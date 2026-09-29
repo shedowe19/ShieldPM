@@ -25,8 +25,8 @@ Begriffsklärung für häufig verwendete Fachbegriffe im Projekt.
 | **DDNS**             | Dynamic DNS — automatische DNS-Aktualisierung bei IP-Wechsel                             |
 | **Turbo-Loader**     | Parallele Downloads für große Dateien                                                    |
 | **GoAccess**         | Echtzeit-Web-Analytics-Tool                                                              |
-| **Debounced Reload** | Verzögerter Nginx-Reload (2s) zur Bündelung mehrerer Änderungen                          |
-| **EJS**              | Embedded JavaScript Templates (für Nginx-Konfigurationen)                                |
+| **Debounced Reload** | Bündelung von Änderungen vor einem Reload; Docker Auto-Discovery nutzt dafür 2 Sekunden  |
+| **LiquidJS**         | Template-Engine für Nginx-Konfigurationen in `backend/templates/`                        |
 | **Objection.js**     | ORM (Object-Relational Mapping) für Node.js                                              |
 | **Knex.js**          | SQL-Query-Builder und Migrationstool                                                     |
 | **rootfs**           | Docker-Overlay-Dateien, die ins Container-Dateisystem kopiert werden                     |

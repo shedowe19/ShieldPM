@@ -33,10 +33,7 @@ ANUBIS_ENABLED=false # to disable globally
 ```
 
 ### Native / LXC Installation
-Run the installer and select **Yes** when prompted to install Anubis:
-```bash
-bash scripts/install.sh
-```
+Extract a full native/LXC installer release package, run its bundled `install.sh`, and select **Yes** when prompted to install Anubis. The source checkout's `scripts/install.sh` requires the prebuilt release payload beside it and is not a standalone install script.
 
 ---
 
@@ -49,14 +46,7 @@ bash scripts/install.sh
 3. Toggle **Anubis AI Firewall** to `ON`.
 4. Configure your rules and click **Save**.
 
-When Anubis is first enabled, ShieldPM automatically populates two default rules:
-
-| Rule Name | Path | User Agent | Action |
-| :--- | :--- | :--- | :--- |
-| `block-ai-crawlers` | `.*` | `(?i)GPTBot\|CCBot\|...` | **DENY** |
-| `challenge-browsers` | `.*` | `Mozilla` | **CHALLENGE** |
-
-You can freely modify, delete, or add rules as needed.
+Enabling Anubis does **not** populate custom rules. Add the rules you need under **Anubis rules**. ShieldPM writes the rules of active, Anubis-enabled Proxy Hosts to `/data/anubis/policy.yaml`. If there are no configured rules, ShieldPM writes a single placeholder rule that matches only `AnubisPlaceholderBot`; do not rely on that placeholder for crawler protection.
 
 ---
 
@@ -66,11 +56,11 @@ Each Anubis rule supports the following fields:
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| **Name** | `string` | Unique rule identifier (kebab-case). Exposed in Prometheus metrics. Auto-generated if empty. |
+| **Name** | `string` | Rule identifier. ShieldPM generates one if omitted; choose a unique name for clarity. |
 | **Path Regex** | `string` | Regular expression to match the request path. `.*` matches all paths. |
 | **Action** | `enum` | What to do when the rule matches. See [Actions](#actions) below. |
 | **User Agent Regex** | `string` | Regular expression to match the `User-Agent` header. Leave empty to match all agents. |
-| **Remote Addresses** | `string[]` | Comma-separated list of CIDR ranges (e.g. `10.0.0.0/8, 192.168.1.0/24`). Only match requests from these IPs. |
+| **Remote Addresses** | `string[]` | Comma-separated CIDR ranges (e.g. `10.0.0.0/8, 192.168.1.0/24`). Only match requests from these IPs. |
 | **Challenge Difficulty** | `integer` | Number of leading zeros required for PoW (1-16). Default: `4`. Higher = harder. Only applies to `CHALLENGE` action. |
 | **Challenge Algorithm** | `enum` | Challenge method to use. Only applies to `CHALLENGE` action. See [Challenge Types](#challenge-types) below. |
 
@@ -85,7 +75,7 @@ Each Anubis rule supports the following fields:
 | :--- | :--- |
 | **ALLOW** | Bypass all further checks and forward the request directly to the backend. Use this for trusted bots (e.g. Googlebot) or internal networks. |
 | **DENY** | Block the request and send a fake "success" page that tricks scrapers into thinking they loaded the content. |
-| **CHALLENGE** | Show a Proof-of-Work challenge page. The browser must solve a cryptographic puzzle before accessing the site. Once solved, a cookie is set that lasts **7 days**. |
+| **CHALLENGE** | Show an Anubis challenge. Cookie lifetime and challenge behavior depend on the installed Anubis binary and its configuration. |
 
 > [!IMPORTANT]
 > Rules are evaluated **top to bottom**. The **first matching rule wins**. Place more specific rules (like ALLOW for Googlebot) above general rules (like CHALLENGE for all Mozilla).
@@ -98,19 +88,12 @@ When using the `CHALLENGE` action, you can choose different challenge algorithms
 
 | Algorithm | Description | Use Case |
 | :--- | :--- | :--- |
-| **fast** (default) | Standard SHA-256 Proof-of-Work. Solves in 1-3 seconds at difficulty 4. | General browser protection |
+| **fast** (default in the UI) | Proof-of-Work challenge. | General browser protection |
 | **slow** | Intentionally wastes CPU cycles. Much slower to solve. | Punishing known bot patterns |
 | **metarefresh** | Uses HTML `<meta http-equiv="refresh">` redirect. No JavaScript required. | Low-resource clients |
 | **preact** | Lightweight JavaScript challenge using Preact framework. | Alternative JS challenge |
 
-**Difficulty Scale:**
-
-| Difficulty | Solve Time (approx.) | Use Case |
-| :--- | :--- | :--- |
-| 1-4 | < 3 seconds | Normal users |
-| 5-8 | 3-30 seconds | Suspicious traffic |
-| 9-12 | 30s - 5 minutes | Aggressive deterrent |
-| 13-16 | Minutes to hours | Effectively impossible |
+**Difficulty:** The UI accepts values from 1 to 16. Actual solving time depends on the client's hardware and the installed Anubis version; test your policy before using high values.
 
 ---
 
@@ -118,7 +101,7 @@ When using the `CHALLENGE` action, you can choose different challenge algorithms
 
 ### Basic: Block AI Crawlers + Challenge Browsers
 
-This is the **default configuration** when you enable Anubis:
+This is an **example to add manually** after enabling Anubis:
 
 | # | Name | Path | User Agent | Action |
 | :--- | :--- | :--- | :--- | :--- |
@@ -160,14 +143,14 @@ This is the **default configuration** when you enable Anubis:
   Client  ───► │    Nginx     │
   Request      │  (Frontend)  │
                 └──────┬──────┘
-                       │ proxy_pass unix:/run/anubis/nginx.sock
+                       │ proxy_pass unix:/run/shieldpm/anubis.sock
                        ▼
                 ┌─────────────┐
                 │   Anubis    │ ◄── Evaluates rules from policy.yaml
                 │  (Firewall) │
                 └──────┬──────┘
                        │ If ALLOW or CHALLENGE passed:
-                       │ forward to unix:/run/nginx/anubis-upstream.sock
+                       │ forward to unix:/run/shieldpm/anubis-upstream.sock
                        ▼
                 ┌─────────────┐
                 │    Nginx    │
@@ -184,17 +167,17 @@ This is the **default configuration** when you enable Anubis:
 **Key Points:**
 - Anubis runs as a **sidecar process** on the same host.
 - Communication uses **Unix sockets** for maximum speed (no TCP overhead).
-- When you save a Proxy Host, ShieldPM automatically regenerates `policy.yaml` and sends `SIGHUP` to Anubis to reload.
+- Changes to Proxy Hosts schedule policy regeneration (debounced by 2 seconds); ShieldPM then sends `SIGHUP` to Anubis.
 - All Nginx options (Caching, Buffering, Block Exploits, WebSocket, Rate Limiting) work normally — they are applied in the **Backend** Nginx server block.
 
 ---
 
 ## ⚙️ Global Policy File
 
-While the UI handles per-host rules, you can also manually define a **global policy** at `/data/anubis/policy.yaml`. ShieldPM automatically generates and manages this file from your UI settings.
+The UI manages per-host rules. ShieldPM generates `/data/anubis/policy.yaml` from enabled hosts; the launch script passes this file to Anubis when present.
 
 > [!WARNING]
-> **Do NOT manually edit** `/data/anubis/policy.yaml` — it will be overwritten every time you save a Proxy Host. Use the UI instead.
+> **Do NOT manually edit** `/data/anubis/policy.yaml` — a later policy generation can overwrite your changes. Use the UI instead.
 
 ### Extracting Default Anubis Policy
 
@@ -222,17 +205,17 @@ ps aux | grep anubis
 ```
 
 ### Challenge page not showing
-1. **Clear cookies** or use **Incognito mode** — the challenge cookie lasts 7 days.
+1. **Clear cookies** or use **Incognito mode** — a valid challenge cookie may bypass another challenge.
 2. **Check rule order** — rules are evaluated top-to-bottom, first match wins.
 3. **Verify policy** was regenerated:
    ```bash
    cat /data/anubis/policy.yaml
    ```
-4. **Test with curl** (no cookies):
+4. **Test with curl** (no cookies) using a User-Agent and path that match one of your rules:
    ```bash
    curl -v -H "User-Agent: Mozilla/5.0" https://your-domain.com/
    ```
-   You should see HTML with the Anubis challenge script, not a redirect.
+   Check the response against your configured action; a placeholder-only policy will not challenge this request.
 
 ### Changes not reflecting
 - Anubis reloads automatically when you **Save** a Proxy Host.

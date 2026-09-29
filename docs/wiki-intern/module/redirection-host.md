@@ -6,11 +6,11 @@ Verwaltung von HTTP/HTTPS-Umleitungen (Redirections), die eine Quell-Domain auf 
 
 ## Kontext
 
-Redirection-Hosts werden verwendet, um eingehende Anfragen z. B. von alten Domains, Tippfehler-Domains oder marketing-spezifischen URLs auf eine kanonische Ziel-URL umzuleiten (HTTP-Statuscode 301/302).
+Redirection-Hosts leiten Anfragen von Quell-Domains zu einer Ziel-Domain um. Die Oberfläche unterstützt HTTP-Statuscodes 300, 301, 302, 303, 307 und 308.
 
 ## Wichtige Dateien
 
-- `backend/internal/redirection-host.js` (~448 Zeilen) — Business-Logik (CRUD, Aktivieren/Deaktivieren, Zertifikat-Zuordnung)
+- `backend/internal/redirection-host.js` — Business-Logik (CRUD, Aktivieren/Deaktivieren, Zertifikat-Zuordnung)
 - `backend/models/redirection_host.js` — Objection.js-Modell, JSON-Domainliste sowie Relationen zu `owner` und `certificate`
 - `backend/templates/redirection_host.conf` — Liquid-Template für das Nginx-`server`-Block
 - `backend/routes/nginx/redirection_hosts.js` — REST-API-Routen unter `/api/nginx/redirection-hosts`
@@ -20,7 +20,7 @@ Redirection-Hosts werden verwendet, um eingehende Anfragen z. B. von alten Domai
 
 ## Verhalten
 
-1. Benutzer legt einen Redirection-Host mit Quell-Domain(s), Ziel-URL und HTTP-Code (301/302) an.
+1. Benutzer legt Quell-Domain(s), Zielschema (`auto`, `http`, `https`), Zieldomain und HTTP-Code an. `preserve_path` hängt bei Bedarf `$request_uri` an. Die UI erwartet im Ziel-Domain-Feld keine vollständige URL.
 2. `internal/redirection-host.js` validiert Berechtigungen, speichert das Modell einschließlich JSON-Domainliste.
 3. `internal/nginx.js` rendert das Template `redirection_host.conf` zu einer `.conf`-Datei unter `/data/nginx/redirection_host/`.
 4. Optional kann ein SSL-Zertifikat zugewiesen werden (HTTPS-Umleitung).
@@ -38,6 +38,10 @@ Redirection-Hosts werden verwendet, um eingehende Anfragen z. B. von alten Domai
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
+## Aktualisierung und Fehlerstatus
+
+Die Erstellungsantwort übernimmt den aktuellen Nginx-Status, einschließlich fehlgeschlagener Konfiguration. DNS-Zugangsdaten für neue Zertifikate werden weder in Host-Metadaten noch im Audit gespeichert. Löschen und Deaktivieren teilen die Warteschlange der [Nginx-Engine](./nginx-engine.md).
+
 ## Verwandte Seiten
 
 - [Proxy-Host](./proxy-host.md)
@@ -45,7 +49,3 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Host-Hilfslogik](./host.md)
 - [Modulübersicht](./README.md)
 - [Datenmodell](../daten/datenmodell.md)
-
-## Aktualisierung und Fehlerstatus
-
-Die Erstellungsantwort übernimmt den aktuellen Nginx-Status, einschließlich fehlgeschlagener Konfiguration. DNS-Zugangsdaten für neue Zertifikate werden weder in Host-Metadaten noch im Audit gespeichert. Löschen und Deaktivieren teilen die Warteschlange der [Nginx-Engine](./nginx-engine.md).

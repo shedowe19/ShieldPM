@@ -16,7 +16,7 @@ OpenAppSec läuft als **Multi-Container-Architektur** mit 5 Services:
 | `openappsec-tuning-svc`     | Tuning Service; lernt aus Traffic und optimiert Policies            |
 | `openappsec-db`             | PostgreSQL 17; speichert Tuning-Daten und Trainingsmetriken         |
 
-Alle Container sind in `compose.yaml` auskommentiert und können einzeln aktiviert werden.
+Alle Container sind in `compose.yaml` auskommentiert. Für die lokale Management-Variante gehören Agent, SmartSync, Shared Storage, Tuning-Service und Datenbank zusammen; bei Cloud-Verwaltung gelten andere Voraussetzungen.
 
 ## Integration
 
@@ -29,7 +29,7 @@ Das OpenAppSec Nginx-Attachment-Modul ist **bereits in ShieldPMs Nginx-Image int
 NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true
 ```
 
-Das Modul wird in `rootfs/usr/local/bin/start.sh` geladen (Zeile 496). Beim Aktivieren werden automatisch **Brotli und Zstd deaktiviert**, da das Modul mit diesen Kompressionsformaten nicht kompatibel ist:
+Die Modulaktivierung erfolgt durch die Laufzeitkonfiguration von Nginx. Dabei werden **Brotli und Zstd deaktiviert**:
 
 ```bash
 # Deaktiviert: brotli on → brotli off
@@ -38,18 +38,18 @@ Das Modul wird in `rootfs/usr/local/bin/start.sh` geladen (Zeile 496). Beim Akti
 
 ### Cloud vs. Lokal
 
-| Modus            | Konfiguration                                                                                  |
-| ---------------- | ---------------------------------------------------------------------------------------------- |
-| **Cloud Portal** | `AGENT_TOKEN` in `.env` / beim Installieren angeben → Verwaltung über https://my.openappsec.io |
-| **Lokal**        | `local_policy.yaml` unter `/etc/cp/conf/local_policy.yaml`                                     |
+| Modus            | Konfiguration                                                                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cloud Portal** | Docker: `AGENT_TOKEN` beim Agent-Dienst in `compose.yaml`; Native/LXC: Token beim Installieren angeben → Verwaltung über https://my.openappsec.io |
+| **Lokal**        | Docker: `/opt/openappsec/localconf/local_policy.yaml` (im Agent `/ext/appsec`); Native/LXC: `/etc/cp/conf/local_policy.yaml`                      |
 
-Standardmäßig läuft OpenAppSec im **detect-learn Modus** (nur Logging, kein Blockieren). Ändern zu `prevent-learn` für aktives Blockieren.
+Der native Installer legt ohne Cloud-Token bei Bedarf eine Policy in **detect-learn** (nur Logging, kein Blockieren) an. Ob der Docker-Agent bereits eine Policy hat, hängt vom gemounteten Konfigurationsverzeichnis ab. Erst nach Prüfung von Logs/Policy auf `prevent-learn` wechseln, um aktiv zu blockieren.
 
 ## Installation
 
 ### Docker / Compose
 
-Container in `compose.yaml` einkommentieren und starten:
+Vor dem Start im ShieldPM-Dienst außerdem `ipc: host`, das gemeinsame `shm-volume` unter `/dev/shm/check-point` und `NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true` aktivieren. Dann die benötigten Container in `compose.yaml` einkommentieren und starten:
 
 ```bash
 docker compose up -d openappsec-agent openappsec-smartsync openappsec-shared-storage openappsec-tuning-svc openappsec-db
@@ -59,7 +59,7 @@ Für das optionale Advanced-Modell bindet `compose.yaml` das Host-Verzeichnis `/
 
 ### Native / LXC (install.sh)
 
-Interactive Installer in `scripts/install.sh` (Abschnitt 15, Zeile 527–626):
+Interaktiver Installer in `scripts/install.sh` (Abschnitt 15):
 
 ```bash
 # Im ShieldPM Installationsdialog "OpenAppSec Agent installieren" wählen
@@ -72,7 +72,7 @@ Der Installer nutzt `https://downloads.openappsec.io/open-appsec-install` und ka
 ## Konfigurationsdateien
 
 - **`/etc/cp/conf/local_policy.yaml`** — Lokale Policy (detect-learn / prevent-learn)
-- **`/etc/cp/conf/open-appsec-advanced-model.tgz`** — Optionales ML-Modell für verbesserte Erkennung
+- **`/etc/cp/conf/open-appsec-advanced-model.tgz`** — Kopierziel des Native/LXC-Installers für das optionale ML-Archiv; der Installer prüft nicht, ob der laufende Agent das Modell tatsächlich geladen hat.
 - **`/opt/openappsec/conf`** — Nginx-Agent-Konfiguration (Volume)
 - **`/opt/openappsec/data`** — Agent-Daten (Volume)
 - **`/opt/openappsec/logs`** — Logs (Volume)
@@ -80,9 +80,9 @@ Der Installer nutzt `https://downloads.openappsec.io/open-appsec-install` und ka
 
 ## Wichtige Dateien
 
-- `compose.yaml` (Zeilen 263–333) — Container-Definitionen (auskommentiert)
-- `scripts/install.sh` (Zeilen 527–626) — Native Installer
-- `rootfs/usr/local/bin/start.sh` (Zeile 496–503) — Nginx-Modul Loading Logik
+- `compose.yaml` — Container-Definitionen (auskommentiert)
+- `scripts/install.sh` — Native Installer
+- `rootfs/usr/local/bin/runtime-config.sh` — Nginx-Modulaktivierung zur Laufzeit
 - `backend/templates/_proxy_logic.conf` — Proxy-Routing ( falls relevant )
 
 ## Sicherheitsaspekte
@@ -108,7 +108,6 @@ open-appsec-ctl --apply-policy
 ## Verwandte Seiten
 
 - [Secrets & Sicherheit](../konfiguration/secrets-und-sicherheit.md)
-- [Anubis](./anubis.md)
 - [Anubis](./anubis.md)
 - [Proxy-Host](./proxy-host.md)
 - [Architektur-Überblick](../architektur/ueberblick.md)

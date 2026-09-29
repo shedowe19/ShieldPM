@@ -1,6 +1,6 @@
 # 🎨 Service Icons
 
-ShieldPM supports displaying service icons for Proxy Hosts in the dashboard table. This feature makes it easier to visually identify services at a glance.
+ShieldPM supports service icons in the Proxy Hosts table. This feature makes it easier to identify services at a glance.
 
 ## Overview
 
@@ -16,7 +16,7 @@ The feature offers three modes for icon handling:
 You can configure the icon settings in the **"Details"** tab of the Proxy Host dialog, right below the "Forward Host/Port" section.
 
 ### 1. Auto-Detection
-This is the default mode. ShieldPM maintains an internal database of ~80 popular self-hosted services and their default ports.
+This is the default mode. The frontend maintains a list of known self-hosted services and their usual ports.
 
 **Detection Logic:**
 1.  **Port + Hostname Match:** First, it checks if both the port and the hostname match a known service (e.g., Port `3000` + Hostname containing `grafana`).
@@ -47,13 +47,13 @@ Select **"No Icon"** to display nothing in the icon column for this host.
 
 ---
 
-## 📸 Screenshots
-
-*(Screenshots of the feature in action would go here)*
-
 ## 🧩 Troubleshooting
 
 **My icon is not showing up?**
 *   Check if the **port** matches the standard port for the service.
 *   If using **Custom**, verify that the URL is reachable and returns a valid image.
 *   If using **Auto**, the service might not be in our database yet. You can switch to **Custom** and provide the URL manually.
+
+## Related pages
+
+- [Proxy Hosts](./Proxy-Hosts.md)

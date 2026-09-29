@@ -10,7 +10,7 @@ Dead-Hosts werden eingesetzt, um bekannte Domains "abzufangen" (z. B. nicht genu
 
 ## Wichtige Dateien
 
-- `backend/internal/dead-host.js` (~420 Zeilen) — Business-Logik
+- `backend/internal/dead-host.js` — Business-Logik
 - `backend/models/dead_host.js` — Objection.js-Modell mit JSON-Domainliste sowie Zertifikats- und Owner-Relation
 - `backend/templates/dead_host.conf` — Liquid-Template für leere/404-Server-Blöcke
 - `backend/routes/nginx/dead_hosts.js` — REST-API-Routen unter `/api/nginx/dead-hosts`
@@ -24,7 +24,7 @@ Dead-Hosts werden eingesetzt, um bekannte Domains "abzufangen" (z. B. nicht genu
 2. `internal/dead-host.js` validiert Berechtigungen und speichert.
 3. `internal/nginx.js` rendert das Template zu `.conf`-Datei unter `/data/nginx/dead_host/`.
 4. Eingehende Requests auf diese Domain erhalten standardmäßig HTTP 404.
-5. Optional kann eine Custom-Page oder ein eigenes SSL-Zertifikat verwendet werden.
+5. Optional kann über `advanced_config` eine eigene Nginx-Location definiert oder ein SSL-Zertifikat zugeordnet werden. `INITIAL_DEFAULT_PAGE` betrifft nur den Default-Server und ändert nicht die Antwort eines expliziten Dead-Hosts.
 
 ## Aktualisierung und Antworten
 
@@ -44,6 +44,10 @@ Dead-Hosts werden eingesetzt, um bekannte Domains "abzufangen" (z. B. nicht genu
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
+## Erstellungsstatus und Konfigurationssperre
+
+Auch die Erstellungsantwort übernimmt jetzt den von Nginx ermittelten Status. DNS-Zugangsdaten werden aus Host-Metadaten und Auditdaten entfernt; für Zertifikatsanforderungen stehen sie weiterhin zur Verfügung. Löschen und Deaktivieren verwenden dieselbe Nginx-Warteschlange wie Konfigurationsänderungen.
+
 ## Verwandte Seiten
 
 - [Proxy-Host](./proxy-host.md)
@@ -51,5 +55,3 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Host-Hilfslogik](./host.md)
 - [Modulübersicht](./README.md)
 - [Datenmodell](../daten/datenmodell.md)
-
-Auch die Erstellungsantwort übernimmt jetzt den von Nginx ermittelten Status. DNS-Zugangsdaten werden aus Host-Metadaten und Auditdaten entfernt; für Zertifikatsanforderungen stehen sie weiterhin zur Verfügung. Löschen und Deaktivieren verwenden dieselbe Nginx-Warteschlange wie Konfigurationsänderungen.

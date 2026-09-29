@@ -18,6 +18,8 @@ Dateien: `backend/lib/config.js` und `backend/db.js`. `backend/knexfile.js` stel
 
 Die Datenbank-Auswahl erfolgt über Umgebungsvariablen:
 
+Eine gültige persistierte Datenbankkonfiguration unter `${DATA_PATH:-/data}/shieldpm/default.json` hat Vorrang vor diesen Variablen. Ist die Datei vorhanden, aber nicht lesbar oder fehlerhaft, bricht der Start ab, statt still auf eine andere Datenbank umzuschalten.
+
 - **SQLite** (Standard): Keine Konfiguration nötig, Datei unter `${DATA_PATH:-/data}/shieldpm/database.sqlite`
 - **MySQL**: `DB_MYSQL_HOST`, `DB_MYSQL_PORT`, `DB_MYSQL_USER`, `DB_MYSQL_PASSWORD`, `DB_MYSQL_NAME`
 - **PostgreSQL**: `DB_POSTGRES_HOST`, `DB_POSTGRES_PORT`, `DB_POSTGRES_USER`, `DB_POSTGRES_PASSWORD`, `DB_POSTGRES_NAME`
@@ -30,13 +32,13 @@ Die Datenbank wird beim Anwendungsstart initialisiert. Migrationen laufen automa
 
 ## Setup
 
-Datei: `backend/setup.js` (7 KB)
+Datei: `backend/setup.js`
 
 Erstellt beim ersten Start:
 
 - Optionaler Admin-Benutzer aus `INITIAL_ADMIN_EMAIL` und `INITIAL_ADMIN_PASSWORD`; ansonsten Ersteinrichtung in der Oberfläche
 - Default-Einstellungen
-- Default-Zertifikate
+- Certbot-Verzeichnisse und -Plugins werden vorbereitet; beim Start können Hostkonfigurationen neu erzeugt werden. Das TLS-Standardzertifikat wird im Startskript für Nginx ausgewählt.
 
 ## Wechsel von SQLite zu MySQL oder PostgreSQL
 

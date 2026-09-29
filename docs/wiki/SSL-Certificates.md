@@ -34,7 +34,7 @@ ShieldPM makes managing SSL/TLS certificates easy with built-in support for **Le
 6. Click Save
 
 > [!IMPORTANT]
-> You must set `ACME_EMAIL` in your environment before requesting certificates. See [Configuration](Configuration).
+> `ACME_EMAIL` is recommended so your ACME provider can contact you. ShieldPM can register without an email for providers that allow it; ZeroSSL's automatic registration and any EAB configuration require an email. See [Configuration](Configuration).
 
 ### DNS-01 Challenge (For Wildcards)
 
@@ -51,19 +51,19 @@ ShieldPM makes managing SSL/TLS certificates easy with built-in support for **Le
 4. Select your DNS provider from the dropdown
 5. Enter the required API credentials
 
-### Supported DNS Providers
+### DNS Provider Examples
+
+The dropdown is populated from `backend/certbot/dns-plugins.json`; check the current list in your deployment before configuring a provider. Examples present in this repository include:
 
 | Provider | Credential Format |
 | :--- | :--- |
 | **Cloudflare** | API Token or Global API Key |
 | **DigitalOcean** | API Token |
-| **Route53 (AWS)** | Access Key + Secret Key |
 | **Google Cloud DNS** | Service Account JSON |
 | **Hetzner** | API Token |
 | **OVH** | Application Key + Secret + Consumer Key |
 | **Namecheap** | API Key + Username |
 | **DuckDNS** | Token |
-| **Name.com** | API Token + Username |
 | **Linode** | API Token |
 
 > [!TIP]
@@ -76,12 +76,14 @@ ShieldPM makes managing SSL/TLS certificates easy with built-in support for **Le
 Upload your own certificates from a corporate CA or a purchased provider:
 
 1. Go to **SSL Certificates** → **Add SSL Certificate** → **Custom**
-2. Upload:
+2. Choose **File Upload** (or **Paste Input**) and provide:
    - **Certificate** (`.pem` or `.crt`)
    - **Certificate Key** (`.key`)
    - **Intermediate Certificate** (optional, for chain)
 3. Click Save
 4. Assign to a Proxy Host in the SSL tab
+
+ShieldPM validates the PEM data and checks that the certificate matches the private key before activating the uploaded files.
 
 > [!WARNING]
 > Custom certificates are **not auto-renewed**. Set a reminder to replace them before expiry.
@@ -92,7 +94,7 @@ Upload your own certificates from a corporate CA or a purchased provider:
 
 | Option | Description | Recommended |
 | :--- | :--- | :---: |
-| **Force SSL** | Redirect all HTTP → HTTPS (301) | ✅ |
+| **Force SSL** | Redirect HTTP → HTTPS (308) | ✅ |
 | **HTTP/2** | Enable HTTP/2 protocol | ✅ |
 | **HSTS** | Send `Strict-Transport-Security` header | ✅ Production |
 | **HSTS Subdomains** | Include subdomains in HSTS | ⚠️ Only if all subdomains use HTTPS |
@@ -105,13 +107,13 @@ Fine-tune certificate behavior via environment variables:
 
 | Variable | Description | Default |
 | :--- | :--- | :--- |
-| `ACME_EMAIL` | Registration email (required) | — |
+| `ACME_EMAIL` | Registration email (recommended; required for ZeroSSL's email registration and when using EAB) | — |
 | `ACME_SERVER` | Custom ACME server URL | Let's Encrypt Production |
-| `ACME_KEY_TYPE` | `ec` (ECDSA) or `rsa` | `ec` |
+| `ACME_KEY_TYPE` | `ecdsa` or `rsa` | `ecdsa` |
 | `ACME_MUST_STAPLE` | Request OCSP Must-Staple extension | `false` |
-| `ACME_OCSP_STAPLING` | Enable OCSP Stapling | `true` |
-| `CRT` | Renewal threshold in hours | `72` |
-| `DEFAULT_CERT_ID` | Default cert ID for unconfigured hosts | — |
+| `ACME_OCSP_STAPLING` | Enable OCSP Stapling | `false` (automatically enabled if `ACME_MUST_STAPLE=true`) |
+| `CRT` | Interval in hours between renewal checks | `23` after environment validation; internal fallback `72` if missing or invalid |
+| `DEFAULT_CERT_ID` | Default cert ID for unconfigured hosts | `0` (none) |
 
 ### Alternative ACME Providers
 
@@ -138,19 +140,19 @@ You can use any ACME-compatible provider by setting `ACME_SERVER`:
 | :--- | :--- |
 | Port 80 not reachable | Check firewall, router port forwarding |
 | Domain not pointing to server | Verify DNS A/AAAA records |
-| `ACME_EMAIL` not set | Set it in environment |
-| Rate limit exceeded | Wait 1 hour or use Staging |
+| ACME provider requires an email or EAB | Configure the provider's required `ACME_EMAIL` and, where applicable, `ACME_EAB_KID` and `ACME_EAB_HMAC_KEY` |
+| ACME rate limit exceeded | Check the provider's retry guidance; use a staging endpoint for future test requests |
 
 ### "Certificate not renewing"
 
-Certificates auto-renew when less than `CRT` hours remain (default: 72h). If renewal fails:
+ShieldPM invokes `certbot renew` at startup and then every `CRT` hours (normally 23). Certbot decides which certificate is due for renewal; `CRT` does not set the expiry threshold. If renewal fails:
 
 ```bash
 # Check certificate status
-docker exec shieldpm certbot certificates
+docker exec shieldpm certbot --config /etc/certbot.ini certificates
 
-# Force renewal attempt
-docker exec shieldpm certbot renew --force-renewal
+# Prefer the ShieldPM UI/API's Renew action for a single Let's Encrypt certificate.
+# It also updates certificate metadata and reloads Nginx on success.
 ```
 
 ---

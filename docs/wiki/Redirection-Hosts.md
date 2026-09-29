@@ -26,8 +26,9 @@ Redirection Hosts forward visitors from one domain to another URL using an HTTP 
 | Field | Description | Example |
 | :--- | :--- | :--- |
 | **Domain Names** | The source domain(s) to redirect from | `old-site.com` |
-| **Forward HTTP Code** | `301` (Permanent) or `302` (Temporary) | `301` |
-| **Forward Domain Name** | The destination URL | `https://new-site.com` |
+| **Forward HTTP Code** | `300`, `301`, `302`, `303`, `307`, or `308` | `301` |
+| **Forward Scheme** | `auto`, `http`, or `https`; `auto` uses the incoming request's scheme | `https` |
+| **Forward Domain Name** | Destination host, without a scheme or path | `new-site.com` |
 | **Preserve Path** | Append the original path to the destination | ✅ |
 
 ### How "Preserve Path" Works
@@ -36,6 +37,8 @@ Redirection Hosts forward visitors from one domain to another URL using an HTTP 
 | :--- | :--- | :--- |
 | ❌ Off | `old.com/blog/post-1` | `https://new.com` |
 | ✅ On | `old.com/blog/post-1` | `https://new.com/blog/post-1` |
+
+These examples use **Forward Scheme: https**. With **auto**, the destination keeps the original HTTP or HTTPS scheme. The implementation appends the original `$request_uri` when Preserve Path is enabled, including any query string.
 
 > [!TIP]
 > Use **Preserve Path** when both the old and new sites have the same URL structure. This ensures bookmarks and search engine links continue to work.
@@ -68,7 +71,7 @@ Dead Hosts explicitly **block** traffic to a domain, returning an error page ins
 | Scenario | Result |
 | :--- | :--- |
 | Request to blocked domain | `404 Not Found` error page |
-| Using `INITIAL_DEFAULT_PAGE=444` | Connection immediately closed (no response body) |
+| Using `INITIAL_DEFAULT_PAGE=444` at initial setup | Selects the initial default site's behavior for otherwise unmatched domains, not this explicit Dead Host's response |
 | Wildcard `*.example.com` | All undefined subdomains return 404 |
 
 > [!TIP]
@@ -80,4 +83,7 @@ You can also assign an SSL certificate to Dead Hosts. This ensures that even HTT
 
 ---
 
-[🏠 Home](Home) | [🔀 Proxy Hosts](Proxy-Hosts) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)
+## Related pages
+
+- [Home](./Home.md)
+- [Proxy Hosts](./Proxy-Hosts.md)

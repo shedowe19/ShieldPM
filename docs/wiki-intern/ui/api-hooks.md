@@ -52,11 +52,11 @@ frontend/src/
 
 ### Tunnel & Network
 
-| Kategorie  | Operationen                                                                                                                                                                 |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cloudflare | getCloudflaredTunnel(s), createCloudflaredTunnel, updateCloudflaredTunnel, deleteCloudflaredTunnel                                                                          |
-| Tor        | getTorOnion(s), createTorOnion, updateTorOnion, deleteTorOnion, torOnionActions                                                                                             |
-| WireGuard  | getWireguardPeer(s), createWireguardPeer, updateWireguardPeer, deleteWireguardPeer, getWireguardPeerConfig, getWireguardPeerQRCode, wireguardPeerActions, wireguardSettings |
+| Kategorie  | Operationen                                                                                                                                                               |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare | getCloudflaredTunnels, createCloudflaredTunnel, updateCloudflaredTunnel, deleteCloudflaredTunnel                                                                          |
+| Tor        | getTorOnions, createTorOnion, updateTorOnion, deleteTorOnion, torOnionActions                                                                                             |
+| WireGuard  | getWireguardPeers, createWireguardPeer, updateWireguardPeer, deleteWireguardPeer, getWireguardPeerConfig, getWireguardPeerQRCode, wireguardPeerActions, wireguardSettings |
 
 ### Users & Auth
 
@@ -92,12 +92,15 @@ frontend/src/
 | `checkVersion.ts`  | Versionsprüfung           |
 | `getDbStats.ts`    | Datenbank-Statistiken     |
 
-### GitOps & Docker
+### GitOps
 
 | Datei        | Beschreibung                |
 | ------------ | --------------------------- |
 | `gitops.ts`  | GitOps-Operationen          |
 | `gitSync.ts` | Git-Sync für einzelne Hosts |
+
+Es gibt keinen Frontend-API-Client `getDockerContainers.ts`. Die DNS-Provider-Abfrage heißt
+`getCertificateDNSProviders.ts` im API-Verzeichnis und `useDnsProviders.ts` im Hook-Verzeichnis.
 
 ## Pattern
 

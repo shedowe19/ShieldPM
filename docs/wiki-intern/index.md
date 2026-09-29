@@ -44,6 +44,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Proxy-Host](./module/proxy-host.md)
 - [Proxy-Host-Konfigurationsvorschau](./module/proxy-host.md#konfigurationsvorschau-vor-dem-speichern)
 - [Proxy-Host-Überwachung](./module/proxy-host-monitor.md)
+- [Resumable Upload Relay](./module/upload-relay.md)
 - [Redirection-Host](./module/redirection-host.md)
 - [Dead-Host (404)](./module/dead-host.md)
 - [Stream (TCP/UDP)](./module/stream.md)
@@ -74,7 +75,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Terminal (SSH)](./module/terminal.md)
 - [Benutzer & Auth](./module/benutzer-auth.md)
 - [Token](./module/token.md)
-- [2FA-Service](./module/2fa.md)
+- [2FA-Überblick](./module/2fa.md)
 - [Anubis (PoW-Gate)](./module/anubis.md)
 
 ### Verwaltung
@@ -130,41 +131,16 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 
 ### Modul-Beziehungen
 
-Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten Abhängigkeiten:
+Die zentrale Engine `backend/internal/nginx.js` rendert Nginx-Konfigurationen mit LiquidJS aus `backend/templates/` und prüft sie mit `nginx -tq` vor dem Reload. Die Host-Module (`proxy-host.js`, `redirection-host.js`, `dead-host.js`, `stream.js`) verwenden sie zusammen mit `host.js`, Zertifikaten und GitOps. Der Proxy-Host integriert zusätzlich Überwachung, Diagnose, Git-Deploy, OAuth2-Proxy und optionalen Upload-Relay.
 
-- **nginx-engine.js** → zentrale Config-Engine → wird beeinflusst von proxy-host, redirection-host, dead-host, stream, access-lists, certificate, anubis
-- **proxy-host.js** → nutzt certificate, access-list, host, nginx-engine, gitops, audit-log
-- **redirection-host.js** → nutzt host, certificate, nginx-engine, gitops, audit-log
-- **dead-host.js** → nutzt host, certificate, nginx-engine, gitops, audit-log
-- **stream.js** → nutzt certificate, nginx-engine, gitops, audit-log
-- **certificate.js** → zentrales Zertifikatsmodul → genutzt von proxy-host, stream, redirection-host, dead-host, certbot
-- **access-lists.js** → nutzt nginx-engine, audit-log, bcryptjs
-- **host.js** (gemeinsame Logik) → Basis für proxy-host, redirection-host, dead-host, stream
-- **user.js / benutzer-auth.js** → nutzt token, auth-session-service, 2fa-service, audit-log
-- **token.js** → nutzt jsonwebtoken
-- **2fa-service.js** → nutzt otplib, simplewebauthn, duo-universal, qrcode, bcryptjs
-- **auth-session-service.js** → nutzt token, benutzer-auth, 2fa-service
-- **chatops.js** → nutzt telegraf (Telegram), ai-agent, token (JWT-Synthese)
-- **ai-agent.js** → nutzt internal/setting (Provider/Model), internal/token, audit-log; aufgerufen von routes/ai.js und chatops
-- **tor.js** → nutzt nginx-engine, Tor-Daemon; bietet syncProxyHost() für Proxy-Host-Synchronisation
-- **oauth2-proxy.js** → nutzt nginx-engine, setting, audit-log
-- **gitops.js** → nutzt isomorphic-git, archiver, js-yaml; synchronisiert proxy-host, dead-host, stream
-- **git-deploy.js** → nutzt isomorphic-git, proxy-host, dead-host, audit-log
-- **certbot.js** → nutzt nginx-engine, certbot-CLI
-- **ip-ranges.js** → nutzt nginx-engine, proxy-agent, Cloudflare-API
-- **cloudflared.js** → nutzt Cloudflared-Binary, audit-log
-- **wireguard.js** → nutzt wireguard-tools, iproute2
-- **pki.js** → nutzt node:crypto, optional OpenSSL (ML-KEM-Hybrid)
-- **terminal.js** → nutzt ssh2, ws, @xterm/xterm
-- **maintenance.js** → nutzt nginx-engine (Maintenance-Config)
-- **dashboard-notes.js** → nutzt audit-log, lib/access (RBAC)
-- **ddns.js / ddns-provider.js** → HTTP-Client für DNS-APIs
-- **docker.js** → nutzt dockerode, Docker-Socket
-- **turbo-loader.js** → Frontend-Chunk-Download + Nginx-Interception
-- **openappsec.js** → WAF-Modul (nginx-Modul + Docker/native)
-- **anubis.js** → externer Anubis-Service (PoW-Gate)
+- **Authentifizierung:** `user.js`, `token.js`, `auth-session-service.js` und `2fa-service.js` verwalten Benutzer, Tokens, Sitzungen und zweite Faktoren; die Routen verbinden diese Dienste.
+- **Zugriff und Zertifikate:** `access-list.js`, `oauth2-proxy.js`, `certificate.js`, `certbot.js` und `pki.js` liefern Regeln, SSO und TLS-Material für Hosts.
+- **Netzwerk:** `tor.js`, `cloudflared.js`, `wireguard.js`, `ddns.js` und `ip_ranges.js` binden externe Dienste beziehungsweise Systemwerkzeuge ein.
+- **Automatisierung:** `gitops.js` importiert und exportiert Konfigurationen; `git-deploy.js` aktualisiert Proxy-Hosts aus Git. `docker.js` erkennt Container über Docker-Labels und bündelt seine eigenen Nginx-Änderungen mit einem 2-Sekunden-Timer.
+- **Verwaltung:** `ai.js` bindet Provider und Tools ein; `chat.js` nutzt den AI-Dienst für Telegram. `maintenance.js` erstellt Wartungskonfigurationen, `dashboard_note.js` verwaltet Dashboard-Notizen und `analytics.js` verarbeitet Zugriffslogs. Die React-Oberfläche rendert Diagramme mit Recharts und Karten mit world-atlas.
+- **Weitere Integrationen:** `anubis.js` verwaltet die PoW-Gate-Integration. OpenAppSec wird über das Nginx-Attachment und einen externen Agenten eingebunden; ein `openappsec.js`-Backendmodul existiert nicht.
 
-- **analytics.js** → nutzt recharts, lokale world-atlas-Topologie, GoAccess
+Details und Dateipfade stehen in der [Modulübersicht](./module/README.md) und den verlinkten Modulseiten.
 
 ### API-Routen (Überblick)
 
@@ -208,7 +184,7 @@ Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten A
 
 ---
 
-_Zuletzt aktualisiert: 2026-09-08_
+_Zuletzt aktualisiert: 2026-09-29._
 
 ## Verwandte Seiten
 

@@ -6,31 +6,32 @@ Git-basierte Konfigurationssynchronisierung (Backup, Versionierung, Restore).
 
 ## Kontext
 
-GitOps ermöglicht es, die gesamte ShieldPM-Konfiguration in einem Git-Repository zu sichern und wiederherzustellen.
+GitOps exportiert die unterstützten ShieldPM-Konfigurationsbereiche und Zertifikatsdateien in ein Git-Repository und kann sie importieren. Laufzeitdaten wie Analytics und die lokale Datenbank werden nicht als vollständiges Systembackup gesichert.
 
 ## Wichtige Dateien
 
-- `backend/internal/gitops.js` (38 KB) — Haupt-Business-Logik (größtes Modul)
-- `backend/internal/git-deploy.js` (11 KB) — Auto-Deploy von Git-Repos
-- `backend/routes/gitops.js` (3 KB) — API-Routen
+- `backend/internal/gitops.js` — Export, Import und Git-Synchronisierung
+- `backend/lib/gitops-files.js` — sicherer Dateizugriff im GitOps-Verzeichnis
+- `backend/routes/gitops.js` — API-Routen
 - `frontend/src/pages/Settings/GitOps.tsx` — Konfiguration und manuelle Aktionen
 
 ## Verhalten
 
-- Exportiert Konfiguration als JSON/YAML
+- Exportiert die Konfiguration als YAML-Dateien unter `/data/gitops/shieldpm-config/` und Zertifikatsdateien als Dateien; die `/export`-API antwortet mit JSON über das Ergebnis, liefert aber kein ZIP-Archiv.
 - Synchronisiert mit Remote-Git-Repository via `isomorphic-git`
 - Unterstützt HTTP(S)-Repositories mit Tokens für Authentifizierung
-- Git-Deploy: Automatisches Klonen und Deployen von statischen Sites
+- Git-Deploy für Websites ist ein eigenständiger Dienst: [Git-Deploy](./git-deploy.md).
+
+Das GitOps-Repository kann Zertifikatsschlüssel und andere sensible Konfigurationswerte enthalten. Den Remote-Zugriff entsprechend einschränken; `gitops-config` mit den Zugangsdaten für das Git-Remote ist vom Settings-Export ausgenommen.
 
 ## Abhängigkeiten
 
 - `isomorphic-git` — Git-Operationen in Node.js
-- `archiver` — ZIP-Archivierung für Export
 - `js-yaml` — YAML-Serialisierung
 
 ### Import- und Exportkonsistenz
 
-Der Export enthält neben Hosts, Streams, Zertifikaten, Benutzern und Einstellungen auch Access Lists mit Auth-/Client-Einträgen, Cloudflared-Tunnels und DDNS-Provider. Die Import-Feldlisten entsprechen den tatsächlichen Modellen. Unbekannte Top-Level-Felder werden vor der Datenbankoperation verworfen; Benutzerberechtigungen und Access-List-Kindobjekte werden separat bereinigt. Proxy-Domains werden beim Import in die normalisierte `host_domains`-Relation umgewandelt.
+Der Export enthält neben Hosts, Streams, Zertifikaten, Benutzern und Einstellungen auch Proxy-Host-Monitor-Konfigurationen, Access Lists mit Auth-/Client-Einträgen, Cloudflared-Tunnels und DDNS-Provider. Die Import-Feldlisten entsprechen den tatsächlichen Modellen. Unbekannte Top-Level-Felder werden vor der Datenbankoperation verworfen; Benutzerberechtigungen und Access-List-Kindobjekte werden separat bereinigt. Proxy-Domains werden beim Import in die normalisierte `host_domains`-Relation umgewandelt.
 
 Neue Objekte behalten ihre positiven ganzzahligen Export-IDs, damit Zertifikats-, Benutzer- und Access-List-Referenzen erhalten bleiben. DDNS-Provider haben kein `is_deleted`-Feld; der Import fügt diese Spalte nicht hinzu.
 

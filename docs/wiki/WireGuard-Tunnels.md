@@ -49,7 +49,7 @@ The concept is simple: ShieldPM acts as a WireGuard server on your cloud VPS (wi
 
 ### Docker Deployment
 
-Your `compose.yaml` needs these additions:
+The included `compose.yaml` runs ShieldPM with `network_mode: host`. Uncomment its WireGuard capability and device examples:
 
 ```yaml
 services:
@@ -58,12 +58,18 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_RAW
-    sysctls:
-      net.ipv4.ip_forward: 1
-      net.ipv4.conf.all.src_valid_mark: 1
     devices:
       - /dev/net/tun:/dev/net/tun
 ```
+
+With host networking, configure forwarding and any required `src_valid_mark` setting **on the Docker host**, not through Compose service `sysctls`:
+
+```bash
+sudo sysctl -w net.ipv4.ip_forward=1
+sudo sysctl -w net.ipv4.conf.all.src_valid_mark=1
+```
+
+Persist host settings in your system's `/etc/sysctl.d/` configuration if needed. Allow the selected UDP listen port in the VPS firewall. In a custom bridged Compose setup, publish that UDP port and ensure container and host routing let Nginx reach peer tunnel addresses.
 
 ### Native / LXC Deployment
 
@@ -87,10 +93,11 @@ WireGuard settings are configured **directly in the ShieldPM UI** — no environ
 3. Configure:
    - **Server Endpoint**: Your VPS domain or public IP (e.g., `vpn.example.com` or `203.0.113.10`)
    - **Listen Port**: UDP port for WireGuard (default: `51820`)
-   - **VPN Subnet**: Internal tunnel network (default: `10.8.0.0/24`)
+   - **VPN Subnet**: Internal IPv4 tunnel network (default: `10.8.0.0/24`)
+   - **Server Address**: Interface address inside that subnet (default: `10.8.0.1/24`)
 4. Click **Save**.
 
-> ⚠️ **Important**: You **must** set the Server Endpoint before creating peers. Without it, generated client configs won't have a valid endpoint address.
+> ⚠️ **Important**: Set the Server Endpoint to a reachable public address before distributing client configurations. If it is empty, the generated client config contains a commented `Endpoint = <your-server-ip>:51820` placeholder that you must replace before connecting.
 
 ### Step 2: Create a Peer
 
@@ -98,7 +105,7 @@ WireGuard settings are configured **directly in the ShieldPM UI** — no environ
 2. Fill in:
    - **Peer Name**: A friendly identifier (e.g., `Home Raspberry Pi`)
    - **Description** *(optional)*: What services run on this peer
-   - **Allowed IPs**: Default `10.8.0.0/24` (tunnel-only traffic). Use `0.0.0.0/0, ::/0` for full VPN mode.
+   - **Allowed IPs**: Default `10.8.0.0/24` (send the IPv4 tunnel subnet through the VPN). A broader value such as `0.0.0.0/0` changes client routing; see the routing note below before using full-tunnel mode.
    - **Keepalive**: `25` seconds (recommended for NAT traversal)
    - **DNS**: `1.1.1.1` or your preferred DNS
 3. Click **Save**.
@@ -139,9 +146,10 @@ Your home service is now securely accessible via `https://nextcloud.example.com`
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| **Server Endpoint** | *(empty)* | Domain or IP clients connect to. **Required.** |
+| **Server Endpoint** | *(empty)* | Domain or IP clients connect to; fill it before using a generated client config. |
 | **Listen Port** | `51820` | UDP port for WireGuard traffic |
 | **VPN Subnet** | `10.8.0.0/24` | Internal tunnel network. Server gets `.1`. |
+| **Server Address** | `10.8.0.1/24` | WireGuard interface address inside that subnet. |
 
 ## 🔐 Security
 
@@ -153,7 +161,9 @@ Your home service is now securely accessible via `https://nextcloud.example.com`
 
 ### Network Isolation
 
-By default, peers can only reach the ShieldPM server (`10.8.0.1`) and services routed through Nginx. The `AllowedIPs = 10.8.0.0/24` setting restricts traffic to tunnel-only mode.
+`AllowedIPs` in the generated **client** config controls which destination prefixes the client sends through the tunnel. The server config independently routes each peer's assigned address. The generated `wg0.conf` accepts traffic arriving on `wg0` and forwards it via firewall rules; it does **not** enforce peer-to-peer or server-service isolation. Add your own firewall policy if peers must not reach other tunnel peers or services.
+
+The current generated NAT rule masquerades traffic leaving interface `eth0`. Check your VPS interface name and firewall routing before relying on full-tunnel IPv4 internet access, especially with Docker host networking. The server settings and peer address allocation currently use IPv4 subnets; adding `::/0` to a client does not create an IPv6 server tunnel, address or NAT path.
 
 ### Demo Mode
 
@@ -230,13 +240,17 @@ If you're migrating from a different WireGuard setup, ensure the subnet doesn't 
 | Feature | ShieldTunnel (WireGuard) | Cloudflare Tunnels | Tor Onion Services |
 |---------|:------------------------:|:------------------:|:------------------:|
 | Self-hosted | ✅ | ❌ (Cloudflare) | ✅ |
-| Speed | ⚡ Very fast | 🔵 Fast | 🐢 Slow |
-| Latency | ~1ms overhead | ~10-50ms overhead | ~200-500ms |
+| Performance | Depends on VPS, peer uplink and routing | Depends on Cloudflare route and origin | Depends on Tor circuit and backend |
 | CGNAT bypass | ✅ | ✅ | ✅ |
 | Open ports needed | UDP (VPS) | None | None |
-| DDoS protection | ❌ (manual) | ✅ (built-in) | ✅ (Tor) |
-| Privacy | 🟡 VPS IP visible | 🟡 CF sees traffic | ✅ Full anonymity |
-| Protocol | UDP (WireGuard) | QUIC (HTTP/2) | TCP (Tor circuits) |
+| DDoS protection | Depends on VPS/network controls | Depends on Cloudflare configuration | Depends on Tor network and service limits |
+| Exposure | VPS endpoint is reachable on its WireGuard UDP port | Cloudflare handles the public hostname | Onion address is reached through Tor; server anonymity depends on deployment |
+| Protocol | UDP (WireGuard) | Outbound cloudflared tunnel | Tor onion service |
 
 ---
-[🏠 Home](Home) | [☁️ Cloudflare Tunnels](Cloudflared-Tunnels) | [🧅 Tor Onion Services](Tor-Onion-Services) | [🔒 Security](Security)
+## Related pages
+
+- [Home](./Home.md)
+- [Cloudflare Tunnels](./Cloudflared-Tunnels.md)
+- [Tor Onion Services](./Tor-Onion-Services.md)
+- [Security](./Security.md)

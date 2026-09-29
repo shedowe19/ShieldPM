@@ -6,7 +6,7 @@ Protokollierung sicherheitsrelevanter Ereignisse und administrativer Aktionen.
 
 ## Kontext
 
-Um Änderungen im System nachvollziehbar zu machen (z.B. Erstellung eines Proxy-Hosts, Login-Versuche), zeichnet das Audit-Log diese Aktionen auf.
+Um Änderungen im System nachvollziehbar zu machen (z. B. die Erstellung eines Proxy-Hosts), schreiben Fachservices Audit-Einträge. Anmeldeversuche oder Chat-Nachrichten sind nicht automatisch Teil dieser Tabelle. Für einen manipulationssicheren Nachweis oder ein vollständiges Security-Log ist die Tabelle allein nicht ausgelegt.
 
 ## Wichtige Dateien
 

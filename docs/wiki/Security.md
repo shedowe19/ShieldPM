@@ -51,7 +51,7 @@ ShieldPM provides a **layered security architecture** that protects your service
 | **[CrowdSec](CrowdSec)** | IPS | Brute force, botnets, known malicious IPs | Sidecar / System service |
 | **[ModSecurity](ModSecurity)** | WAF | SQL injection, XSS, path traversal | Per-host toggle |
 | **[OpenAppSec](OpenAppSec)** | AI WAF | Zero-day attacks, unknown patterns | Module + Agent |
-| **[Anubis](Anubis)** | AI Firewall | AI crawlers, automated bots, scrapers | Environment variable |
+| **[Anubis](Anubis)** | Bot challenge | AI crawlers, automated bots, scrapers | Per-host rules; optional `ANUBIS_ENABLED` |
 | **[Access Lists](Access-Lists)** | ACL | Unauthorized access | Per-host assignment |
 | **[OAuth2-Proxy](OAuth2-Proxy)** | SSO | Unauthorized access via Identity Provider | Per-host assignment |
 | **[Rate Limiting](Request-Rate-Limiting)** | DDoS | Abuse, scraping, brute force | Per-host config |
@@ -71,8 +71,8 @@ ShieldPM supports modern TLS protocols out of the box:
 | :--- | :--- | :--- |
 | **TLS 1.3** | ✅ Default | Fastest, most secure |
 | **TLS 1.2** | ✅ Supported | For older client compatibility |
-| **HTTP/3 (QUIC)** | ✅ Enabled | UDP-based, improved mobile performance |
-| **ML-KEM-768** | ✅ Available | Post-quantum key exchange (via Internal PKI) |
+| **HTTP/3 (QUIC)** | ✅ When enabled | Requires UDP listener and `DISABLE_H3_QUIC=false` |
+| **ML-KEM-768** | Conditional | Hybrid key exchange depends on the Nginx/OpenSSL build and client support; internal CA signatures remain ECDSA |
 
 ### Certificate Management
 
@@ -99,6 +99,9 @@ ShieldPM supports modern TLS protocols out of the box:
 - [ ] SSL certificates configured for all public hosts
 - [ ] HTTP/3 enabled (UDP 443 open)
 - [ ] Regular backups via [GitOps](GitOps) or manual `tar`
+
+> [!WARNING]
+> Use a **private, access-controlled repository** for GitOps. The current export serializes configuration fields such as DDNS provider credentials, Cloudflared tunnel tokens, and Access List metadata to YAML. Review repository access and rotate exposed credentials if such an export has ever been pushed to a public remote. GitOps does not replace a full backup of private certificate keys or the database.
 
 ---
 

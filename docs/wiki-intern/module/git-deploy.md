@@ -17,7 +17,7 @@ Typische Anwendungsfälle:
 
 ## Wichtige Dateien
 
-- `backend/internal/git-deploy.js` (~417 Zeilen) — Klonen, Pullen, Branch-Wechsel, Auth-Handling
+- `backend/internal/git-deploy.js` — Klonen, Pullen, Branch-Wechsel, Auth-Handling
 - `backend/migrations/20260119000000_add_git_sync.js` — Git-Sync-Felder pro Host
 - `frontend/src/components/GitSyncTab.tsx` — UI-Tab im Host-Modal
 - `frontend/src/hooks/useGitSync.ts` — React-Query-Hook
@@ -27,7 +27,7 @@ Typische Anwendungsfälle:
 1. Pro Proxy-Host mit Weiterleitungsschema `path` kann eine Git-Konfiguration hinterlegt werden (`git_repo_url`, `git_branch`, `git_poll_interval`, `git_poll_unit`, optional Auth-Daten).
 2. `internal/git-deploy.js` klont/aktualisiert das Repo (via `isomorphic-git`) in ein Verzeichnis pro Host unter `/data/`.
 3. Beim Branch-Wechsel wird das Repo neu geklont, sonst wird ein `git pull` ausgeführt.
-4. Bei jedem erfolgreichen Sync wird `forward_host` auf das ausgecheckte Verzeichnis gesetzt und Nginx neu geladen.
+4. Ein erfolgreicher Sync setzt `forward_host` bei Bedarf auf `/data/websites/host-<id>` und generiert dabei die Nginx-Konfiguration neu. Bei unverändertem Root-Pfad erfolgt kein solcher Reload pro Polling.
 5. **Trigger**: pro Host ein eigener `setInterval`-Timer (`git_poll_interval` × `git_poll_unit`, z. B. 5 minutes). Manuelle Sync-Trigger sind über die UI möglich.
 6. Im Demo-Modus ist das Polling deaktiviert.
 

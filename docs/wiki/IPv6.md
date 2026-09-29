@@ -1,6 +1,6 @@
 # IPv6 Configuration
 
-ShieldPM fully supports IPv6 for both incoming traffic and upstream connections. This guide explains how to configure IPv6 in different deployment environments.
+ShieldPM can listen on IPv6 and reach IPv6 upstreams when the host or container has working IPv6 networking. Listener settings do not provision IPv6 connectivity by themselves.
 
 ---
 
@@ -22,7 +22,7 @@ ShieldPM fully supports IPv6 for both incoming traffic and upstream connections.
 
 ## 🐳 Docker & IPv6
 
-By default, Docker containers **do not** have IPv6 connectivity. The standard bridge network is IPv4-only.
+IPv6 availability in a Docker container depends on the Docker daemon, its networks, and the host's routing. Check the actual network configuration before using an IPv6 upstream.
 
 ### Option 1: Host Network Mode (Easiest)
 
@@ -51,7 +51,6 @@ To use IPv6 with a bridge network, you need to enable IPv6 in Docker **and** you
 {
   "ipv6": true,
   "fixed-cidr-v6": "fd00:dead:beef::/48",
-  "experimental": true,
   "ip6tables": true
 }
 ```
@@ -87,6 +86,8 @@ networks:
 > [!IMPORTANT]
 > Use a **unique local address (ULA)** prefix like `fd00:` for Docker internal networks, not public IPv6 prefixes.
 
+The ULA in this example is for container-to-container connectivity. To serve external IPv6 clients, the Docker host must have a reachable IPv6 address and an appropriate published listener/firewall path; to reach external IPv6 upstreams, the container needs a working route. Publishing a port and adding a ULA alone do not establish public IPv6 routing.
+
 ---
 
 ## 📦 Native / LXC & IPv6
@@ -106,10 +107,10 @@ Control how ShieldPM listens on IPv6 via `compose.yaml` or `/data/.env`:
 | `IPV6_BINDING` | Bind to a specific IPv6 address | `[::]` (all) |
 | `NPM_IPV6_BINDING` | Bind Admin UI to specific IPv6 address | `[::]` (all) |
 | `GOA_IPV6_BINDING` | Bind Analytics to specific IPv6 address | `[::]` (all) |
-| `DISABLE_IPV6` | Completely disable all IPv6 listeners | `false` |
+| `DISABLE_IPV6` | Disable the generated Nginx IPv6 listeners, including hosts, streams, admin UI and GoAccess | `false` |
 
 > [!TIP]
-> Set `DISABLE_IPV6=true` if your environment does not support IPv6. This prevents "Address family not supported by protocol" errors in the logs.
+> Set `DISABLE_IPV6=true` if the environment cannot bind IPv6 listeners. This does not disable IPv6 DNS answers or fix outbound IPv6 routing to upstreams.
 
 ---
 
@@ -117,7 +118,7 @@ Control how ShieldPM listens on IPv6 via `compose.yaml` or `/data/.env`:
 
 ### "Address family not supported by protocol"
 
-Your system or Docker container doesn't have IPv6 support.
+The Nginx process cannot create the configured IPv6 listener in this environment.
 
 **Fix:** Set `DISABLE_IPV6=true` in your environment.
 
@@ -138,4 +139,7 @@ DNS resolution returned an IPv6 address that Docker can't route.
 
 ---
 
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)
+## Related pages
+
+- [Home](./Home.md)
+- [Proxy Hosts](./Proxy-Hosts.md)

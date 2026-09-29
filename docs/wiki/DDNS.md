@@ -1,84 +1,31 @@
 # Dynamic DNS (DDNS)
 
-ShieldPM includes a built-in Dynamic DNS (DDNS) client that can automatically update your DNS records when your public IP address changes. This eliminates the need for running separate containers like `ddclient` or `oznu/cloudflare-ddns`.
+ShieldPM can update DNS records when the public address seen by its backend changes. Create a provider in **DDNS Providers** and select whether it should update IPv4, IPv6, or both. This does not make a service behind CGNAT reachable on IPv4 by itself.
 
----
+## Supported providers
 
-## 🏗️ Architecture
+| Provider   | Configuration                                                             | Update behavior                                                                                |
+| ---------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Cloudflare | Zone ID, API token with permission to edit DNS in that zone, domain names | Updates existing A and/or AAAA records for each configured name.                               |
+| DuckDNS    | DuckDNS token and domain names                                            | Sends the selected public IPv4/IPv6 addresses to DuckDNS.                                      |
+| Custom URL | HTTP(S) update URL and domain names                                       | Sends a GET to a publicly routable URL; replaces `{IP}` or `{IPv4}`, `{IPv6}`, and `{DOMAIN}`. |
 
-```
-  ┌──────────────┐         ┌──────────────────────────────────┐
-  │  ShieldPM     │────────▶│  IP Detection Service            │
-  │  DDNS Client  │         │  (ipify.org / icanhazip.com)    │
-  └──────┬───────┘         └──────────────────────────────────┘
-         │                          │
-         │ IP changed?              │ Current Public IP
-         │◀─────────────────────────┘
-         │
-         │ YES → Update DNS
-         ▼
-  ┌──────────────────────────────────┐
-  │  DNS Provider API                │
-  │  ┌────────┐ ┌────────┐ ┌──────┐ │
-  │  │Cloudfl.│ │DuckDNS │ │Custom│ │
-  │  └────────┘ └────────┘ └──────┘ │
-  └──────────────────────────────────┘
-```
+Enter the domain names in the provider form. Choose the IP version appropriate for that provider and record. For a custom URL, placeholders for an unavailable IP version become empty. Custom URL requests reject localhost, private or reserved network addresses, and redirects; the resolved address is checked again when connecting. A custom endpoint on your private LAN will therefore not work.
 
----
+## Detection and updates
 
-## Key Features
+- IPv4 is detected through `https://api.ipify.org?format=json`; IPv6 through `https://api6.ipify.org?format=json`. The latter contributes an IPv6 address only if the request actually returns IPv6.
+- The backend checks every 60 seconds and shortly after startup. It updates a provider when a selected public IP differs from that provider's last successful address, or retries a previous error. Creating or changing a provider triggers a forced run.
+- The provider list displays the last IPv4/IPv6 values, last update, and error. The provider form offers a **Test** action for an immediate update of a saved provider.
 
-* **Dual Stack Support**: Updates both IPv4 (A records) and IPv6 (AAAA records) simultaneously.
-* **Multiple Providers**: Support for Cloudflare, DuckDNS, and Custom HTTP endpoints.
-* **GitOps Integration**: All DDNS configurations are automatically backed up and versioned if [GitOps](GitOps) is enabled.
-* **Smart Polling**: Checks for IP changes every 60 seconds (configurable via code, default) and only triggers updates when necessary.
+If the backend cannot reach an IP detection service over the required address family, it cannot update that address family. Verify outbound connectivity before troubleshooting the DNS record itself.
 
-## Supported Providers
+## GitOps and credentials
 
-### 1. Cloudflare
+When GitOps is configured, DDNS provider entries are exported to `ddns-providers/*.yaml` and can be restored. **Treat the GitOps repository as sensitive:** provider `config` contains the Cloudflare/DuckDNS token or custom update URL, and those values are included in the YAML export. Keep the repository private, control access and backups, and rotate a token if it has been exposed. GitOps connection testing warns when a repository appears public.
 
-Updates DNS records for domains managed by Cloudflare.
+## Related pages
 
-**Configuration:**
-
-* **Zone ID**: The Zone ID of your domain (found in the Cloudflare Dashboard overview).
-* **API Token**: A Cloudflare API Token (NOT the Global API Key) with the following permissions:
-  * `Zone.DNS`: Edit
-* **Domains**: Comma-separated list of subdomains to update (e.g., `vpn.example.com, home.example.com`).
-
-### 2. DuckDNS
-
-Updates a `*.duckdns.org` domain.
-
-**Configuration:**
-
-* **Token**: Your DuckDNS account token.
-* **Domains**: Comma-separated list of subdomains (e.g., `my-home` for `my-home.duckdns.org`).
-
-### 3. Custom / Webhook
-
-Send a GET request to a custom URL when the IP changes. Useful for other providers that support update-via-URL (like DynDNS, No-IP) or for triggering webhooks.
-
-**Configuration:**
-
-* **Update URL**: The URL to request. You can use `{IP}` as a placeholder which will be replaced by the detected IP address.
-  * Example: `https://dyn.example.com/update?hostname=myhome&myip={IP}`
-
-## IP Detection
-
-ShieldPM automatically detects your public IP addresses using external echo services:
-
-* **IPv4**: `https://api.ipify.org`, `https://ipv4.icanhazip.com`
-* **IPv6**: `https://api6.ipify.org`, `https://ipv6.icanhazip.com`
-
-If you are behind a CGNAT (Carrier Grade NAT), IPv4 detection might return the carrier's shared IP, which is not reachable from the outside. However, IPv6 often works correctly in these scenarios.
-
-## GitOps Backup & Restore
-
-If you have configured **[GitOps Synchronization](GitOps)**, your DDNS providers are automatically:
-
-* **Exported**: Saved as YAML files in the `ddns-providers/` folder of your Git repository.
-* **Restored**: Automatically re-created when you run a "Restore" or "Import from Git" operation.
-
-This ensures you can rebuild your entire stack without re-entering API tokens.
+- [GitOps](./GitOps.md)
+- [Cloudflare Tunnels](./Cloudflared-Tunnels.md)
+- [IPv6](./IPv6.md)

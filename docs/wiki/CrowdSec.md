@@ -38,7 +38,7 @@
 
 **Key Points:**
 
-- The **Lua Bouncer** is built into Nginx and checks every request against CrowdSec decisions
+- The **Lua Bouncer** is available in Nginx. ShieldPM invokes it on a Proxy Host only when that host's CrowdSec option is enabled; the global bouncer configuration also needs `ENABLED=true` and a valid API key.
 - The **Agent** continuously parses Nginx logs and creates ban decisions for malicious IPs
 - Communication between Bouncer and Agent uses the **Local API** (HTTP on port 8080)
 - Decisions are cached locally for sub-millisecond lookup performance
@@ -55,7 +55,7 @@ To enable CrowdSec with ShieldPM, you need two components: the **Agent** (analyz
 
 > [!IMPORTANT]
 > **Initialization Order Matters!**
-> ShieldPM creates the necessary configuration files (`parser.yaml`, `collection.yaml`) on first boot in your data directory.
+> ShieldPM copies the bundled `parser.yaml`, `collection.yaml`, and `shieldpm-acquis.yaml` to `/data/crowdsec/` on first boot. The bind-mounted files must exist before CrowdSec starts.
 > **You must start ShieldPM FIRST** before enabling the CrowdSec container.
 >
 > 1. Start ShieldPM (`docker compose up -d shieldpm`).
@@ -67,7 +67,7 @@ To enable CrowdSec with ShieldPM, you need two components: the **Agent** (analyz
 ### 2. The Agent
 
 Add the CrowdSec container to your `compose.yaml`.
-**Important:** ShieldPM automatically provisions the necessary Parser and Collection configurations to your data directory (default: `data/crowdsec/`). You **must** mount these into the CrowdSec container.
+**Important:** ShieldPM provisions the three files in its `/data/crowdsec/` directory. The example assumes the ShieldPM data directory is bind-mounted from `/opt/shieldpm` on the Docker host (as in the repository's `compose.yaml`). Adapt all three file mounts if you use another host path.
 
 ```yaml
 crowdsec:
@@ -75,16 +75,17 @@ crowdsec:
   image: docker.io/crowdsecurity/crowdsec:latest
   restart: always
   network_mode: bridge
+  ports:
+    - "127.0.0.1:8080:8080"
   environment:
     - "TZ=Europe/Berlin"
     - "COLLECTIONS=crowdsecurity/nginx crowdsecurity/base-http-scenarios crowdsecurity/http-cve crowdsecurity/modsecurity crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules"
   volumes:
-    - "./crowdsec-db:/var/lib/crowdsec/data"
-    - "./crowdsec-config:/etc/crowdsec"
+    - "/opt/crowdsec/data:/var/lib/crowdsec/data"
+    - "/opt/crowdsec/conf:/etc/crowdsec"
     - "/opt/shieldpm/nginx:/opt/shieldpm/nginx:ro" # Read logs from ShieldPM
     # Mount ShieldPM Custom Configs
-    # ⚠️ STANDARD PATH: /opt/shieldpm/crowdsec/
-    # Verify this matches your 'volumes' in shieldpm service!
+    # Verify these paths match the data volume of the shieldpm service.
     - "/opt/shieldpm/crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"
     - "/opt/shieldpm/crowdsec/collection.yaml:/etc/crowdsec/collections/shieldpm.yaml:ro"
     - "/opt/shieldpm/crowdsec/shieldpm-acquis.yaml:/etc/crowdsec/acquis.d/shieldpm.yaml:ro"
@@ -107,12 +108,15 @@ crowdsec:
    _Copy the API Key printed._
 
 2. **Configure ShieldPM:**
-   Edit `data/crowdsec/crowdsec.conf`:
+   Edit `/opt/shieldpm/crowdsec/crowdsec.conf` on the Docker host (or `/data/crowdsec/crowdsec.conf` inside ShieldPM):
 
    ```ini
    API_KEY=your-generated-key
-   API_URL=http://<crowdsec-container-ip>:8080
+   API_URL=http://127.0.0.1:8080
+   ENABLED=true
    ```
+
+   The repository's Compose example publishes the CrowdSec Local API on host loopback (`127.0.0.1:8080:8080`) and runs ShieldPM with host networking. If you change that topology, set `API_URL` to the address reachable from ShieldPM.
 
 3. **Restart ShieldPM:**
 
@@ -178,10 +182,17 @@ If you skipped CrowdSec during installation or want to add it later:
 
    ```bash
    cscli hub update
-   cscli parsers install shedowe19/shieldpm-logs
+   mkdir -p /etc/crowdsec/parsers/s01-parse /etc/crowdsec/collections
+   curl -fsSL -o /etc/crowdsec/parsers/s01-parse/shieldpm.yaml \
+     https://raw.githubusercontent.com/shedowe19/ShieldPM/develop/rootfs/etc/crowdsec/parser.yaml
+   curl -fsSL -o /etc/crowdsec/collections/shieldpm.yaml \
+     https://raw.githubusercontent.com/shedowe19/ShieldPM/develop/rootfs/etc/crowdsec/collection.yaml
    cscli collections install crowdsecurity/base-http-scenarios
    cscli collections install crowdsecurity/http-cve
    cscli collections install crowdsecurity/appsec-virtual-patching
+   cscli collections install crowdsecurity/appsec-generic-rules
+   cscli collections install crowdsecurity/modsecurity
+   cscli scenarios install crowdsecurity/nginx-req-limit-exceeded
    ```
 
 4. **Generate Bouncer Key & Configure:**

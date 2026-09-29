@@ -18,6 +18,8 @@ Beschreibung der OpenAPI/Swagger Schema-Struktur.
 
 Die API verwendet `ajv` (Another JSON Schema Validator) zur Validierung eingehender Requests gegen die definierten Schemas.
 
+Die OpenAPI-Spezifikation bildet nicht jede implementierte Route ab. Insbesondere fehlen die Analytics-Routen unter `/api/analytics` und `/api/nginx/analytics` sowie einzelne Integrationsrouten in `swagger.json`; die realen Express-Routen in `backend/routes/` bleiben hierfür maßgeblich. Eine vollständige Endpunktabdeckung der interaktiven Dokumentation darf deshalb nicht angenommen werden.
+
 Datei: `backend/validate-schema.js`
 
 Parallele Aufrufe des Loaders teilen sich dieselbe laufende Kompilierung. Nach einem Lesefehler darf der nächste Aufruf erneut kompilieren; ein erfolgreiches Ergebnis wird im Speicher wiederverwendet. Die Versionsnummer stammt aus `backend/package.json`, auch bei `/docs/swagger.json`.

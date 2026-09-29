@@ -6,11 +6,11 @@ Dokumentation der API-Client-Dateien unter `frontend/src/api/backend/`.
 
 ## Kontext
 
-Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src/hooks/` nutzen diese Dateien, um React Query Queries und Mutations zu definieren.
+Die aufrufspezifischen Dateien repräsentieren einzelne API-Operationen; `base.ts`, Modelle und Typmodule bündeln gemeinsame Logik. Die Hooks in `frontend/src/hooks/` nutzen die Operationen für React-Query-Abfragen und -Mutationen.
 
 ## Verhalten
 
-- Jede Datei exportiert eine Funktion, die einen HTTP-Aufruf an die Backend-API macht
+- Die aufrufspezifischen Module exportieren Funktionen für HTTP-Aufrufe an die Backend-API
 - Gruppiert nach CRUD-Operationen (create, get, getAll, update, delete, toggle)
 - JSON-Anfragen werden rekursiv nach `snake_case`, Antworten nach `camelCase` konvertiert. Die Frontend-Modelle und Formularwerte für KI, DDNS und ChatOps verwenden deshalb unter anderem `apiKey`, `baseUrl`, `numCtx`, `ipVer`, `zoneId` und `allowedIds`. Integrationstests mit unveränderten Backend-JSON-Antworten sichern das Lesen und Zurückschreiben dieser Felder.
 - Header-Wörterbücher (`headers`, `headers_regex` beziehungsweise `headersRegex`) bewahren ihre enthaltenen Schlüssel in beiden Richtungen. So wird beispielsweise eine Anubis-Regel für `User-Agent` beim Bearbeiten nicht versehentlich zu einer Regel für `user_agent`; umgebende API-Felder werden weiterhin konvertiert. Ein API-Roundtrip-Test prüft auch mehrere verschachtelte Regeln.
@@ -31,7 +31,7 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 
 ### Proxy-Hosts
 
-`createProxyHost.ts`, `getProxyHost.ts`, `getProxyHosts.ts`, `updateProxyHost.ts`, `deleteProxyHost.ts`, `toggleProxyHost.ts`
+`createProxyHost.ts`, `getProxyHost.ts`, `getProxyHosts.ts`, `updateProxyHost.ts`, `deleteProxyHost.ts`, `toggleProxyHost.ts`, `diagnoseProxyHost.ts`, `previewProxyHost.ts`, `proxyHostMonitor.ts`
 
 ### Redirection-Hosts
 
@@ -47,7 +47,7 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 
 ### Zertifikate
 
-`createCertificate.ts`, `getCertificate.ts`, `getCertificates.ts`, `deleteCertificate.ts`, `renewCertificate.ts`, `uploadCertificate.ts`, `validateCertificate.ts`, `getDnsProviders.ts`, `getCertificateDNSProviders.ts`, `downloadCertificate.ts`, `downloadRootCa.ts`, `testHttpCertificate.ts`
+`createCertificate.ts`, `getCertificate.ts`, `getCertificates.ts`, `deleteCertificate.ts`, `renewCertificate.ts`, `uploadCertificate.ts`, `validateCertificate.ts`, `getCertificateDNSProviders.ts`, `downloadCertificate.ts`, `downloadRootCa.ts`, `testHttpCertificate.ts`
 
 ### Access-Lists
 
@@ -59,7 +59,7 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 
 ### Cloudflare Tunnels
 
-`createCloudflaredTunnel.ts`, `getCloudflaredTunnel.ts`, `getCloudflaredTunnels.ts`, `updateCloudflaredTunnel.ts`, `deleteCloudflaredTunnel.ts`
+`createCloudflaredTunnel.ts`, `getCloudflaredTunnels.ts`, `updateCloudflaredTunnel.ts`, `deleteCloudflaredTunnel.ts`
 
 ### Tor Onion
 
@@ -103,19 +103,15 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 
 ### Analytics
 
-`getAnalyticsSeries.ts`, `getAnalyticsSummary.ts`
+`getAnalyticsSeries.ts`, `getAnalyticsSummary.ts`, `getAnalyticsStatus.ts`, `getAnalyticsTopHosts.ts`
 
 ### Audit-Log
 
 `getAuditLog.ts`, `getAuditLogs.ts`
 
-### Docker
+### Berechtigungen
 
-`getDockerContainers.ts`
-
-### Permissions
-
-`setUserPermissions.ts`
+`setPermissions.ts` (unter „Benutzer“ bereits aufgeführt)
 
 ## Abhängigkeiten
 

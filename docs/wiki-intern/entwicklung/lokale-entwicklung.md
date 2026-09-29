@@ -18,7 +18,7 @@ Tipps und Hinweise für die tägliche Entwicklungsarbeit.
 
 1. Backend und Frontend parallel starten
 2. Frontend kommuniziert über API-Proxy mit Backend
-3. Änderungen am Backend werden durch Nodemon automatisch neu geladen
+3. Änderungen am Backend erfordern einen manuellen Neustart von `yarn dev` (`backend/package.json` startet direkt `node index-dev.js`)
 4. Änderungen am Frontend werden durch Vite HMR sofort reflektiert
 
 ## Datenbank-Migrationen

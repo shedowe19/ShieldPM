@@ -17,29 +17,24 @@ When you access ShieldPM for the first time, a **Setup Wizard** guides you throu
 
 Security headers add an extra layer of protection for visitors:
 
-| Header | Variable | Recommended Value | Description |
-| :--- | :--- | :--- | :--- |
-| **HSTS** | `NGINX_HSTS_SUBDOMAINS` | `true` | Forces HTTPS on all subdomains |
-| **X-Frame-Options** | `X_FRAME_OPTIONS` | `sameorigin` | Prevents clickjacking attacks |
+| Header              | Variable                                           | Recommended Value                                              | Description                                                                     |
+| :------------------ | :------------------------------------------------- | :------------------------------------------------------------- | :------------------------------------------------------------------------------ |
+| **HSTS**            | Proxy Host `HSTS` setting; `NGINX_HSTS_SUBDOMAINS` | Enable per host after verifying HTTPS for the affected domains | Advertises HTTPS to browsers; the subdomain option applies when HSTS is enabled |
+| **X-Frame-Options** | `X_FRAME_OPTIONS`                                  | `sameorigin`                                                   | Prevents clickjacking attacks                                                   |
 
 ### Block Common Exploits
 
-Enable **Block Exploits** on every Proxy Host. This activates built-in Nginx rules that block:
-
-- SQL injection attempts
-- Path traversal attacks (`../../etc/passwd`)
-- Known vulnerability scanners
-- Malformed HTTP requests
+Enable **Block Exploits** where appropriate and test the upstream application. This turns on ModSecurity rules for that Proxy Host; inspect ModSecurity logs if legitimate requests are blocked.
 
 ### Network Isolation (Docker)
 
-| Mode | Security | Performance | When to Use |
-| :--- | :--- | :--- | :--- |
-| **Bridge** (default) | ✅ Isolated | Good | Most setups |
-| **Host** | ⚠️ Shared stack | Best | When you need real client IPs or IPv6 |
+| Mode                          | Security                   | Performance | When to Use                                                    |
+| :---------------------------- | :------------------------- | :---------- | :------------------------------------------------------------- |
+| **Bridge**                    | Separate network namespace | Good        | Simple published-port installations                            |
+| **Host** (repository samples) | Host network namespace     | Good        | Direct host listeners and integrations needing host networking |
 
 > [!TIP]
-> If using Bridge mode, ShieldPM automatically fetches and applies Cloudflare/CDN IP ranges so that the real client IP is preserved in logs and Access Lists.
+> Cloudflare IP-range fetching is **off by default** (`SKIP_IP_RANGES=true`). Enable it only when needed and configure trusted upstreams carefully. The setting is independent of Docker's network mode; it does not automatically preserve client IPs behind every CDN.
 
 ### Admin UI Access
 
@@ -47,7 +42,7 @@ Restrict access to the Admin UI (port 81) from the public internet:
 
 - Set `NPM_LISTEN_LOCALHOST=true` to bind the Admin UI to localhost only
 - Access it through a Cloudflare Tunnel, VPN, or SSH tunnel
-- Or create a Proxy Host for the Admin UI with an Access List (Basic Auth or OAuth2)
+- If you create a Proxy Host for the Admin UI with an Access List or OAuth2, also block direct access to port 81 with a firewall or bind it to localhost; the Proxy Host does not close the direct listener
 
 ---
 
@@ -55,17 +50,17 @@ Restrict access to the Admin UI (port 81) from the public internet:
 
 ### What to Backup
 
-| Data | Location | Critical |
-| :--- | :--- | :---: |
-| Database | `/data/database.sqlite` | ✅ |
-| SSL Certificates | `/data/tls/` | ✅ |
-| Configuration | `/data/nginx/` | ⚠️ (regenerated) |
-| Keys | `/data/shieldpm/keys.json` | ✅ |
-| Access Lists | `/data/access/` | ✅ |
-| Tor Keys | `/data/tor/` | ⚠️ (if using Onion Services) |
+| Data             | Location                                                        |           Critical           |
+| :--------------- | :-------------------------------------------------------------- | :--------------------------: |
+| Database         | `/data/shieldpm/database.sqlite` (or an external database dump) |              ✅              |
+| SSL Certificates | `/data/tls/`                                                    |              ✅              |
+| Configuration    | `/data/nginx/`                                                  |       ⚠️ (regenerated)       |
+| Keys             | `/data/shieldpm/keys.json`                                      |              ✅              |
+| Access Lists     | `/data/access/`                                                 |              ✅              |
+| Tor Keys         | `/data/tor/`                                                    | ⚠️ (if using Onion Services) |
 
 > [!TIP]
-> Use [GitOps](GitOps) to automatically back up your configuration to a Git repository after every change. This gives you versioned, off-site backups with zero effort.
+> [GitOps](GitOps) can auto-push versioned configuration when enabled. It is not a complete backup: certificate private keys are excluded from exported certificate files, and service credentials may appear in YAML. Keep the repository private and back up `/data` separately.
 
 ### Backup Commands
 
@@ -86,8 +81,8 @@ systemctl start shieldpm
 Set up a cron job for automated daily backups:
 
 ```bash
-# Add to crontab (crontab -e)
-0 3 * * * tar -czf /backups/shieldpm-$(date +\%F).tar.gz /data 2>/dev/null
+# Stop the service before archiving SQLite, or make a consistent SQLite snapshot first.
+# See Backup & Restore for complete procedures.
 ```
 
 ---
@@ -103,13 +98,9 @@ HTTP/3 uses UDP instead of TCP and is significantly faster on high-latency or lo
 - UDP port 443 must be open in your firewall
 - In Docker: expose port `443/udp` (see [Docker Compose Reference](Docker-Compose-Reference))
 
-### Enable Caching
+### Test Caching per Application
 
-For static sites (blogs, documentation, landing pages), enable **Cache Assets** in the Proxy Host settings:
-
-- Serves images, CSS, and JS directly from Nginx disk cache
-- Reduces load on your backend by 50-90%
-- Automatically invalidated when the backend updates
+Enable the Proxy Host's **Cache Assets** option only after checking the generated configuration and your application's cache behavior. Do not assume automatic invalidation or a fixed performance gain for dynamic responses.
 
 ### Worker Tuning
 
@@ -125,14 +116,14 @@ NGINX_WORKER_CONNECTIONS=4096
 
 ### Database Choice
 
-| Database | Best For | Concurrent Users |
-| :--- | :--- | :--- |
-| **SQLite** | Home/Small setups | 1-5 admins |
-| **MySQL/MariaDB** | Medium/Production | 5-50 admins |
-| **PostgreSQL** | Enterprise/Large | 50+ admins |
+| Database          | Typical fit                                             |
+| :---------------- | :------------------------------------------------------ |
+| **SQLite**        | Small installations without a separate database service |
+| **MySQL/MariaDB** | Deployments already operating that database             |
+| **PostgreSQL**    | Deployments already operating that database             |
 
 > [!NOTE]
-> SQLite works perfectly fine for most home and small business setups. Only switch to an external database if you experience performance issues or need multi-node deployments.
+> Measure the workload before changing database engines. ShieldPM's file-based Nginx configuration and local runtime state are not designed for multiple nodes sharing one database without additional coordination.
 
 ---
 
@@ -164,7 +155,7 @@ Before exposing ShieldPM to the internet, verify:
 
 - [ ] Setup Wizard completed (admin account created)
 - [ ] Admin UI not publicly accessible (or protected by Access List)
-- [ ] ACME email configured for Let's Encrypt
+- [ ] ACME email configured for certificate notices and for providers that require it
 - [ ] Time zone set correctly (`TZ` variable)
 - [ ] Backup strategy in place (manual or GitOps)
 - [ ] Block Exploits enabled on all Proxy Hosts

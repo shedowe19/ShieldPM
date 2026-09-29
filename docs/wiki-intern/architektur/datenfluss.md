@@ -8,9 +8,9 @@ Beschreibung des Datenflusses in ShieldPM — von der Benutzeraktion bis zur Ngi
 
 ```
 Browser → Nginx (Frontend)
-           ├── CrowdSec (Lua IPS) → Block/Allow
-           ├── ModSecurity (WAF) → Block/Allow
-           └── OpenAppSec (AI WAF) → Block/Allow
+           ├── CrowdSec (Lua IPS) → Block/Allow, falls aktiviert
+           ├── ModSecurity (WAF) → Block/Allow, falls aktiviert
+           └── OpenAppSec (AI WAF) → Block/Allow, falls aktiviert
                     │
                     ▼
               ┌─────────────┐
@@ -32,10 +32,11 @@ Browser → Nginx (Frontend)
 5. Objection.js Model speichert in Datenbank
 6. internal/nginx.js wird getriggert:
    a. Liest aktuelle Host-Daten aus DB
-   b. Rendert EJS-Template (templates/proxy_host.conf)
+   b. Rendert LiquidJS-Vorlage (templates/proxy_host.conf)
    c. Schreibt .conf nach /data/nginx/proxy_host/X.conf
-7. nginx -s reload (debounced, 2s Verzögerung)
-8. Audit-Log-Eintrag wird erstellt
+7. nginx -tq prüft die Gesamtkonfiguration; bei Fehler wird die vorherige Datei wiederhergestellt
+8. Bei gültiger Konfiguration nginx -s reload (ohne globalen Debounce)
+9. Audit-Log-Eintrag wird erstellt
 ```
 
 ## Datenbank-Zugriffsmuster
@@ -51,16 +52,15 @@ Route (Express) → Schema-Validierung (AJV)
 ## Zertifikats-Erneuerung
 
 ```
-1. Cron-Job (alle CRT Stunden, Standard: 23)
-2. internal/certbot.js prüft ablaufende Zertifikate
-3. certbot renew wird ausgeführt
-4. Bei Erfolg: nginx -s reload
+1. Ein vom Backend gestarteter Timer (`CRT` Stunden, im Startskript standardmäßig 23) prüft auslaufende Zertifikate
+2. internal/certificate.js führt bei Bedarf die Erneuerung über Certbot aus
+3. Nach erfolgreicher Erneuerung wird die Nginx-Konfiguration validiert und ein Reload signalisiert
 ```
 
 ## Wichtige Hinweise
 
-- **Nginx-Validierung deaktiviert**: `nginx -t` wird vor dem Reload **nicht** ausgeführt. Template-Fehler können Nginx brechen.
-- **Debounced Reload**: Schnelle aufeinanderfolgende Änderungen werden in einem einzigen Reload gebündelt.
+- **Nginx-Validierung**: `internal/nginx.js` ruft vor dem Reload `nginx -tq` auf. Ungültige Hostkonfigurationen werden zurückgerollt und im Hoststatus protokolliert.
+- **Serielle Änderungen**: Hostdateien und Zertifikatsaktivierung laufen unter einem gemeinsamen Konfigurations-Lock. Eine Sammelregeneration testet den gesamten Stapel einmal; der reguläre Reload hat keinen pauschalen Zwei-Sekunden-Debounce.
 - **Boolean-Felder in SQLite**: Werden als `0`/`1` (Integer) gespeichert. Das Objection.js-Modell konvertiert automatisch.
 
 ## Verwandte Seiten

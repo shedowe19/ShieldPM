@@ -14,6 +14,7 @@
 
 - TODO: End-to-End-Beispiel mit Authentik (Auth-Typ `AUTHENTIK_PROXY`) für [OAuth2-Proxy](./module/oauth2-proxy.md) ergänzen — der Auth-Typ ist parallel zu oauth2-proxy verfügbar, ein konkretes Setup-Beispiel fehlt aber noch.
 - TODO: IP-Ranges-Quellen für andere CDNs (z. B. Fastly, Akamai) prüfen ([IP-Ranges](./module/ip-ranges.md)).
+- TODO: `backend/schema/swagger.json` um die vorhandenen Analytics-, OIDC-, GitOps- und Upload-Relay-Routen ergänzen. Die generierte OpenAPI/Swagger-Ansicht bildet derzeit nicht alle Express-Endpunkte ab ([API-Schemas](./api/schemas.md)).
 
 ## Gelöste Fragen
 
@@ -30,12 +31,12 @@
 
 - ~~`backend/lib/`~~ → Dokumentiert in [Backend-Lib](./architektur/backend-lib.md).
 - ~~`frontend/src/modules/`~~ → 3 Module: AuthStore, Permissions, Validations → [Frontend-Internas](./ui/frontend-internas.md).
-- ~~`frontend/src/modals/`~~ → 21 Modals (19 + index + DeleteConfirm) → [Frontend-Internas](./ui/frontend-internas.md).
-- ~~`frontend/src/hooks/`~~ → 32 Custom-Hooks → [Frontend-Internas](./ui/frontend-internas.md).
+- ~~`frontend/src/modals/`~~ → Dokumentiert in [Frontend-Internas](./ui/frontend-internas.md).
+- ~~`frontend/src/hooks/`~~ → Dokumentiert in [Frontend-Internas](./ui/frontend-internas.md).
 - ~~`frontend/src/context/`~~ → AuthContext, LocaleContext, ThemeContext → [Frontend-Internas](./ui/frontend-internas.md).
-- ~~`frontend/src/types/`~~ → `enums.ts` (8 KB) → [Frontend-Internas](./ui/frontend-internas.md).
-- ~~`rootfs/usr/local/bin/`~~ → 9 Scripts dokumentiert in [Rootfs-Referenz](./konfiguration/rootfs.md).
-- ~~Wird `liquidjs` parallel zu EJS für Templates verwendet oder nur als Fallback?~~ → Wird nur in `backend/lib/utils.js` importiert, EJS ist der Standard für Nginx-Templates.
+- ~~`frontend/src/types/`~~ → Dokumentiert in [Frontend-Internas](./ui/frontend-internas.md).
+- ~~`rootfs/usr/local/bin/`~~ → Dokumentiert in [Rootfs-Referenz](./konfiguration/rootfs.md).
+- ~~Welche Template-Engine rendert die Nginx-Konfiguration?~~ → `backend/lib/utils.js` erzeugt eine LiquidJS-Instanz; `backend/internal/nginx.js` rendert damit die Templates unter `backend/templates/`.
 - ~~Backend-`dev`-Script~~ → `backend/package.json` definiert `yarn dev` als `node index-dev.js`; Scheduler und Analytics werden im Entwicklungsmodus gestartet und bei `SIGINT` oder `SIGTERM` beendet. Siehe [lokale Entwicklung](./entwicklung/lokale-entwicklung.md).
 - ~~Umfang der Backend-Tests in `backend/test/`~~ → Ordner existiert und enthält Tests für `lib/`, `internal/` und Integrationen via Vitest.
 - ~~Wie funktioniert die Migration von NPMplus-Daten beim ersten Start?~~ → `rootfs/usr/local/bin/entrypoint.sh` prüft, ob `/data/npmplus` existiert und `/data/shieldpm` fehlt, und führt dann ein `mv` aus.

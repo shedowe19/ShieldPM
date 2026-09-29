@@ -92,7 +92,11 @@ npx biome check .           # Prüfen
 npx biome check --write .   # Auto-Fix
 ```
 
-## Abschlussprüfung nach dem zweiten Durchgang
+## Historische Prüfläufe des Code-Audits 2026-09
+
+Die folgenden Zahlen dokumentieren die damaligen Audit-Prüfläufe und sind keine fortlaufend aktualisierte Testinventur. Für aktuelle Zahlen die oben genannten Testbefehle ausführen und die CI-Ergebnisse des betreffenden Commits prüfen. Historischer Kontext: [Prüfbericht](./code-audit-2026-09.md).
+
+### Zweiter Durchgang
 
 Prüflauf mit Node.js 26.8.1 und den versionierten Yarn-Lockfiles:
 
@@ -106,7 +110,7 @@ Ausführen: `cd backend && yarn test --run`; `cd frontend && yarn test --run && 
 
 Die neuen Tests decken unter anderem Berechtigungen, einmalige 2FA-Challenges, Refresh-Replay, geschützte Terminal-Upgrades, echte SQLite-Transaktionen mit Fremdschlüsseln, mehrseitigen Import, Symlink-Schutz, Konfigurationsfehler, Prozessrennen und Datums-/Formularverträge ab. Externe Dienste werden gemockt; die Prüfgrenzen stehen im Bericht.
 
-## Regressionen des dritten Durchgangs
+### Dritter Durchgang
 
 Gesamtstand: **903 Backend-Tests in 133 Dateien, 536 Frontend-Tests in 176 Dateien und 37 Infrastrukturtests**, zusammen 1.476 bestandene Tests. Locale-Check, TypeScript, Vite und vollständiges Biome-Linting sind ebenfalls erfolgreich. Lokale Gesamtsuiten verwenden `--maxWorkers=2`.
 
@@ -116,7 +120,7 @@ Die Frontend-Tests verwenden echte QueryClients für die sieben optimistischen C
 
 Die Infrastrukturtests verwenden temporäre Dateien und echte SQLite-WAL-Snapshots. Sie simulieren Kopier-/Bereinigungsfehler und prüfen reversible Nginx-Optionen, Certbot-Link-Recovery, eigene Socketnamen und LXC-SSH-Hostschlüssel. Diese isolierten Prüfungen starten keine produktive Installation.
 
-## Regressionen des vierten Durchgangs
+### Vierter Durchgang
 
 Mit Node.js 26.8.1 bestehen **970 Backend-Tests in 144 Dateien und 544 Frontend-Tests in 177 Dateien**. Von 56 Python-Infrastrukturtests bestehen lokal 55; nur der echte Unix-Socket-Test wird wegen einer lokalen `EPERM`-Beschränkung übersprungen. In GitHub CI darf dieser Test nicht übersprungen werden. Locale-Check, TypeScript, Vite-Produktionsbuild, OpenAPI und vollständige Biome-Prüfungen sind erfolgreich.
 
@@ -124,7 +128,7 @@ Die neuen Regressionen prüfen atomare Schlüsselveröffentlichung und Duo-Erset
 
 Die Infrastrukturtests sichern Installation, Providerwechsel, Prozessneustart, eng begrenzte Besitzänderungen, migrierte Default-Konfigurationen und eigene Runtime-Verzeichnisse ab. Zusätzlich startet `scripts/ci/docker-smoke.sh` in beiden nativen Docker-PR-Jobs das frisch gebaute Image als root und als UID 1000. Es prüft tatsächliche Betriebsbereitschaft, Socketrechte, Nginx-Konfiguration und Reload sowie Schreibrechte und entfernt alle Testressourcen. Der Test läuft ohne externes Netzwerk und benötigt keine echten Anbieterzugangsdaten.
 
-## Regressionen des fünften Durchgangs
+### Fünfter Durchgang
 
 Mit Node.js 26.8.1 bestehen **998 Backend-Tests in 152 Dateien und 567 Frontend-Tests in 179 Dateien**. Die Python-Suite umfasst **58 Tests**, davon lokal 57 bestanden und ein erwarteter Unix-Socket-Skip; in GitHub CI bleibt dieser Test verpflichtend. Gesamtsuiten laufen lokal mit zwei Workern. Die Frontend-Wiederholung ohne parallele Backend-Last besteht nach einem anfänglichen Import-Timeout mit unverändertem Zeitlimit. Locale-Check und Build werden nach Vitest ausgeführt.
 
@@ -132,7 +136,7 @@ Neue Tests prüfen echte Passkey-Signaturen mit konkurrierendem Zählerupdate, G
 
 Der Docker-Smoke rendert beide tatsächlichen gRPC-Vorlagen und prüft mit einem lokalen HTTP/2-Echo Methode, Pfad, Query und Body unter root und UID 1000. Die Python-Regression des Wiki-Generators erzeugt Seiten mit Vorlagenmarkern in ihren Namen und prüft unveränderte Knoten-/Kantenidentitäten. Ausführliche Abdeckung und Grenzen stehen im [Prüfbericht](./code-audit-2026-09.md).
 
-## Regressionen des sechsten Durchgangs
+### Sechster Durchgang
 
 Mit Node.js 26.8.1 bestehen **1.061 Backend-Tests in 162 Dateien und 588 Frontend-Tests in 182 Dateien**, ohne Skips. Die 58 Python-Infrastrukturtests ergeben lokal 57 bestandene Tests und den dokumentierten Unix-Socket-Skip; GitHub CI muss alle 58 ausführen. Backend-Typprüfung, OpenAPI, Locale-Check, Frontend-TypeScript, Vite-Produktionsbuild und vollständiges Biome-Linting sind erfolgreich. Die lokalen Gesamtsuiten liefen nacheinander mit zwei Workern.
 

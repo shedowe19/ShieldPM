@@ -29,15 +29,15 @@ Diese Begriffe tauchen im gesamten Projekt auf — in Code, Konfiguration und Do
 | **DDNS**             | Dynamic DNS — automatische DNS-Aktualisierung bei IP-Wechsel                                    |
 | **Turbo-Loader**     | Parallele Downloads für große Dateien                                                           |
 | **GoAccess**         | Echtzeit-Web-Analytics-Tool (Port :91)                                                          |
-| **Debounced Reload** | Verzögerter Nginx-Reload (2s) zur Bündelung mehrerer Änderungen                                 |
-| **EJS**              | Embedded JavaScript Templates (für Nginx-Konfigurationen)                                       |
+| **Debounced Reload** | Bündelung von Änderungen vor einem Reload; Docker Auto-Discovery nutzt dafür 2 Sekunden         |
+| **LiquidJS**         | Template-Engine für Nginx-Konfigurationen in `backend/templates/`                               |
 | **Objection.js**     | ORM (Object-Relational Mapping) für Node.js basierend auf Knex                                  |
 | **Knex.js**          | SQL-Query-Builder und Migrationstool für Node.js                                                |
 | **rootfs**           | Docker-Overlay-Dateien, die ins Container-Dateisystem kopiert werden                            |
 | **NPM**              | Nginx Proxy Manager — das Ursprungsprojekt, nicht zu verwechseln mit npm (Node Package Manager) |
 | **NPMplus**          | ZoeyVids Fork von NPM, Basis für ShieldPM                                                       |
 | **Internal**         | Backend-Business-Logik-Schicht (`backend/internal/`)                                            |
-| **ML-KEM**           | Machine Learning Key Encapsulation Mechanism — Post-Quantum-Kryptographie                       |
+| **ML-KEM**           | Module-Lattice-Based Key-Encapsulation Mechanism — Post-Quantum-Kryptographie                   |
 
 ## Offene Fragen
 

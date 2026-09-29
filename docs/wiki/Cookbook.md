@@ -16,6 +16,8 @@ To allow large file uploads (e.g., 10GB):
     proxy_request_buffering off;
     ```
 
+The Proxy Host's **Disable Buffering** option also turns off request and response buffering. Large uploads still have to fit limits imposed by the client, upstream application and any CDN in front of ShieldPM.
+
 ### 2. Service Discovery (caldav/carddav)
 To suppress the "Your web server is not properly set up to resolve .well-known..." warnings:
 1.  Go to the **Advanced** tab.
@@ -47,9 +49,10 @@ Home Assistant relies heavily on Websockets for real-time updates.
 Media servers need to handle long-lived connections for streaming.
 
 1.  **Websockets:** Enable **Websockets Support**.
-2.  **Buffering:** Disable buffering in the **Advanced** tab to prevent playback issues:
+2.  **Buffering:** If playback or downloads are delayed by proxy buffering, enable **Disable Buffering** in the Proxy Host's Details options (equivalent to these Nginx directives for proxied traffic):
     ```nginx
     proxy_buffering off;
+    proxy_request_buffering off;
     ```
 
 ## 🛡️ AdGuard Home
@@ -61,4 +64,8 @@ Securing the AdGuard Home web interface.
 3.  **Location:** If you want to host it under a subpath (e.g., `/adguard`), note that AdGuard Home does not natively support base URLs easily. It is **highly recommended** to use a subdomain (e.g., `dns.example.com`).
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)
+## Related pages
+
+- [Home](./Home.md)
+- [Proxy Hosts](./Proxy-Hosts.md)
+- [Disable Buffering](./Disable-Buffering.md)

@@ -1,12 +1,12 @@
-# 2FA-Service
+# Zwei-Faktor-Authentifizierung – Überblick
 
 ## Zweck
 
-Zwei-Faktor-Authentifizierung (TOTP, WebAuthn/Passkeys, Duo Security).
+Kurzer Überblick über Zwei-Faktor-Authentifizierung (TOTP, YubiKey OTP, WebAuthn/Passkeys und Duo Security). Technische Details, Endpunkte, Sicherheitsgrenzen und Regressionstests stehen im [2FA-Service](./2fa-service.md).
 
 ## Kontext
 
-Bietet zusätzliche Sicherheitsebene für Benutzerkonten mit drei verschiedenen 2FA-Methoden.
+Bietet zusätzliche Sicherheit für ShieldPM-Benutzerkonten mit vier konfigurierbaren Methoden und einmalig nutzbaren Wiederherstellungscodes.
 
 ## Wichtige Dateien
 
@@ -18,7 +18,8 @@ Bietet zusätzliche Sicherheitsebene für Benutzerkonten mit drei verschiedenen 
 ## Verhalten
 
 - **TOTP**: Zeitbasierte Einmal-Passwörter via `otplib` + QR-Code
-- **WebAuthn/Passkeys**: Hardwaregeräte (YubiKey, FIDO2) via `@simplewebauthn/server`
+- **YubiKey OTP**: Validierung des Yubico-Einmalcodes (auch mit eigenem HTTPS-Validierungsdienst möglich)
+- **WebAuthn/Passkeys**: Hardwaregeräte und Plattformauthentifikatoren via `@simplewebauthn/server`
 - **Duo Security**: Cloud-basierte 2FA via `@duosecurity/duo_universal`
 - Backup-Codes als Fallback
 
@@ -41,6 +42,7 @@ Die detaillierten Abläufe und der Duo-State-Vertrag stehen im [2FA-Servicedetai
 
 ## Verwandte Seiten
 
+- [2FA-Service – technische Details](./2fa-service.md)
 - [Benutzer & Auth](./benutzer-auth.md)
 - [OAuth2-Proxy (SSO)](./oauth2-proxy.md)
 - [Audit-Log](../verwaltung/audit-log.md)

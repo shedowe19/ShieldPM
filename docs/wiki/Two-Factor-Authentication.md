@@ -49,7 +49,7 @@ ShieldPM supports **four** 2FA methods plus backup codes as a fallback:
 ### Prerequisites
 
 - You must be logged in to your ShieldPM account
-- Navigate to **Users** → Click on your user → **Security** tab
+- Open your own **Profile** (`/profile`) → **Security**
 
 ### Authenticator App (TOTP)
 
@@ -61,7 +61,7 @@ ShieldPM supports **four** 2FA methods plus backup codes as a fallback:
    - Any TOTP-compatible app
 3. Enter the 6-digit verification code from the app
 4. Click **Verify & Enable**
-5. **Save your backup codes** — these are your emergency fallback
+5. **Save the displayed backup codes** — enabling a new TOTP method regenerates them and invalidates older codes.
 
 ### YubiKey (Hardware OTP)
 
@@ -140,7 +140,7 @@ After entering your username and password:
 
 ## 🆘 Backup Codes
 
-Backup codes are generated automatically when you set up your first 2FA method.
+Backup codes are generated when the first 2FA method is set up. Enabling an additional TOTP method regenerates the codes; other methods reuse existing unspent codes when available. Always save any newly displayed codes.
 
 - **8 codes** are generated per user
 - Each code can only be used **once**
@@ -148,7 +148,7 @@ Backup codes are generated automatically when you set up your first 2FA method.
 
 ### Regenerating Backup Codes
 
-1. Go to **Users** → Your user → **Security** tab
+1. Go to **Profile** → **Security**
 2. Click **Regenerate Backup Codes**
 3. Save the new codes — **the old ones are invalidated**
 
@@ -158,7 +158,7 @@ Backup codes are generated automatically when you set up your first 2FA method.
 
 ## 🗑️ Removing a 2FA Method
 
-1. Go to **Users** → Your user → **Security** tab
+1. Go to **Profile** → **Security**
 2. Find the method under "Active Methods"
 3. Click the **trash icon** (🗑️) next to it
 
@@ -197,8 +197,7 @@ Change your language in the ShieldPM settings — the 2FA pages will automatical
 
 ### Locked out of account
 - Use a backup code to sign in
-- If no backup codes remain, an admin can remove 2FA from your account via the database
-- As a last resort, use the ShieldPM CLI to reset user credentials
+- If no backup codes remain, an administrator must use the supported account recovery procedure or restore access from a backup; do not edit 2FA database rows without a verified recovery plan.
 
 ---
 
@@ -214,6 +213,7 @@ Change your language in the ShieldPM settings — the 2FA pages will automatical
 | `/api/users/:id/2fa/passkey/register/complete` | POST | Complete passkey registration |
 | `/api/users/:id/2fa/duo/setup` | POST | Configure Duo Security |
 | `/api/users/:id/2fa/:methodId` | DELETE | Remove a 2FA method |
+| `/api/users/:id/2fa/backup-codes/count` | GET | Count unused backup codes |
 | `/api/users/:id/2fa/backup-codes/regenerate` | POST | Regenerate backup codes |
 | `/api/tokens/2fa/verify` | POST | Verify 2FA during login |
 | `/api/tokens/2fa/passkey/begin` | POST | Start passkey authentication |

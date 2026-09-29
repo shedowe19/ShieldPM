@@ -30,7 +30,7 @@ ShieldPM verwendet JWT-basierte Authentifizierung mit optionalem 2FA und OIDC.
 - Session-Verwaltung mit Geräte-Tracking
 - Berechtigungssystem (Permissions pro Benutzer)
 - Passwort-Hashing mit `bcryptjs`
-- JWT-Signierung mit `/data/keys.json`
+- JWT-Signierung mit den Schlüsseln aus `/data/shieldpm/keys.json` (`backend/lib/config.js`); das Startskript migriert einen alten `/data/keys.json`-Pfad.
 
 ## Abhängigkeiten
 

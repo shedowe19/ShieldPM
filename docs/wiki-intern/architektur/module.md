@@ -10,34 +10,35 @@
 
 **Pfad**: `backend/routes/`
 
-Express-Routen definieren die REST-API-Endpunkte. Sie validieren Eingaben gegen JSON-Schemas und delegieren an die Internal-Schicht.
+Express-Routen definieren die REST-API-Endpunkte. Sie validieren bei schreibenden Requests die Eingaben gegen JSON-Schemas, prüfen die Zugriffsrechte und delegieren an die Internal-Schicht.
 
-| Datei                        | Endpunkte                        |
-| ---------------------------- | -------------------------------- |
-| `main.js`                    | Basis-Routen, Health-Checks      |
-| `nginx/proxy_hosts.js`       | `/api/nginx/proxy-hosts`         |
-| `nginx/redirection_hosts.js` | `/api/nginx/redirection-hosts`   |
-| `nginx/dead_hosts.js`        | `/api/nginx/dead-hosts`          |
-| `nginx/streams.js`           | `/api/nginx/streams`             |
-| `nginx/certificates.js`      | `/api/nginx/certificates`        |
-| `nginx/access_lists.js`      | `/api/nginx/access-lists`        |
-| `nginx/cloudflared.js`       | `/api/nginx/cloudflared-tunnels` |
-| `nginx/tor_onion.js`         | `/api/nginx/tor-onion`           |
-| `nginx/wireguard.js`         | `/api/nginx/wireguard`           |
-| `nginx/ddns_providers.js`    | `/api/nginx/ddns-providers`      |
-| `nginx/analytics.js`         | `/api/nginx/analytics`           |
-| `users.js`                   | `/api/users`                     |
-| `tokens.js`                  | `/api/tokens`                    |
-| `settings.js`                | `/api/settings`                  |
-| `ai.js`                      | `/api/ai`                        |
-| `chat.js`                    | `/api/chat`                      |
-| `gitops.js`                  | `/api/gitops`                    |
-| `2fa.js`                     | `/api/users/:user_id/2fa`        |
-| `oidc.js`                    | `/api/oidc`                      |
-| `audit-log.js`               | `/api/audit-log`                 |
-| `dashboard.js`               | `/api/dashboard`                 |
-| `reports.js`                 | `/api/reports`                   |
-| `services.js`                | `/api/services`                  |
+| Datei                        | Endpunkte                                     |
+| ---------------------------- | --------------------------------------------- |
+| `main.js`                    | Basis-Routen, Health-Checks                   |
+| `nginx/proxy_hosts.js`       | `/api/nginx/proxy-hosts`                      |
+| `nginx/redirection_hosts.js` | `/api/nginx/redirection-hosts`                |
+| `nginx/dead_hosts.js`        | `/api/nginx/dead-hosts`                       |
+| `nginx/streams.js`           | `/api/nginx/streams`                          |
+| `nginx/certificates.js`      | `/api/nginx/certificates`                     |
+| `nginx/access_lists.js`      | `/api/nginx/access-lists`                     |
+| `nginx/cloudflared.js`       | `/api/nginx/cloudflared-tunnels`              |
+| `nginx/tor_onion.js`         | `/api/nginx/tor-onion`                        |
+| `nginx/wireguard.js`         | `/api/nginx/wireguard`                        |
+| `nginx/ddns_providers.js`    | `/api/nginx/ddns-providers`                   |
+| `nginx/analytics.js`         | `/api/nginx/analytics`                        |
+| `users.js`                   | `/api/users`                                  |
+| `tokens.js`                  | `/api/tokens`                                 |
+| `settings.js`                | `/api/settings`                               |
+| `ai.js`                      | `/api/ai`                                     |
+| `chat.js`                    | `/api/chat`                                   |
+| `gitops.js`                  | `/api/gitops`                                 |
+| `2fa.js`                     | `/api/users/:user_id/2fa`                     |
+| `oidc.js`                    | `/api/oidc`                                   |
+| `audit-log.js`               | `/api/audit-log`                              |
+| `dashboard.js`               | `/api/dashboard`                              |
+| `reports.js`                 | `/api/reports`                                |
+| `services.js`                | `/api/services`                               |
+| `nginx/upload-relay.js`      | `/api/nginx/proxy-hosts/:hostId/upload-relay` |
 
 ### 2. Internal (Business-Logik)
 
@@ -66,7 +67,7 @@ Objection.js Modelle definieren Tabellen, Relationen und Hooks (`$beforeInsert`,
 
 **Pfad**: `backend/templates/`
 
-EJS-Templates für Nginx-Konfigurationsdateien.
+LiquidJS-Vorlagen (`*.conf`) für Nginx-Konfigurationsdateien. `internal/nginx.js` serialisiert die Hostkonfiguration, prüft mit `nginx -tq` und signalisiert anschließend den Reload; bei einem fehlerhaften Host wird die vorherige Datei wiederhergestellt.
 
 ## Frontend-Schichten
 

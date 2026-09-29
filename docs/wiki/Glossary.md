@@ -10,11 +10,11 @@ Common terms used in ShieldPM and networking.
 - **AAAA Record:** A DNS record that points a domain name to an IPv6 address.
 - **Access List (ACL):** A set of rules (Basic Auth, IP Allow/Deny, mTLS) that controls who can access a proxy host.
 - **ACME:** Automated Certificate Management Environment. The protocol used by Let's Encrypt to issue and renew certificates automatically.
-- **Anubis:** An AI-powered firewall that blocks automated crawlers and bots using proof-of-work challenges.
+- **Anubis:** A proof-of-work gate that challenges automated clients before they reach a protected host.
 
 ## C
 
-- **CGNAT:** Carrier-Grade NAT. Means your ISP shares one public IP among many customers, making port forwarding impossible. Use Cloudflare Tunnels or IPv6 as alternatives.
+- **CGNAT:** Carrier-Grade NAT. An ISP shares one public IPv4 address among multiple customers, so ordinary inbound IPv4 port forwarding on that address is unavailable. A tunnel or routed IPv6 can be an alternative.
 - **CNAME:** Canonical Name. A DNS record that creates an alias pointing one domain to another.
 - **CrowdSec:** An open-source IPS that detects and blocks malicious IPs using community-driven threat intelligence.
 - **CRS:** Core Rule Set. The OWASP-maintained set of rules used by ModSecurity to detect attacks.
@@ -50,7 +50,7 @@ Common terms used in ShieldPM and networking.
 
 ## M
 
-- **ML-KEM-768:** A post-quantum key exchange algorithm (also known as Kyber) used by ShieldPM's Internal PKI for future-proof TLS handshakes.
+- **ML-KEM-768:** A parameter set of the Module-Lattice-Based Key-Encapsulation Mechanism for post-quantum key establishment. ShieldPM exposes an optional hybrid TLS flag for hosts using its internal CA; actual TLS support depends on the separate Nginx build.
 - **ModSecurity:** An open-source Web Application Firewall (WAF) that inspects HTTP traffic for malicious payloads.
 - **mTLS:** Mutual TLS. Both client and server verify each other's certificates. Used for Zero Trust access in ShieldPM.
 

@@ -23,7 +23,7 @@ Zwei-Faktor-Authentifizierung (TOTP, YubiKey OTP, Passkeys/WebAuthn, Duo Securit
 ### TOTP
 
 - `setupTotp(userId, userEmail)` — Generiert geheimen Schlüssel + QR-Code (Base64 PNG)
-- `verifyAndEnableTotp(userId, code)` — Verifiziert Code und aktiviert TOTP für den User
+- `verifyAndEnableTotp(userId, code)` — Verifiziert Code, aktiviert TOTP und erzeugt einen neuen Satz Backup-Codes (auch wenn schon welche vorhanden sind)
 - `verifyTotp(userId, code)` — Prüft eine aktivierte Methode und verbraucht ihren Zeitschritt atomar
 
 ### YubiKey

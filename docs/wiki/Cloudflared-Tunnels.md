@@ -1,141 +1,39 @@
 # Cloudflare Tunnels
 
-ShieldPM includes native integration for managing **Cloudflare Tunnels**. This allows you to securely expose your locally running services to the internet without opening public inbound ports on your firewall.
+ShieldPM can run a `cloudflared` connector from a tunnel token stored in the management UI. The connector opens outbound connections to Cloudflare, so the tunnel does not require an inbound port on your router. You still configure the public hostname and its local origin service in Cloudflare.
 
-## 🚀 Introduction
+The ShieldPM runtime must have the connector binary at `/usr/local/bin/cloudflared` and outbound connectivity to Cloudflare. This path is fixed in the current process manager. For a Native/LXC installation, verify the binary is installed there before creating a tunnel.
 
-Cloudflare Tunnel (formerly Argo Tunnel) creates a secure, encrypted link between your ShieldPM instance and the Cloudflare edge network.
+## Create a tunnel
 
-**Key Benefits:**
+1. Create a token-managed `cloudflared` tunnel in your Cloudflare account and copy its connector token. Treat the token as a credential.
+2. In ShieldPM, open **Cloudflare Tunnels**, choose **Add Tunnel**, enter a name and paste the token.
+3. Save. ShieldPM launches `/usr/local/bin/cloudflared tunnel run` with `TUNNEL_TOKEN` in the child process environment. A running child is shown as online after a short stability check; that status alone does not verify each published hostname.
 
-* **No Inbound Ports:** You don't need to open port 80 or 443 on your router.
-* **DDoS Protection:** Traffic passes through Cloudflare's filtering before reaching your server.
-* **Static IP Bypass:** Works even behind CGNAT (Carrier-Grade NAT) or dynamic IPs.
+The token is encrypted in ShieldPM's database. Starting, stopping, restarting, or deleting a tunnel acts on its local child process and database record. Configure or remove the corresponding public hostname in Cloudflare separately.
 
-## 🏗️ Architecture
+If GitOps export is enabled, its `cloudflared-tunnels/*.yaml` entries contain decrypted token values. Keep the GitOps repository private and restrict backup access.
 
-```
-  ┌──────────┐     ┌──────────────────┐     ┌──────────────────────────────┐
-  │  Browser  │────▶│  Cloudflare Edge │────▶│         ShieldPM             │
-  │  (User)   │◀────│  (DDoS Filter,   │     │                              │
-  └──────────┘     │   TLS Termination)│     │  ┌────────────────────────┐  │
-                   └──────────────────┘     │  │  cloudflared (Tunnel)  │  │
-        Internet ─ ─ ─│─ ─ ─ ─ ─ ─ ─ ─ ─ ─│─▶│  Receives traffic via  │  │
-                      │  QUIC Tunnel        │  │  encrypted QUIC tunnel │  │
-                      │  (outbound only,    │  └──────────┬─────────────┘  │
-                      │   no open ports!)   │             │                │
-                                            │             ▼                │
-                                            │  ┌────────────────────────┐  │
-                                            │  │   Nginx (Port 443)     │  │
-                                            │  │  SSL, WAF, AccessList  │  │
-                                            │  └──────────┬─────────────┘  │
-                                            └─────────────┼────────────────┘
-                                                          ▼
-                                            ┌────────────────────────┐
-                                            │    Backend Service     │
-                                            │  (192.168.1.50:8080)   │
-                                            └────────────────────────┘
+## Route a public hostname to a Proxy Host
+
+For the included `compose.yaml`, ShieldPM uses host networking. In Cloudflare's public hostname settings, set the origin service to `http://localhost:80` for ShieldPM's HTTP listener, or choose the appropriate reachable host/address if your deployment differs. Then create a ShieldPM **Proxy Host** whose **Domain Names** include exactly that public hostname. Its **Forward Scheme/Host/Port** describe your **application**, such as `http`, `192.168.1.50`, and `8080`.
+
+```text
+Visitor → Cloudflare edge → cloudflared → ShieldPM HTTP/HTTPS listener → application upstream
 ```
 
-**Key Points:**
-* `cloudflared` creates an **outbound-only** connection — no ports need to be opened on your firewall
-* Traffic is encrypted end-to-end via QUIC protocol
-* ShieldPM manages the `cloudflared` process lifecycle automatically
-* All Nginx features (Access Lists, WAF, Caching) still work normally
+Cloudflare's origin service URL selects the listener on ShieldPM. It does **not** determine the Proxy Host's forwarding scheme. If you choose `https://localhost:443` as the origin instead, the domain must have a suitable certificate on ShieldPM. Set origin SNI/hostname and certificate verification in Cloudflare to match that certificate; disabling origin verification is a separate trust decision and is not universally required.
 
----
+ShieldPM's HTTP WAF, access lists, and other Proxy Host settings operate on the request at its Nginx listener. The tunnel does not pass the visitor's original TLS handshake directly to Nginx. A ShieldPM access list requiring a visitor client certificate at Nginx cannot verify that certificate through a normal Cloudflare HTTP(S) public hostname; enforce client-certificate policy at Cloudflare if needed. Also review the real-client-IP settings for your Cloudflare deployment before creating IP-based rules.
 
-## ⚙️ Configuration
+## Troubleshooting
 
-### 1. Prerequisites
+- Check the token and outbound network connectivity when the local tunnel process cannot start. For Docker, inspect `docker logs shieldpm`.
+- If the process is running but a hostname fails, check the Cloudflare public hostname's origin URL and confirm the matching ShieldPM Proxy Host is enabled and its upstream reachable.
+- For HTTPS origins, check the certificate name, trust and SNI settings for the **Cloudflare-to-ShieldPM** connection. This is distinct from the Proxy Host's **ShieldPM-to-application** forwarding scheme.
 
-* A **Cloudflare Account**.
-* A domain managed by Cloudflare DNS.
-* **ShieldPM** running (Docker, Native, or LXC).
+## Related pages
 
-### 2. Create a Tunnel (Cloudflare Dashboard)
-
-1. Go to the [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/).
-2. Navigate to **Access** > **Tunnels**.
-3. Click **Create a tunnel**.
-4. Choose **Cloudflared** as the connector type.
-5. Give your tunnel a name (e.g., `shieldpm-home`) and click **Save**.
-6. **Copy the Tunnel Token**. You will see a command like `cloudflared service install eyJhIjoi...`. Copy **only** the token string starting with `ey...`.
-
-### 3. Add Tunnel in ShieldPM
-
-1. Open your ShieldPM Admin Interface.
-2. Navigate to the **Cloudflare Tunnel** tab (Cloud icon).
-3. Click **Add Tunnel**.
-4. **Name:** Enter a friendly name for this tunnel (e.g., `Home Server`).
-5. **Tunnel Token:** Paste the token you copied in Step 2.
-6. Click **Save**.
-
-ShieldPM will automatically start a dedicated `cloudflared` process for this tunnel. The status badge should turn **Green (Online)** within a few seconds.
-
----
-
-## 🌐 Exposing Services
-
-Once your tunnel is online, you can use it to expose services via **Proxy Hosts**.
-
-1. In the Cloudflare Dashboard:
-    * Go to your Tunnel > **Public Hostname**.
-    * Add a public hostname (e.g., `app.example.com`).
-    * **Service**: pointing to your ShieldPM instance.
-        * Type: `HTTP`
-        * URL: `localhost:80` (or the internal IP of your ShieldPM container).
-
-2. In ShieldPM:
-    * Create a **Proxy Host** for `app.example.com`.
-    * Forward to your internal service (e.g., `192.168.1.50:8080`).
-
-**Note:** The traffic flow is:
-`User` -> `Cloudflare Edge` -> `Cloudflared (in ShieldPM)` -> `Nginx (in ShieldPM)` -> `Your Backend Service`.
-
-This allows you to still use Nginx features like Access Lists, ModSecurity, and Caching even when using Tunnels.
-
----
-
-## � Advanced: HTTPS & mTLS
-
-### Using HTTPS Backends
-
-If you want the connection between Cloudflare and ShieldPM to be encrypted (HTTPS), follow these steps:
-
-1. In Cloudflare Dashboard (Public Hostname), set **Service Type** to `HTTPS` and URL to `localhost:443`.
-2. Under **Additional application settings** > **TLS**:
-    * Enable **No TLS Verify**. This is required because ShieldPM uses self-signed or internal certificates for localhost, which Cloudflare cannot verify by default.
-3. In ShieldPM Proxy Host:
-    * Ensure **Scheme** is `https`.
-    * **SSL Certificate:** You can use "None" (fallback to default) or a self-signed cert, as Cloudflare is the only client.
-
-### Integration with Internal PKI & mTLS
-
-ShieldPM includes a powerful **Internal Public Key Infrastructure (PKI)** and **Mutual TLS (mTLS)** feature. However, using this with Cloudflare Tunnels requires understanding how traffic is handled.
-
-**The Limitation:**
-Cloudflare Tunnel (in HTTP mode) terminates the SSL connection at the Cloudflare Edge. This means the client (visitor) performs the TLS handshake with Cloudflare, not with ShieldPM.
-
-* **Result:** Nginx **cannot** request a Client Certificate from the visitor because the connection it sees comes from `cloudflared` (localhost).
-* **Impact:** If you enable "mTLS" in an Access List on a host served via Tunnel, visitors will get a 400 Bad Request or 403 Forbidden because they cannot present a certificate to Nginx.
-
-**Recommended Solutions:**
-
-1. **Use Cloudflare Access (mTLS):** Configure mTLS enforcement in the Cloudflare Zero Trust dashboard. Cloudflare will validate the client certificate at the edge and then forward the request to your tunnel.
-2. **Use Internal CA for Backend Security:** You can still use the ShieldPM Internal CA to issue certificates for your backend services (the apps ShieldPM points to).
-3. **For pure mTLS (End-to-End):** You would need to use Cloudflare Tunnel in **TCP Mode** (arbitrary TCP logging), which passes the raw encrypted packets to Nginx. Note that this bypasses Cloudflare's WAF and requires `cloudflared` on the client side or specific enterprise setups.
-
----
-
-## �🛠️ Troubleshooting
-
-* **Status stays Offline:** Check your internet connection and ensuring the provided token is correct. Check the container logs `docker logs shieldpm` for `cloudflared` errors.
-* **Maintenance:** If you delete a tunnel in ShieldPM, the process is stopped immediately.
-
----
-
-## 🔒 Security Best Practices
-
-* **Do not proxy the Tunnel through Nginx again:** Cloudflared handles the connection.
-* **Use Access Lists:** You can still apply ShieldPM Access Lists to Proxy Hosts served via the tunnel for an extra layer of security.
+- [Proxy Hosts](./Proxy-Hosts.md)
+- [Tor Onion Services](./Tor-Onion-Services.md)
+- [Access Lists](./Access-Lists.md)

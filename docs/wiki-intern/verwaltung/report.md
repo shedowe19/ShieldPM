@@ -2,21 +2,21 @@
 
 ## Zweck
 
-Erfassung von System-Metriken und Prüfung auf Updates der ShieldPM-Software.
+Anzeige der Host-Anzahlen und Prüfung auf neue ShieldPM-Releases.
 
 ## Kontext
 
-Das System bietet Funktionen zum Erstellen von Berichten über die Nutzung und prüft, ob neue Versionen der Software auf GitHub oder anderen Quellen verfügbar sind.
+Der Host-Bericht speist das Dashboard; die Versionsprüfung fragt das aktuelle GitHub-Release des Projekts ab.
 
 ## Wichtige Dateien
 
-- `backend/internal/report.js` (1 KB) — Generierung von Zusammenfassungen
-- `backend/internal/remote-version.js` (2 KB) — Logik zur Prüfung von Updates
+- `backend/internal/report.js` — Host-Anzahlen unter Berücksichtigung von Benutzer-ID und Sichtbarkeitsrechten
+- `backend/internal/remote-version.js` — Release-Abfrage und SemVer-Vergleich
 
 ## Verhalten
 
-- `report.js` aggregiert Daten wie die Anzahl der Proxy-Hosts, Zertifikate und Benutzer.
-- `remote-version.js` ruft periodisch die aktuelle Versionsnummer ab (z.B. über GitHub API oder npm) und vergleicht sie mit der laufenden Instanz.
+- `report.js` liefert die vier Zähler `proxy`, `redirection`, `stream` und `dead`; Zertifikate und Benutzer gehören nicht zu diesem Bericht. Die Abfrage benötigt `reports:hosts`.
+- `remote-version.js` fragt `https://api.github.com/repos/shedowe19/ShieldPM/releases/latest` ab und vergleicht `tag_name` per SemVer mit `backend/package.json`. Es cached ein gültiges Ergebnis 24 Stunden im Backend-Prozess und begrenzt den HTTP-Abruf auf zehn Sekunden und 1 MiB. Die Rückgabe enthält `current`, `latest` und `update_available`.
 
 ## Abhängigkeiten
 

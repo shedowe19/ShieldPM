@@ -63,13 +63,13 @@ Uncomment the `openappsec-agent` service in your `compose.yaml` (see [Docker Com
      - "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true"
    ```
 
-2. **Enable IPC and shared memory volume** for the ShieldPM service.
+2. **Enable IPC and shared memory:** uncomment `ipc: host` and `shm-volume:/dev/shm/check-point` on the ShieldPM service, plus the corresponding `shm-volume` definition at the bottom of `compose.yaml`. The agent service already includes `ipc: host` and the same volume once uncommented.
 
-3. **Configure `local_policy.yaml`** at `/opt/openappsec/localconf/local_policy.yaml`.
+3. **For local management**, configure `local_policy.yaml` at `/opt/openappsec/localconf/local_policy.yaml` on the host. The agent mounts `/opt/openappsec/localconf` at `/ext/appsec`; the native/LXC policy path below is different.
 
 4. **Without Cloud Portal:** Uncomment the additional containers (`smartsync`, `shared-storage`, `tuning-svc`, `openappsec-db`).
 
-5. **With Cloud Portal:** Set `AGENT_TOKEN` from [my.openappsec.io](https://my.openappsec.io) instead.
+5. **With Cloud Portal:** Set `AGENT_TOKEN` from [my.openappsec.io](https://my.openappsec.io). Configure credentials and bind-mounted directories before bringing up the service.
 
 ---
 
@@ -154,11 +154,11 @@ individual `.tgz` file to that path, provided the host file already exists;
 otherwise Docker may create a directory in its place and the container will
 fail to start.
 
-**Native / LXC (manually):**
+**Native / LXC:** ShieldPM's installer copies a selected archive to `/etc/cp/conf/open-appsec-advanced-model.tgz`. For an existing agent, verify the agent's model-loading procedure for your installed OpenAppSec version and confirm activation in its status/logs; copying the archive alone does not establish that the advanced model was loaded.
 
 ```bash
+# This mirrors the file-copy step in scripts/install.sh; check agent status afterward.
 cp open-appsec-advanced-model.tgz /etc/cp/conf/open-appsec-advanced-model.tgz
-open-appsec-ctl --apply-policy
 ```
 
 ---

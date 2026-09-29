@@ -6,73 +6,75 @@
 
 ## Kontext
 
-Jedes Modul folgt dem gleichen Pattern: Es exportiert ein Objekt mit `create`, `get`, `getAll`, `update`, `delete` Methoden, die einen `access`-Parameter für Berechtigungsprüfung erhalten.
+Die Module unter `backend/internal/` bündeln Geschäftslogik. Viele CRUD-Module exportieren ein Objekt mit Methoden wie `create`, `get`, `getAll`, `update` und `delete`; andere sind zustandsbehaftete Dienste oder Hilfsfunktionen. Berechtigungen werden je nach API-Rolle über `access` und die Routen geprüft.
 
 ## Module nach Kategorie
 
 ### Kern-Proxy-Verwaltung
 
-| Modul                                             | Datei                         | Beschreibung                                  |
-| ------------------------------------------------- | ----------------------------- | --------------------------------------------- |
-| [Nginx-Engine](./nginx-engine.md)                 | `nginx.js` (12 KB)            | Konfigurationsgenerierung und Reload          |
-| [Nginx-Templates](./nginx-templates.md)           | `templates/` (9 Dateien)      | EJS-Templates für Nginx-Configs               |
-| [Proxy-Host](./proxy-host.md)                     | `proxy-host.js` (19 KB)       | CRUD für Reverse-Proxy-Hosts                  |
-| [Proxy-Host-Überwachung](./proxy-host-monitor.md) | `proxy-host-monitor.js`       | HTTP-/TCP-Zustandsprüfungen je Host           |
-| [Resumable Upload Relay](./upload-relay.md)       | `upload-relay.js`             | Persistente tus-Uploads zum privaten Upstream |
-| [Redirection-Host](./redirection-host.md)         | `redirection-host.js` (13 KB) | CRUD für Umleitungen                          |
-| [Dead-Host](./dead-host.md)                       | `dead-host.js` (11 KB)        | CRUD für 404-Hosts                            |
-| [Stream](./stream.md)                             | `stream.js` (12 KB)           | CRUD für TCP/UDP-Streams                      |
-| [Host (gemeinsame Logik)](./host.md)              | `host.js` (6 KB)              | Gemeinsame Host-Logik                         |
+| Modul                                                                                         | Datei                       | Beschreibung                                  |
+| --------------------------------------------------------------------------------------------- | --------------------------- | --------------------------------------------- |
+| [Nginx-Engine](./nginx-engine.md)                                                             | `nginx.js`                  | Konfigurationsgenerierung und Reload          |
+| [Nginx-Templates](./nginx-templates.md)                                                       | `backend/templates/`        | LiquidJS-Templates für Nginx-Configs          |
+| [Proxy-Host](./proxy-host.md)                                                                 | `proxy-host.js`             | CRUD für Reverse-Proxy-Hosts                  |
+| [Proxy-Host-Konfigurationsvorschau](./proxy-host.md#konfigurationsvorschau-vor-dem-speichern) | `proxy-host-preview.js`     | Read-only-Vorschau und Diff vor dem Speichern |
+| [Proxy-Host-Diagnose](../features/proxy-host-diagnostics.md)                                  | `proxy-host-diagnostics.js` | DNS-, TLS-, Upstream- und Routing-Diagnose    |
+| [Proxy-Host-Überwachung](./proxy-host-monitor.md)                                             | `proxy-host-monitor.js`     | HTTP-/TCP-Zustandsprüfungen je Host           |
+| [Resumable Upload Relay](./upload-relay.md)                                                   | `upload-relay.js`           | Persistente tus-Uploads zum privaten Upstream |
+| [Redirection-Host](./redirection-host.md)                                                     | `redirection-host.js`       | CRUD für Umleitungen                          |
+| [Dead-Host](./dead-host.md)                                                                   | `dead-host.js`              | CRUD für 404-Hosts                            |
+| [Stream](./stream.md)                                                                         | `stream.js`                 | CRUD für TCP/UDP-Streams                      |
+| [Host (gemeinsame Logik)](./host.md)                                                          | `host.js`                   | Gemeinsame Host-Logik                         |
 
 ### Sicherheit
 
-| Modul                                | Datei                            | Beschreibung                  |
-| ------------------------------------ | -------------------------------- | ----------------------------- |
-| [Access-List](./access-lists.md)     | `access-list.js` (17 KB)         | Basic Auth, IP-Filter, mTLS   |
-| [Zertifikate](./zertifikate.md)      | `certificate.js` (27 KB)         | SSL/TLS-Zertifikatsverwaltung |
-| Certbot                              | `certbot.js` (10 KB)             | Let's Encrypt Automatisierung |
-| Token                                | `token.js` (6 KB)                | JWT-Token-Verwaltung          |
-| [Anubis](./anubis.md)                | `anubis.js` (5 KB)               | PoW-Gate gegen Bots           |
-| [OAuth2-Proxy](./oauth2-proxy.md)    | `oauth2-proxy.js` (7 KB)         | SSO-Integration               |
-| [2FA-Service](./2fa.md)              | `2fa-service.js` (21 KB)         | TOTP, WebAuthn, Duo Security  |
-| Auth-Session (siehe Benutzer & Auth) | `auth-session-service.js` (6 KB) | Session-Verwaltung            |
-| [IP-Ranges](./ip-ranges.md)          | `ip_ranges.js` (3 KB)            | Cloudflare IP-Ranges          |
-| [PKI (interne CA)](./pki.md)         | `pki.js` (7 KB)                  | Interne CA / ML-KEM           |
+| Modul                                | Datei                     | Beschreibung                  |
+| ------------------------------------ | ------------------------- | ----------------------------- |
+| [Access-List](./access-lists.md)     | `access-list.js`          | Basic Auth, IP-Filter, mTLS   |
+| [Zertifikate](./zertifikate.md)      | `certificate.js`          | SSL/TLS-Zertifikatsverwaltung |
+| [Certbot](./certbot.md)              | `certbot.js`              | Let's Encrypt Automatisierung |
+| [Token](./token.md)                  | `token.js`                | JWT-Token-Verwaltung          |
+| [Anubis](./anubis.md)                | `anubis.js`               | PoW-Gate gegen Bots           |
+| [OAuth2-Proxy](./oauth2-proxy.md)    | `oauth2-proxy.js`         | SSO-Integration               |
+| [2FA-Service](./2fa-service.md)      | `2fa-service.js`          | TOTP, WebAuthn, Duo Security  |
+| Auth-Session (siehe Benutzer & Auth) | `auth-session-service.js` | Session-Verwaltung            |
+| [IP-Ranges](./ip-ranges.md)          | `ip_ranges.js`            | Cloudflare-IP-Ranges          |
+| [PKI (interne CA)](./pki.md)         | `pki.js`                  | Interne CA / ML-KEM           |
 
 ### Tunnel & Netzwerk
 
-| Modul                           | Datei                     | Beschreibung                 |
-| ------------------------------- | ------------------------- | ---------------------------- |
-| [Cloudflared](./cloudflared.md) | `cloudflared.js` (4 KB)   | Cloudflare Tunnel Verwaltung |
-| [Tor](./tor.md)                 | `tor.js` (11 KB)          | Tor Hidden Services          |
-| [WireGuard](./wireguard.md)     | `wireguard.js` (19 KB)    | WireGuard VPN-Tunnels        |
-| [DDNS](./ddns.md)               | `ddns.js` (8 KB)          | Dynamic DNS Client           |
-| DDNS-Provider (siehe DDNS)      | `ddns-provider.js` (4 KB) | DDNS-Anbieter-Logik          |
+| Modul                           | Datei              | Beschreibung                 |
+| ------------------------------- | ------------------ | ---------------------------- |
+| [Cloudflared](./cloudflared.md) | `cloudflared.js`   | Cloudflare Tunnel Verwaltung |
+| [Tor](./tor.md)                 | `tor.js`           | Tor Hidden Services          |
+| [WireGuard](./wireguard.md)     | `wireguard.js`     | WireGuard VPN-Tunnels        |
+| [DDNS](./ddns.md)               | `ddns.js`          | Dynamic DNS Client           |
+| DDNS-Provider (siehe DDNS)      | `ddns-provider.js` | DDNS-Anbieter-Logik          |
 
 ### Tools & Integrationen
 
-| Modul                           | Datei                   | Beschreibung                       |
-| ------------------------------- | ----------------------- | ---------------------------------- |
-| [AI / AI-Core](./ai-agent.md)   | `ai.js` (14 KB)         | AI-Agent Verwaltung                |
-| AI-Core                         | `ai/` (Ordner)          | Executor, Providers, Tools, Prompt |
-| [Chat (Telegram)](./chatops.md) | `chat.js` (7 KB)        | Telegram-Bot (Telegraf)            |
-| [Docker](./docker.md)           | `docker.js` (15 KB)     | Docker Auto-Discovery              |
-| [GitOps](./gitops.md)           | `gitops.js` (38 KB)     | Git-Sync (isomorphic-git)          |
-| [Git-Deploy](./git-deploy.md)   | `git-deploy.js` (11 KB) | Auto-Deploy von Git-Repos          |
-| [Terminal](./terminal.md)       | `terminal.js` (4 KB)    | Web-SSH-Terminal                   |
-| [Analytics](./analytics.md)     | `analytics.js` (14 KB)  | Traffic-Analyse                    |
+| Modul                           | Datei           | Beschreibung                       |
+| ------------------------------- | --------------- | ---------------------------------- |
+| [AI / AI-Core](./ai-agent.md)   | `ai.js`         | AI-Agent Verwaltung                |
+| AI-Core                         | `ai/` (Ordner)  | Executor, Providers, Tools, Prompt |
+| [Chat (Telegram)](./chatops.md) | `chat.js`       | Telegram-Bot (Telegraf)            |
+| [Docker](./docker.md)           | `docker.js`     | Docker Auto-Discovery              |
+| [GitOps](./gitops.md)           | `gitops.js`     | Git-Sync (isomorphic-git)          |
+| [Git-Deploy](./git-deploy.md)   | `git-deploy.js` | Auto-Deploy von Git-Repos          |
+| [Terminal](./terminal.md)       | `terminal.js`   | Web-SSH-Terminal                   |
+| [Analytics](./analytics.md)     | `analytics.js`  | Traffic-Analyse                    |
 
 ### Verwaltung
 
-| Modul                                           | Datei                      | Beschreibung        |
-| ----------------------------------------------- | -------------------------- | ------------------- |
-| [Benutzer & Auth](./benutzer-auth.md)           | `user.js` (17 KB)          | Benutzerverwaltung  |
-| [Einstellungen](../verwaltung/einstellungen.md) | `setting.js` (3 KB)        | Systemeinstellungen |
-| [Dashboard-Notizen](./dashboard-notes.md)       | `dashboard_note.js` (3 KB) | Dashboard-Notizen   |
-| [Audit-Log](../verwaltung/audit-log.md)         | `audit-log.js` (3 KB)      | Protokollierung     |
-| [Maintenance](./maintenance.md)                 | `maintenance.js` (5 KB)    | Wartungsfenster     |
-| [Report](../verwaltung/report.md)               | `report.js` (1 KB)         | System-Reports      |
-| Remote-Version                                  | `remote-version.js` (2 KB) | Versionsprüfung     |
+| Modul                                           | Datei               | Beschreibung        |
+| ----------------------------------------------- | ------------------- | ------------------- |
+| [Benutzer & Auth](./benutzer-auth.md)           | `user.js`           | Benutzerverwaltung  |
+| [Einstellungen](../verwaltung/einstellungen.md) | `setting.js`        | Systemeinstellungen |
+| [Dashboard-Notizen](./dashboard-notes.md)       | `dashboard_note.js` | Dashboard-Notizen   |
+| [Audit-Log](../verwaltung/audit-log.md)         | `audit-log.js`      | Protokollierung     |
+| [Maintenance](./maintenance.md)                 | `maintenance.js`    | Wartungsfenster     |
+| [Report](../verwaltung/report.md)               | `report.js`         | System-Reports      |
+| Remote-Version                                  | `remote-version.js` | Versionsprüfung     |
 
 ## Verwandte Seiten
 

@@ -1,6 +1,6 @@
 # Request Rate Limiting
 
-ShieldPM includes a built-in Rate Limiting feature to protect your services from abuse, scraping, and brute-force attacks. It allows you to define a maximum number of requests a single IP address can make within a specified timeframe.
+ShieldPM includes a built-in rate limiter for Proxy Hosts. Configure a sustained request rate per client IP and host, plus an optional burst allowance.
 
 ---
 
@@ -11,14 +11,14 @@ ShieldPM includes a built-in Rate Limiting feature to protect your services from
   │  Client   │────────▶│          Rate Limiter             │
   │  (IP)     │         │    (Lua resty.limit.req)         │
   └──────────┘         │                                  │
-                       │  Request count per IP:           │
+                       │  Leaky bucket per host + IP:     │
                        │  ┌───────────────────────────┐   │
-                       │  │  IP: 1.2.3.4 → 8/10 req  │───▶ ✅ ALLOW
-                       │  │  IP: 5.6.7.8 → 15/10 req │───▶ ❌ 429 Too Many
-                       │  │  IP: 9.0.1.2 → 3/10 req  │───▶ ✅ ALLOW
+                       │  │  Within rate            │───▶ ✅ ALLOW
+                       │  │  Within burst           │───▶ ⏳ DELAY
+                       │  │  Above bucket capacity  │───▶ ❌ 429
                        │  └───────────────────────────┘   │
                        │                                  │
-                       │  Storage: Shared Memory (20MB)   │
+                       │  Storage: Nginx shared memory    │
                        └──────────────────────────────────┘
 ```
 
@@ -37,7 +37,7 @@ Configure Rate Limiting on a per-host basis:
 | Field | Description | Example |
 | :--- | :--- | :--- |
 | **Rate** | Number of requests allowed per time unit. `0` = disabled. | `10` |
-| **Per** | Time unit: `second` or `minute` | `minute` |
+| **Per** | Time unit: seconds or minutes (the generated Nginx template stores `s` or `m`) | Minute |
 | **Burst** | Extra requests to queue (softens spikes) | `20` |
 
 ### How Burst Works
@@ -62,7 +62,7 @@ Protect login pages from brute-force attacks:
 | **Per** | Minute |
 | **Burst** | 0 |
 
-**Result:** An IP can only make 5 requests per minute. Any additional request is immediately blocked with 429.
+**Result:** The limiter targets a sustained rate of 5 requests per minute. It is a leaky-bucket rate, not a quota that resets at a fixed minute boundary; with no burst, closely spaced requests may be rejected even before five requests have occurred in the current clock minute.
 
 ### General API Protection
 
@@ -74,7 +74,7 @@ Prevent a single user from monopolizing API resources:
 | **Per** | Second |
 | **Burst** | 50 |
 
-**Result:** Users can sustain 100 req/s. Short bursts up to 150 req/s are tolerated, but sustained high traffic is throttled.
+**Result:** Users can sustain about 100 req/s. Up to 50 excess requests may wait for a slot; traffic beyond the bucket capacity receives 429.
 
 ### Light Website Protection
 
@@ -86,7 +86,7 @@ Soft rate limiting for a public website:
 | **Per** | Minute |
 | **Burst** | 60 |
 
-**Result:** Normal browsing (30 req/min) is unaffected. Fast page loads with many assets are queued. Only abusive crawlers are blocked.
+**Result:** The sustained rate is 30 req/min. Up to 60 excess requests can queue and wait; legitimate page loads may also be delayed or rejected if they exceed the configured bucket.
 
 ---
 
@@ -95,7 +95,7 @@ Soft rate limiting for a public website:
 | Property | Value |
 | :--- | :--- |
 | **HTTP Status Code** | `429 Too Many Requests` |
-| **Storage Backend** | Shared memory zone (`ip_req_limit`, 20 MiB) |
+| **Storage Backend** | Nginx shared memory zone `ip_req_limit` (zone size belongs to the deployed Nginx configuration) |
 | **Lua Module** | `resty.limit.req` (OpenResty) |
 | **Tracking** | Per client IP address |
 | **Scope** | Per Proxy Host (independent limits per host) |

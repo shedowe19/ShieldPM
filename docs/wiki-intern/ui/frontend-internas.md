@@ -45,7 +45,7 @@ Dadurch aktualisieren sich Kopfzeile und Berechtigungsansichten auch nach Änder
 Eine optimistische Aktualisierung des Alias behält die numerische Benutzer-ID im gecachten Objekt bei.
 `useUser.test.tsx` sichert beide Fälle ab.
 
-32 Hooks für Server-State-Management (React Query):
+Hooks für Server-State-Management (React Query):
 
 ### CRUD Hooks (Entitäten)
 
@@ -196,29 +196,29 @@ wieder her. Eine eigenständige Refresh-Sitzung für den impersonierten Benutzer
 
 ## Modals (`frontend/src/modals/`)
 
-21 Dialog-Komponenten für CRUD-Operationen:
+Dialog-Komponenten für CRUD- und Sicherheitsaktionen (Auswahl):
 
-| Modal                    | Datei                          | Größe  | Zweck                                           |
-| ------------------------ | ------------------------------ | ------ | ----------------------------------------------- |
-| ProxyHostModal           | `ProxyHostModal.tsx`           | 17 KB  | Proxy-Host erstellen/bearbeiten (größte Datei)  |
-| AccessListModal          | `AccessListModal.tsx`          | 14 KB  | Access-List Verwaltung                          |
-| UserModal                | `UserModal.tsx`                | 17 KB  | Benutzer erstellen/bearbeiten und Avatar-Upload |
-| PermissionsModal         | `PermissionsModal.tsx`         | 14 KB  | Berechtigungen setzen                           |
-| RedirectionHostModal     | `RedirectionHostModal.tsx`     | 13 KB  | Redirect erstellen/bearbeiten                   |
-| CustomCertificateModal   | `CustomCertificateModal.tsx`   | 12 KB  | Custom-Zertifikat hochladen                     |
-| DdnsProviderModal        | `DdnsProviderModal.tsx`        | 12 KB  | DDNS-Provider konfigurieren                     |
-| StreamModal              | `StreamModal.tsx`              | 9 KB   | Stream erstellen/bearbeiten                     |
-| InternalCertificateModal | `InternalCertificateModal.tsx` | 9 KB   | Internes Zertifikat                             |
-| ChangePasswordModal      | `ChangePasswordModal.tsx`      | 9 KB   | Passwort ändern                                 |
-| DeadHostModal            | `DeadHostModal.tsx`            | 7 KB   | Dead-Host erstellen/bearbeiten                  |
-| HTTPCertificateModal     | `HTTPCertificateModal.tsx`     | 6 KB   | HTTP-Challenge-Zertifikat                       |
-| DashboardNoteModal       | `DashboardNoteModal.tsx`       | 6 KB   | Dashboard-Notiz bearbeiten                      |
-| SetPasswordModal         | `SetPasswordModal.tsx`         | 5 KB   | Passwort setzen                                 |
-| DNSCertificateModal      | `DNSCertificateModal.tsx`      | 4 KB   | DNS-Challenge-Zertifikat                        |
-| EventDetailsModal        | `EventDetailsModal.tsx`        | 3.5 KB | Audit-Event-Details                             |
-| DeleteConfirmModal       | `DeleteConfirmModal.tsx`       | 3 KB   | Lösch-Bestätigung                               |
-| RenewCertificateModal    | `RenewCertificateModal.tsx`    | 3 KB   | Zertifikat erneuern                             |
-| HelpModal                | `HelpModal.tsx`                | 2.4 KB | Hilfe-Dialog                                    |
+| Modal                    | Datei                          | Zweck                                           |
+| ------------------------ | ------------------------------ | ----------------------------------------------- |
+| ProxyHostModal           | `ProxyHostModal.tsx`           | Proxy-Host erstellen/bearbeiten                 |
+| AccessListModal          | `AccessListModal.tsx`          | Access-List Verwaltung                          |
+| UserModal                | `UserModal.tsx`                | Benutzer erstellen/bearbeiten und Avatar-Upload |
+| PermissionsModal         | `PermissionsModal.tsx`         | Berechtigungen setzen                           |
+| RedirectionHostModal     | `RedirectionHostModal.tsx`     | Redirect erstellen/bearbeiten                   |
+| CustomCertificateModal   | `CustomCertificateModal.tsx`   | Custom-Zertifikat hochladen                     |
+| DdnsProviderModal        | `DdnsProviderModal.tsx`        | DDNS-Provider konfigurieren                     |
+| StreamModal              | `StreamModal.tsx`              | Stream erstellen/bearbeiten                     |
+| InternalCertificateModal | `InternalCertificateModal.tsx` | Internes Zertifikat                             |
+| ChangePasswordModal      | `ChangePasswordModal.tsx`      | Passwort ändern                                 |
+| DeadHostModal            | `DeadHostModal.tsx`            | Dead-Host erstellen/bearbeiten                  |
+| HTTPCertificateModal     | `HTTPCertificateModal.tsx`     | HTTP-Challenge-Zertifikat                       |
+| DashboardNoteModal       | `DashboardNoteModal.tsx`       | Dashboard-Notiz bearbeiten                      |
+| SetPasswordModal         | `SetPasswordModal.tsx`         | Passwort setzen                                 |
+| DNSCertificateModal      | `DNSCertificateModal.tsx`      | DNS-Challenge-Zertifikat                        |
+| EventDetailsModal        | `EventDetailsModal.tsx`        | Audit-Event-Details                             |
+| DeleteConfirmModal       | `DeleteConfirmModal.tsx`       | Lösch-Bestätigung                               |
+| RenewCertificateModal    | `RenewCertificateModal.tsx`    | Zertifikat erneuern                             |
+| HelpModal                | `HelpModal.tsx`                | Hilfe-Dialog                                    |
 
 Schlägt der Avatar-Upload nach dem Speichern eines Benutzers fehl, bleibt der Dialog geöffnet und zeigt die
 Fehlermeldung an. Erfolgsmeldung und Schließen des Dialogs erfolgen erst nach einem erfolgreichen Avatar-Upload,

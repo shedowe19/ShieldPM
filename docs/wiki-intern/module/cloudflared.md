@@ -10,15 +10,16 @@ Ermöglicht das Exponieren von Diensten über Cloudflare ohne eingehende Portfre
 
 ## Wichtige Dateien
 
-- `backend/internal/cloudflared.js` (4 KB) — Business-Logik
-- `backend/models/cloudflared_tunnel.js` (2 KB) — Objection.js-Modell
-- `backend/routes/nginx/cloudflared.js` (5 KB) — API-Routen
+- `backend/internal/cloudflared.js` — Business-Logik
+- `backend/models/cloudflared_tunnel.js` — Objection.js-Modell
+- `backend/routes/nginx/cloudflared.js` — API-Routen
 
 ## Verhalten
 
 - Verwaltet Cloudflare-Tunnel-Konfigurationen in der Datenbank
 - Startet und überwacht die lokal installierte Cloudflared-Binary
 - Kein offener Port auf dem Host nötig
+- Die Online-Anzeige besagt, dass der lokale Prozess nach zwei Sekunden noch läuft; sie ist kein Nachweis, dass jeder Cloudflare-Public-Hostname oder der zugehörige Origin funktioniert.
 
 ## Abhängigkeiten
 
@@ -28,6 +29,8 @@ Ermöglicht das Exponieren von Diensten über Cloudflare ohne eingehende Portfre
 ### Prozesslebenszyklus
 
 Das Modul startet die lokal installierte `cloudflared`-Binary mit dem Tunnel-Token in der Prozessumgebung. Es registriert einen `error`-Handler für Startfehler, beispielsweise eine fehlende Binary, und speichert Fehlerstatus und Fehlermeldung. Ein verspätetes `exit`-Event eines gestoppten Prozesses darf weder den Eintrag eines bereits gestarteten Nachfolgers löschen noch dessen Status überschreiben. Auch die verzögerte Online-Prüfung bezieht sich auf die konkrete Prozessinstanz.
+
+Der Token ist im Datenbankmodell verschlüsselt. GitOps exportiert jedoch den entschlüsselten Modelldatensatz nach `cloudflared-tunnels/*.yaml`; Zugriff auf das GitOps-Repository und dessen Sicherungen muss entsprechend beschränkt werden. Der Origin des Public Hostname wird im Cloudflare-Konto konfiguriert und muss auf einen erreichbaren ShieldPM-Listener zeigen; das Zielschema des Proxy Hosts beschreibt unabhängig davon die Verbindung zum Anwendung-Upstream.
 
 ### Serialisierung und globale Sichtbarkeit
 

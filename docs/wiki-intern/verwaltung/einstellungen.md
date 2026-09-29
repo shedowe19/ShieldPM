@@ -19,7 +19,7 @@ Die Anwendung benötigt globale Konfigurationswerte, die in der Datenbank gespei
 
 - `setting.js` ermöglicht das Lesen und Aktualisieren von Systemeinstellungen.
 - Einzelne Settings werden per Key gespeichert (z. B. `default-site`, `oidc-config`).
-- Nach einer Änderung wird ggf. ein Nginx-Reload oder ein Service-Restart ausgelöst.
+- Änderungen an `default-site` erzeugen und prüfen Nginx-Konfiguration und laden Nginx neu. Andere Schlüssel werden als Datenbankwerte aktualisiert; abhängige Module lesen sie bei Bedarf. `setting.js` startet keinen generischen Service-Neustart.
 - Die Default-Site-Variante mit eigenem HTML zeigt Validierungsfehler direkt unter dem beschrifteten Editor an und verknüpft sie über `aria-describedby`; ein leerer Inhalt kann nicht gespeichert werden. Regression: `frontend/src/pages/Settings/DefaultSite.test.tsx`.
 - Ein fehlgeschlagenes Nachladen der Default-Site-Einstellung zeigt bei bereits vorhandenen Daten einen Fehler im weiterhin geöffneten Formular. Ungespeichertes HTML bleibt auch bei anschließender Wiederherstellung der Verbindung erhalten. Scheitert das erste Laden ohne Daten, wird kein Formular mit Ersatzwerten angeboten.
 - AI-Modelllisten gelten nur für die Verbindung, mit der sie angefordert wurden. Änderungen an Provider, Base-URL oder API-Key verwerfen geladene Optionen und ausstehende Antworten einschließlich deren Fehlern. Auch ein Wechsel zurück zum vorherigen Wert reaktiviert keine ältere Anfrage. Regression: `frontend/src/pages/Settings/Ai.test.tsx`.

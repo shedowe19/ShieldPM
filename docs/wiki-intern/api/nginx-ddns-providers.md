@@ -12,13 +12,14 @@ API-Routen für DDNS-Provider-Verwaltung.
 
 ## Endpunkte
 
-| Methode | Pfad                            | Beschreibung               |
-| ------- | ------------------------------- | -------------------------- |
-| GET     | `/api/nginx/ddns-providers`     | Alle DDNS-Provider listen  |
-| POST    | `/api/nginx/ddns-providers`     | Neuen Provider erstellen   |
-| GET     | `/api/nginx/ddns-providers/:id` | Einzelnen Provider abrufen |
-| PUT     | `/api/nginx/ddns-providers/:id` | Provider aktualisieren     |
-| DELETE  | `/api/nginx/ddns-providers/:id` | Provider löschen           |
+| Methode | Pfad                                 | Beschreibung                  |
+| ------- | ------------------------------------ | ----------------------------- |
+| GET     | `/api/nginx/ddns-providers`          | Alle DDNS-Provider listen     |
+| POST    | `/api/nginx/ddns-providers`          | Neuen Provider erstellen      |
+| GET     | `/api/nginx/ddns-providers/:id`      | Einzelnen Provider abrufen    |
+| PUT     | `/api/nginx/ddns-providers/:id`      | Provider aktualisieren        |
+| DELETE  | `/api/nginx/ddns-providers/:id`      | Provider löschen              |
+| POST    | `/api/nginx/ddns-providers/:id/test` | Provideraktualisierung testen |
 
 ## Verwandte Seiten
 

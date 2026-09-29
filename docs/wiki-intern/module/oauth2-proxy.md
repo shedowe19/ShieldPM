@@ -13,11 +13,11 @@ Während ShieldPM selbst per OIDC Login-fähig ist (siehe [Benutzer & Auth](./be
 - `backend/internal/oauth2-proxy.js` (~240 Zeilen) — Konfiguration und Lebenszyklus
 - `backend/templates/_proxy_logic.conf` — `auth_request`-Direktiven für Proxy-Hosts
 - `backend/migrations/*` — Felder für OAuth-Konfiguration in Proxy-Hosts/Settings
-- `frontend/src/pages/Settings/` — UI-Konfiguration (sofern aktiviert)
+- `frontend/src/modals/AccessListSsoTab.tsx` — SSO-Konfiguration im Access-List-Dialog
 
 ## Verhalten
 
-- ShieldPM startet/konfiguriert oauth2-proxy als Sidecar-Service oder Subprozess (je nach Deployment).
+- ShieldPM startet/konfiguriert oauth2-proxy als verwalteten Subprozess pro verwendeter Access-List. Das Docker-Image enthält das Binary; der native Installer bietet dessen Installation optional an.
 - Pro Proxy-Host kann SSO aktiviert werden; Nginx prüft Cookies und weist anonyme Anfragen zur Login-Seite des Providers.
 - Nach erfolgreicher Anmeldung erhält der Backend-Host Identity-Header (`X-Auth-Request-Email`, `X-Auth-Request-User`).
 - Die TOML-Konfiguration maskiert Zeichenketten und schreibt Listen als jeweils einen Array-Wert. Absolute Login-Weiterleitungen werden ausschließlich für Domains der zugeordneten, aktivierten Proxy-Hosts zugelassen; E-Mail-Domains sind davon unabhängig. Ohne solche Hosts ist die Weiterleitungsliste leer, statt den nicht ausgewerteten Nginx-Ausdruck `$host` zu enthalten.
@@ -50,12 +50,12 @@ In `frontend/src/modals/AccessListModal.tsx` als Auswahl-Optionen verdrahtet, in
 | `azure`         | Azure          |                                        |
 | `keycloak-oidc` | Keycloak       |                                        |
 
-Authentik wird **nicht** über oauth2-proxy, sondern als eigener Auth-Typ `AUTHENTIK_PROXY` (Feld `authentik_host`) integriert — er nutzt Authentiks eigenen Forward-Auth-Modus.
+Authentik kann entweder als eigener Auth-Typ `AUTHENTIK_PROXY` (Feld `authentik_host`, Forward-Auth-Modus) **oder** als generischer OIDC-Provider (`oidc`) im verwalteten oauth2-proxy verwendet werden. Die OAuth2-Proxy-Auswahl enthält keinen separaten Providerwert `authentik`.
 
 ## Abhängigkeiten
 
 - `internal/nginx.js` — Reload nach Konfigurationsänderung
-- `internal/setting.js` — Globale OAuth2-Proxy-Einstellungen
+- `internal/proxy-host.js` — Lebenszyklus bei Hoständerungen
 - `internal/audit-log.js` — Protokollierung
 
 ## Offene Fragen

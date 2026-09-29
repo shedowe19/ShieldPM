@@ -39,7 +39,7 @@ Die API wird durch Express.js bereitgestellt. Schema-Validierung erfolgt über A
 
 ## Authentifizierung
 
-Alle Endpunkte (außer `/api/tokens`) erfordern ein JWT-Token im `Authorization: Bearer`-Header.
+Der öffentliche Health-Endpunkt `GET /api` liefert Setup-, Demo- und Versionsstatus sowie einen anfänglichen CSRF-Token. Anmeldung über `POST /api/tokens`, Refresh und zweiter Faktor sind ohne gültiges Access-JWT erreichbar; die Ersteinrichtung besitzt eine eigene Ausnahme. Geschützte Routen akzeptieren ein JWT im `Authorization: Bearer`-Header oder das HttpOnly-Cookie `shieldpm_jwt`. Aktionen erfordern zusätzlich Ressourcenberechtigungen. Cookie-basierte Schreibanfragen senden den passenden Token im Header `X-XSRF-TOKEN`; für Login, Refresh, Logout und bestimmte Erst-Setup-/2FA-Schritte gelten im Backend gezielte Ausnahmen. Die Duo-Browserübergabe bleibt CSRF-geschützt.
 
 Die [Proxy-Host-Diagnose](../features/proxy-host-diagnostics.md) ist als `POST /api/nginx/proxy-hosts/:host_id/diagnostics` nur für sichtbare Hosts zugänglich. Ihr einziger optionaler Body-Wert `websocket_path` legt einen relativen Pfad desselben Hosts fest.
 

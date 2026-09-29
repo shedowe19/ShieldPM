@@ -76,17 +76,17 @@ Siehe [Rootfs-Referenz](./rootfs.md) für vollständige Auflistung.
 
 ## Projekt-Dateien
 
-| Datei                    | Zweck                                                               |
-| ------------------------ | ------------------------------------------------------------------- |
-| `README.md`              | Projekt-Dokumentation — öffentlicher Einstiegspunkt                 |
-| `LICENSE`                | GPL-3.0 Lizenz — Urheberrechtsinformationen                         |
-| `THIRD-PARTY-NOTICES.md` | Generierte Lizenz-Attribution für NPM-Drittabhängigkeiten           |
-| `pentest_crowdsec.py`    | Pentest-Skript für CrowdSec-Integrationstests                       |
-| `renovate.json`          | Renovate-Bot Konfiguration für automatische Dependency-Updates      |
-| `.gitignore`             | Git-Ignorierliste                                                   |
-| `.gitattributes`         | Git-Attribute (z.B. linguististische Erkennung)                     |
-| `.imgbotconfig`          | ImgBot-Konfiguration für automatische Bildoptimierung               |
-| `.version`               | ShieldPM Version (z.B. `4.4.1`) — synchron mit package.json-Dateien |
+| Datei                    | Zweck                                                                                                                        |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`              | Projekt-Dokumentation — öffentlicher Einstiegspunkt                                                                          |
+| `LICENSE`                | ShieldPM-Lizenz für private/interne Nutzung mit MIT-Hinweisen zu übernommenen Anteilen; Einschränkungen stehen im Lizenztext |
+| `THIRD-PARTY-NOTICES.md` | Generierte Lizenz-Attribution für NPM-Drittabhängigkeiten                                                                    |
+| `pentest_crowdsec.py`    | Pentest-Skript für CrowdSec-Integrationstests                                                                                |
+| `renovate.json`          | Renovate-Bot Konfiguration für automatische Dependency-Updates                                                               |
+| `.gitignore`             | Git-Ignorierliste                                                                                                            |
+| `.gitattributes`         | Git-Attribute (z.B. linguististische Erkennung)                                                                              |
+| `.imgbotconfig`          | ImgBot-Konfiguration für automatische Bildoptimierung                                                                        |
+| `.version`               | ShieldPM Version (z.B. `4.4.1`) — synchron mit package.json-Dateien                                                          |
 
 ## Agent-spezifische Dateien
 

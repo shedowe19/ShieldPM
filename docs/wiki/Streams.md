@@ -14,7 +14,7 @@ Stream Hosts allow you to forward raw **TCP** and **UDP** traffic through Shield
 ```
 
 > [!NOTE]
-> Streams **do not** inspect or modify the traffic — they simply forward the raw TCP/UDP packets. This means no WAF, no access lists, and no caching. For HTTP-based services, use [Proxy Hosts](Proxy-Hosts) instead.
+> Streams forward TCP connections or UDP datagrams through Nginx's stream module. They do not offer HTTP WAF, access lists, or caching. Optional TLS termination and PROXY protocol forwarding **do** modify how a connection is handled. For HTTP-based services, use [Proxy Hosts](./Proxy-Hosts.md).
 
 ## Use Cases
 
@@ -33,7 +33,7 @@ Stream Hosts allow you to forward raw **TCP** and **UDP** traffic through Shield
 
 | Field | Description |
 | :--- | :--- |
-| **Incoming Port** | The port ShieldPM listens on for this stream. Must be unique and not conflict with other hosts. |
+| **Incoming Port** | The port ShieldPM listens on. An overlapping Stream using the same transport (TCP or UDP) is rejected; your chosen port must also be available on the host. |
 | **Forwarding Host** | The IP or hostname of the backend service (e.g., `192.168.1.50`, `my-server`). |
 | **Forwarding Port** | The port on the backend service. |
 | **TCP** | Enable TCP forwarding (toggle). |
@@ -54,15 +54,15 @@ Stream Hosts allow you to forward raw **TCP** and **UDP** traffic through Shield
 
 You can optionally assign an SSL certificate to a Stream for **TLS termination**. This is useful for encrypting connections to services that don't natively support TLS.
 
-1. Select an existing certificate from the dropdown, or request a new one.
-2. The stream will then accept TLS-encrypted connections on the incoming port and forward the decrypted traffic to the backend.
+1. For a TCP stream, select an existing certificate or request a new one. New certificates require domain names for issuance; Stream hosts do not store those domain names.
+2. The TCP listener then terminates incoming TLS and forwards the decrypted TCP stream to the backend. UDP listeners do not use the certificate.
 
 ### Notes Tab
 
-Use the Notes field to add internal documentation for this stream (e.g., "Minecraft Server - Living Room PC"). Notes are only visible to administrators.
+Use the Notes field to add internal documentation for this stream (e.g., "Minecraft Server - Living Room PC"). Notes are visible in the management UI to people with permission to view the stream.
 
 > [!TIP]
-> If the note starts with ⚠️ or contains a warning keyword, it will be highlighted in the stream list to draw attention.
+> The note is shown prominently when opening the stream's edit dialog; it does not require a special prefix.
 
 ## Example: Minecraft Server
 
@@ -93,4 +93,7 @@ Use the Notes field to add internal documentation for this stream (e.g., "Minecr
     ```
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)
+## Related pages
+
+- [Home](./Home.md)
+- [Proxy Hosts](./Proxy-Hosts.md)

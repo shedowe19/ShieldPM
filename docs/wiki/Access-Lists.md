@@ -59,7 +59,7 @@ By default, if you have both Auth and IP rules, Nginx usually requires **all** c
 
 ## 🔑 OpenID Connect (OIDC) / OAuth2
 
-ShieldPM supports modern Single Sign-On using OpenID Connect (supported by Keycloak, Google, Authentik, Authelia, etc.).
+ShieldPM offers two distinct SSO modes in an Access List: built-in Nginx OIDC (`oidc`) and a managed `oauth2-proxy` process. The steps below describe **built-in OIDC**; use the [OAuth2-Proxy guide](OAuth2-Proxy) for the separate proxy mode.
 
 ### Configuration
 
@@ -69,13 +69,13 @@ In the **Access List** dialog, scroll to the Authorization section:
 2. **Discovery Document URL:** The `.well-known/openid-configuration` endpoint of your IdP.
     - *Example:* `https://auth.example.com/realms/master/.well-known/openid-configuration`
 3. **Client ID & Client Secret:** Credentials you generated in your Identity Provider.
-4. **Redirect URI:** Ensure your IdP allows the callback URL: `https://<your-service>/oauth2/callback`.
+4. **Redirect URI:** For built-in OIDC, register `https://<your-service>/_oauth2_callback` with your IdP. The `/oauth2/callback` route belongs to the separate oauth2-proxy mode (and changes if its prefix changes).
 
 ### How it works
 
 1. User visits your site.
 2. Nginx checks for a valid session cookie.
-3. If missing, user is redirected to the IdP (e.g., "Sign in with Google").
+3. If missing, the built-in OIDC integration redirects the user to the IdP.
 4. After success, IdP redirects back to the callback URL.
 5. Nginx verifies the token, sets a session cookie, and allows access.
 
@@ -96,7 +96,7 @@ Strictly require clients to present a valid SSL Certificate to access your servi
 
 ### Behavior
 
-* **Enforcement:** Nginx immediately rejects connections during the TLS Handshake if the client does not provide a valid certificate signed by the configured CA.
+- **Enforcement:** Nginx verifies the client certificate and the generated host configuration also returns HTTP 403 when `$ssl_client_verify` is not `SUCCESS`. The failure may appear during TLS negotiation or as an HTTP error, depending on the client and connection.
 - **Browser:** Users will be prompted by their browser to select a certificate.
 - **API/CLI:** Use `--cert client.crt --key client.key` (e.g. with curl).
 

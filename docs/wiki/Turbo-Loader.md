@@ -7,7 +7,7 @@ Normally, web browsers download files using a single TCP connection. If you have
 
 The Turbo-Loader intercepts file downloads at the Nginx level and serves a specialized, lightweight HTML app instead. This app uses Javascript to request up to **8 parallel chunks** at the same time using HTTP `Range` requests, saturating your downstream bandwidth.
 
-Once all chunks are retrieved, it saves the file directly to your disk with nearly zero RAM overhead.
+With a compatible browser and permission to choose a save location, it writes received chunks to disk. Other browsers may need to buffer the full file in memory before saving.
 
 ## When does it trigger?
 The Turbo-Loader is automatically active for any Proxy Host where you flip the **Turbo-Loader** toggle in the UI.
@@ -21,22 +21,22 @@ When enabled, Nginx intercepts HTTP GET requests based purely on the **file exte
 Some web applications initiate downloads by creating a "hidden iframe" in the background (e.g., double-clicking a file in Synology File Station).
 Since the Turbo-Loader requires a visible User Interface to show download progress and request saving permissions, it cannot operate inside a hidden iframe (the UI would be invisible to the user).
 
-If the Turbo-Loader detects it is embedded in a hidden iframe or triggered via an automated API, it will automatically bypass itself and revert to a standard, single-thread Nginx download.
+If the Turbo-Loader page is embedded in any iframe, it redirects that iframe to the ordinary download with `turbo=0`. Other automated clients should use `?turbo=0` explicitly if they need the original file response instead of the HTML download page.
 
 ## Direct-To-Disk vs RAM Fallback
 For maximum performance and to prevent browser crashes on huge files, the Turbo-Loader utilizes the modern **File System Access API (FSFA)**. This allows the browser to dynamically write chunks directly to your physical hard drive as they arrive, using almost **0% RAM**.
 
 ### Browser Compatibility & Brave "Shields"
-* **Supported:** Google Chrome, Microsoft Edge, Opera, and Chromium-based browsers.
-* **Blocked:** Firefox (API not supported yet) and **Brave Browser (if Shields are set to Aggressive)**.
+* **Direct-to-disk:** Available when the browser exposes `showSaveFilePicker` in the page's security context and permits the user to choose a file.
+* **RAM fallback:** Used when that API is absent or blocked. Some Brave settings and browser permission policies can block the file picker.
 
-If your browser blocks the Direct-To-Disk API (e.g., due to Brave's Aggressive Shields), the Turbo-Loader falls back to **RAM Mode**. It will buffer the entire file in your system memory and assemble it at the very end.
+If your browser blocks the Direct-To-Disk API, the Turbo-Loader falls back to **RAM Mode**. It buffers the entire file in memory before offering a save action.
 
 > [!WARNING]
 > **The 1.2 GB RAM Crash Limit**
-> Chromium browsers have an internal memory limit for Blobs (files assembled in RAM). If you attempt to save a file larger than ~1.5 GB from RAM, the browser's download manager will silently crash and display a vague **"Network Error"** (Netzwerkfehler).
+> Assembling a large Blob may exhaust a browser tab's memory or fail during saving; the exact threshold depends on the browser and device.
 >
-> To prevent this, the Turbo-Loader enforces a **strict 1.2 GB limit** when running in RAM Fallback mode. If your file is larger and the Direct-To-Disk API is blocked, the download will not start. Instead, you will be presented with a large **Standard Download** fallback button.
+> The Turbo-Loader enforces a **1.2 GiB limit** in RAM fallback mode and asks for confirmation above 512 MiB. For larger files without the direct-to-disk API, use its **Standard Download** button.
 
 #### How to fix the "Direct-To-Disk Blocked" error in Brave:
 1. Click the **Lion icon** in the top-right corner of Brave.

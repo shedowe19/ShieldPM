@@ -62,7 +62,7 @@ Die Tests prüfen Datenmigration, Certbot-Verknüpfungen, Shell-Syntax, unverän
 
 ## Datenbank (Entwicklung)
 
-SQLite wird automatisch verwendet. Die Datei wird unter `/data/database.sqlite` erstellt. Migrationen laufen beim Start automatisch.
+SQLite wird automatisch verwendet. Die Datei wird bei lokalem Start unter `backend/data/shieldpm/database.sqlite` angelegt (`DATA_PATH` ist standardmäßig `${process.cwd()}/data`). Im Container liegt sie unter `/data/shieldpm/database.sqlite`. Migrationen laufen beim Start automatisch.
 
 ## Code-Qualität
 

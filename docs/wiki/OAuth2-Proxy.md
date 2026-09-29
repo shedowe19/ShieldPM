@@ -77,7 +77,7 @@ ShieldPM will automatically:
    - **Name**: `ShieldPM OAuth2 Proxy`
    - **Authorization Flow**: Select your default authorization flow
    - **Client Type**: `Confidential`
-   - **Redirect URIs**: `https://your-domain.example.com/oauth2/callback` (one per protected domain, or use Regex mode with `.*`)
+   - **Redirect URIs**: Explicitly register `https://your-domain.example.com/oauth2/callback` for each protected domain (adjust the prefix if changed).
    - **Signing Key**: ⚠️ **Select an RSA key** (e.g. `authentik Self-signed Certificate`). **Do NOT leave this empty** — without a signing key, Authentik uses HS256 which is incompatible with OAuth2-Proxy.
    - **Scopes**: `openid`, `email`, `profile`
 
@@ -176,7 +176,7 @@ ShieldPM will automatically:
 | Cookie Secret | *(generated with openssl)* |
 | Allowed Emails | `user@example.com` *(specific users)* |
 
-> **Note:** GitHub uses usernames, not email domains, for access control. Use **Allowed Emails** to restrict access to specific GitHub accounts, or **Allowed Groups** for GitHub organizations/teams.
+> **Note:** If you use Allowed Emails or Allowed Groups, check that the GitHub account and OAuth app expose the required verified email address or group information. Provider-specific claims and scopes can affect these filters.
 
 ---
 
@@ -252,7 +252,7 @@ You can restrict who can access a protected host by configuring:
 | **Allowed Email Domains** | Comma-separated domains | `example.com,corp.com` |
 | **Allowed Groups** | Comma-separated groups (provider-specific) | `admins,devops` |
 
-- **All three are optional.** If none are set, `email_domains = ["*"]` is used (any authenticated user).
+- If no email-domain or individual-email restriction is set, ShieldPM writes `email_domains = ["*"]` (any authenticated user). If **Allowed Emails** alone is set, the email-domain list stays empty; an explicitly configured domain list is additional to the individual-email filter.
 - **Groups** are provider-dependant. Authentik exposes groups via the `groups` claim. Keycloak requires a mapper.
 
 ---
@@ -269,7 +269,7 @@ Some providers require additional scopes. Set them in the **Scopes** field (e.g.
 
 ### PKCE (Proof Key for Code Exchange)
 
-OAuth2-Proxy will automatically detect if your provider supports PKCE (`S256`) and will display a warning if it's not enabled. For maximum security, enable it via the provider settings. ShieldPM does not currently expose a UI toggle for this — it relies on the provider's OIDC Discovery to advertise support.
+ShieldPM does not expose a PKCE toggle or its own PKCE warning in the Access List UI. Check your identity provider and the installed oauth2-proxy version when configuring this behavior.
 
 ---
 
@@ -306,7 +306,7 @@ When you apply an Access List with OAuth2-Proxy to a Proxy Host, ShieldPM does t
 1. **Spawns a Process**: A dedicated `oauth2-proxy` process per Access List, listening on a Unix socket (`/run/shieldpm/oauth2-proxy-<id>.sock`).
 2. **Generates Config**: Creates `oauth2-proxy.cfg` dynamically based on your settings.
 3. **Configures Nginx**: Adds `auth_request` directives to intercept and validate every request.
-4. **Lifecycle Management**: The process is only started when the Access List is actually assigned to a Proxy Host. It's automatically stopped when unassigned or when the last Proxy Host using it is deleted.
+4. **Lifecycle Management**: The process starts only when the Access List is assigned to at least one enabled Proxy Host. It stops when there are no enabled, non-deleted assigned hosts.
 
 ---
 

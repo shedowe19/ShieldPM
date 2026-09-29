@@ -15,11 +15,11 @@ curl -o compose.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/refs/h
 docker compose up -d
 ```
 
-**Port**: UI auf `:81`, HTTP auf `:80`, HTTPS auf `:443`, GoAccess auf `:91`
+**Ports**: UI auf `:81`, HTTP auf `:80`, HTTPS auf `:443` (TCP und ggf. UDP für QUIC); GoAccess auf `:91` nur bei `GOA=true`.
 
 **Image**: `ghcr.io/shedowe19/shieldpm:develop`
 
-**Persistente Daten**: `/opt/shieldpm` → gemountet nach `/data` im Container.
+**Persistente Daten**: `/opt/shieldpm` → gemountet nach `/data` im Container. `compose.yaml` verwendet `network_mode: host`; Ports werden daher direkt am Docker-Host gebunden. `compose.easy.yaml` ist die reduzierte Variante.
 
 ## Native / LXC (Proxmox)
 
@@ -121,7 +121,7 @@ Docker-Publikationen derselben Git-Referenz laufen nacheinander; alle manuellen 
 
 Der Docker-Build-Workflow berücksichtigt auch `.dockerignore`, `scripts/install.sh` und `scripts/setup-node-apt.sh`. Pull Requests bauen lokale Images für die Prüfung. PRs aus demselben Repository melden sich bei GHCR an, damit das geschützte Nginx-Basisimage geladen werden kann; Fork-PRs erhalten keine Registry-Zugangsdaten. Push und Multiarch-Publikation laufen nur außerhalb von Pull Requests. Der manuelle Latest-Workflow übergibt und validiert den Release-Tag als Umgebungsvariable, statt Benutzereingaben direkt in Shell-Code einzusetzen.
 
-Ein erfolgreicher `develop`-Push erstellt zusätzlich zum Image `ghcr.io/shedowe19/shieldpm:develop` ein GitHub-Release für `v<.version>`, sofern diese Version noch kein Release besitzt. Dasselbe gilt für einen Push des exakt passenden Versionstags. Der Tag eines neuen Releases verweist auf den gebauten Commit; vorhandene Releases und ihre Artefakte bleiben bei späteren Builds derselben Version unverändert. Ein bereits belegter Versionstag auf einem anderen Commit blockiert die Veröffentlichung. Der Release-Job läuft weder bei Pull Requests noch bei `workflow_dispatch`. Für ein neues Release müssen `.version` sowie beide Paketversionen gemeinsam erhöht werden.
+Ein erfolgreicher, vom Pfadfilter in `docker.yml` erfasster `develop`-Push erstellt zusätzlich zum Image `ghcr.io/shedowe19/shieldpm:develop` ein GitHub-Release für `v<.version>`, sofern diese Version noch kein Release besitzt. Reine Wiki- oder Markdown-Änderungen starten diesen Docker-Workflow nicht. Dasselbe gilt für einen Push des exakt passenden Versionstags. Der Tag eines neuen Releases verweist auf den gebauten Commit; vorhandene Releases und ihre Artefakte bleiben bei späteren Builds derselben Version unverändert. Ein bereits belegter Versionstag auf einem anderen Commit blockiert die Veröffentlichung. Der Release-Job läuft weder bei Pull Requests noch bei `workflow_dispatch`. Für ein neues Release müssen `.version` sowie beide Paketversionen gemeinsam erhöht werden.
 
 Der Shellcheck-Workflow prüft auch Erweiterungslose Helfer wie `update-shieldpm` und führt `python3 -m unittest discover -s scripts/tests -v` aus. Diese Tests arbeiten mit temporären Verzeichnissen und simulierten externen Befehlen, ohne einen Installer oder laufende Dienste zu starten.
 

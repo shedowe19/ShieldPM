@@ -48,6 +48,8 @@ Das Wiki muss aktualisiert werden bei:
 
 ## Seitenvorlage
 
+Das folgende Beispiel ist für eine Seite unter `module/` gedacht; relative Links an den tatsächlichen Speicherort anpassen.
+
 ```markdown
 # Seitentitel
 
@@ -74,12 +76,12 @@ Welche Module werden verwendet?
 
 ## Offene Fragen
 
-Siehe zentrale Sammelseite [Offene Fragen](./offene-fragen.md).
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 
-- [Offene Fragen](./offene-fragen.md)
-- [Index](./index.md)
+- [Offene Fragen](../offene-fragen.md)
+- [Index](../index.md)
 ```
 
 ## Unsicherheiten markieren

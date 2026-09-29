@@ -17,7 +17,7 @@ Die Datenbankschemas werden durch Knex.js-Migrationen definiert und durch Object
 
 | Konvention        | Beschreibung                                                                                         |
 | ----------------- | ---------------------------------------------------------------------------------------------------- |
-| Primärschlüssel   | `id` (auto-incrementing integer)                                                                     |
+| Primärschlüssel   | Häufig `id` (Auto-Increment-Integer); Ausnahmen wie Einstellungen in der jeweiligen Migration prüfen |
 | Timestamps        | Je Tabelle `dateTime` oder `string`; Analytics-Zähler und Log-Erfassungszeit besitzen eigene Formate |
 | Booleans (SQLite) | Gespeichert als `0`/`1` Integer, konvertiert im Model                                                |
 | Fremdschlüssel    | `*_id` Namenskonvention (z.B. `certificate_id`, `access_list_id`)                                    |
@@ -37,6 +37,7 @@ Die Objection.js-Modelle verwenden folgende Lifecycle-Hooks:
 - Migrationen laufen beim Anwendungsstart automatisch
 - Migrationen exportieren `up` und `down`, sind aber nicht durchgängig rückgängig zu machen. Beispielsweise enthalten frühe Schemaänderungen leere Rollbacks; gehashte Passwörter können nicht in Klartext zurückverwandelt werden. Ein erfolgreicher `down`-Aufruf garantiert daher keine Wiederherstellung des vollständigen früheren Schemas oder Datenstands.
 - Migrationen verwenden ESM (`export { up, down }`)
+- `login_attempts` wird bei Bedarf durch `backend/routes/tokens.js` angelegt und nicht durch eine Datei unter `backend/migrations/`. Der SQLite-Import entdeckt Anwendungstabellen aus dem Schema und berücksichtigt sie beim Datenbankwechsel.
 
 ## Abhängigkeiten
 

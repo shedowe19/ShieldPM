@@ -12,27 +12,27 @@ Express 5 wird verwendet (`5.2.1`). Dies bringt native `async/await`-Unterstütz
 
 ### E2: ESM statt CommonJS
 
-Das gesamte Projekt ist `"type": "module"`. Kein `require()` erlaubt. Alle Imports verwenden `import/export`-Syntax.
+Backend und Frontend verwenden ESM. Backend-Module verwenden `import/export`-Syntax.
 
 **Ausnahme**: `backend/validate-env.cjs` ist eine CommonJS-Datei (wird vor dem ESM-Setup geladen).
 
 ### E3: SQLite als Entwicklungsdatenbank
 
-Entwicklung verwendet SQLite (`better-sqlite3`). Produktion unterstützt MySQL und PostgreSQL. Die Migrations sind so geschrieben, dass sie auf allen drei Engines funktionieren.
+SQLite (`better-sqlite3`) ist die Standard-Datenbank auch für einfache produktive Installationen. MySQL/MariaDB und PostgreSQL sind ebenfalls unterstützt. Die Migrationskette wird für alle drei Engines getestet.
 
 **Gotcha**: Boolean-Felder in SQLite werden als `0`/`1` gespeichert. Das Objection.js-Modell konvertiert im `$afterGet()`.
 
 ### E4: Nginx-Validierung aktiviert
 
-`nginx -t` wird vor dem Reload **aktiv** ausgeführt (via `test()`-Methode = `nginx -tq`). Das schützt vor trivialen Config-Fehlern. Template-Fehler können Nginx dennoch brechen.
+`nginx -tq` wird vor dem Reload ausgeführt. Bei einem ungültigen Host wird die vorherige Datei wiederhergestellt und der Fehler im Hoststatus festgehalten. Die Konfigurationsvorschau ist nur ein Rendern und ersetzt die Prüfung beim Speichern nicht.
 
 ### E5: Kein Debouncing in der Nginx-Engine
 
-Der Nginx-Reload wird **sofort** ausgelöst (keine Verzögerung). Debouncing mit 2s Verzögerung lebt in `docker.js`, nicht in der Nginx-Engine selbst.
+Der reguläre Nginx-Reload wird ohne globale Verzögerung ausgelöst. Das Docker-Auto-Discovery-Modul sammelt seine eigenen Hoständerungen kurzzeitig und führt dann eine gemeinsame Konfiguration und einen validierten Reload aus. Die Nginx-Engine selbst serialisiert Konfigurationsänderungen.
 
 ### E6: Objection.js statt Raw SQL
 
-Datenbankzugriffe erfolgen ausschließlich über Objection.js Query-Builder. Keine Raw-SQL-Queries im Service-Code.
+Modelle verwenden Objection.js und Knex. Einzelne Funktionen benötigen direkte Knex-/SQL-Abfragen, etwa Datenbankstatistiken, Aggregationen und den SQLite-Import. Diese Abfragen sind auf die jeweilige Datenbank-Engine abgestimmt.
 
 ### E7: `domain_names` ist abgeleitet
 
@@ -40,11 +40,11 @@ Das Feld `domain_names` auf Proxy-Hosts wird im `$afterGet()` aus der `host_doma
 
 ### E8: Daten-Vertrag: `/data/`
 
-Alle dynamischen Daten müssen unter `/data/` liegen. Docker-Volumes erwarten diese Struktur. Zustandsinformationen dürfen nicht außerhalb gespeichert werden.
+Persistente Anwendungsdaten liegen unter `/data/` und müssen bei Docker-Installationen entsprechend gemountet werden. Temporäre Laufzeitdateien und Systemkonfiguration können außerhalb liegen.
 
 ### E9: shadcn/ui + Radix als einzige UI-Bibliothek
 
-Keine zusätzlichen UI-Component-Libraries. Frontend verwendet ausschließlich shadcn/ui (Radix UI) + Tailwind CSS.
+Die primären UI-Komponenten verwenden shadcn/ui, Radix UI und Tailwind CSS; spezialisierte Bibliotheken wie TanStack Table, Recharts und Xterm werden für Tabellen, Charts und Terminal eingesetzt.
 
 ### E10: Multi-Stage Docker Build
 
@@ -56,7 +56,7 @@ Der Dockerfile verwendet drei Stages:
 
 ### E11: Biome statt ESLint/Prettier
 
-Code-Qualität wird durch Biome (`@biomejs/biome`) sichergestellt, nicht durch ESLint + Prettier.
+JS/TS-Code wird mit Biome (`@biomejs/biome`) geprüft. Die Markdown-Dateien des internen Wiki werden mit Prettier formatiert.
 
 ## Verwandte Seiten
 

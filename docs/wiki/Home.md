@@ -17,6 +17,7 @@
 * **[Installation](Installation)**: Get started with Docker Compose and migration guides.
 * **[Proxmox LXC Installation](Proxmox-LXC)**: Setup guide for Native Containers (Systemd).
 * **[Configuration](Configuration)**: Environment variables and database setup.
+* **[User Management](User-Management)**: Accounts, roles, and permissions.
 * **[IPv6 Configuration](IPv6)**: Setup guide for Docker and IPv6.
 * **[Docker Compose Reference](Docker-Compose-Reference)**: Full reference file with all options.
 * **[Prerequisites & Best Practices](Best-Practices)**: Backup strategies, security hardening, and performance tips.
@@ -26,7 +27,7 @@
 
 ### Host Management
 
-* **[Proxy Hosts](Proxy-Hosts)**: Detailed guide on configuring hosts, locations, and cache.
+* **[Proxy Hosts](Proxy-Hosts)**: Hosts, locations, cache, upstream monitoring, and diagnostics.
 * **[Stream Hosts (TCP/UDP)](Streams)**: Forward raw TCP/UDP traffic (Game Servers, Databases, VPN).
 * **[Turbo-Loader (Parallel Downloads)](Turbo-Loader)**: Accelerate large file downloads.
 * **[Redirection & Dead Hosts](Redirection-Hosts)**: Managing 301/302 redirects and 404 blocks.
@@ -40,10 +41,11 @@
 * **[Security Overview](Security)**: Introduction to security features.
 * **[CrowdSec Deep Dive](CrowdSec)**: Setup, Bouncer, and Collections.
 * **[ModSecurity Deep Dive](ModSecurity)**: OWASP CRS, Paranoia Levels, and Tuning.
+* **[OpenAppSec WAF](OpenAppSec)**: Optional AI WAF agent and advanced model setup.
 * **[Two-Factor Authentication (2FA)](Two-Factor-Authentication)**: TOTP, YubiKey, Passkey (FIDO2), and Duo Security.
 * **[Access Lists](Access-Lists)**: Basic Auth, IP Ranges, and Authorization.
 * **[OAuth2-Proxy Integration](OAuth2-Proxy)**: Setup Single Sign-On using Google, GitHub, Azure, OIDC, etc.
-* **[Anubis AI Firewall](Anubis)**: Stop AI crawlers and automated bots.
+* **[Anubis Proof-of-Work Gate](Anubis)**: Challenge automated clients before they reach a protected host.
 * **[Request Rate Limiting](Request-Rate-Limiting)**: Protect hosts from abuse and DDoS.
 * **[Internal PKI & ML-KEM](Internal-PKI)**: Setup and use the internal Certificate Authority with Post-Quantum security.
 * **[Secure Demo Mode](Demo-Mode)**: Architecture and deployment of the public sandbox environment.
