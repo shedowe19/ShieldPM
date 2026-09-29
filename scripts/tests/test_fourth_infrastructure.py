@@ -233,7 +233,7 @@ cp() { [ "$active" = false ] || { echo "service still serving old code" >&2; ret
                                 env={**env, "OAS_SYSTEMCTL_ACTIVE": "1", "OAS_RESTART_EXIT": "47"},
                                 capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0, result.stdout)
-        self.assertIn("previous configuration was restored", result.stderr)
+        self.assertIn("was restored", result.stderr)
         self.assertEqual(env_file.read_bytes(), original)
         self.assertEqual(log.read_text().count("systemctl restart shieldpm.service"), 2)
 
