@@ -7,7 +7,6 @@ const readSource = (path) => fs.readFileSync(backendSourcePath(path), "utf8");
 
 const yamlConsumers = ["internal/anubis.js", "internal/gitops.js"];
 const packageManifest = JSON.parse(readSource("package.json"));
-const lockfile = readSource("yarn.lock");
 
 describe("js-yaml ESM compatibility", () => {
 	it("uses the named exports exposed by js-yaml under Node 26", () => {
@@ -25,8 +24,8 @@ describe("js-yaml ESM compatibility", () => {
 		}
 	});
 
-	it("pins the vulnerable transitive js-yaml 4 line to its fixed release", () => {
+	it("keeps the scoped security resolution for transitive js-yaml 4", () => {
+		// Resolved versions are checked separately without relying on Yarn's selector grouping.
 		expect(packageManifest.resolutions["@apidevtools/swagger-parser/**/js-yaml"]).toBe("4.3.2");
-		expect(lockfile).toMatch(/js-yaml@4\.3\.2, js-yaml@\^4\.1\.0:\n {2}version "4\.3\.2"/);
 	});
 });
