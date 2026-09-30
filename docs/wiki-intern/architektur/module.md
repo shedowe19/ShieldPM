@@ -46,17 +46,19 @@ Express-Routen definieren die REST-API-Endpunkte und delegieren an die Internal-
 
 Enthält die Fachlogik für Hostkonfiguration, Zertifikate und Integrationen. Dienste mit Benutzerkontext prüfen die erforderlichen Berechtigungen; technische Helfer wie die Nginx-Engine werden von bereits autorisierten Aufrufern oder Startprozessen verwendet. Operationen können Nebeneffekte wie Nginx-Reloads und Audit-Einträge auslösen.
 
-| Datei             | Beschreibung                                                |
-| ----------------- | ----------------------------------------------------------- |
-| `nginx.js`        | Nginx-Konfiguration generieren/reloaden                     |
-| `tor.js`          | Tor Onion Services + `syncProxyHost()`                      |
-| `chat.js`         | Telegram-Bot + `smartEscape()`                              |
-| `ip_ranges.js`    | Cloudflare-IP-Ranges herunterladen & Nginx-Config schreiben |
-| `gitops.js`       | GitOps-Auto-Push                                            |
-| `ai/`             | AI-Agent                                                    |
-| `token.js`        | JWT-Token-Erzeugung                                         |
-| `certbot.js`      | Let's-Encrypt-Ausstellung und DNS-Challenge                 |
-| `acme-profile.js` | Globale ACME-Datenbankvorgabe und geprüfte Settings-API     |
+| Datei                    | Beschreibung                                                |
+| ------------------------ | ----------------------------------------------------------- |
+| `nginx.js`               | Nginx-Konfiguration generieren/reloaden                     |
+| `tor.js`                 | Tor Onion Services + `syncProxyHost()`                      |
+| `chat.js`                | Telegram-Bot + `smartEscape()`                              |
+| `ip_ranges.js`           | Cloudflare-IP-Ranges herunterladen & Nginx-Config schreiben |
+| `gitops.js`              | GitOps-Auto-Push                                            |
+| `ai/`                    | AI-Agent                                                    |
+| `token.js`               | JWT-Token-Erzeugung                                         |
+| `certbot.js`             | Let's-Encrypt-Ausstellung und DNS-Challenge                 |
+| `acme-profile.js`        | Globale ACME-Datenbankvorgabe und geprüfte Settings-API     |
+| `certificate-options.js` | Zertifikats-Schlüsseltyp und Live-Prüfintervall             |
+| `ip-ranges-options.js`   | Cloudflare-IP-Abruf und Live-Aktualisierungsintervall       |
 
 ### 3. Models (Datenzugriff)
 

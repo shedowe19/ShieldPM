@@ -20,6 +20,16 @@ describe("startup network configuration", () => {
 			expect(result.stdout).not.toContain("ACME_PROFILE");
 		},
 	);
+	it.each([
+		["ACME_KEY_TYPE", "invalid-key"],
+		["CRT", "invalid-interval"],
+		["SKIP_IP_RANGES", "invalid-boolean"],
+		["IPRT", "invalid-interval"],
+	])("leaves removed %s to the one-time settings migration", (key, value) => {
+		const result = validate({ [key]: value });
+		expect(result.status).toBe(0);
+		expect(result.stdout).not.toContain(`export ${key}=`);
+	});
 	it("does not contact the CA during startup for an obsolete environment profile", () => {
 		const directory = fs.mkdtempSync(path.join(os.tmpdir(), "shieldpm-profile-validation-"));
 		try {
@@ -42,7 +52,6 @@ describe("startup network configuration", () => {
 	});
 	it.each([
 		["ACME_SERVER", "invalid-url"],
-		["ACME_KEY_TYPE", "invalid-key"],
 		["ACME_SERVER_TLS_VERIFY", "invalid-boolean"],
 	])("still validates %s after moving profiles to the UI", (key, value) => {
 		expect(validate({ [key]: value, ACME_PROFILE: "shortlived" }).status).toBe(1);
@@ -67,5 +76,7 @@ describe("startup network configuration", () => {
 		expect(result.status).toBe(0);
 		expect(result.stdout).toContain("export HTTP_PORT='80'");
 		expect(result.stdout).not.toContain("ACME_PROFILE");
+		for (const key of ["ACME_KEY_TYPE", "CRT", "SKIP_IP_RANGES", "IPRT"])
+			expect(result.stdout).not.toContain(`export ${key}=`);
 	});
 });

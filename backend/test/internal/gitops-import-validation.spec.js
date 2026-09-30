@@ -1,5 +1,7 @@
 import * as yaml from "js-yaml";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import certificateOptionsSchema from "../../schema/components/certificate-options-object.json" with { type: "json" };
+import ipRangesOptionsSchema from "../../schema/components/ip-ranges-options-object.json" with { type: "json" };
 
 const mocks = vi.hoisted(() => {
 	const files = new Map();
@@ -107,8 +109,16 @@ vi.mock("../../internal/proxy-host-monitor.js", () => ({
 	assertMonitorConfig: vi.fn((data) => data),
 	default: { update: vi.fn(), removeHost: vi.fn(), resetHost: vi.fn() },
 }));
+vi.mock("../../internal/certificate-options.js", () => ({ default: { update: vi.fn() } }));
+vi.mock("../../internal/ip-ranges-options.js", () => ({ default: { update: vi.fn() } }));
+vi.mock("../../schema/index.js", () => ({
+	getValidationSchema: (path) =>
+		path === "/settings/certificate-options" ? certificateOptionsSchema : ipRangesOptionsSchema,
+}));
 
+import certificateOptions from "../../internal/certificate-options.js";
 import gitops from "../../internal/gitops.js";
+import ipRangesOptions from "../../internal/ip-ranges-options.js";
 import monitor from "../../internal/proxy-host-monitor.js";
 import { assertNoSymlinkPath, writeConfigFile } from "../../lib/gitops-files.js";
 
@@ -124,6 +134,34 @@ describe("GitOps import sanitization and safe restore", () => {
 		mocks.prunes.length = 0;
 		mocks.pruneError.value = null;
 		for (const key of Object.keys(mocks.rows)) delete mocks.rows[key];
+	});
+	it.each([
+		["certificate-options", certificateOptions, { key_type: "rsa", renewal_interval_hours: 4 }],
+		["ip-ranges-options", ipRangesOptions, { enabled: true, refresh_interval_hours: 24 }],
+	])("restores %s through its validated live application service", async (id, service, policy) => {
+		file("settings", { id, value: "configured", meta: policy });
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result).toMatchObject({ success: true, imported: 1 });
+		expect(service.update).toHaveBeenCalledExactlyOnceWith(access, policy);
+		expect(mocks.writes).toEqual([]);
+	});
+	it.each([
+		{ id: "certificate-options", value: "configured", meta: { key_type: "rsa", renewal_interval_hours: 99 } },
+		{
+			id: "certificate-options",
+			value: "configured",
+			meta: { key_type: "rsa", renewal_interval_hours: 4, injected: true },
+		},
+		{ id: "ip-ranges-options", value: "configured", meta: { enabled: true, refresh_interval_hours: 7 } },
+		{ id: "ip-ranges-options", value: "ignored", meta: { enabled: true, refresh_interval_hours: 6 } },
+	])("retains the current application options for invalid GitOps imports %j", async (data) => {
+		file("settings", data);
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(result.errors).toHaveLength(1);
+		expect(certificateOptions.update).not.toHaveBeenCalled();
+		expect(ipRangesOptions.update).not.toHaveBeenCalled();
+		expect(mocks.writes).toEqual([]);
 	});
 	it("removes unknown top-level and nested fields from the actual database payload", async () => {
 		file("users", {

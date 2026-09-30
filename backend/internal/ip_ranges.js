@@ -15,11 +15,7 @@ const __dirname = dirname(__filename);
 
 const CLOUDFARE_V4_URL = "https://www.cloudflare.com/ips-v4";
 const CLOUDFARE_V6_URL = "https://www.cloudflare.com/ips-v6";
-const requestedMultiplier = Number(process.env.IPRT);
-const renewalMultiplier =
-	Number.isInteger(requestedMultiplier) && requestedMultiplier >= 1 && requestedMultiplier <= 99
-		? requestedMultiplier
-		: 1;
+let fetchPromise = null;
 
 const parseRanges = (content, kind) => {
 	const ranges = content
@@ -36,15 +32,67 @@ const parseRanges = (content, kind) => {
 };
 
 const internalIpRanges = {
-	interval_timeout: 1000 * 60 * 60 * 6 * renewalMultiplier,
+	interval_timeout: 1000 * 60 * 60 * 6,
 	interval: null,
 	interval_processing: false,
 	iteration_count: 0,
+	enabled: false,
+	generation: 0,
 
 	initTimer: () => {
-		if (internalIpRanges.interval) return;
+		if (!internalIpRanges.enabled || internalIpRanges.interval) return;
+		const generation = internalIpRanges.generation;
 		logger.info("IP Ranges Renewal Timer initialized");
-		internalIpRanges.interval = setInterval(internalIpRanges.fetch, internalIpRanges.interval_timeout);
+		internalIpRanges.interval = setInterval(() => {
+			if (internalIpRanges.enabled && generation === internalIpRanges.generation) {
+				internalIpRanges.fetch().catch((err) => logger.warn(err.message));
+			}
+		}, internalIpRanges.interval_timeout);
+		internalIpRanges.interval.unref?.();
+	},
+
+	/** Stop automatic refresh and invalidate requests without deleting the last known trust list. */
+	stop: () => {
+		if (internalIpRanges.interval) clearInterval(internalIpRanges.interval);
+		internalIpRanges.interval = null;
+		internalIpRanges.enabled = false;
+		internalIpRanges.generation++;
+	},
+
+	/**
+	 * Apply a validated database policy; only enabling triggers an immediate fetch.
+	 * @param {{enabled: boolean, refresh_interval_hours: number}} policy
+	 * @param {{startup?: boolean}} [options]
+	 * @returns {Promise<void>}
+	 */
+	configure: async (policy, { startup = false } = {}) => {
+		const wasEnabled = internalIpRanges.enabled;
+		const timeout = policy.refresh_interval_hours * 60 * 60 * 1000;
+		if (!policy.enabled) {
+			internalIpRanges.stop();
+			internalIpRanges.interval_timeout = timeout;
+			// A publication already holding the lock must finish before disabling returns.
+			await internalNginx.withConfigurationLock(async () => {});
+			return;
+		}
+		if (internalIpRanges.interval_timeout !== timeout && internalIpRanges.interval) {
+			clearInterval(internalIpRanges.interval);
+			internalIpRanges.interval = null;
+		}
+		internalIpRanges.interval_timeout = timeout;
+		internalIpRanges.enabled = true;
+		if (!wasEnabled) internalIpRanges.generation++;
+		internalIpRanges.initTimer();
+		if (wasEnabled) return;
+		const generation = internalIpRanges.generation;
+		const refresh = () => {
+			if (!internalIpRanges.enabled || internalIpRanges.generation !== generation) return;
+			return internalIpRanges.fetch({ reload: !startup });
+		};
+		// Re-enabling while an obsolete request is still running starts a fresh request when it finishes.
+		const initialFetch = fetchPromise ? fetchPromise.then(refresh) : refresh();
+		if (startup) await initialFetch;
+		else initialFetch?.catch((err) => logger.warn(err.message));
 	},
 
 	fetchUrl: (url) => {
@@ -79,45 +127,46 @@ const internalIpRanges = {
 	},
 
 	/**
-	 * Triggered at startup and then later by a timer, this will fetch the ip ranges from services and apply them to nginx.
+	 * Fetch and apply ranges manually or automatically; startup performs its own final reload.
+	 * @param {{reload?: boolean}} [options]
+	 * @returns {Promise<void>}
 	 */
-	fetch: async () => {
-		if (!internalIpRanges.interval_processing) {
-			internalIpRanges.interval_processing = true;
-			logger.info("Fetching IP Ranges from online services...");
-
-			let ip_ranges = [];
-
+	fetch: ({ reload = true } = {}) => {
+		if (fetchPromise) return fetchPromise;
+		const generation = internalIpRanges.generation;
+		const isCurrent = () => generation === internalIpRanges.generation;
+		internalIpRanges.interval_processing = true;
+		logger.info("Fetching IP Ranges from online services...");
+		fetchPromise = (async () => {
 			try {
-				const cloudflare_v4_data = await internalIpRanges.fetchUrl(CLOUDFARE_V4_URL);
-				const items_v4 = parseRanges(cloudflare_v4_data, "ipv4");
-				ip_ranges = [...ip_ranges, ...items_v4];
-
-				const cloudflare_v6_data = await internalIpRanges.fetchUrl(CLOUDFARE_V6_URL);
-				const items_v6 = parseRanges(cloudflare_v6_data, "ipv6");
-				ip_ranges = [...ip_ranges, ...items_v6];
-
-				const clean_ip_ranges = ip_ranges.filter((range) => !!range);
-
+				const ipv4 = await internalIpRanges.fetchUrl(CLOUDFARE_V4_URL);
+				if (!isCurrent()) return;
+				const ipv6 = await internalIpRanges.fetchUrl(CLOUDFARE_V6_URL);
+				if (!isCurrent()) return;
+				const ipRanges = [...parseRanges(ipv4, "ipv4"), ...parseRanges(ipv6, "ipv6")];
 				await internalNginx.withConfigurationLock(async () => {
-					await internalIpRanges.generateConfig(clean_ip_ranges);
-					if (internalIpRanges.iteration_count) await internalNginx.reload();
+					if (!isCurrent()) return;
+					const applied = await internalIpRanges.generateConfig(ipRanges, isCurrent);
+					if (!applied || !isCurrent()) return;
+					if (reload) await internalNginx.reload();
+					internalIpRanges.iteration_count++;
 				});
-
-				internalIpRanges.iteration_count++;
 			} catch (err) {
 				logger.fatal(err.message);
-			} finally {
-				internalIpRanges.interval_processing = false;
 			}
-		}
+		})().finally(() => {
+			internalIpRanges.interval_processing = false;
+			fetchPromise = null;
+		});
+		return fetchPromise;
 	},
 
 	/**
 	 * @param   {Array}  ip_ranges
+	 * @param   {() => boolean} [isCurrent]
 	 * @returns {Promise}
 	 */
-	generateConfig: async (ip_ranges) => {
+	generateConfig: async (ip_ranges, isCurrent = () => true) => {
 		const renderEngine = utils.getRenderEngine();
 		const filename = "/data/nginx/ip_ranges.conf";
 		const temporaryFile = `${filename}.${randomUUID()}.tmp`;
@@ -131,7 +180,9 @@ const internalIpRanges = {
 
 		try {
 			const config_text = await renderEngine.parseAndRender(template, { ip_ranges: ip_ranges });
+			if (!isCurrent()) return false;
 			await fs.promises.writeFile(temporaryFile, config_text, { encoding: "utf8" });
+			if (!isCurrent()) return false;
 			await fs.promises.rename(temporaryFile, filename);
 			return true;
 		} catch (err) {

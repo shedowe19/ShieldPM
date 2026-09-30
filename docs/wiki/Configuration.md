@@ -1,6 +1,6 @@
 # Configuration
 
-ShieldPM is configured via **Environment Variables**. No config file editing is required for basic setup — just set the variables and restart.
+ShieldPM stores its migrated application options in the database and manages them through **Settings**. Certificate and Cloudflare IP-range changes apply without restarting. Deployment configuration and the remaining environment-based options are configured below and generally require a restart.
 
 - **Docker:** Set them in `compose.yaml` under the configured service's `environment:` (`shieldpm` in the main repository samples, `app` in `docker-compose.demo.yaml`). The main samples use host networking; the demo and other bridge deployments must publish the required ports, including `443/udp` for HTTP/3.
 - **Native / LXC:** Edit the file `/data/.env`.
@@ -89,6 +89,21 @@ ShieldPM runs schema migrations for the **selected** database on startup. When y
 
 ---
 
+## Application Settings
+
+Administrators manage these database settings in the UI:
+
+| Location                           | Option                                | Allowed values                    | Default  |
+| :--------------------------------- | :------------------------------------ | :-------------------------------- | :------- |
+| **Settings → Certificates / ACME** | Certificate key type                  | `ecdsa` or `rsa`                  | `ecdsa`  |
+| **Settings → Certificates / ACME** | Renewal check interval                | Whole hours from 1 to 12          | 12 hours |
+| **Settings → Network**             | Automatic Cloudflare IP-range updates | Enabled or disabled               | Disabled |
+| **Settings → Network**             | IP-range refresh interval             | 6 to 594 hours, in six-hour steps | 6 hours  |
+
+The key type applies to the next Let's Encrypt issuance or renewal, including existing Certbot lineages. Changing the check interval replaces the running timer; Certbot still decides when renewal is due. Enabling IP-range updates starts a background fetch and the periodic timer. Disabling them stops automatic updates and keeps the last known ranges.
+
+On upgrade, `ACME_KEY_TYPE`, `CRT`, `SKIP_IP_RANGES` and `IPRT` are imported once when their database settings are first created; existing saved settings are preserved. Legacy renewal intervals are capped at 12 hours, and `IPRT` becomes a refresh interval of six hours times its valid multiplier. After creation, the database values are authoritative and these old variables no longer control runtime behavior. Remove them from deployment configuration after checking the migrated values in Settings.
+
 ## 🔐 SSL & ACME (Let's Encrypt)
 
 | Variable                 | Description                                                                                               | Default                  |
@@ -99,11 +114,9 @@ ShieldPM runs schema migrations for the **selected** database on startup. When y
 | `ACME_EAB_HMAC_KEY`      | External Account Binding HMAC Key                                                                         | —                        |
 | `ACME_MUST_STAPLE`       | Enable OCSP Must-Staple extension                                                                         | `false`                  |
 | `ACME_OCSP_STAPLING`     | Enable OCSP Stapling                                                                                      | `false`                  |
-| `ACME_KEY_TYPE`          | Key type: `rsa` or `ecdsa`                                                                                | `ecdsa`                  |
 | `ACME_SERVER_TLS_VERIFY` | Verify the ACME server TLS certificate                                                                    | `true`                   |
 | `CUSTOM_OCSP_STAPLING`   | Enable OCSP Stapling for custom certificates                                                              | `false`                  |
 | `DEFAULT_CERT_ID`        | Default certificate ID for otherwise unmatched hosts (`0` uses the dummy certificate)                     | `0`                      |
-| `CRT`                    | Configured hours between renewal checks; runtime caps the effective interval at 12 hours                  | `23` (effective: `12`)   |
 
 Use **Settings → Certificates / ACME** to save the global **Standard** or **Short-lived** profile in ShieldPM. The database default is Standard, and a saved change applies immediately without restarting. New certificate dialogs use this default and allow an individual override; certificates with an explicit saved profile keep it. Legacy certificates without profile metadata use the global choice on renewal. The former `ACME_PROFILE` environment variable is ignored; remove it from existing configuration and review the saved choice in Settings after upgrading. See [SSL Certificates](SSL-Certificates).
 
@@ -138,8 +151,6 @@ Use **Settings → Certificates / ACME** to save the global **Standard** or **Sh
 | `DISABLE_NGINX_BEAUTIFIER`      | Disable automatic formatting of Nginx configs                                            | `false`              |
 | `FULLCLEAN`                     | Remove selected unused runtime/log data during startup; it does not rebuild host configs | `false`              |
 | `REGENERATE_ALL`                | Remove generated host `.conf` files during startup so the backend can regenerate them    | `false`              |
-| `SKIP_IP_RANGES`                | Skip fetching real IP ranges (Cloudflare, etc.)                                          | `true`               |
-| `IPRT`                          | Multiplier for the 6-hour Cloudflare IP-range refresh interval when fetching is enabled  | `1`                  |
 
 ---
 

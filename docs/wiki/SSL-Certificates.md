@@ -124,16 +124,16 @@ ShieldPM validates the PEM data and checks that the certificate matches the priv
 
 ## ⚙️ ACME Configuration
 
-Fine-tune certificate behavior via environment variables:
+Use **Settings → Certificates / ACME** to choose the key type (`ecdsa` or `rsa`) and the renewal check interval (1–12 whole hours). The defaults are ECDSA and 12 hours. Saving applies without restarting: the key type is used on the next issuance or renewal, including existing lineages, and the interval replaces the running timer. Neither change immediately issues a new certificate. An automatic renewal batch already in progress keeps its initial key type; a saved change applies to the next batch. Existing `ACME_KEY_TYPE` and `CRT` values are imported once on upgrade when the database setting is created; afterward, use the UI.
+
+The following certificate options still use environment variables:
 
 | Variable             | Description                                                                                    | Default                                                    |
 | :------------------- | :--------------------------------------------------------------------------------------------- | :--------------------------------------------------------- |
 | `ACME_EMAIL`         | Registration email (recommended; required for ZeroSSL's email registration and when using EAB) | —                                                          |
 | `ACME_SERVER`        | Custom ACME server URL                                                                         | Let's Encrypt Production                                   |
-| `ACME_KEY_TYPE`      | `ecdsa` or `rsa`                                                                               | `ecdsa`                                                    |
 | `ACME_MUST_STAPLE`   | Request OCSP Must-Staple extension                                                             | `false`                                                    |
 | `ACME_OCSP_STAPLING` | Enable OCSP Stapling                                                                           | `false` (automatically enabled if `ACME_MUST_STAPLE=true`) |
-| `CRT`                | Configured hours between renewal checks; effective interval is capped at **12 hours**          | `23` configured; **12 hours** effective                    |
 | `DEFAULT_CERT_ID`    | Default cert ID for unconfigured hosts                                                         | `0` (none)                                                 |
 
 ### Alternative ACME Providers
@@ -167,7 +167,7 @@ Buypass [discontinued TLS/SSL and ACME certificate issuance](https://www.buypass
 
 ### "Certificate not renewing"
 
-ShieldPM checks its managed Let's Encrypt certificates at startup and then at most every **12 hours**, calling `certbot renew` separately for each certificate with its saved profile. A valid `CRT` below 12 shortens that interval; a larger or invalid value still results in a 12-hour interval. Certbot decides when each certificate is due. A check does not force a new certificate; `CRT` does not set the expiry threshold. A failed renewal is logged without preventing checks of the other certificates. Keep HTTP challenge access or DNS credentials working for automatic Short-lived renewal. If renewal fails:
+ShieldPM checks its managed Let's Encrypt certificates at startup and then at most every **12 hours**, calling `certbot renew` separately for each certificate with its saved profile. Administrators set the interval from **1 to 12 hours** under **Settings → Certificates / ACME**; the default is 12 hours and changes apply to the running timer. Certbot decides when each certificate is due. A check does not force a new certificate; the check interval does not set the expiry threshold. A failed renewal is logged without preventing checks of the other certificates. Keep HTTP challenge access or DNS credentials working for automatic Short-lived renewal. If renewal fails:
 
 ```bash
 # Check certificate status

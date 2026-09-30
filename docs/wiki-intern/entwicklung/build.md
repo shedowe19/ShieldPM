@@ -47,7 +47,7 @@ PR-Builds laden das fertige Image nur in den lokalen Docker-Daemon des Runners (
 
 Vom Docker-Workflow erfasste Pushes auf `develop` veröffentlichen nach erfolgreichen Builds beider Architekturen das Multiarch-Image `ghcr.io/shedowe19/shieldpm:develop` und erstellen für eine noch unveröffentlichte `.version` ein GitHub-Release mit den nativen Installern und LXC-Templates. Der Workflow besitzt für Branch-Pushes einen Pfadfilter; reine Wiki-Änderungen lösen diesen Build nicht aus. Ein Push des passenden `v<version>`-Tags kann dasselbe Release auslösen; ein manueller Workflow-Start erstellt kein Release. Der erste Release-Lauf legt einen fehlenden Versions-Tag auf dem tatsächlich gebauten Commit an. Ein bereits vorhandenes Release bleibt bei weiteren Builds derselben Version unverändert; ein vorhandener Tag auf einem anderen Commit verhindert die Veröffentlichung, bis `.version` erhöht ist.
 
-Nach dem Build führt `scripts/ci/docker-smoke.sh` in beiden Architektur-Jobs einen echten Containerstart mit PUID/PGID `0` und `1000` aus: Bei Pull Requests aus dem lokal geladenen Image, bei Pushes aus dem veröffentlichten Architekturbild. Die Runner `ubuntu-latest` und `ubuntu-24.04-arm` passen nativ zu ihren Images; QEMU ist dafür nicht erforderlich. Jeder Container erhält ein eigenes temporäres Datenvolume und `--network none`. `TZ=UTC`, deaktiviertes IPv6 und `SKIP_IP_RANGES=true` halten die Prüfung unabhängig von externen Diensten.
+Nach dem Build führt `scripts/ci/docker-smoke.sh` in beiden Architektur-Jobs einen echten Containerstart mit PUID/PGID `0` und `1000` aus: Bei Pull Requests aus dem lokal geladenen Image, bei Pushes aus dem veröffentlichten Architekturbild. Die Runner `ubuntu-latest` und `ubuntu-24.04-arm` passen nativ zu ihren Images; QEMU ist dafür nicht erforderlich. Jeder Container erhält ein eigenes temporäres Datenvolume und `--network none`. `TZ=UTC`, deaktiviertes IPv6 und die auf dem frischen Datenvolume standardmäßig deaktivierte Cloudflare-IP-Aktualisierung halten die Prüfung unabhängig von externen Diensten.
 
 Ein ausdrücklich als Testfixture gekennzeichneter Marker im ACME-Account-Verzeichnis überspringt ausschließlich die sonst vor dem Dienststart versuchte Registrierung. Er enthält keine Zugangsdaten und ist kein nutzbarer ACME-Account. Die Prüfung wartet höchstens 180 Sekunden pro Container auf den vorhandenen Healthcheck. Anschließend prüft sie als jeweilige Service-UID den Backend-Socket, schreibt in die generierte Standardkonfiguration und das Certbot-Plugin-Verzeichnis, führt `nginx -tq`, Reload und Healthcheck aus und kontrolliert, dass `/run`, `/tmp` und `/usr/local` weiterhin Root gehören. Bei Fehlern werden Status und begrenzte Containerlogs ausgegeben; Container, Volumes und lokale Fixtures werden auch im Fehlerfall entfernt. Der Workflow-Schritt ist zusätzlich auf zehn Minuten begrenzt.
 
@@ -86,6 +86,12 @@ Nach dem Dependency-Update in PR #144 maß der CI-Build 1.246.277 Byte für alle
 gzip-komprimierten JavaScript-Assets zusammen. Das Gesamtbudget wurde dafür von 1.242.000 auf 1.255.000 Byte
 angepasst; der neue Grenzwert lässt rund 8,7 KB Spielraum über der gemessenen Baseline. Die Limits für den größten
 JavaScript-Chunk und die Stylesheets blieben unverändert.
+
+Die Zertifikats- und Netzwerkoptionen in PR #146 erhöhen den gemessenen Gesamtumfang von 1.252.952 auf 1.258.326 Byte
+(5.374 Byte zusätzlich). Die beiden Einstellungsbereiche teilen ihren Formularablauf, der Netzwerktab wird verzögert
+geladen, und die Texte sind in allen 13 Sprachen vorhanden; neue Abhängigkeiten wurden nicht ergänzt. Das Gesamtbudget
+steigt dafür um 6.000 auf 1.261.000 Byte und behält 2.674 Byte Spielraum. Größter JavaScript-Chunk (284.537 Byte) und
+Stylesheets (16.098 Byte) bleiben innerhalb ihrer unveränderten Grenzen von 299.000 beziehungsweise 16.600 Byte.
 
 ## Native / LXC Build
 

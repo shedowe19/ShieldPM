@@ -52,6 +52,8 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Zertifikate](./module/zertifikate.md)
 - [ACME-Profile (Standard/Short-lived)](./module/zertifikate.md#acme-profile)
 - [Globale ACME-Vorgabe in den Einstellungen](./verwaltung/einstellungen.md#globale-acme-profilvorgabe)
+- [Zertifikats- und Netzwerkoptionen](./verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen)
+- [Konfigurationsstrategie und weitere UI-Migrationen](./konfiguration/config-dateien.md#schrittweise-verlagerung-von-anwendungsoptionen)
 - [Certbot](./module/certbot.md)
 - [Interne PKI](./module/pki.md)
 - [Access-Lists](./module/access-lists.md)
@@ -136,8 +138,8 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 Die zentrale Engine `backend/internal/nginx.js` rendert Nginx-Konfigurationen mit LiquidJS aus `backend/templates/` und prüft sie mit `nginx -tq` vor dem Reload. Die Host-Module (`proxy-host.js`, `redirection-host.js`, `dead-host.js`, `stream.js`) verwenden sie zusammen mit `host.js`, Zertifikaten und GitOps. Der Proxy-Host integriert zusätzlich Überwachung, Diagnose, Git-Deploy, OAuth2-Proxy und optionalen Upload-Relay.
 
 - **Authentifizierung:** `user.js`, `token.js`, `auth-session-service.js` und `2fa-service.js` verwalten Benutzer, Tokens, Sitzungen und zweite Faktoren; die Routen verbinden diese Dienste.
-- **Zugriff und Zertifikate:** `access-list.js`, `oauth2-proxy.js`, `certificate.js`, `certbot.js` und `pki.js` liefern Regeln, SSO und TLS-Material für Hosts. `acme-profile.js` lädt die globale Profilvorgabe aus der Datenbank und prüft Änderungen vor dem Speichern.
-- **Netzwerk:** `tor.js`, `cloudflared.js`, `wireguard.js`, `ddns.js` und `ip_ranges.js` binden externe Dienste beziehungsweise Systemwerkzeuge ein.
+- **Zugriff und Zertifikate:** `access-list.js`, `oauth2-proxy.js`, `certificate.js`, `certbot.js` und `pki.js` liefern Regeln, SSO und TLS-Material für Hosts. `acme-profile.js` lädt die globale Profilvorgabe aus der Datenbank und prüft Änderungen vor dem Speichern; `certificate-options.js` verwaltet Schlüsseltyp und laufenden Prüftimer.
+- **Netzwerk:** `tor.js`, `cloudflared.js`, `wireguard.js`, `ddns.js` und `ip_ranges.js` binden externe Dienste beziehungsweise Systemwerkzeuge ein. `ip-ranges-options.js` steuert den Cloudflare-IP-Abruf aus gespeicherten Einstellungen.
 - **Automatisierung:** `gitops.js` importiert und exportiert Konfigurationen; `git-deploy.js` aktualisiert Proxy-Hosts aus Git. `docker.js` erkennt Container über Docker-Labels und bündelt seine eigenen Nginx-Änderungen mit einem 2-Sekunden-Timer.
 - **Verwaltung:** `ai.js` bindet Provider und Tools ein; `chat.js` nutzt den AI-Dienst für Telegram. `maintenance.js` erstellt Wartungskonfigurationen, `dashboard_note.js` verwaltet Dashboard-Notizen und `analytics.js` verarbeitet Zugriffslogs. Die React-Oberfläche rendert Diagramme mit Recharts und Karten mit world-atlas.
 - **Weitere Integrationen:** `anubis.js` verwaltet die PoW-Gate-Integration. OpenAppSec wird über das Nginx-Attachment und einen externen Agenten eingebunden; ein `openappsec.js`-Backendmodul existiert nicht.

@@ -97,6 +97,7 @@ export const SETTINGS_TAB = {
 	AI: "ai",
 	GITOPS: "gitops",
 	CERTIFICATES: "certificates",
+	NETWORK: "network",
 } as const;
 export type SettingsTab = (typeof SETTINGS_TAB)[keyof typeof SETTINGS_TAB];
 

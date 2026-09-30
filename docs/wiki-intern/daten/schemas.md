@@ -56,6 +56,10 @@ Certbot persistiert die Ausstellungsoptionen zusätzlich je Lineage in `/data/tl
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
+### Anwendungsoptionen
+
+Die Datensätze `certificate-options` und `ip-ranges-options` verwenden die bestehende Tabelle `setting`, jeweils mit `value: "configured"`. `meta` speichert `{ key_type, renewal_interval_hours }` beziehungsweise `{ enabled, refresh_interval_hours }`. Die Migration `20260930000200_add_application_options.js` importiert alte Umgebungswerte einmalig bei fehlenden Datensätzen und erhält bereits gespeicherte Optionen. Sie ergänzt keine neuen Spalten. API und Grenzen stehen unter [Einstellungen](../verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen).
+
 ## Verwandte Seiten
 
 - [Datenmodell](./datenmodell.md)

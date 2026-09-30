@@ -18,6 +18,7 @@ import streamModel from "../models/stream.js";
 import internalAcmeProfile from "./acme-profile.js";
 import internalAuditLog from "./audit-log.js";
 import * as certbot from "./certbot.js";
+import internalCertificateOptions from "./certificate-options.js";
 import internalGitOps from "./gitops.js";
 import internalNginx from "./nginx.js";
 import internalPki from "./pki.js";
@@ -135,15 +136,21 @@ const internalCertificate = {
 	intervalProcessing: false,
 	processing: false,
 
-	initTimer: async () => {
-		// Defer CRT env var parsing to runtime so NaN is never set at module load time.
-		// Check at least twice daily, including certificates created after this timer starts.
-		const crtHours = Number(process.env.CRT);
-		const validInterval = Number.isInteger(crtHours) && crtHours > 0 && crtHours <= 596;
-		const intervalTimeout = 1000 * 60 * 60 * Math.min(validInterval ? crtHours : 12, 12);
+	/** @param {number} hours @returns {void} */
+	rescheduleTimer: (hours) => {
+		if (!Number.isInteger(hours) || hours < 1 || hours > 12) {
+			throw new error.ValidationError("Certificate renewal interval must be from 1 to 12 hours");
+		}
+		const intervalTimeout = 1000 * 60 * 60 * hours;
 		logger.info(`Certbot Renewal Timer initialized (interval: ${intervalTimeout / 1000 / 60 / 60}h)`);
 		clearInterval(internalCertificate.interval);
 		internalCertificate.interval = setInterval(internalCertificate.processExpiringHosts, intervalTimeout);
+	},
+
+	/** @returns {Promise<void>} */
+	initTimer: async () => {
+		const policy = await internalCertificateOptions.getPolicy();
+		internalCertificate.rescheduleTimer(policy.renewal_interval_hours);
 		// And do this now as well
 		internalCertificate.processExpiringHosts();
 		await internalCertificate.cleanUpMissingCertificates().catch((err) => {
@@ -172,6 +179,7 @@ const internalCertificate = {
 					.where("is_deleted", 0)
 					.andWhere("provider", "letsencrypt");
 				const policy = await internalAcmeProfile.getPolicy();
+				const options = await internalCertificateOptions.getPolicy();
 				// A profile in certbot.ini overrides saved lineage options, so renew each managed
 				// certificate with its own selection. Certbot still decides whether it is due.
 				for (const certificate of certificates || []) {
@@ -185,6 +193,8 @@ const internalCertificate = {
 							"--cert-name",
 							`npm-${certificate.id}`,
 							"--quiet",
+							"--key-type",
+							options.key_type,
 							...getCertificateProfileArgs(certificate, policy),
 						]);
 						if (result) logger.info(`Renew Result for Cert #${certificate.id}: ${result}`);

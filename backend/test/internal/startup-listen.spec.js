@@ -11,6 +11,9 @@ const state = vi.hoisted(() => ({
 	terminal: vi.fn(),
 	monitorStart: vi.fn(),
 	monitorStop: vi.fn(),
+	ipPolicy: vi.fn(),
+	ipConfigure: vi.fn(),
+	ipStop: vi.fn(),
 }));
 vi.mock("../../app.js", async () => {
 	const { default: express } = await import("express");
@@ -38,7 +41,8 @@ vi.mock("../../internal/ddns.js", () => ({ default: { initTimer: () => {} } }));
 vi.mock("../../internal/docker.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/git-deploy.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/gitops.js", () => ({ default: { init: async () => {} } }));
-vi.mock("../../internal/ip_ranges.js", () => ({ default: {} }));
+vi.mock("../../internal/ip-ranges-options.js", () => ({ default: { getPolicy: state.ipPolicy } }));
+vi.mock("../../internal/ip_ranges.js", () => ({ default: { configure: state.ipConfigure, stop: state.ipStop } }));
 vi.mock("../../internal/maintenance.js", () => ({ default: { initTimer: () => {} } }));
 vi.mock("../../internal/nginx.js", () => ({ default: { reload: async () => {} } }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: { init: async () => {} } }));
@@ -60,7 +64,7 @@ describe("backend listener lifecycle", () => {
 	beforeEach(() => {
 		vi.resetModules();
 		vi.clearAllMocks();
-		vi.stubEnv("SKIP_IP_RANGES", "true");
+		state.ipPolicy.mockResolvedValue({ enabled: false, refresh_interval_hours: 6 });
 		for (const key of ["DATA_PATH", "INITIAL_ADMIN_EMAIL", "INITIAL_ADMIN_PASSWORD", "INITIAL_DEFAULT_PAGE"])
 			vi.stubEnv(key, "");
 		vi.spyOn(process, "exit").mockImplementation(() => undefined);
@@ -123,7 +127,19 @@ describe("backend listener lifecycle", () => {
 		await vi.waitFor(() => expect(process.exit).toHaveBeenCalledExactlyOnceWith(0));
 		expect(state.analyticsStop).toHaveBeenCalledOnce();
 		expect(state.monitorStop).toHaveBeenCalledOnce();
+		expect(state.ipStop).toHaveBeenCalledOnce();
 		expect(server.listening).toBe(false);
+	});
+	it("applies the database IP range policy at startup regardless of removed environment controls", async () => {
+		vi.stubEnv("SKIP_IP_RANGES", "true");
+		vi.stubEnv("IPRT", "99");
+		state.ipPolicy.mockResolvedValue({ enabled: true, refresh_interval_hours: 12 });
+		await import("../../index.js");
+		await vi.waitFor(() => expect(state.completed).toBe(true));
+		expect(state.ipConfigure).toHaveBeenCalledExactlyOnceWith(
+			{ enabled: true, refresh_interval_hours: 12 },
+			{ startup: true },
+		);
 	});
 	it.each(["SIGINT", "SIGTERM"])("runs development monitoring after listen and stops it on %s", async (signal) => {
 		await import("../../index-dev.js");

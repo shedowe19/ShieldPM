@@ -1,0 +1,30 @@
+{
+	"operationId": "getCertificateOptions",
+	"summary": "Get certificate options",
+	"tags": [
+		"settings"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "The configured certificate options",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/certificate-options-object.json"
+					},
+					"example": {
+						"key_type": "ecdsa",
+						"renewal_interval_hours": 12
+					}
+				}
+			}
+		}
+	}
+}

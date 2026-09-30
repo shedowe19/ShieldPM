@@ -23,8 +23,10 @@ const mocks = vi.hoisted(() => ({
 	createLeadCert: vi.fn(),
 	gitops: vi.fn(),
 	policy: vi.fn().mockResolvedValue("standard"),
+	options: vi.fn().mockResolvedValue({ key_type: "ecdsa", renewal_interval_hours: 12 }),
 }));
 vi.mock("../../internal/acme-profile.js", () => ({ default: { getPolicy: mocks.policy } }));
+vi.mock("../../internal/certificate-options.js", () => ({ default: { getPolicy: mocks.options } }));
 vi.mock("../../models/certificate.js", () => ({ default: { query: mocks.query } }));
 vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.proxyQuery } }));
 vi.mock("../../models/dead_host.js", () => ({ default: { query: mocks.deadQuery } }));
@@ -71,6 +73,7 @@ describe("certificate lifecycle regressions", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.policy.mockResolvedValue("standard");
+		mocks.options.mockResolvedValue({ key_type: "ecdsa", renewal_interval_hours: 12 });
 		mocks.configurationLock.mockImplementation(async (operation) => operation());
 	});
 	afterEach(async () => {
@@ -436,20 +439,10 @@ describe("certificate lifecycle regressions", () => {
 		expect(mocks.audit.mock.calls[0][1].meta.meta.dns_provider_credentials).toBeUndefined();
 	});
 
-	it.each([
-		["0", 12],
-		["-1", 12],
-		["1000000", 12],
-		["12hours", 12],
-		["", 12],
-		["596", 12],
-		["72", 12],
-		["23", 12],
-		["1", 1],
-		["6", 6],
-	])("uses safe renewal interval for CRT=%s and replaces existing timers", async (value, hours) => {
+	it.each([1, 6, 12])("uses the saved %s-hour renewal interval and replaces existing timers", async (hours) => {
 		vi.useFakeTimers();
-		vi.stubEnv("CRT", value);
+		vi.stubEnv("CRT", "23");
+		mocks.options.mockResolvedValue({ key_type: "rsa", renewal_interval_hours: hours });
 		vi.spyOn(internalCertificate, "processExpiringHosts").mockResolvedValue();
 		vi.spyOn(internalCertificate, "cleanUpMissingCertificates").mockResolvedValue();
 		const interval = vi.spyOn(globalThis, "setInterval");
@@ -458,6 +451,24 @@ describe("certificate lifecycle regressions", () => {
 		expect(interval).toHaveBeenLastCalledWith(internalCertificate.processExpiringHosts, hours * 3600000);
 		expect(vi.getTimerCount()).toBe(1);
 		clearInterval(internalCertificate.interval);
+	});
+	it("changes the active interval without starting another renewal or cleanup", async () => {
+		vi.useFakeTimers();
+		const renew = vi.spyOn(internalCertificate, "processExpiringHosts").mockResolvedValue();
+		const cleanup = vi.spyOn(internalCertificate, "cleanUpMissingCertificates").mockResolvedValue();
+		internalCertificate.rescheduleTimer(12);
+		internalCertificate.rescheduleTimer(2);
+		expect(vi.getTimerCount()).toBe(1);
+		expect(renew).not.toHaveBeenCalled();
+		expect(cleanup).not.toHaveBeenCalled();
+		await vi.advanceTimersByTimeAsync(2 * 3600000);
+		expect(renew).toHaveBeenCalledOnce();
+		clearInterval(internalCertificate.interval);
+	});
+	it.each([0, 13, 1.5, Number.NaN])("rejects invalid live timer interval %s before replacing it", (hours) => {
+		const timer = vi.spyOn(globalThis, "setInterval");
+		expect(() => internalCertificate.rescheduleTimer(hours)).toThrow("from 1 to 12 hours");
+		expect(timer).not.toHaveBeenCalled();
 	});
 
 	it("validates private keys in memory and rejects encrypted keys immediately", async () => {
@@ -609,6 +620,7 @@ describe("certificate lifecycle regressions", () => {
 		expect(internalCertificate.intervalProcessing).toBe(false);
 	});
 	it("renews mixed profiles individually and continues after a failure without forcing issuance", async () => {
+		mocks.options.mockResolvedValueOnce({ key_type: "rsa", renewal_interval_hours: 3 });
 		const certificates = [
 			{ id: 1, meta: { letsencrypt_profile: "standard" } },
 			{ id: 2, meta: { letsencrypt_profile: "shortlived" } },
@@ -636,7 +648,12 @@ describe("certificate lifecycle regressions", () => {
 		for (const [i, command] of args.entries()) {
 			expect(command).toContain(`npm-${i + 1}`);
 			expect(command).not.toContain("--force-renewal");
+			expect(command.slice(command.indexOf("--key-type"), command.indexOf("--key-type") + 2)).toEqual([
+				"--key-type",
+				"rsa",
+			]);
 		}
+		expect(mocks.options).toHaveBeenCalledOnce();
 		expect(mocks.reload).toHaveBeenCalledOnce();
 		expect(internalCertificate.intervalProcessing).toBe(false);
 		expect(internalCertificate.processing).toBe(false);

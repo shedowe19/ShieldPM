@@ -16,6 +16,7 @@ import utils from "../lib/utils.js";
 import { ssl as logger } from "../logger.js";
 import pjson from "../package.json" with { type: "json" };
 import internalAcmeProfile from "./acme-profile.js";
+import internalCertificateOptions from "./certificate-options.js";
 
 // State variable for processing lock
 let processing = false;
@@ -33,8 +34,9 @@ export const runCertbot = async (args, prepare) => {
 	}
 	processing = true;
 	try {
+		const resolvedArgs = typeof args === "function" ? await args() : args;
 		if (prepare) await prepare();
-		return await utils.execFile("certbot", args);
+		return await utils.execFile("certbot", resolvedArgs);
 	} finally {
 		processing = false;
 	}
@@ -48,7 +50,7 @@ export const runCertbot = async (args, prepare) => {
 export const requestCertbot = async (certificate) => {
 	logger.info(`Requesting Certbot certificates for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`);
 
-	const result = await runCertbot([
+	const result = await runCertbot(async () => [
 		"--config",
 		"/etc/certbot.ini",
 		"certonly",
@@ -60,6 +62,8 @@ export const requestCertbot = async (certificate) => {
 		process.env.ACME_SERVER,
 		"--authenticator",
 		"webroot",
+		"--key-type",
+		(await internalCertificateOptions.getPolicy()).key_type,
 		...getCertificateProfileArgs(certificate),
 	]);
 	logger.success(result);
@@ -95,7 +99,7 @@ export const requestCertbotWithDnsChallenge = async (certificate) => {
 	const credentialsArg = dnsPlugin.credentials_argument || `${pluginName}-credentials`;
 
 	const result = await runCertbot(
-		[
+		async () => [
 			"--config",
 			"/etc/certbot.ini",
 			"certonly",
@@ -115,6 +119,8 @@ export const requestCertbotWithDnsChallenge = async (certificate) => {
 				: []),
 			"--server",
 			process.env.ACME_SERVER,
+			"--key-type",
+			(await internalCertificateOptions.getPolicy()).key_type,
 			...getCertificateProfileArgs(certificate),
 		],
 		async () => {
@@ -139,19 +145,24 @@ export const requestCertbotWithDnsChallenge = async (certificate) => {
 export const renewCertbot = async (certificate) => {
 	logger.info(`Renewing Certbot certificates for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`);
 
-	const policy =
-		certificate.meta?.letsencrypt_profile === undefined ? await internalAcmeProfile.getPolicy() : "standard";
-	const renewResult = await runCertbot([
-		"--config",
-		"/etc/certbot.ini",
-		"renew",
-		"--server",
-		process.env.ACME_SERVER,
-		"--cert-name",
-		`npm-${certificate.id}`,
-		"--force-renewal",
-		...getCertificateProfileArgs(certificate, policy),
-	]);
+	const renewResult = await runCertbot(async () => {
+		const policy =
+			certificate.meta?.letsencrypt_profile === undefined ? await internalAcmeProfile.getPolicy() : "standard";
+		const options = await internalCertificateOptions.getPolicy();
+		return [
+			"--config",
+			"/etc/certbot.ini",
+			"renew",
+			"--server",
+			process.env.ACME_SERVER,
+			"--cert-name",
+			`npm-${certificate.id}`,
+			"--force-renewal",
+			"--key-type",
+			options.key_type,
+			...getCertificateProfileArgs(certificate, policy),
+		];
+	});
 	logger.info(renewResult);
 	return renewResult;
 };
@@ -173,19 +184,24 @@ export const renewCertbotWithDnsChallenge = async (certificate) => {
 		`Renewing LetsEncrypt certificates via ${dnsPlugin.name} for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`,
 	);
 
-	const policy =
-		certificate.meta?.letsencrypt_profile === undefined ? await internalAcmeProfile.getPolicy() : "standard";
-	const renewResult = await runCertbot([
-		"--config",
-		"/etc/certbot.ini",
-		"renew",
-		"--server",
-		process.env.ACME_SERVER,
-		"--cert-name",
-		`npm-${certificate.id}`,
-		"--force-renewal",
-		...getCertificateProfileArgs(certificate, policy),
-	]);
+	const renewResult = await runCertbot(async () => {
+		const policy =
+			certificate.meta?.letsencrypt_profile === undefined ? await internalAcmeProfile.getPolicy() : "standard";
+		const options = await internalCertificateOptions.getPolicy();
+		return [
+			"--config",
+			"/etc/certbot.ini",
+			"renew",
+			"--server",
+			process.env.ACME_SERVER,
+			"--cert-name",
+			`npm-${certificate.id}`,
+			"--force-renewal",
+			"--key-type",
+			options.key_type,
+			...getCertificateProfileArgs(certificate, policy),
+		];
+	});
 	logger.info(renewResult);
 	return renewResult;
 };

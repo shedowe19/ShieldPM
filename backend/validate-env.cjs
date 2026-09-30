@@ -78,7 +78,7 @@ const deprecated = [
     { key: 'LE_STAGING', msg: 'LE_STAGING env is not supported, please use ACME_SERVER.' },
     { key: 'DEBUG', msg: 'DEBUG env is not supported.' },
     { key: 'SKIP_CERTBOT_OWNERSHIP', msg: 'SKIP_CERTBOT_OWNERSHIP env is not supported.' },
-    { key: 'IP_RANGES_FETCH_ENABLED', msg: 'IP_RANGES_FETCH_ENABLED env is not supported, please use SKIP_IP_RANGES.' },
+    { key: 'IP_RANGES_FETCH_ENABLED', msg: 'IP_RANGES_FETCH_ENABLED env is not supported. Configure IP ranges in the ShieldPM web UI.' },
     { key: 'DB_SQLITE_FILE', msg: 'DB_SQLITE_FILE env is not supported, the database needs to be in /data/shieldpm/database.sqlite.' },
 ];
 
@@ -111,16 +111,11 @@ checkBool('ACME_MUST_STAPLE');
 ensureDefault('ACME_OCSP_STAPLING', 'false');
 checkBool('ACME_OCSP_STAPLING');
 
-ensureDefault('ACME_KEY_TYPE', 'ecdsa');
 ensureDefault('ACME_SERVER_TLS_VERIFY', 'true');
 ensureDefault('CUSTOM_OCSP_STAPLING', 'false');
 
 checkBool('ACME_SERVER_TLS_VERIFY');
 checkBool('CUSTOM_OCSP_STAPLING');
-
-if (process.env.ACME_KEY_TYPE && !['ecdsa', 'rsa'].includes(process.env.ACME_KEY_TYPE)) {
-    fatal('ACME_KEY_TYPE needs to be ecdsa or rsa.');
-}
 
 // IDs
 ensureDefault('PUID', '0');
@@ -189,7 +184,6 @@ const boolDefaults = {
     'NGINX_DISABLE_PROXY_BUFFERING': 'false',
     'DISABLE_NGINX_BEAUTIFIER': 'false',
     'FULLCLEAN': 'false',
-    'SKIP_IP_RANGES': 'true',
     'LOGROTATE': 'false',
     'GOA': 'false',
     'PHP82': 'false',
@@ -231,13 +225,9 @@ if (workerProcesses !== 'auto' && !isInt(workerProcesses)) fatal('NGINX_WORKER_P
 checkInt('NGINX_WORKER_CONNECTIONS');
 
 ensureDefault('LOGROTATIONS', '3');
-ensureDefault('CRT', '23');
-ensureDefault('IPRT', '1');
 ensureDefault('DEFAULT_CERT_ID', '0');
 
 checkInt('LOGROTATIONS');
-checkInt('CRT');
-checkInt('IPRT');
 checkInt('DEFAULT_CERT_ID');
 
 ensureDefault('GOACLA', "--agent-list --real-os --double-decode --anonymize-ip --anonymize-level=1 --keep-last=30 --with-output-resolver --no-query-string");

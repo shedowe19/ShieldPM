@@ -21,6 +21,26 @@ Die Schlüsseldatei `shieldpm/keys.json` wird vollständig in eine private tempo
 
 `backend/lib/environment-hash.js` berechnet gemeinsam für `envs.sh` und `utils.writeHash()` den Fingerabdruck der Nginx-Vorlagen, ihrer benannten Umgebungswerte und der Template-Version. Die strukturierte Kodierung unterscheidet beispielsweise die Portpaare `443/80` und `44/380`. Änderungen der Vorlagendateien selbst führen auch ohne Versionsänderung zu `REGENERATE_ALL=true`. Nach abgeschlossener Neuerzeugung liegt der Fingerabdruck unter `${DATA_PATH:-/data}/shieldpm/env.sha512sum`.
 
+## Schrittweise Verlagerung von Anwendungsoptionen
+
+Bereits umgesetzt sind die globale ACME-Profilwahl (`acme-profile`), Schlüsseltyp und Prüfintervall (`certificate-options`) sowie Cloudflare-IP-Abruf und Aktualisierungsintervall (`ip-ranges-options`). Diese Optionen liegen in der Datenbank und werden über validierte APIs in der UI verwaltet; Änderungen benötigen keinen Dienstneustart. Die zuletzt genannten beiden Gruppen übernehmen alte Umgebungswerte einmalig bei ihrer Anlage. Bestehende gespeicherte Werte haben Vorrang.
+
+Die folgenden Stufen sind eine **Roadmap und noch nicht umgesetzt**. Sie beschreiben die empfohlene Reihenfolge für weitere Änderungen:
+
+| Stufe | Kandidaten                                                                                                   | Voraussetzung                                                                                                                                               |
+| ----- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | Nginx-Formatierung, Analytics-Aufbewahrung                                                                   | Lesezeitpunkt aus dem laufenden Prozess lösen; Auswirkungen verkürzter Aufbewahrung ausdrücklich behandeln                                                  |
+| 2     | Weitere globale Nginx-Header, Buffering und Logging; Certbot-TLS-/Must-Staple-Optionen                       | Konfiguration unter Sperre prüfen, anwenden und bei Fehlern zurücksetzen; alte INI-Vorgaben behandeln                                                       |
+| 3     | ACME-Server/E-Mail/EAB, Docker-Discovery-Ziele, Standard-Zertifikat                                          | Registrierung aus dem Launcher lösen, laufende Docker-Clients ersetzen und Zertifikat/Schlüssel als Paar prüfen                                             |
+| 4     | Passkey-RP/Origin und Yubico-Validator                                                                       | Bestehende Anmeldedaten, Origins, Geheimnisse und Fehlerverhalten schützen                                                                                  |
+| 5     | Anwendungsnahe Startoptionen wie Listener/Ports/Bindings, Zeitzone, PHP-/Modulladung und Dienstkonfiguration | Dauerhafte Startkonfiguration vor Datenbank/UI bereitstellen; kontrollierte Neustarts, Validierung und Wiederherstellung des Verwaltungszugangs ermöglichen |
+
+Anwendungsnahe Startoptionen sind durch ihre bisherige Nutzung im Launcher nicht dauerhaft von der UI-Verlagerung ausgeschlossen. Weitere Dienst-, Proxy-/Sitzungs-, Einrichtungs- und Integrationsoptionen müssen bei ihrer jeweiligen Stufe auf Neustartbedarf, Schutz von Zugangsdaten und Wiederherstellung geprüft werden. Sie bleiben bis zur tatsächlichen Migration in ihrer bisherigen Konfiguration; diese Roadmap ersetzt keinen Startpfad.
+
+Docker-Image, Container-Netzwerkmodus, Volumes, Geräte und Capabilities bleiben Bereitstellungsentscheidungen. Auch die Datenbank-Bootstrap-Verbindung muss unabhängig von der noch nicht verfügbaren Anwendungsdatenbank bereitgestellt werden. Die bereits umgesetzten vier Optionen verändern diese Ressourcen nicht.
+
+Bei jeder weiteren Gruppe muss die tatsächliche Anwendung zusätzlich zur Datenbankpersistenz umgesetzt werden. Ein Settings-Patch startet bisher keinen generischen Neustart; Vorlagenfingerabdruck, Timer, Nginx-Regenerierung und externe Dienstverbindungen müssen je nach Gruppe gezielt behandelt werden.
+
 ## Frontend
 
 | Datei                         | Zweck                              |

@@ -9,6 +9,7 @@ import { isDemoMode } from "../lib/config.js";
 import { decrypt, encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import { assertNoSymlinkPath, assertSafeConfigTree, writeConfigFile } from "../lib/gitops-files.js";
+import apiValidator from "../lib/validator/api.js";
 import { global as logger } from "../logger.js";
 import AccessList from "../models/access_list.js";
 import Certificate from "../models/certificate.js";
@@ -21,6 +22,9 @@ import RedirectionHost from "../models/redirection_host.js";
 import settingModel from "../models/setting.js";
 import Stream from "../models/stream.js";
 import User from "../models/user.js";
+import { getValidationSchema } from "../schema/index.js";
+import internalCertificateOptions from "./certificate-options.js";
+import internalIpRangesOptions from "./ip-ranges-options.js";
 import internalNginx from "./nginx.js";
 import internalProxyHostMonitor, { assertMonitorConfig } from "./proxy-host-monitor.js";
 import { relayConfigForHost, validateRelayConfigForHost } from "./upload-relay.js";
@@ -1342,6 +1346,24 @@ const internalGitOps = {
 								}
 
 								if (settingData.id === "gitops-config") return;
+								if (["certificate-options", "ip-ranges-options"].includes(settingData.id)) {
+									if (settingData.value !== "configured") {
+										throw new errs.ValidationError(
+											"Application options must use the configured value",
+										);
+									}
+									const policy = await apiValidator(
+										getValidationSchema(`/settings/${settingData.id}`, "put"),
+										settingData.meta,
+									);
+									const service =
+										settingData.id === "certificate-options"
+											? internalCertificateOptions
+											: internalIpRangesOptions;
+									await service.update(access, policy);
+									imported++;
+									return;
+								}
 
 								const existing = await settingModel.query().findById(settingData.id);
 								if (existing) {

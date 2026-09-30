@@ -28,19 +28,19 @@ class RuntimeConfigTests(unittest.TestCase):
     def test_certbot_options_can_be_changed_back_after_restart(self):
         config = self.root / "certbot.ini"
         config.write_text((REPO / "rootfs/etc/certbot.ini").read_text())
-        for key_type, staple, verify in [
-            ("rsa", "false", "false"),
-            ("ecdsa", "true", "true"),
-            ("rsa", "false", "true"),
+        for staple, verify in [
+            ("false", "false"),
+            ("true", "true"),
+            ("false", "true"),
         ]:
-            with self.subTest(key_type=key_type, staple=staple, verify=verify):
-                self.shell('configure_certbot_ini "$1"', config, ACME_KEY_TYPE=key_type,
+            with self.subTest(staple=staple, verify=verify):
+                self.shell('configure_certbot_ini "$1"', config,
                            ACME_MUST_STAPLE=staple, ACME_SERVER_TLS_VERIFY=verify)
                 lines = config.read_text().splitlines()
-                self.assertIn(f"key-type = {key_type}", lines)
                 self.assertIn(f"must-staple = {staple}", lines)
                 self.assertIn(f"no-verify-ssl = {'true' if verify == 'false' else 'false'}", lines)
-                self.assertFalse(any("required-profile" in line or "preferred-profile" in line for line in lines))
+                self.assertFalse(any("required-profile" in line or "preferred-profile" in line
+                                     or "key-type" in line for line in lines))
 
     def test_profiles_ignore_removed_environment_variable_and_clear_old_global_options(self):
         config = self.root / "certbot.ini"
@@ -49,9 +49,10 @@ class RuntimeConfigTests(unittest.TestCase):
             with self.subTest(profile=profile):
                 config.write_text(baseline + "required-profile = shortlived\n"
                                   "  preferred-profile=classic\n#required-profile\n"
-                                  "  # preferred-profile = old-profile\n")
+                                  "  # preferred-profile = old-profile\nkey-type = rsa\n"
+                                  "  # key-type = ecdsa\n")
                 for _ in range(2):
-                    self.shell('configure_certbot_ini "$1"', config, ACME_KEY_TYPE="ecdsa",
+                    self.shell('configure_certbot_ini "$1"', config, ACME_KEY_TYPE="invalid-stale-key",
                                ACME_MUST_STAPLE="true", ACME_SERVER_TLS_VERIFY="true", ACME_PROFILE=profile)
                     self.assertEqual(config.read_text(), baseline)
 

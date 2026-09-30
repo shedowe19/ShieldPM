@@ -1,6 +1,7 @@
 import { IconGitBranch, IconRobot, IconSettings, IconShield } from "@tabler/icons-react";
 import { Lock } from "lucide-react";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
+import { Loading } from "src/components/Loading";
 import { T } from "src/locale";
 import { SETTINGS_TAB, type SettingsTab } from "src/types/enums";
 import AiConfigPage from "./Ai";
@@ -9,6 +10,8 @@ import DefaultSite from "./DefaultSite";
 import GitOps from "./GitOps";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useHealth } from "@/hooks/useHealth";
+
+const Network = lazy(() => import("./Network"));
 
 export default function Layout() {
 	const health = useHealth();
@@ -45,38 +48,23 @@ export default function Layout() {
 						<h2 className="text-2xl font-bold tracking-tight mb-4 hidden lg:block">
 							<T id="settings" />
 						</h2>
-						<button
-							type="button"
-							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === SETTINGS_TAB.DEFAULT_SITE ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
-							onClick={() => setActiveTab(SETTINGS_TAB.DEFAULT_SITE)}
-						>
-							<IconSettings className="mr-2 h-4 w-4" />
-							<T id="settings.default-site" />
-						</button>
-						<button
-							type="button"
-							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === SETTINGS_TAB.AI ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
-							onClick={() => setActiveTab(SETTINGS_TAB.AI)}
-						>
-							<IconRobot className="mr-2 h-4 w-4" />
-							AI Agent
-						</button>
-						<button
-							type="button"
-							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === SETTINGS_TAB.GITOPS ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
-							onClick={() => setActiveTab(SETTINGS_TAB.GITOPS)}
-						>
-							<IconGitBranch className="mr-2 h-4 w-4" />
-							<T id="settings.gitops" />
-						</button>
-						<button
-							type="button"
-							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === SETTINGS_TAB.CERTIFICATES ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
-							onClick={() => setActiveTab(SETTINGS_TAB.CERTIFICATES)}
-						>
-							<IconShield className="mr-2 h-4 w-4" />
-							<T id="settings.certificates.title" />
-						</button>
+						{[
+							{ id: SETTINGS_TAB.DEFAULT_SITE, label: "settings.default-site", Icon: IconSettings },
+							{ id: SETTINGS_TAB.AI, label: "AI Agent", Icon: IconRobot },
+							{ id: SETTINGS_TAB.GITOPS, label: "settings.gitops", Icon: IconGitBranch },
+							{ id: SETTINGS_TAB.CERTIFICATES, label: "settings.certificates.title", Icon: IconShield },
+							{ id: SETTINGS_TAB.NETWORK, label: "settings.network.title", Icon: IconSettings },
+						].map(({ id, label, Icon }) => (
+							<button
+								key={id}
+								type="button"
+								className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === id ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
+								onClick={() => setActiveTab(id)}
+							>
+								<Icon className="mr-2 h-4 w-4" />
+								{id === SETTINGS_TAB.AI ? label : <T id={label} />}
+							</button>
+						))}
 					</nav>
 				</aside>
 				<div className="flex-1 lg:max-w-4xl">
@@ -84,6 +72,11 @@ export default function Layout() {
 					{activeTab === SETTINGS_TAB.AI && <AiConfigPage />}
 					{activeTab === SETTINGS_TAB.GITOPS && <GitOps />}
 					{activeTab === SETTINGS_TAB.CERTIFICATES && <Certificates />}
+					{activeTab === SETTINGS_TAB.NETWORK && (
+						<Suspense fallback={<Loading noLogo />}>
+							<Network />
+						</Suspense>
+					)}
 				</div>
 			</div>
 		</div>

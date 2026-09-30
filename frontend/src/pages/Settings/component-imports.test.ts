@@ -8,6 +8,9 @@ const settingsRouteFiles = [
 	"src/pages/Settings/GitOps.tsx",
 	"src/pages/Settings/DefaultSite.tsx",
 	"src/pages/Settings/Certificates.tsx",
+	"src/pages/Settings/CertificateOptionsCard.tsx",
+	"src/pages/Settings/Network.tsx",
+	"src/pages/Settings/OptionsCard.tsx",
 ];
 const componentBarrelImport = /from ["']src\/components(?:\/index)?["']/;
 

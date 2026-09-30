@@ -10,6 +10,7 @@ vi.mock("./DefaultSite", () => ({ default: () => <div>Default site settings</div
 vi.mock("./Ai", () => ({ default: () => <div>AI settings</div> }));
 vi.mock("./GitOps", () => ({ default: () => <div>GitOps settings</div> }));
 vi.mock("./Certificates", () => ({ default: () => <div>Certificate profile settings</div> }));
+vi.mock("./Network", () => ({ default: () => <div>Network settings</div> }));
 
 beforeEach(() => {
 	health.data.demo = false;
@@ -39,4 +40,12 @@ it("keeps certificate profile settings unavailable in demo mode", () => {
 	expect(screen.getByText("Global Settings are disabled in Demo Mode.")).toBeInTheDocument();
 	expect(screen.queryByRole("button", { name: "settings.certificates.title" })).not.toBeInTheDocument();
 	expect(screen.queryByText("Certificate profile settings")).not.toBeInTheDocument();
+});
+
+it("loads the Network tab when selected", async () => {
+	render(<Layout />);
+	expect(screen.queryByText("Network settings")).not.toBeInTheDocument();
+	fireEvent.click(screen.getByRole("button", { name: "settings.network.title" }));
+	expect(await screen.findByText("Network settings")).toBeInTheDocument();
+	expect(screen.queryByText("Default site settings")).not.toBeInTheDocument();
 });

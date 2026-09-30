@@ -196,7 +196,7 @@ for service_uid in 0 1000; do
         --mount "type=volume,source=$volume,target=/data" \
         --health-interval 5s --health-timeout 10s --health-start-period 5s --health-retries 3 \
         --env TZ=UTC --env PUID="$service_uid" --env PGID="$service_uid" \
-        --env DISABLE_IPV6=true --env SKIP_IP_RANGES=true \
+        --env DISABLE_IPV6=true \
         --env TOR_ENABLED=false --env ANUBIS_ENABLED=false \
         --env ACME_OCSP_STAPLING=false --env CUSTOM_OCSP_STAPLING=false \
         "$image" >/dev/null

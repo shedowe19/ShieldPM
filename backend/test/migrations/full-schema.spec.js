@@ -47,6 +47,9 @@ describe("complete database migration chain", () => {
 				const acmeProfile = await database("setting").where({ id: "acme-profile" }).first();
 				expect(acmeProfile.value).toBe("standard");
 				expect(acmeProfile.description).not.toMatch(/inherit|ACME_PROFILE/);
+				for (const id of ["certificate-options", "ip-ranges-options"]) {
+					expect(await database("setting").where({ id }).first()).toMatchObject({ id, value: "configured" });
+				}
 			} finally {
 				if (embedded) await embedded.close();
 				else await database.destroy();

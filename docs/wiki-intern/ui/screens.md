@@ -44,13 +44,14 @@ unbekannte oder beschädigte Einträge werden ignoriert. Die Einstellung gilt f�
 
 ## Detail: Settings-Tabs
 
-| Datei                       | Zweck                                             |
-| --------------------------- | ------------------------------------------------- |
-| `Settings/DefaultSite.tsx`  | Default-Site-Konfiguration                        |
-| `Settings/Certificates.tsx` | Globale ACME-Profilvorgabe (Standard/Short-lived) |
-| `Settings/Ai.tsx`           | AI-Agent Konfiguration                            |
-| `Settings/GitOps.tsx`       | GitOps-Einstellungen                              |
-| `Settings/Layout.tsx`       | Settings-Layout                                   |
+| Datei                       | Zweck                                                          |
+| --------------------------- | -------------------------------------------------------------- |
+| `Settings/DefaultSite.tsx`  | Default-Site-Konfiguration                                     |
+| `Settings/Certificates.tsx` | ACME-Profilvorgabe, Schlüsseltyp und Zertifikats-Prüfintervall |
+| `Settings/Network.tsx`      | Cloudflare-IP-Abruf und Aktualisierungsintervall               |
+| `Settings/Ai.tsx`           | AI-Agent Konfiguration                                         |
+| `Settings/GitOps.tsx`       | GitOps-Einstellungen                                           |
+| `Settings/Layout.tsx`       | Settings-Layout                                                |
 
 ## Detail: Dashboard-Widgets
 

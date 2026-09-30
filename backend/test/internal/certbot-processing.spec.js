@@ -1,8 +1,14 @@
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ execFile: vi.fn(), requests: [], policy: vi.fn().mockResolvedValue("standard") }));
+const mocks = vi.hoisted(() => ({
+	execFile: vi.fn(),
+	requests: [],
+	policy: vi.fn().mockResolvedValue("standard"),
+	options: vi.fn().mockResolvedValue({ key_type: "ecdsa", renewal_interval_hours: 12 }),
+}));
 vi.mock("../../internal/acme-profile.js", () => ({ default: { getPolicy: mocks.policy } }));
+vi.mock("../../internal/certificate-options.js", () => ({ default: { getPolicy: mocks.options } }));
 vi.mock("../../lib/utils.js", () => ({ default: { execFile: mocks.execFile } }));
 vi.mock("../../lib/certbot.js", () => ({ installPlugin: vi.fn() }));
 vi.mock("proxy-agent", () => ({ ProxyAgent: class {} }));
@@ -48,7 +54,41 @@ describe("Certbot process coordination", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.policy.mockResolvedValue("standard");
+		mocks.options.mockResolvedValue({ key_type: "ecdsa", renewal_interval_hours: 12 });
 		mocks.requests.length = 0;
+	});
+	it.each([requestCertbot, requestCertbotWithDnsChallenge, renewCertbot, renewCertbotWithDnsChallenge])(
+		"uses the saved key type and ignores stale environment options in %s",
+		async (operation) => {
+			vi.stubEnv("ACME_KEY_TYPE", "ecdsa");
+			vi.spyOn(fs.promises, "mkdir").mockResolvedValue();
+			vi.spyOn(fs.promises, "writeFile").mockResolvedValue();
+			vi.spyOn(fs.promises, "chmod").mockResolvedValue();
+			mocks.execFile.mockResolvedValue("issued");
+			mocks.options.mockResolvedValue({ key_type: "rsa", renewal_interval_hours: 3 });
+			await operation({
+				...certificate,
+				meta: { dns_provider: "cloudflare", dns_provider_credentials: "synthetic-credential" },
+			});
+			const args = mocks.execFile.mock.calls[0][1];
+			expect(args.slice(args.indexOf("--key-type"), args.indexOf("--key-type") + 2)).toEqual([
+				"--key-type",
+				"rsa",
+			]);
+			expect(mocks.options).toHaveBeenCalledOnce();
+		},
+	);
+	it("releases the lock when saved key options cannot be read, before DNS plugin changes", async () => {
+		mocks.options.mockRejectedValueOnce(new Error("invalid saved options"));
+		await expect(
+			requestCertbotWithDnsChallenge({
+				...certificate,
+				meta: { dns_provider: "cloudflare", dns_provider_credentials: "synthetic-credential" },
+			}),
+		).rejects.toThrow("invalid saved options");
+		expect(installPlugin).not.toHaveBeenCalled();
+		expect(mocks.execFile).not.toHaveBeenCalled();
+		expect(isProcessing()).toBe(false);
 	});
 	afterEach(() => {
 		vi.restoreAllMocks();

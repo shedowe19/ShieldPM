@@ -1,0 +1,45 @@
+{
+	"operationId": "updateCertificateOptions",
+	"summary": "Set certificate options",
+	"tags": [
+		"settings"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"requestBody": {
+		"description": "Application certificate options",
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"$ref": "../../../components/certificate-options-object.json"
+				},
+				"example": {
+					"key_type": "ecdsa",
+					"renewal_interval_hours": 12
+				}
+			}
+		}
+	},
+	"responses": {
+		"200": {
+			"description": "The configured certificate options",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/certificate-options-object.json"
+					},
+					"example": {
+						"key_type": "ecdsa",
+						"renewal_interval_hours": 12
+					}
+				}
+			}
+		}
+	}
+}

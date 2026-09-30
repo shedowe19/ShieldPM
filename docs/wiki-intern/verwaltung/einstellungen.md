@@ -12,9 +12,10 @@ Die Anwendung benötigt globale Konfigurationswerte, die in der Datenbank gespei
 
 - `backend/internal/setting.js` — Business-Logik für Einstellungen
 - `backend/internal/acme-profile.js` — Geprüfte ACME-Profilvorgabe und dedizierte API
+- `backend/internal/certificate-options.js`, `backend/internal/ip-ranges-options.js` — Validierte Anwendungsoptionen mit Live-Anwendung
 - `backend/models/setting.js` — Einstellungs-Modell
 - `backend/routes/settings.js` — REST-API unter `/api/settings`
-- `frontend/src/pages/Settings/` — UI mit Tabs (DefaultSite, ACME, Ai, GitOps, Layout)
+- `frontend/src/pages/Settings/` — UI mit Tabs (DefaultSite, ACME/Zertifikate, Netzwerk, Ai, GitOps, Layout)
 
 ## Verhalten
 
@@ -42,6 +43,23 @@ Neue Zertifikatsanfragen ohne individuelle Wahl verwenden die globale Vorgabe un
 Die globale Vorgabe stammt ausschließlich aus der Datenbank und beginnt mit Standard. Bei jedem Standard-Auftrag werden erforderliche und bevorzugte Certbot-Profile geleert, damit alte INI- oder Lineage-Optionen nicht weiterwirken. Beide Auswahlen benötigen Certbot ab Version 4.0. Details zur Argumentauflösung und Erneuerung stehen unter [Certbot](../module/certbot.md).
 
 Regressionen: `backend/test/internal/acme-profile.spec.js` prüft Auflösung, Berechtigungen, Client-/CA-Prüfung und Fehlererhalt; `backend/test/schema/acme-profile-settings-contract.spec.js` den API-Vertrag und `backend/test/migrations/acme-profile-setting.spec.js` die Standard-Vorgabe und Normalisierung bei erhaltenen individuellen Einstellungen. Die Client- und ACME-Aufrufe sind gemockt; es werden keine echten Zertifikate ausgestellt. `Settings/Certificates.test.tsx`, `Settings/Layout.test.tsx`, `useAcmeProfile.test.tsx` und `CertificateProfiles.test.tsx` prüfen UI-Zustände, sofortige Cacheübernahme sowie den Schutz individueller Profilwahlen vor verspäteten Antworten.
+
+## Zertifikats- und Netzwerkoptionen
+
+Einstellungen → Zertifikate / ACME ergänzt die Profilwahl um Schlüsseltyp und Prüfintervall. Einstellungen → Netzwerk bietet den automatischen Cloudflare-IP-Abruf und sein Aktualisierungsintervall an. Die Werte liegen in `setting.meta` der Datensätze `certificate-options` und `ip-ranges-options`; `value` ist jeweils `configured`.
+
+| Datensatz             | Metadaten                                                                          | Vorgabe                |
+| --------------------- | ---------------------------------------------------------------------------------- | ---------------------- |
+| `certificate-options` | `key_type`: `ecdsa` oder `rsa`, `renewal_interval_hours`: ganze Zahl 1–12          | ECDSA, 12 Stunden      |
+| `ip-ranges-options`   | `enabled`: Boolean, `refresh_interval_hours`: ganze Zahl 6–594 und durch 6 teilbar | deaktiviert, 6 Stunden |
+
+`GET` und `PUT /api/settings/certificate-options` beziehungsweise `/api/settings/ip-ranges-options` verwenden direkt das jeweilige Optionsobjekt als Antwort und vollständigen PUT-Body, ohne `value`-/`meta`-Hülle. GET verlangt `settings:get`, PUT `settings:update` für die jeweilige ID. Die generische Settings-Aktualisierung dieser Datensätze wird abgewiesen; die dedizierten Services validieren und wenden die Werte an.
+
+Zertifikatsänderungen benötigen keinen Neustart: Das Prüfintervall ersetzt den bestehenden Timer ohne zusätzliche Sofortprüfung, der Schlüsseltyp gilt für die nächste Ausstellung oder Erneuerung einschließlich bestehender Lineages. Ein Timerwechsel erzwingt keine Erneuerung. Eine schon laufende automatische Prüfserie verwendet weiterhin ihren anfangs geladenen Schlüsseltyp; die Änderung gilt ab der nächsten Serie. Bei IP-Ranges startet Aktivieren einen Hintergrundabruf und den Timer; reine Intervalländerungen ersetzen nur den Timer. Deaktivieren stoppt zukünftige Abrufe und macht laufende Antworten für die Veröffentlichung ungültig. Die zuletzt gespeicherte Range-Liste bleibt erhalten.
+
+GitOps-Restore leitet diese beiden Optionsdatensätze ebenfalls durch dieselben Schema- und Serviceprüfungen samt Live-Anwendung. Importierte Werte müssen `value: "configured"` und vollständige gültige Metadaten verwenden. Ungültige Daten werden als Importfehler gemeldet und ersetzen die vorhandenen Optionen nicht. Regressionen prüfen Migration, API-Vertrag, Berechtigungen und Timer-Anwendung unter `backend/test/migrations/application-options.spec.js`, `backend/test/schema/application-options-contract.spec.js`, `backend/test/routes/application-options.spec.js` und den beiden `internal/*-options.spec.js`-Dateien; die UI-Zustände unter `Settings/RuntimeOptions.test.tsx`.
+
+Die Migration `20260930000200_add_application_options.js` importiert die bisherigen `ACME_KEY_TYPE`-, `CRT`-, `SKIP_IP_RANGES`- und `IPRT`-Werte nur bei der ersten Anlage fehlender Datensätze. Vorhandene Datenbankwerte bleiben erhalten. Danach gibt es keine Umgebungsrückfallebene für diese Optionen. Die verbleibenden Konfigurationsgruppen und die geplante Reihenfolge ihrer Verlagerung stehen unter [Konfigurationsstrategie](../konfiguration/config-dateien.md#schrittweise-verlagerung-von-anwendungsoptionen).
 
 ## Standardseite und Fehlerbehandlung
 

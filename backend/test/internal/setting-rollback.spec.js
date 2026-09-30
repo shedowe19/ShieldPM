@@ -179,4 +179,12 @@ describe("default-site configuration recovery", () => {
 		expect(fs.existsSync("/data/html/index.html")).toBe(false);
 		expect(fs.existsSync(path.join(state.directory, "default.conf"))).toBe(false);
 	});
+
+	it.each(["certificate-options", "ip-ranges-options"])("blocks generic updates of %s", async (id) => {
+		await state.db("setting").insert({ id, value: "configured", meta: "{}" });
+		await expect(settings.update(access, { id, value: "injected", meta: { injected: true } })).rejects.toThrow(
+			"application options endpoint",
+		);
+		expect(await state.db("setting").where({ id }).first()).toMatchObject({ value: "configured", meta: "{}" });
+	});
 });

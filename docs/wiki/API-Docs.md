@@ -86,6 +86,30 @@ An administrator saves the choice with **PUT** `/api/nginx/certificates/acme-pro
 
 The response contains only the saved `profile`. Only `standard` and `shortlived` are accepted; Standard is the initial database default. Certbot 4.0 or newer and its profile support are required. Short-lived also requires the ACME server to advertise that profile and rejects active legacy certificates without a saved profile if they have more than 25 domain names. A failed validation preserves the previous value. Saving applies immediately to new requests without an explicit profile and to renewal of legacy certificates without profile metadata. Explicit per-certificate profiles remain unchanged. The generic `/api/settings/acme-profile` update is rejected; use this dedicated endpoint.
 
+### Certificate and Cloudflare update options
+
+Administrators use **GET/PUT** `/api/settings/certificate-options` with this complete body/response:
+
+```json
+{
+  "key_type": "ecdsa",
+  "renewal_interval_hours": 12
+}
+```
+
+`key_type` accepts `ecdsa` or `rsa`; the renewal check interval is an integer from 1 to 12 hours. The key type applies to the next issuance or renewal, including existing certificates. The interval updates the running timer and does not force renewal.
+
+**GET/PUT** `/api/settings/ip-ranges-options` uses:
+
+```json
+{
+  "enabled": false,
+  "refresh_interval_hours": 6
+}
+```
+
+The refresh interval is an integer from 6 to 594 hours in six-hour steps. Enabling starts a background fetch and periodic updates; disabling retains the cached ranges and stops automatic updates. Both endpoints require administrative settings permissions (`settings:get` for GET, `settings:update` for PUT). Each PUT sends the complete options object, without a settings `meta` wrapper. Changes apply without restarting; generic updates of these setting IDs are rejected.
+
 Most API errors use an `error` object with a numeric `code` and public `message`. A CSRF rejection before route execution responds with HTTP 403 and `error.reason: "EBADCSRFTOKEN"`. Some analytics routes return a shorter `error` string for host-not-found or forbidden responses; check the endpoint's response contract when handling errors.
 
 ---

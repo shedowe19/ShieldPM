@@ -12,6 +12,7 @@ import { useAcmeProfile, useSetAcmeProfile } from "src/hooks/useAcmeProfile";
 import { T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import CertificateOptionsCard from "./CertificateOptionsCard";
 
 export default function Certificates() {
 	const { data, isPending, error } = useAcmeProfile();
@@ -32,72 +33,75 @@ export default function Certificates() {
 	};
 
 	return (
-		<Card className="border-t-4 border-lime-500/50">
-			<CardHeader>
-				<CardTitle className="flex items-center gap-2">
-					<IconShield className="h-6 w-6" />
-					<T id="settings.certificates.title" />
-				</CardTitle>
-				<CardDescription>
-					<T id="settings.certificates.description" />
-				</CardDescription>
-			</CardHeader>
-			<CardContent className="space-y-4">
-				{isPending && <Loading noLogo />}
-				{(error || saveProfile.error) && (
-					<Alert variant="destructive">
-						<AlertTitle>
-							<T id="error.title" />
-						</AlertTitle>
-						<AlertDescription>{(saveProfile.error || error)?.message}</AlertDescription>
-					</Alert>
-				)}
-				{data && profile && (
-					<>
-						<div className="space-y-2">
-							<Label htmlFor="defaultCertificateProfile">
-								<T id="settings.certificates.profile" />
-							</Label>
-							<Select
-								value={profile}
-								onValueChange={(value) => {
-									saveProfile.reset();
-									setDraft(value as CertificateProfile);
-								}}
-								disabled={saveProfile.isPending}
-							>
-								<SelectTrigger id="defaultCertificateProfile">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="standard">
-										<T id="certificates.profile.standard" />
-									</SelectItem>
-									<SelectItem value="shortlived">
-										<T id="certificates.profile.shortlived" />
-									</SelectItem>
-								</SelectContent>
-							</Select>
+		<div className="space-y-6">
+			<Card className="border-t-4 border-lime-500/50">
+				<CardHeader>
+					<CardTitle className="flex items-center gap-2">
+						<IconShield className="h-6 w-6" />
+						<T id="settings.certificates.title" />
+					</CardTitle>
+					<CardDescription>
+						<T id="settings.certificates.description" />
+					</CardDescription>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					{isPending && <Loading noLogo />}
+					{(error || saveProfile.error) && (
+						<Alert variant="destructive">
+							<AlertTitle>
+								<T id="error.title" />
+							</AlertTitle>
+							<AlertDescription>{(saveProfile.error || error)?.message}</AlertDescription>
+						</Alert>
+					)}
+					{data && profile && (
+						<>
+							<div className="space-y-2">
+								<Label htmlFor="defaultCertificateProfile">
+									<T id="settings.certificates.profile" />
+								</Label>
+								<Select
+									value={profile}
+									onValueChange={(value) => {
+										saveProfile.reset();
+										setDraft(value as CertificateProfile);
+									}}
+									disabled={saveProfile.isPending}
+								>
+									<SelectTrigger id="defaultCertificateProfile">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="standard">
+											<T id="certificates.profile.standard" />
+										</SelectItem>
+										<SelectItem value="shortlived">
+											<T id="certificates.profile.shortlived" />
+										</SelectItem>
+									</SelectContent>
+								</Select>
+								<p className="text-sm text-muted-foreground">
+									{profile === "shortlived" ? (
+										<T id="certificates.profile.shortlived-description" />
+									) : (
+										<T id="certificates.profile.standard-description" />
+									)}
+								</p>
+							</div>
 							<p className="text-sm text-muted-foreground">
-								{profile === "shortlived" ? (
-									<T id="certificates.profile.shortlived-description" />
-								) : (
-									<T id="certificates.profile.standard-description" />
-								)}
+								<T id="settings.certificates.applies" />
 							</p>
-						</div>
-						<p className="text-sm text-muted-foreground">
-							<T id="settings.certificates.applies" />
-						</p>
-						<div className="flex justify-end">
-							<Button type="button" onClick={save} disabled={!canSave || saveProfile.isPending}>
-								{saveProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-								<T id="save" />
-							</Button>
-						</div>
-					</>
-				)}
-			</CardContent>
-		</Card>
+							<div className="flex justify-end">
+								<Button type="button" onClick={save} disabled={!canSave || saveProfile.isPending}>
+									{saveProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+									<T id="save" />
+								</Button>
+							</div>
+						</>
+					)}
+				</CardContent>
+			</Card>
+			<CertificateOptionsCard />
+		</div>
 	);
 }

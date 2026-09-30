@@ -337,6 +337,15 @@ der neue Wert gilt für nachfolgende Aufträge ohne Neustart. Die UI ermöglicht
 Auswahl. Neue Formulare verwenden die Vorgabe, vorhandene explizite Zertifikatsprofile bleiben unverändert.
 Altzertifikate ohne Profilfeld folgen ihr bei der nächsten Erneuerung. Details stehen unter [Einstellungen](../verwaltung/einstellungen.md).
 
+`CertificateOptionsCard.tsx` ergänzt den Zertifikats-Tab um ECDSA/RSA und das Prüfintervall von 1 bis 12 Stunden.
+`Settings/Network.tsx` bietet den Cloudflare-IP-Abruf und ein Intervall von 6 bis 594 Stunden in Sechs-Stunden-Schritten.
+`OptionsCard.tsx` verwaltet die lokalen Entwürfe und zeigt Lade-/Fehlerzustände an; ohne geladene Daten wird kein
+Formular mit Ersatzwerten angeboten. Ungespeicherte Eingaben bleiben bei Hintergrundabfragen erhalten.
+`useRuntimeOptions.ts` verwendet die Cache-Schlüssel `["certificate-options"]` und `["ip-ranges-options"]`,
+bricht vor dem Speichern ältere GETs ab und übernimmt erfolgreiche Antworten unmittelbar in den Cache.
+Die API-Clients übertragen komplette Optionsobjekte und wandeln ihre camelCase-Feldnamen zu snake_case um.
+Details zu Datenbankwerten und Live-Anwendung stehen unter [Einstellungen](../verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen).
+
 `useAcmeProfile.ts` verwendet den React-Query-Schlüssel `["acme-profile"]`. Vor dem Speichern werden ältere GETs
 abgebrochen; nach Erfolg wird die Antwort direkt in den Cache übernommen, damit eine verspätete Abfrage die neue
 Vorgabe nicht zurücksetzt. Der lokale Einstellungsentwurf bleibt bei Hintergrundabfragen und Fehlern erhalten.

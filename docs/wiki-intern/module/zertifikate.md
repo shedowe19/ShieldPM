@@ -21,9 +21,15 @@ ShieldPM automatisiert die Zertifikatsverwaltung über Let's Encrypt (ACME) und 
 ## Verhalten
 
 - Zertifikate werden über ACME (Let's Encrypt) automatisch beantragt
-- `CRT` steuert das konfigurierte Intervall zwischen `certbot renew`-Prüfungen, nicht die verbleibende Zertifikatslaufzeit. `validate-env.cjs` setzt bei normalen Starts standardmäßig **23 Stunden**; gültig sind ganze Werte von 1 bis 596. `certificate.js` begrenzt das tatsächliche Intervall unabhängig davon auf **höchstens 12 Stunden**, auch bei einem fehlenden oder ungültigen Wert. Kleinere gültige Werte bleiben erhalten. Beim Start erfolgt sofort eine Prüfung; erneute Initialisierung ersetzt den vorhandenen Timer. Die Begrenzung gilt auch für Standard-Zertifikate, damit später angelegte Short-lived-Zertifikate ohne Neustart regelmäßig geprüft werden.
+- Die Datenbankeinstellung `certificate-options.meta.renewal_interval_hours` steuert das Intervall zwischen `certbot renew`-Prüfungen, nicht die verbleibende Zertifikatslaufzeit. Gültig sind ganze Stunden von **1 bis 12**, Standard ist **12 Stunden**. Unter Einstellungen → Zertifikate / ACME gespeicherte Änderungen ersetzen den laufenden Timer ohne Neustart und ohne zusätzliche Sofortprüfung. Beim Backend-Start erfolgt weiterhin sofort eine Prüfung. Die Prüfung erzwingt keine Erneuerung; Certbot bestimmt die Fälligkeit selbst.
 - Zertifikate werden unter `/data/tls/` gespeichert
 - Unterstützt ECDSA und RSA Schlüsseltypen
+
+## Globale Zertifikatsoptionen
+
+`certificate-options` speichert `key_type: "ecdsa" | "rsa"` und `renewal_interval_hours: 1..12` in `setting.meta`. Die UI bietet beide Felder unter Einstellungen → Zertifikate / ACME an. Der Schlüsseltyp wird bei neuen Ausstellungen sowie manuellen und automatischen Erneuerungen als `--key-type` weitergegeben, auch für bestehende Certbot-Lineages. Speichern allein ersetzt keine Zertifikatsdateien und löst keine erzwungene Erneuerung aus. Eine bereits laufende automatische Prüfserie behält den zu ihrem Beginn geladenen Schlüsseltyp; die neue Wahl gilt für die nächste Serie.
+
+Die Anlage-Migration übernimmt vorhandene `ACME_KEY_TYPE`-/`CRT`-Werte einmalig für fehlende Einstellungsdatensätze; danach gilt ausschließlich die Datenbankwahl. API und Validierung stehen unter [Einstellungen](../verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen).
 
 ## ACME-Profile
 

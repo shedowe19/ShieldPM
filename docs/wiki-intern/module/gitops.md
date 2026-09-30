@@ -43,6 +43,8 @@ Nach erfolgreichem Revert wird ausschließlich der Backend-Prozess per SIGTERM n
 
 Unklar: Der Import ist weiterhin nicht als Gesamttransaktion über alle Module implementiert. Bereits erfolgreich importierte Objekte bleiben bei späteren Fehlern bestehen. GitOps verwendet `isomorphic-git` über HTTP(S); native SSH-Schlüssel-Authentifizierung wird nicht unterstützt. Die Oberfläche bietet deshalb ausschließlich Token-Authentifizierung an.
 
+Die Einstellungsdatensätze `certificate-options` und `ip-ranges-options` werden beim Restore nicht direkt gepatcht: `value: "configured"` und ihre Metadaten werden gegen die dedizierten Optionsschemas geprüft und durch die jeweiligen Update-Services angewendet. Dadurch ändern sich auch die laufenden Timer ohne Neustart. Ungültige Metadaten oder Zustände werden als Importfehler gemeldet; die bisher gespeicherten Optionen bleiben erhalten. Siehe [Einstellungen](../verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen).
+
 ### Einstellungen und manuelle Aktionen
 
 Die GitOps-Seite zeigt bei fehlgeschlagener Erstabfrage keine speicherbaren Standardwerte an. Verbindungstests und Git-Aktionen verwenden die gespeicherte Backend-Konfiguration und bleiben gesperrt, solange die angezeigten Einstellungen ungespeicherte Änderungen enthalten. Während einer Mutation sind weitere Git-Aktionen und Änderungen der Konfiguration gesperrt. Ein neu eingegebener Token wird nach erfolgreichem Speichern aus dem Formular entfernt; leere Token-Felder erhalten die gespeicherten Zugangsdaten.

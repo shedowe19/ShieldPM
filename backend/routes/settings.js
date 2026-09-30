@@ -1,4 +1,6 @@
 import express from "express";
+import internalCertificateOptions from "../internal/certificate-options.js";
+import internalIpRangesOptions from "../internal/ip-ranges-options.js";
 import internalSetting from "../internal/setting.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
@@ -30,6 +32,24 @@ router
 		const rows = await internalSetting.getAll(res.locals.access);
 		res.status(200).send(rows);
 	});
+
+// Register typed application options before the generic setting ID route.
+for (const [id, service] of [
+	["certificate-options", internalCertificateOptions],
+	["ip-ranges-options", internalIpRangesOptions],
+]) {
+	router
+		.route(`/${id}`)
+		.options((_, res) => res.sendStatus(204))
+		.all(jwtdecode())
+		.get(async (_req, res) => {
+			res.status(200).send(await service.get(res.locals.access));
+		})
+		.put(async (req, res) => {
+			const payload = await apiValidator(getValidationSchema(`/settings/${id}`, "put"), req.body);
+			res.status(200).send(await service.update(res.locals.access, payload));
+		});
+}
 
 /**
  * Specific setting

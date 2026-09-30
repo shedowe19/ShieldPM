@@ -89,7 +89,7 @@ vi.mock("node:fs", async (importOriginal) => {
 // Import the module under test
 import internalCertificate from "../../internal/certificate.js";
 
-describe("Fix #58: initTimer interval uses safe default when CRT env var is unset", () => {
+describe("certificate renewal timer configuration", () => {
 	it("intervalTimeout property no longer exists on the static object (no NaN at module load)", () => {
 		// The static object must NOT have intervalTimeout – it was moved into initTimer()
 		expect(internalCertificate.intervalTimeout).toBeUndefined();

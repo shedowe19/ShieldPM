@@ -58,7 +58,6 @@ services:
 #      - "ACME_EAB_HMAC_KEY=123456789abcdef" # HMAC key for External Account Binding for the acme server, not supported by letsencrypt, optional for zerossl (Login on their site => Developer), but required for google public ca: https://cloud.google.com/certificate-manager/docs/public-ca-tutorial?hl=de#request-key-hmac
 #      - "ACME_MUST_STAPLE=true" # enables must-staple, default false; verify CA support, also enables ACME_OCSP_STAPLING
 #      - "ACME_OCSP_STAPLING=true" # enables ocsp stapling, default false, I recommend enabling this if your CA supports it, supported by zerossl and google public ca
-#      - "ACME_KEY_TYPE=rsa" # which key type to use ecdsa or rsa, default and recommended: ecdsa
 #      - "ACME_SERVER_TLS_VERIFY=false" # disables ACME server TLS certificate verification; default and recommended: true
 #      - "CUSTOM_OCSP_STAPLING=true" # enables ocsp stapling for custom certs, default false, I recommend enabling this if your custom certs support it
 #      - "PUID=1000" # set user id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root)
@@ -93,9 +92,6 @@ services:
 #      - "FULLCLEAN=true" # Cleans unused config folders, default false
 #      - "LOGROTATE=true" # Enables writing http access logs to /opt/shieldpm/nginx/json_access.log, stream access logs to /opt/shieldpm/nginx/stream.log and enables daily logrotation, default false
 #      - "LOGROTATIONS=7" # Set how often the json_access.log should be rotated until it is deleted, default 3
-#      - "SKIP_IP_RANGES=false" # Skip fetching/whitelisting ip ranges from cloudflare, default true
-#      - "IPRT=3" # Multiplier for the 6-hour Cloudflare IP range refresh, default 1; ignored when SKIP_IP_RANGES=true
-#      - "CRT=12" # Configure hours between renewal checks; values above 12 are capped at runtime
 #      - "GOA=true" # Enables goaccess (and overrides LOGROTATE to true), default false --- if you download the GeoLite2-Country.mmdb, GeoLite2-City.mmdb AND GeoLite2-ASN.mmdb file from MaxMind and place them in /opt/shieldpm/goaccess/geoip it will automatically enable GeoIP in goaccess after restarting ShieldPM (no need to change GOACLA below), you may also enable the geoipupdate container below (please change the timezone)
 #      - "GOACLA=--agent-list --real-os --double-decode --anonymize-ip --anonymize-level=2 --keep-last=7 --with-output-resolver --no-query-string" # Arguments that should be passed to goaccess, default: --agent-list --real-os --double-decode --anonymize-ip --anonymize-level=1 --keep-last=30 --with-output-resolver --no-query-string
 #      - "PHP82=true" # Activate PHP82, default false, supported, but not recommended, you should prefer to use a dedicated php-fpm container

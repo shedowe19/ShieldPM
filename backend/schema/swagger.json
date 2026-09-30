@@ -437,6 +437,22 @@
 				"$ref": "./paths/settings/get.json"
 			}
 		},
+		"/settings/certificate-options": {
+			"get": {
+				"$ref": "./paths/settings/certificate-options/get.json"
+			},
+			"put": {
+				"$ref": "./paths/settings/certificate-options/put.json"
+			}
+		},
+		"/settings/ip-ranges-options": {
+			"get": {
+				"$ref": "./paths/settings/ip-ranges-options/get.json"
+			},
+			"put": {
+				"$ref": "./paths/settings/ip-ranges-options/put.json"
+			}
+		},
 		"/settings/{settingID}": {
 			"get": {
 				"$ref": "./paths/settings/settingID/get.json"
