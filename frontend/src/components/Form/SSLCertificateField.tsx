@@ -71,6 +71,10 @@ export function SSLCertificateField({
 				...rest
 			} = meta;
 			setFieldValue("meta", rest);
+		} else if (v[name] !== "new") {
+			// Host metadata can retain the profile of a previously issued certificate.
+			// A new request must start with the current global default instead.
+			setFieldValue("meta.letsencryptProfile", undefined);
 		}
 	};
 

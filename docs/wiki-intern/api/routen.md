@@ -57,11 +57,18 @@ des berechtigten Hosts. Ein `nginx -tq` der vorgeschlagenen Konfiguration erfolg
 ### Zertifikatsprofile
 
 `POST /api/nginx/certificates` akzeptiert bei `provider: "letsencrypt"` das optionale Feld
-`meta.letsencrypt_profile` (`standard` oder `shortlived`, fehlend entspricht `standard`). Dieselbe
+`meta.letsencrypt_profile` (`standard` oder `shortlived`, fehlend verwendet die globale Vorgabe). Dieselbe
 Auswahl wird bei Host-Erstellung oder -Aktualisierung mit `certificate_id: "new"` an die Ausstellung
 weitergereicht; Streams benötigen hierfür DNS-Verifikation. Die bestehenden Renew-Routen behalten
 das gespeicherte Profil bei. Der Update-Endpunkt eines vorhandenen Zertifikats erlaubt keinen
 Profilwechsel. Details und Grenzen stehen unter [Zertifikate](../module/zertifikate.md).
+
+`GET /api/nginx/certificates/acme-profile` liefert mit `certificates:list` die wirksame globale
+Vorgabe als `{ profile, source, environmentProfile? }`. `PUT` auf demselben Pfad speichert mit
+`settings:update` und dem Body `{ "profile": "standard" | "shortlived" }` die Vorgabe nach
+Validierung von Certbot und gegebenenfalls dem ACME-Verzeichnis. Die Antwort verwendet `source: "settings"`;
+bis zur ersten Speicherung steht dort `environment`. Diese dedizierte Route ersetzt für den Schlüssel
+`acme-profile` den generischen Settings-PUT, der dafür abgewiesen wird. Siehe [Einstellungen](../verwaltung/einstellungen.md).
 
 ### Proxy-Host-Diagnose
 

@@ -11,9 +11,10 @@ Die Anwendung benötigt globale Konfigurationswerte, die in der Datenbank gespei
 ## Wichtige Dateien
 
 - `backend/internal/setting.js` — Business-Logik für Einstellungen
+- `backend/internal/acme-profile.js` — Geprüfte ACME-Profilvorgabe und dedizierte API
 - `backend/models/setting.js` — Einstellungs-Modell
 - `backend/routes/settings.js` — REST-API unter `/api/settings`
-- `frontend/src/pages/Settings/` — UI mit Tabs (DefaultSite, Ai, GitOps, Layout)
+- `frontend/src/pages/Settings/` — UI mit Tabs (DefaultSite, ACME, Ai, GitOps, Layout)
 
 ## Verhalten
 
@@ -25,6 +26,22 @@ Die Anwendung benötigt globale Konfigurationswerte, die in der Datenbank gespei
 - Ein fehlgeschlagenes Nachladen der Default-Site-Einstellung zeigt bei bereits vorhandenen Daten einen Fehler im weiterhin geöffneten Formular. Ungespeichertes HTML bleibt auch bei anschließender Wiederherstellung der Verbindung erhalten. Scheitert das erste Laden ohne Daten, wird kein Formular mit Ersatzwerten angeboten.
 - AI-Modelllisten gelten nur für die Verbindung, mit der sie angefordert wurden. Änderungen an Provider, Base-URL oder API-Key verwerfen geladene Optionen und ausstehende Antworten einschließlich deren Fehlern. Auch ein Wechsel zurück zum vorherigen Wert reaktiviert keine ältere Anfrage. Regression: `frontend/src/pages/Settings/Ai.test.tsx`.
 - GitOps-Einstellungen werden erst nach erfolgreichem Laden bearbeitbar. Ungespeicherte Änderungen sperren Aktionen gegen die bisher gespeicherte Repository-Konfiguration; siehe [GitOps](../module/gitops.md).
+
+## Globale ACME-Profilvorgabe
+
+Einstellungen → Zertifikate / ACME (`frontend/src/pages/Settings/Certificates.tsx`) bietet Administratoren die globale Auswahl Standard oder Short-lived. Die Datenbank speichert sie im Datensatz `setting.id: "acme-profile"`; die Migration `20260930000000_add_acme_profile_setting.js` ergänzt zunächst `value: "inherit"` und überschreibt einen bereits vorhandenen Datensatz nicht. `inherit` dient nur der Upgrade-Kompatibilität und ist keine UI-Auswahl.
+
+`GET /api/nginx/certificates/acme-profile` ist mit `certificates:list` zugänglich und liefert die wirksame Vorgabe (`profile`), ihre Quelle (`source: "environment" | "settings"`) und optional den bisherigen Umgebungswert (`environmentProfile`). `PUT` verlangt `settings:update` und ausschließlich `{ "profile": "standard" | "shortlived" }`. Der generische Settings-PUT für `acme-profile` wird abgewiesen, damit er die vorgesehene Prüfung nicht umgeht.
+
+Vor dem Speichern prüft der Service die Unterstützung der Certbot-Profiloptionen; für Short-lived zusätzlich das angebotene `shortlived`-Profil des konfigurierten ACME-Verzeichnisses. Scheitert eine Prüfung, bleibt der gespeicherte Wert unverändert. Eine erfolgreiche Änderung wirkt auf nachfolgende Zertifikatsaufträge ohne Dienstneustart und ohne Änderung von Umgebungsdateien oder Certbot-INI. Sie erzeugt allein noch kein neues Zertifikat.
+
+Eine globale Short-lived-Vorgabe wird außerdem abgewiesen, wenn ein aktives älteres Let's-Encrypt-Zertifikat ohne gespeichertes Profil mehr als 25 Domainnamen enthält. Dadurch wird dessen spätere Erneuerung nicht auf ein unzulässiges Profil umgestellt. Standard bleibt verwendbar; alternativ können die betroffenen Zertifikate durch explizite Standard-Zertifikate ersetzt oder auf Short-lived-Zertifikate mit höchstens 25 Namen aufgeteilt werden. Nach der Host-Neuzuordnung müssen die ersetzten Altzertifikate entfernt werden, da die Prüfung alle nicht gelöschten Let's-Encrypt-Zertifikate berücksichtigt. Zertifikate mit explizit gespeichertem Standard-Profil verhindern die Änderung nicht.
+
+Neue Zertifikatsanfragen ohne individuelle Wahl verwenden die globale Vorgabe und speichern das aufgelöste Profil im Zertifikat. Neue HTTP-/DNS- und Inline-Host-Formulare übernehmen die Vorgabe nur, solange keine individuelle Wahl vorliegt. Bereits explizit gespeicherte Zertifikatsprofile behalten Vorrang. Bei älteren Zertifikaten ohne Profilfeld wird nach dem ersten UI-Speichern die globale Wahl während der nächsten Erneuerung angewendet.
+
+Bis zur ersten Speicherung gilt die Umgebung als Rückfallebene: `ACME_PROFILE=shortlived` ergibt Short-lived, andere oder fehlende Werte ergeben Standard für neue Zertifikate. Bestehende Altzertifikate ohne Profilmetadaten behalten in diesem Anfangszustand dagegen auch beliebige bisherige Umgebungs- oder Lineage-Profile. Nach einer UI-Speicherung hat der Datenbankwert Vorrang. Details zur Argumentauflösung und Erneuerung stehen unter [Certbot](../module/certbot.md).
+
+Regressionen: `backend/test/internal/acme-profile.spec.js` prüft Auflösung, Berechtigungen, Client-/CA-Prüfung und Fehlererhalt; `backend/test/schema/acme-profile-settings-contract.spec.js` den API-Vertrag und `backend/test/migrations/acme-profile-setting.spec.js` den anfangs kompatiblen Datenbankzustand. Die Client- und ACME-Aufrufe sind gemockt; es werden keine echten Zertifikate ausgestellt. `Settings/Certificates.test.tsx`, `Settings/Layout.test.tsx`, `useAcmeProfile.test.tsx` und `CertificateProfiles.test.tsx` prüfen UI-Zustände, sofortige Cacheübernahme sowie den Schutz individueller Profilwahlen vor verspäteten Antworten.
 
 ## Standardseite und Fehlerbehandlung
 
@@ -50,3 +67,4 @@ Dashboard-Notizen sind ein eigenständiges Feature und werden auf einer separate
 - [Dashboard-Notizen](../module/dashboard-notes.md)
 - [Audit-Log](./audit-log.md)
 - [Modulübersicht](../module/README.md)
+- [Zertifikate](../module/zertifikate.md)

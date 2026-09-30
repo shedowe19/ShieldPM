@@ -15,6 +15,9 @@ const internalSetting = {
 	 */
 	update: async (access, data) => {
 		await access.can("settings:update", data.id);
+		if (data.id === "acme-profile") {
+			throw new errs.ValidationError("Use the certificate ACME profile endpoint to update this setting");
+		}
 		const performUpdate = async () => {
 			// Read inside the Nginx lock so rollback cannot restore a stale setting.
 			const row = await internalSetting.get(access, { id: data.id });

@@ -117,13 +117,12 @@
 			"example": "letsencrypt"
 		},
 		"letsencrypt_profile": {
-			"description": "Let's Encrypt certificate profile; omitted values use standard",
+			"description": "Let's Encrypt certificate profile; omitted request values use the configured global default",
 			"type": "string",
 			"enum": [
 				"standard",
 				"shortlived"
 			],
-			"default": "standard",
 			"example": "shortlived"
 		},
 		"http2_support": {

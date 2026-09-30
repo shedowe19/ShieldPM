@@ -324,14 +324,34 @@ vom Dialog ab.
 
 `Form/CertificateProfileField.tsx` bietet in den HTTP-/DNS-Zertifikatsdialogen und über `SSLOptionsFields` bei
 `certificateId: "new"` die Auswahl Standard oder Short-lived an. Das Formik-Feld heißt
-`meta.letsencryptProfile`; der API-Client überführt es zu `meta.letsencrypt_profile`. Fehlende Werte werden auf
-`standard` gesetzt. Ein vorhandenes Zertifikat bietet keinen Profilwechsel an; die Zertifikatsliste zeigt das
+`meta.letsencryptProfile`; der API-Client überführt es zu `meta.letsencrypt_profile`. Die über
+`/api/nginx/certificates/acme-profile` geladene globale Vorgabe initialisiert nur ein noch nicht gewähltes Profil;
+eine individuelle Wahl wird nicht durch eine spätere Antwort überschrieben. Ein vorhandenes Zertifikat bietet keinen Profilwechsel an; die Zertifikatsliste zeigt das
 explizit gespeicherte Profil für Let's-Encrypt-Zertifikate als Badge. Alte Datensätze ohne Profilfeld bekommen
 keinen Badge, weil ihre bisherige globale Profilkonfiguration daraus nicht hervorgeht. Details zur Laufzeit und Erneuerung stehen unter
 [Zertifikate](../module/zertifikate.md).
 
+`Settings/Certificates.tsx` bietet unter Einstellungen → Zertifikate / ACME Administratoren die persistente globale Auswahl Standard/Short-lived.
+Die dedizierte API prüft die Voraussetzungen vor dem Speichern; der neue Wert gilt für nachfolgende Aufträge
+ohne Neustart. Die UI zeigt an, ob die Vorgabe aus der Umgebung oder aus den gespeicherten Einstellungen stammt;
+bei der Umgebungsrückfallebene zeigt sie zusätzlich den aktuellen `environmentProfile`-Wert als Code-Text an.
+Neue Formulare verwenden die Vorgabe, vorhandene explizite Zertifikatsprofile bleiben unverändert. Details zu
+Altzertifikaten und der anfänglichen Umgebungsrückfallebene stehen unter [Einstellungen](../verwaltung/einstellungen.md).
+
+`useAcmeProfile.ts` verwendet den React-Query-Schlüssel `["acme-profile"]`. Vor dem Speichern werden ältere GETs
+abgebrochen; nach Erfolg wird die Antwort direkt in den Cache übernommen, damit eine verspätete Abfrage die neue
+Vorgabe nicht zurücksetzt. Der lokale Einstellungsentwurf bleibt bei Hintergrundabfragen und Fehlern erhalten.
+Fehlt beim ersten Laden jede gültige Antwort, bietet der Tab kein Formular mit erfundenen Ersatzwerten an.
+Die Profilfelder neuer Zertifikate lassen bei ausstehender oder fehlgeschlagener Abfrage den Metadatenwert
+ausgelassen und zeigen den Zustand an; das Backend löst dann die globale Vorgabe auf. Eine individuelle Auswahl
+bleibt dabei möglich und wird auch durch eine spätere erfolgreiche Abfrage nicht überschrieben.
+
 `SSLCertificateField` entfernt beim Wechsel von einer neuen zu einer vorhandenen oder keiner Zertifikatsauswahl die
 Profilwahl und DNS-Challenge-Daten aus `meta`, einschließlich Zugangsdaten und einer Wartezeit von null Sekunden.
+Beim Wechsel von einem vorhandenen oder keinem Zertifikat zu einer neuen Ausstellung wird ein eventuell im Host
+gespeichertes altes Profil ebenfalls verworfen, damit die aktuelle globale Vorgabe geladen wird. Eine wiederholte
+Auswahl von „neu“ behält dagegen eine bereits getroffene individuelle Wahl. `SSLCertificateField.test.tsx`
+prüft diese Übergänge einschließlich der erhaltenen übrigen Metadaten.
 Andere Metadaten bleiben erhalten. Streams bieten ausschließlich ihre unterstützten TLS-Optionen an; neue
 Zertifikate benötigen Domainnamen und DNS-Verifikation. Siehe [Streams](../module/stream.md).
 

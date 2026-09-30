@@ -1,0 +1,53 @@
+{
+	"operationId": "updateACMEProfile",
+	"summary": "Set the default Let's Encrypt certificate profile",
+	"tags": [
+		"certificates"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"requestBody": {
+		"description": "The default profile to use for new certificates",
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": [
+						"profile"
+					],
+					"properties": {
+						"profile": {
+							"$ref": "../../../../common.json#/properties/letsencrypt_profile"
+						}
+					}
+				},
+				"example": {
+					"profile": "shortlived"
+				}
+			}
+		}
+	},
+	"responses": {
+		"200": {
+			"description": "The saved default profile",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../components/acme-profile-object.json"
+					},
+					"example": {
+						"profile": "shortlived",
+						"source": "settings"
+					}
+				}
+			}
+		}
+	}
+}

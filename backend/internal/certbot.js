@@ -15,6 +15,7 @@ import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
 import { ssl as logger } from "../logger.js";
 import pjson from "../package.json" with { type: "json" };
+import internalAcmeProfile from "./acme-profile.js";
 
 // State variable for processing lock
 let processing = false;
@@ -138,6 +139,8 @@ export const requestCertbotWithDnsChallenge = async (certificate) => {
 export const renewCertbot = async (certificate) => {
 	logger.info(`Renewing Certbot certificates for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`);
 
+	const policy =
+		certificate.meta?.letsencrypt_profile === undefined ? await internalAcmeProfile.getPolicy() : "inherit";
 	const renewResult = await runCertbot([
 		"--config",
 		"/etc/certbot.ini",
@@ -147,7 +150,7 @@ export const renewCertbot = async (certificate) => {
 		"--cert-name",
 		`npm-${certificate.id}`,
 		"--force-renewal",
-		...getCertificateProfileArgs(certificate),
+		...getCertificateProfileArgs(certificate, policy),
 	]);
 	logger.info(renewResult);
 	return renewResult;
@@ -170,6 +173,8 @@ export const renewCertbotWithDnsChallenge = async (certificate) => {
 		`Renewing LetsEncrypt certificates via ${dnsPlugin.name} for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`,
 	);
 
+	const policy =
+		certificate.meta?.letsencrypt_profile === undefined ? await internalAcmeProfile.getPolicy() : "inherit";
 	const renewResult = await runCertbot([
 		"--config",
 		"/etc/certbot.ini",
@@ -179,7 +184,7 @@ export const renewCertbotWithDnsChallenge = async (certificate) => {
 		"--cert-name",
 		`npm-${certificate.id}`,
 		"--force-renewal",
-		...getCertificateProfileArgs(certificate),
+		...getCertificateProfileArgs(certificate, policy),
 	]);
 	logger.info(renewResult);
 	return renewResult;

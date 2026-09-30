@@ -128,6 +128,14 @@
 				"$ref": "./paths/nginx/certificates/post.json"
 			}
 		},
+		"/nginx/certificates/acme-profile": {
+			"get": {
+				"$ref": "./paths/nginx/certificates/acme-profile/get.json"
+			},
+			"put": {
+				"$ref": "./paths/nginx/certificates/acme-profile/put.json"
+			}
+		},
 		"/nginx/certificates/dns-providers": {
 			"get": {
 				"$ref": "./paths/nginx/certificates/dns-providers/get.json"

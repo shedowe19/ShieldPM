@@ -46,6 +46,7 @@ vi.mock("../../internal/certificate.js", () => ({
 	default: { download: mocks.download, renew: mocks.renew, delete: mocks.delete, get: mocks.get },
 }));
 vi.mock("../../internal/pki.js", () => ({ default: { createClientCert: mocks.createClientCert } }));
+vi.mock("../../internal/acme-profile.js", () => ({ default: {} }));
 vi.mock("../../lib/express/jwt-decode.js", () => ({ default: () => vi.fn() }));
 vi.mock("../../lib/validator/index.js", () => ({ default: async (_schema, payload) => payload }));
 vi.mock("../../lib/validator/api.js", () => ({ default: async (_schema, payload) => payload }));

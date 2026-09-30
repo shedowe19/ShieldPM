@@ -64,7 +64,30 @@ These four fields are required. Optional fields such as `certificate_id`, `ssl_f
 }
 ```
 
-`meta.letsencrypt_profile` accepts `standard` or `shortlived`; omitting it preserves Standard behavior. DNS-challenge requests use the same field together with their DNS-provider metadata. Inline host requests with `certificate_id: "new"` also accept the profile in `meta`; streams require DNS validation. Short-lived requests allow at most 25 domain names. The profile is returned in certificate metadata, retained for renewal, and cannot be changed through the certificate update endpoint. See [SSL Certificates](SSL-Certificates) for lifetime and global ACME configuration behavior.
+`meta.letsencrypt_profile` accepts `standard` or `shortlived`; omitting it uses the current global default and saves that resolved choice on the new certificate. DNS-challenge requests use the same field together with their DNS-provider metadata. Inline host requests with `certificate_id: "new"` also accept the profile in `meta`; streams require DNS validation. Short-lived requests allow at most 25 domain names. The profile is returned in certificate metadata, retained for renewal, and cannot be changed through the certificate update endpoint. See [SSL Certificates](SSL-Certificates) for lifetime and global ACME configuration behavior.
+
+### Global ACME profile
+
+**GET** `/api/nginx/certificates/acme-profile` requires certificate-list permission and returns the effective new-certificate default:
+
+```json
+{
+  "profile": "standard",
+  "source": "environment"
+}
+```
+
+`source` is `environment` until the global setting is saved, then `settings`. The optional `environmentProfile` reports the configured environment fallback without making it override the saved UI choice.
+
+An administrator saves the choice with **PUT** `/api/nginx/certificates/acme-profile`:
+
+```json
+{
+  "profile": "shortlived"
+}
+```
+
+The response has the same shape with `source: "settings"`. Only `standard` and `shortlived` are accepted. Certbot profile support is validated before saving; Short-lived also requires the ACME server to advertise that profile. A failed validation preserves the previous value. Saving applies immediately to new requests without an explicit profile and to renewal of legacy certificates without profile metadata. Explicit per-certificate profiles remain unchanged. The generic `/api/settings/acme-profile` update is rejected; use this dedicated endpoint.
 
 Most API errors use an `error` object with a numeric `code` and public `message`. A CSRF rejection before route execution responds with HTTP 403 and `error.reason: "EBADCSRFTOKEN"`. Some analytics routes return a shorter `error` string for host-not-found or forbidden responses; check the endpoint's response contract when handling errors.
 

@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ execFile: vi.fn(), requests: [] }));
+const mocks = vi.hoisted(() => ({ execFile: vi.fn(), requests: [], policy: vi.fn().mockResolvedValue("inherit") }));
+vi.mock("../../internal/acme-profile.js", () => ({ default: { getPolicy: mocks.policy } }));
 vi.mock("../../lib/utils.js", () => ({ default: { execFile: mocks.execFile } }));
 vi.mock("../../lib/certbot.js", () => ({ installPlugin: vi.fn() }));
 vi.mock("proxy-agent", () => ({ ProxyAgent: class {} }));
@@ -46,6 +47,7 @@ const certificate = { id: 1, domain_names: ["example.test"], meta: {} };
 describe("Certbot process coordination", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mocks.policy.mockResolvedValue("inherit");
 		mocks.requests.length = 0;
 	});
 	afterEach(() => {
@@ -73,6 +75,27 @@ describe("Certbot process coordination", () => {
 		await requestCertbot(certificate);
 		expect(mocks.execFile.mock.calls[0][1]).not.toContain("--required-profile");
 	});
+	it.each([renewCertbot, renewCertbotWithDnsChallenge])(
+		"uses the saved global profile for legacy certificates in %s",
+		async (operation) => {
+			vi.stubEnv("ACME_PROFILE", "none");
+			mocks.execFile.mockResolvedValue("renewed");
+			mocks.policy.mockResolvedValueOnce("standard");
+			await operation({ ...certificate, meta: { dns_provider: "cloudflare" } });
+			const standardArgs = mocks.execFile.mock.calls[0][1];
+			expect(standardArgs.slice(standardArgs.indexOf("--required-profile"))).toEqual([
+				"--required-profile",
+				"",
+				"--preferred-profile",
+				"",
+			]);
+			mocks.policy.mockResolvedValueOnce("shortlived");
+			await operation({ ...certificate, meta: { dns_provider: "cloudflare" } });
+			expect(mocks.execFile.mock.calls[1][1]).toEqual(
+				expect.arrayContaining(["--required-profile", "shortlived"]),
+			);
+		},
+	);
 	it.each([requestCertbot, renewCertbot, renewCertbotWithDnsChallenge])(
 		"clears both global profile settings for explicit standard in %s",
 		async (operation) => {

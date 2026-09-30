@@ -108,7 +108,7 @@ const HTTPCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPr
 						{
 							domainNames: [] as string[],
 							provider: CERTIFICATE_PROVIDER.LETSENCRYPT,
-							meta: { letsencryptProfile: "standard" },
+							meta: {},
 						} as HTTPCertificateValues
 					}
 					onSubmit={onSubmit}

@@ -94,6 +94,7 @@ export { up, down };
 - `20260923000000_add_proxy_host_monitor` — legt die Monitor-Konfiguration und den Verlauf von Upstream-Prüfungen pro Proxy-Host an.
 - `20260923000001_add_proxy_host_monitor_tls_options` — ergänzt die optionalen Felder `upstream_ca` (PEM-Zertifikatskette) und `upstream_server_name` (DNS-Name) an vorhandenen Monitor-Konfigurationen. Bestehende Zeilen erhalten `NULL`; die einzeln geprüften Spalten erlauben den erneuten Lauf nach einer unterbrochenen Schemaänderung.
 - `20260924000000_add_proxy_host_monitor_skip_certificate_verification` — ergänzt die ausdrücklich aktivierbare Option für TLS-Probes mit deaktivierter Zertifikatsprüfung; die Standardeinstellung bleibt Zertifikatsprüfung.
+- `20260930000000_add_acme_profile_setting` — ergänzt den globalen Einstellungsdatensatz `acme-profile` mit `value: "inherit"` und leeren Metadaten. Ein bereits vorhandener Datensatz wird nicht überschrieben. `inherit` bewahrt auf Upgrades die bisherige ACME-Umgebung bis zur UI-Speicherung; danach gelten `standard` oder `shortlived`. Der Rollback entfernt ausschließlich diesen Einstellungsdatensatz.
 
 ## Datenintegrität bei Migrationen
 

@@ -27,20 +27,21 @@ const internalDeadHost = {
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {
-		const createCertificate = data.certificate_id === "new";
+		let thisData = _.cloneDeep(data);
+		const createCertificate = thisData.certificate_id === "new";
 
 		if (createCertificate) {
-			delete data.certificate_id;
+			delete thisData.certificate_id;
 		}
 
-		await access.can("dead_hosts:create", data);
-		await internalHost.validateReferences(access, data);
-		internalHost.validateDomainNames(data.domain_names);
+		await access.can("dead_hosts:create", thisData);
+		await internalHost.validateReferences(access, thisData);
+		internalHost.validateDomainNames(thisData.domain_names);
 
 		// Get a list of the domain names and check each of them against existing records
 		const domainNameCheckPromises = [];
 
-		data.domain_names.map((domain_name) => {
+		thisData.domain_names.map((domain_name) => {
 			domainNameCheckPromises.push(internalHost.isHostnameTaken(domain_name));
 			return true;
 		});
@@ -53,13 +54,17 @@ const internalDeadHost = {
 			return true;
 		});
 
+		if (createCertificate) {
+			thisData = await internalCertificate.prepareQuickCertificate(access, thisData);
+		}
+
 		// At this point the domains should have been checked
-		data.owner_user_id = access.token.getUserId(1);
-		const thisData = internalHost.cleanSslHstsData(createCertificate, data);
+		thisData.owner_user_id = access.token.getUserId(1);
+		thisData = internalHost.cleanSslHstsData(createCertificate, thisData);
 
 		// Fix for db field not having a default value
 		// for this optional field.
-		if (typeof data.advanced_config === "undefined") {
+		if (typeof thisData.advanced_config === "undefined") {
 			thisData.advanced_config = "";
 		}
 
@@ -80,7 +85,7 @@ const internalDeadHost = {
 		});
 
 		if (createCertificate) {
-			const cert = await internalCertificate.createQuickCertificate(access, data);
+			const cert = await internalCertificate.createQuickCertificate(access, thisData);
 
 			// update host with cert id
 			await internalDeadHost.update(
@@ -120,7 +125,7 @@ const internalDeadHost = {
 	 * @return {Promise}
 	 */
 	update: async (access, data, options = {}) => {
-		let thisData = /** @type {any} */ (data);
+		let thisData = /** @type {any} */ (_.cloneDeep(data));
 		const createCertificate = thisData.certificate_id === "new";
 		if (createCertificate) {
 			delete thisData.certificate_id;
@@ -156,13 +161,12 @@ const internalDeadHost = {
 		}
 
 		if (createCertificate) {
-			const cert = await internalCertificate.createQuickCertificate(
-				access,
-				/** @type {any} */ ({
-					domain_names: thisData.domain_names || row.domain_names,
-					meta: _.assign({}, row.meta, thisData.meta),
-				}),
-			);
+			thisData = await internalCertificate.prepareQuickCertificate(access, {
+				...thisData,
+				domain_names: thisData.domain_names || row.domain_names,
+				meta: _.assign({}, _.omit(row.meta, ["letsencrypt_profile"]), thisData.meta),
+			});
+			const cert = await internalCertificate.createQuickCertificate(access, thisData);
 
 			// update host with cert id
 			thisData.certificate_id = cert.id;
@@ -174,7 +178,7 @@ const internalDeadHost = {
 			{
 				domain_names: row.domain_names,
 			},
-			data,
+			thisData,
 		);
 
 		thisData = internalHost.cleanSslHstsData(createCertificate, thisData, row);

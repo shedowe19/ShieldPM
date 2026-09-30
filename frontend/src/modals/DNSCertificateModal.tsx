@@ -67,7 +67,6 @@ const DNSCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPro
 							provider: CERTIFICATE_PROVIDER.LETSENCRYPT,
 							meta: {
 								dnsChallenge: true,
-								letsencryptProfile: "standard",
 							},
 						} as DNSCertificateValues
 					}

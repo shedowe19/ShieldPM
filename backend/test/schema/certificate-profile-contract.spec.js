@@ -70,11 +70,11 @@ describe("Let's Encrypt certificate profile contracts", () => {
 		).resolves.toMatchObject({ meta });
 	});
 
-	it("keeps requests without a profile backward compatible with the documented standard default", async () => {
+	it("keeps requests without a profile compatible with resolving the global default", async () => {
 		await expect(
 			apiValidator(createSchema, { provider: "letsencrypt", domain_names: ["example.test"], meta: {} }),
 		).resolves.toMatchObject({ meta: {} });
-		expect(createSchema.properties.meta.properties.letsencrypt_profile.default).toBe("standard");
+		expect(createSchema.properties.meta.properties.letsencrypt_profile.default).toBeUndefined();
 	});
 
 	it.each(invalidProfiles)("rejects unsupported certificate profile %j", async (profile) => {
@@ -139,7 +139,7 @@ for (const { route, payload, resourceId = "hostID" } of hostCases) {
 				).resolves.toMatchObject({ certificate_id: "new", meta });
 			});
 
-			it("allows inline certificate creation with an omitted standard profile", async () => {
+			it("allows inline certificate creation with an omitted profile", async () => {
 				await expect(
 					apiValidator(getValidationSchema(path, method), {
 						...payload,

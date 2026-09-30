@@ -5,7 +5,7 @@ import { ZipArchive } from "archiver";
 import dayjs from "dayjs";
 import _ from "lodash";
 import tempWrite from "temp-write";
-import { getCertificateProfile, getCertificateProfileArgs } from "../lib/certificate-profile.js";
+import { getCertificateProfile, getCertificateProfileArgs, resolveDefaultProfile } from "../lib/certificate-profile.js";
 import error from "../lib/error.js";
 import { sanitizeProxyHost } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
@@ -15,6 +15,7 @@ import deadHostModel from "../models/dead_host.js";
 import proxyHostModel from "../models/proxy_host.js";
 import redirectionHostModel from "../models/redirection_host.js";
 import streamModel from "../models/stream.js";
+import internalAcmeProfile from "./acme-profile.js";
 import internalAuditLog from "./audit-log.js";
 import * as certbot from "./certbot.js";
 import internalGitOps from "./gitops.js";
@@ -170,6 +171,7 @@ const internalCertificate = {
 					.query()
 					.where("is_deleted", 0)
 					.andWhere("provider", "letsencrypt");
+				const policy = await internalAcmeProfile.getPolicy();
 				// A profile in certbot.ini overrides saved lineage options, so renew each managed
 				// certificate with its own selection. Certbot still decides whether it is due.
 				for (const certificate of certificates || []) {
@@ -183,7 +185,7 @@ const internalCertificate = {
 							"--cert-name",
 							`npm-${certificate.id}`,
 							"--quiet",
-							...getCertificateProfileArgs(certificate),
+							...getCertificateProfileArgs(certificate, policy),
 						]);
 						if (result) logger.info(`Renew Result for Cert #${certificate.id}: ${result}`);
 					} catch (err) {
@@ -241,7 +243,8 @@ const internalCertificate = {
 		await access.can("certificates:create", thisData);
 		thisData.owner_user_id = access.token.getUserId(1);
 		if (thisData.provider === "letsencrypt") {
-			thisData.meta = { ...thisData.meta, letsencrypt_profile: getCertificateProfile(thisData.meta) };
+			const prepared = await internalCertificate.prepareQuickCertificate(access, thisData);
+			thisData.meta = prepared.meta;
 		} else if (thisData.meta?.letsencrypt_profile !== undefined) {
 			throw new error.ValidationError("Certificate profiles are only available for Let's Encrypt certificates");
 		}
@@ -251,10 +254,6 @@ const internalCertificate = {
 			}
 			thisData.nice_name = thisData.domain_names.join(", ");
 		}
-		if (thisData.meta?.letsencrypt_profile === "shortlived" && thisData.domain_names.length > 25) {
-			throw new error.ValidationError("Short-lived certificates support at most 25 domain names");
-		}
-
 		const certificate = await certificateModel.query().insertAndFetch(thisData);
 		let savedRow = certificate;
 		try {
@@ -713,6 +712,27 @@ const internalCertificate = {
 			domain_names: data.domain_names,
 			meta: data.meta,
 		});
+	},
+
+	/** Resolve and validate inline issuance before a host or stream is persisted.
+	 * @param {import("../lib/types.js").Access} access
+	 * @param {Object} data
+	 * @returns {Promise<Object>}
+	 */
+	prepareQuickCertificate: async (access, data) => {
+		await access.can("certificates:create", data);
+		const prepared = _.cloneDeep(data);
+		if (!Array.isArray(prepared.domain_names) || prepared.domain_names.length === 0) {
+			throw new error.ValidationError("At least one domain name is required for certificate creation");
+		}
+		const profile =
+			prepared.meta?.letsencrypt_profile === undefined
+				? resolveDefaultProfile(await internalAcmeProfile.getPolicy())
+				: getCertificateProfile(prepared.meta);
+		if (profile === "shortlived" && prepared.domain_names.length > 25) {
+			throw new error.ValidationError("Short-lived certificates support at most 25 domain names");
+		}
+		return { ...prepared, meta: { ...prepared.meta, letsencrypt_profile: profile } };
 	},
 
 	/**

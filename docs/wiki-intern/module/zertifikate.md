@@ -12,6 +12,7 @@ ShieldPM automatisiert die Zertifikatsverwaltung über Let's Encrypt (ACME) und 
 
 - `backend/internal/certificate.js` (27 KB) — Business-Logik
 - `backend/internal/certbot.js` (10 KB) — Let's Encrypt Automatisierung
+- `backend/internal/acme-profile.js` — Globale Profilvorgabe, Prüfung und Einstellungs-API
 - `backend/internal/pki.js` (7 KB) — Interne CA / ML-KEM
 - `backend/models/certificate.js` (3 KB) — Objection.js-Modell
 - `backend/routes/nginx/certificates.js` (10 KB) — API-Routen
@@ -26,11 +27,15 @@ ShieldPM automatisiert die Zertifikatsverwaltung über Let's Encrypt (ACME) und 
 
 ## ACME-Profile
 
-- Bei einer neuen Let's-Encrypt-Ausstellung wird `meta.letsencrypt_profile` als `standard` oder `shortlived` gespeichert. Fehlende Angaben in neuen API-Anfragen werden auf `standard` normalisiert. Alte Datensätze ohne Profil behalten ihre bisherige Certbot-Konfiguration einschließlich globalem `ACME_PROFILE`; eine Datenbankmigration ist nicht erforderlich.
+- Bei einer neuen Let's-Encrypt-Ausstellung wird `meta.letsencrypt_profile` als `standard` oder `shortlived` gespeichert. Fehlende Angaben in neuen API-Anfragen werden auf das aktuell wirksame globale Profil aufgelöst. Nach der Ausstellung bleibt diese explizite Wahl trotz späterer Änderungen der globalen Vorgabe erhalten.
+- Der neue Einstellungsdatensatz `acme-profile` speichert die globale Vorgabe in der Tabelle `setting`. Die Migration legt ihn mit `value: "inherit"` an, ohne bestehende Werte zu überschreiben. Bis zum ersten UI-Speichern gilt `ACME_PROFILE=shortlived` als Short-lived-Vorgabe; andere oder fehlende Umgebungswerte entsprechen Standard für neue Zertifikate. Ältere Zertifikate ohne Profilmetadaten behalten in diesem Zustand ihre bisherige Certbot-Konfiguration, einschließlich beliebiger globaler Profile und gespeicherter Lineage-Optionen.
+- Administratoren speichern unter Einstellungen → Zertifikate / ACME `standard` oder `shortlived`. Die Einstellung wirkt auf nachfolgende Aufträge ohne Neustart und ohne Änderung der Umgebungsdateien oder Certbot-INI. Neue Zertifikate ohne individuelle Wahl verwenden sie; ältere Zertifikate ohne Profilfeld übernehmen sie bei der nächsten Erneuerung. Bereits explizit gespeicherte Zertifikatsprofile werden nicht überschrieben und die Einstellung allein löst keine sofortige Neuausstellung aus.
 - `shortlived` verlangt strikt das gleichnamige CA-Profil, benötigt Certbot ab Version 4.0 und erlaubt höchstens **25 Domainnamen** pro Zertifikat. Bei Let's Encrypt beträgt dessen Laufzeit **160 Stunden (6 Tage und 16 Stunden)**. Explizites `standard` leert bei einem konfigurierten `ACME_PROFILE` globale erforderliche und bevorzugte Certbot-Profile, sodass die CA ihren Standard und dessen Laufzeit wählt. Ohne globales Profil bleibt der Standard-Ablauf mit älteren Certbot-Versionen kompatibel. Beide Auswahlen können trotz eines globalen `ACME_PROFILE` gemeinsam genutzt werden.
 - Die Auswahl steht in HTTP-/DNS-Zertifikatsdialogen sowie beim Anfordern eines neuen Zertifikats aus Host-Dialogen zur Verfügung. Host-Anfragen mit `certificate_id: "new"` reichen das Profil an die Zertifikatsausstellung weiter. Bereits zugewiesene Zertifikate werden durch Änderungen an Host-Metadaten nicht umgestellt.
 - Das Profil eines bestehenden Zertifikats wird nicht über die Bearbeitung gewechselt. Ein Wechsel erfolgt durch eine neue Ausstellung und die anschließende Host-Zuordnung. Interne und hochgeladene Zertifikate verwenden diese ACME-Auswahl nicht.
 - Manuelle und automatische Erneuerung übernehmen die explizite Profilwahl jedes gespeicherten Zertifikats. Die automatische Prüfung ruft `certbot renew` ohne erzwungene Erneuerung pro Zertifikat auf, damit globale Profile die individuelle Wahl nicht überschreiben. Ein Fehler stoppt die Prüfungen der übrigen Zertifikate nicht. Details stehen unter [Certbot](./certbot.md).
+- `GET /api/nginx/certificates/acme-profile` verlangt `certificates:list` und liefert `profile`, `source: "environment" | "settings"` sowie optional `environmentProfile`. Der administrative PUT verlangt `settings:update`. Vor dem Speichern wird Certbots Profilunterstützung geprüft; Short-lived verlangt zusätzlich das vom ACME-Verzeichnis angebotene Profil. Bei einem Fehler bleibt die vorherige Einstellung unverändert. Der generische Settings-PUT für `acme-profile` wird abgewiesen, damit er diese Prüfung nicht umgeht.
+- Proxy-, Redirection-, Dead-Hosts und Streams lösen die Profilwahl und die Begrenzung auf 25 Short-lived-Domains bereits vor ihren Datenbankänderungen auf. Ein globales Short-lived-Profil greift damit auch für Inline-Ausstellungen ohne ausdrücklich mitgesendetes Profil.
 
 ## Sicherheits- und Lebenszyklusregeln
 
@@ -69,6 +74,7 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 - [Proxy-Host](./proxy-host.md)
 - [Certbot](./certbot.md)
+- [Einstellungen](../verwaltung/einstellungen.md)
 - [Interne PKI](./pki.md)
 - [Access-Lists](./access-lists.md)
 - [Secrets & Sicherheit](../konfiguration/secrets-und-sicherheit.md)

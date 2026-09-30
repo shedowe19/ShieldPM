@@ -41,7 +41,11 @@ Die Objection.js-Modelle verwenden folgende Lifecycle-Hooks:
 
 ### Zertifikatsprofil
 
-Die Tabelle `certificate` speichert die ACME-Auswahl im vorhandenen JSON-Feld `meta.letsencrypt_profile` (`standard` oder `shortlived`); es gibt keine zusätzliche Spalte oder Migration. Neue Erstellungsanfragen ohne Profil werden mit `standard` gespeichert. Bestehende Datensätze ohne Feld behalten dagegen ihre bisherige Certbot-Konfiguration. Certbot persistiert die Ausstellungsoptionen zusätzlich je Lineage in `/data/tls/certbot/renewal/npm-<id>.conf`. ShieldPM wendet explizite Profile bei jeder Erneuerung pro Zertifikat erneut an, damit eine globale INI-Vorgabe diese Einstellungen nicht überschreibt. Siehe [Zertifikate](../module/zertifikate.md).
+Die Tabelle `certificate` speichert die individuelle ACME-Auswahl im vorhandenen JSON-Feld `meta.letsencrypt_profile` (`standard` oder `shortlived`); dafür gibt es keine zusätzliche Spalte. Neue Erstellungsanfragen ohne Profil speichern die aktuell aufgelöste globale Vorgabe. Diese individuelle Wahl bleibt bei späteren Änderungen der globalen Einstellung erhalten.
+
+Die globale Vorgabe liegt im vorhandenen `setting`-Datensatz mit `id: "acme-profile"`. Die Migration `20260930000000_add_acme_profile_setting.js` legt ihn mit `value: "inherit"` und leeren Metadaten an, falls er noch fehlt; vorhandene Werte bleiben bestehen. `inherit` aktiviert die Kompatibilitätsrückfallebene zur Umgebung. Die UI speichert anschließend `standard` oder `shortlived` als verbindliche globale Vorgabe.
+
+Certbot persistiert die Ausstellungsoptionen zusätzlich je Lineage in `/data/tls/certbot/renewal/npm-<id>.conf`. ShieldPM wendet explizite Profile bei jeder Erneuerung pro Zertifikat erneut an, damit eine globale INI-Vorgabe diese Einstellungen nicht überschreibt. Bestehende Zertifikate ohne Profilfeld behalten bei `inherit` ihre bisherige Konfiguration; nach dem ersten UI-Speichern wenden ihre Erneuerungen den Datenbankwert an. Siehe [Zertifikate](../module/zertifikate.md) und [Einstellungen](../verwaltung/einstellungen.md).
 
 ## Abhängigkeiten
 

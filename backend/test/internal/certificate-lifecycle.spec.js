@@ -22,7 +22,9 @@ const mocks = vi.hoisted(() => ({
 	deleteConfig: vi.fn(),
 	createLeadCert: vi.fn(),
 	gitops: vi.fn(),
+	policy: vi.fn().mockResolvedValue("inherit"),
 }));
+vi.mock("../../internal/acme-profile.js", () => ({ default: { getPolicy: mocks.policy } }));
 vi.mock("../../models/certificate.js", () => ({ default: { query: mocks.query } }));
 vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.proxyQuery } }));
 vi.mock("../../models/dead_host.js", () => ({ default: { query: mocks.deadQuery } }));
@@ -68,6 +70,7 @@ describe("certificate lifecycle regressions", () => {
 	const temporaryDirs = [];
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mocks.policy.mockResolvedValue("inherit");
 		mocks.configurationLock.mockImplementation(async (operation) => operation());
 	});
 	afterEach(async () => {
@@ -138,6 +141,33 @@ describe("certificate lifecycle regressions", () => {
 				provider: "letsencrypt",
 				domain_names: Array.from({ length: 26 }, (_, i) => `domain${i}.example`),
 				meta: { letsencrypt_profile: "shortlived" },
+			}),
+		).rejects.toThrow("at most 25 domain names");
+		expect(mocks.query).not.toHaveBeenCalled();
+	});
+	it("resolves an omitted profile from the saved default before any certificate write", async () => {
+		mocks.policy.mockResolvedValue("shortlived");
+		const data = { provider: "letsencrypt", domain_names: ["test.example"], meta: {} };
+		const query = {
+			insertAndFetch: vi.fn(async (row) => ({ ...row, id: 2 })),
+			patchAndFetchById: vi.fn(async (_id, patch) => ({ ...data, id: 2, ...patch })),
+			deleteById: vi.fn(),
+		};
+		mocks.query.mockReturnValue(query);
+		vi.spyOn(internalCertificate, "requestCertbot").mockResolvedValue("issued");
+		vi.spyOn(internalCertificate, "getLiveCertPath").mockReturnValue("/mock/cert");
+		vi.spyOn(internalCertificate, "getCertificateInfoFromFile").mockResolvedValue({ dates: { to: 1800000000 } });
+		const result = await internalCertificate.create(access(), data);
+		expect(result.meta.letsencrypt_profile).toBe("shortlived");
+		expect(query.insertAndFetch.mock.calls[0][0].meta.letsencrypt_profile).toBe("shortlived");
+		expect(data.meta).toEqual({});
+	});
+	it("rejects an oversized inherited Short-lived request before certificate persistence", async () => {
+		mocks.policy.mockResolvedValue("shortlived");
+		await expect(
+			internalCertificate.create(access(), {
+				provider: "letsencrypt",
+				domain_names: Array.from({ length: 26 }, (_, i) => `host${i}.example`),
 			}),
 		).rejects.toThrow("at most 25 domain names");
 		expect(mocks.query).not.toHaveBeenCalled();
@@ -607,6 +637,39 @@ describe("certificate lifecycle regressions", () => {
 		expect(internalCertificate.intervalProcessing).toBe(false);
 		expect(internalCertificate.processing).toBe(false);
 	});
+	it.each(["standard", "shortlived"])(
+		"applies saved global %s only to legacy rows during scheduled renewal",
+		async (policy) => {
+			vi.stubEnv("ACME_PROFILE", "none");
+			mocks.policy.mockResolvedValue(policy);
+			mocks.query.mockReturnValue(
+				queryFor([
+					{ id: 1, meta: { letsencrypt_profile: "standard" } },
+					{ id: 2, meta: { letsencrypt_profile: "shortlived" } },
+					{ id: 3, meta: {} },
+				]),
+			);
+			vi.spyOn(internalCertificate, "getCertificateInfoFromFile").mockRejectedValue(
+				new Error("mock file absent"),
+			);
+			mocks.runCertbot.mockResolvedValue("");
+			await internalCertificate.processExpiringHosts();
+			expect(mocks.policy).toHaveBeenCalledOnce();
+			const commands = mocks.runCertbot.mock.calls.map(([command]) => command);
+			expect(commands).toHaveLength(3);
+			expect(commands[0]).not.toContain("--required-profile");
+			expect(commands[1].slice(commands[1].indexOf("--required-profile"))).toEqual([
+				"--required-profile",
+				"shortlived",
+			]);
+			expect(commands[2].slice(commands[2].indexOf("--required-profile"))).toEqual(
+				policy === "shortlived"
+					? ["--required-profile", "shortlived"]
+					: ["--required-profile", "", "--preferred-profile", ""],
+			);
+			expect(internalCertificate.intervalProcessing).toBe(false);
+		},
+	);
 	it("accepts a shortlived leaf with SANs and validity dates but no Common Name", async () => {
 		vi.spyOn(utils, "execFile")
 			.mockResolvedValueOnce("subject=\n")
