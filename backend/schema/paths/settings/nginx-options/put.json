@@ -1,0 +1,43 @@
+{
+	"operationId": "updateNginxOptions",
+	"summary": "Set Nginx formatting options",
+	"tags": [
+		"settings"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"requestBody": {
+		"description": "Application Nginx formatting options",
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"$ref": "../../../components/nginx-options-object.json"
+				},
+				"example": {
+					"beautifier_enabled": true
+				}
+			}
+		}
+	},
+	"responses": {
+		"200": {
+			"description": "The configured Nginx formatting options",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/nginx-options-object.json"
+					},
+					"example": {
+						"beautifier_enabled": true
+					}
+				}
+			}
+		}
+	}
+}

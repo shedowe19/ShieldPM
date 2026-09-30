@@ -74,6 +74,10 @@ der dafür abgewiesen wird. Siehe [Einstellungen](../verwaltung/einstellungen.md
 
 `GET` und `PUT /api/settings/certificate-options` lesen/speichern `{ key_type, renewal_interval_hours }`; `GET` und `PUT /api/settings/ip-ranges-options` lesen/speichern `{ enabled, refresh_interval_hours }`. Beide PUTs verlangen das vollständige jeweilige Objekt. GET prüft `settings:get`, PUT `settings:update` für die betreffende ID. Die statischen Routen stehen vor der generischen Settings-Route; deren Service blockiert Updates dieser Schlüssel, um Validierung und Live-Anwendung zu erhalten. Grenzen und Wirkung stehen unter [Einstellungen](../verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen).
 
+### Analytics- und Nginx-Optionen
+
+`GET`/`PUT /api/settings/analytics-options` lesen/speichern `{ detailed_retention_hours, aggregation_retention_days }`; `GET`/`PUT /api/settings/nginx-options` lesen/speichern `{ beautifier_enabled }`. PUT verlangt jeweils das vollständige Optionsobjekt. Die statischen Routen prüfen `settings:get` beziehungsweise `settings:update` für die ID und stehen vor der generischen Settings-Route, deren Update-Service diese IDs schützt. Gültige Updates werden auditiert und benötigen keinen Neustart; ihre Wirkung gilt bei der nächsten Bereinigung beziehungsweise Konfigurationsgenerierung. Grenzen stehen unter [Einstellungen](../verwaltung/einstellungen.md#analytics--und-nginx-optionen).
+
 ### Proxy-Host-Diagnose
 
 `POST /api/nginx/proxy-hosts/:host_id/diagnostics` startet die [Proxy-Host-Diagnose](../features/proxy-host-diagnostics.md). Die Route akzeptiert keine frei wählbaren Netzwerkziele.

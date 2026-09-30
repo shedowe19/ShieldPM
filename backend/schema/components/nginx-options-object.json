@@ -1,0 +1,14 @@
+{
+	"type": "object",
+	"description": "Application options for generated Nginx configuration formatting",
+	"additionalProperties": false,
+	"required": [
+		"beautifier_enabled"
+	],
+	"properties": {
+		"beautifier_enabled": {
+			"type": "boolean",
+			"description": "Whether generated Nginx configurations are formatted"
+		}
+	}
+}

@@ -1,7 +1,9 @@
 import * as yaml from "js-yaml";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import analyticsOptionsSchema from "../../schema/components/analytics-options-object.json" with { type: "json" };
 import certificateOptionsSchema from "../../schema/components/certificate-options-object.json" with { type: "json" };
 import ipRangesOptionsSchema from "../../schema/components/ip-ranges-options-object.json" with { type: "json" };
+import nginxOptionsSchema from "../../schema/components/nginx-options-object.json" with { type: "json" };
 
 const mocks = vi.hoisted(() => {
 	const files = new Map();
@@ -111,14 +113,23 @@ vi.mock("../../internal/proxy-host-monitor.js", () => ({
 }));
 vi.mock("../../internal/certificate-options.js", () => ({ default: { update: vi.fn() } }));
 vi.mock("../../internal/ip-ranges-options.js", () => ({ default: { update: vi.fn() } }));
+vi.mock("../../internal/analytics-options.js", () => ({ default: { update: vi.fn() } }));
+vi.mock("../../internal/nginx-options.js", () => ({ default: { update: vi.fn() } }));
 vi.mock("../../schema/index.js", () => ({
 	getValidationSchema: (path) =>
-		path === "/settings/certificate-options" ? certificateOptionsSchema : ipRangesOptionsSchema,
+		({
+			"/settings/certificate-options": certificateOptionsSchema,
+			"/settings/ip-ranges-options": ipRangesOptionsSchema,
+			"/settings/analytics-options": analyticsOptionsSchema,
+			"/settings/nginx-options": nginxOptionsSchema,
+		})[path],
 }));
 
+import analyticsOptions from "../../internal/analytics-options.js";
 import certificateOptions from "../../internal/certificate-options.js";
 import gitops from "../../internal/gitops.js";
 import ipRangesOptions from "../../internal/ip-ranges-options.js";
+import nginxOptions from "../../internal/nginx-options.js";
 import monitor from "../../internal/proxy-host-monitor.js";
 import { assertNoSymlinkPath, writeConfigFile } from "../../lib/gitops-files.js";
 
@@ -138,6 +149,8 @@ describe("GitOps import sanitization and safe restore", () => {
 	it.each([
 		["certificate-options", certificateOptions, { key_type: "rsa", renewal_interval_hours: 4 }],
 		["ip-ranges-options", ipRangesOptions, { enabled: true, refresh_interval_hours: 24 }],
+		["analytics-options", analyticsOptions, { detailed_retention_hours: 87600, aggregation_retention_days: 7 }],
+		["nginx-options", nginxOptions, { beautifier_enabled: false }],
 	])("restores %s through its validated live application service", async (id, service, policy) => {
 		file("settings", { id, value: "configured", meta: policy });
 		const result = await gitops.importConfig(access, { overwrite: true });
@@ -154,6 +167,23 @@ describe("GitOps import sanitization and safe restore", () => {
 		},
 		{ id: "ip-ranges-options", value: "configured", meta: { enabled: true, refresh_interval_hours: 7 } },
 		{ id: "ip-ranges-options", value: "ignored", meta: { enabled: true, refresh_interval_hours: 6 } },
+		{
+			id: "analytics-options",
+			value: "configured",
+			meta: { detailed_retention_hours: 0, aggregation_retention_days: 35 },
+		},
+		{
+			id: "analytics-options",
+			value: "configured",
+			meta: { detailed_retention_hours: 24, aggregation_retention_days: 35, injected: true },
+		},
+		{
+			id: "analytics-options",
+			value: "inherit",
+			meta: { detailed_retention_hours: 24, aggregation_retention_days: 35 },
+		},
+		{ id: "nginx-options", value: "configured", meta: { beautifier_enabled: false, injected: true } },
+		{ id: "nginx-options", value: "inherit", meta: { beautifier_enabled: true } },
 	])("retains the current application options for invalid GitOps imports %j", async (data) => {
 		file("settings", data);
 		const result = await gitops.importConfig(access, { overwrite: true });
@@ -161,6 +191,8 @@ describe("GitOps import sanitization and safe restore", () => {
 		expect(result.errors).toHaveLength(1);
 		expect(certificateOptions.update).not.toHaveBeenCalled();
 		expect(ipRangesOptions.update).not.toHaveBeenCalled();
+		expect(analyticsOptions.update).not.toHaveBeenCalled();
+		expect(nginxOptions.update).not.toHaveBeenCalled();
 		expect(mocks.writes).toEqual([]);
 	});
 	it("removes unknown top-level and nested fields from the actual database payload", async () => {

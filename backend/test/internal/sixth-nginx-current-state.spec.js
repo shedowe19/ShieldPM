@@ -6,6 +6,10 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { createPostgres } from "../helpers/postgres.js";
 
 const state = vi.hoisted(() => ({ db: null, engine: "sqlite" }));
+vi.mock("../../internal/nginx-options.js", () => ({
+	default: { getPolicy: async () => ({ beautifier_enabled: false }) },
+}));
+
 vi.mock("../../db.js", async () => {
 	const { default: knex } = await import("knex");
 	state.db = knex({ client: "better-sqlite3", connection: { filename: ":memory:" }, useNullAsDefault: true });
@@ -65,7 +69,6 @@ describe.each(["sqlite", "postgres"])("queued Nginx jobs use current persisted h
 	});
 	beforeEach(async () => {
 		directory = await fs.promises.mkdtemp(path.join(os.tmpdir(), "shieldpm-current-nginx-"));
-		vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", "true");
 		vi.spyOn(nginx, "getConfigName").mockImplementation((_kind, id) => path.join(directory, `${id}.conf`));
 		vi.spyOn(utils, "execFile").mockResolvedValue("");
 		for (const table of ["host_domain", "proxy_host", "certificate", "access_list", "access_list_auth"])

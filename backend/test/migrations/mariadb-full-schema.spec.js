@@ -90,7 +90,7 @@ mariaDb("complete MariaDB migration chain", () => {
 			}
 			expect(await database.schema.hasColumn("auth_sessions", "replaced_by_session_id")).toBe(true);
 			expect(await database("setting").where("id", "ai-config").first()).toBeTruthy();
-			for (const id of ["certificate-options", "ip-ranges-options"]) {
+			for (const id of ["certificate-options", "ip-ranges-options", "analytics-options", "nginx-options"]) {
 				expect(await database("setting").where({ id }).first()).toMatchObject({ id, value: "configured" });
 			}
 

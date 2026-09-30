@@ -8,6 +8,10 @@ const mocks = vi.hoisted(() => ({
 	routes: new Map(),
 }));
 
+vi.mock("../../internal/analytics-options.js", () => ({
+	default: { getPolicy: async () => ({ detailed_retention_hours: 24, aggregation_retention_days: 35 }) },
+}));
+
 vi.mock("express", () => ({
 	default: {
 		Router: () => {

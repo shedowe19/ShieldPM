@@ -1,6 +1,6 @@
 # Configuration
 
-ShieldPM stores its migrated application options in the database and manages them through **Settings**. Certificate and Cloudflare IP-range changes apply without restarting. Deployment configuration and the remaining environment-based options are configured below and generally require a restart.
+ShieldPM stores its migrated application options in the database and manages them through **Settings**. Certificate, Cloudflare IP-range, analytics retention and Nginx formatting options apply without restarting. Deployment configuration and the remaining environment-based options are configured below and generally require a restart.
 
 - **Docker:** Set them in `compose.yaml` under the configured service's `environment:` (`shieldpm` in the main repository samples, `app` in `docker-compose.demo.yaml`). The main samples use host networking; the demo and other bridge deployments must publish the required ports, including `443/udp` for HTTP/3.
 - **Native / LXC:** Edit the file `/data/.env`.
@@ -99,10 +99,19 @@ Administrators manage these database settings in the UI:
 | **Settings → Certificates / ACME** | Renewal check interval                | Whole hours from 1 to 12          | 12 hours |
 | **Settings → Network**             | Automatic Cloudflare IP-range updates | Enabled or disabled               | Disabled |
 | **Settings → Network**             | IP-range refresh interval             | 6 to 594 hours, in six-hour steps | 6 hours  |
+| **Settings → Analytics**           | Detailed request retention            | Positive whole hours              | 24 hours |
+| **Settings → Analytics**           | Aggregate retention                   | Positive whole days               | 35 days  |
+| **Settings → Nginx**               | Automatic config formatting           | Enabled or disabled               | Enabled  |
+
+**Settings → Analytics** manages detailed-log retention in whole hours (default **24**) and aggregate retention in whole days (default **35**). **Settings → Nginx** controls automatic configuration formatting (enabled by default). Retention values must be positive safe integers, up to `9007199254740991`, without an additional product limit or relationship between the two fields.
+
+Retention changes are used by the next startup/hourly cleanup; saving does not immediately delete data. Both cutoffs must be usable dates with a positive year before either table is cleaned. An unusable policy or extreme period skips both deletions and logs an error. Formatting changes apply when a configuration is next generated; saving does not rewrite files or reload Nginx.
 
 The key type applies to the next Let's Encrypt issuance or renewal, including existing Certbot lineages. Changing the check interval replaces the running timer; Certbot still decides when renewal is due. Enabling IP-range updates starts a background fetch and the periodic timer. Disabling them stops automatic updates and keeps the last known ranges.
 
 On upgrade, `ACME_KEY_TYPE`, `CRT`, `SKIP_IP_RANGES` and `IPRT` are imported once when their database settings are first created; existing saved settings are preserved. Legacy renewal intervals are capped at 12 hours, and `IPRT` becomes a refresh interval of six hours times its valid multiplier. After creation, the database values are authoritative and these old variables no longer control runtime behavior. Remove them from deployment configuration after checking the migrated values in Settings.
+
+On upgrade, `20260930000300_add_analytics_nginx_options` imports `ANALYTICS_DETAILED_RETENTION_HOURS`, `ANALYTICS_AGGREGATION_RETENTION_DAYS` and `DISABLE_NGINX_BEAUTIFIER` once for missing database settings. Existing saved choices are preserved. Legacy retention values use their previous integer parsing; missing or empty values keep the 24-hour/35-day defaults. Invalid nonempty values preserve history by importing a maximum safe integer and logging a warning, rather than silently shortening retention. Review and repair such values under **Settings → Analytics**. Formatting is disabled only when the old flag was exactly `true`. These variables no longer provide a runtime fallback after migration.
 
 ## 🔐 SSL & ACME (Let's Encrypt)
 
@@ -148,7 +157,6 @@ Use **Settings → Certificates / ACME** to save the global **Standard** or **Sh
 | `NGINX_404_REDIRECT`            | Redirect 404 hosts to the default site                                                   | `false`              |
 | `NGINX_HSTS_SUBDOMAINS`         | Include subdomains in HSTS header when enabled                                           | `true`               |
 | `X_FRAME_OPTIONS`               | X-Frame-Options header value                                                             | `sameorigin`         |
-| `DISABLE_NGINX_BEAUTIFIER`      | Disable automatic formatting of Nginx configs                                            | `false`              |
 | `FULLCLEAN`                     | Remove selected unused runtime/log data during startup; it does not rebuild host configs | `false`              |
 | `REGENERATE_ALL`                | Remove generated host `.conf` files during startup so the backend can regenerate them    | `false`              |
 

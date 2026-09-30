@@ -69,15 +69,17 @@ Die Module unter `backend/internal/` bündeln Geschäftslogik. Viele CRUD-Module
 
 ### Verwaltung
 
-| Modul                                           | Datei               | Beschreibung        |
-| ----------------------------------------------- | ------------------- | ------------------- |
-| [Benutzer & Auth](./benutzer-auth.md)           | `user.js`           | Benutzerverwaltung  |
-| [Einstellungen](../verwaltung/einstellungen.md) | `setting.js`        | Systemeinstellungen |
-| [Dashboard-Notizen](./dashboard-notes.md)       | `dashboard_note.js` | Dashboard-Notizen   |
-| [Audit-Log](../verwaltung/audit-log.md)         | `audit-log.js`      | Protokollierung     |
-| [Maintenance](./maintenance.md)                 | `maintenance.js`    | Wartungsfenster     |
-| [Report](../verwaltung/report.md)               | `report.js`         | System-Reports      |
-| Remote-Version                                  | `remote-version.js` | Versionsprüfung     |
+| Modul                                                                                     | Datei                                      | Beschreibung                                       |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------ | -------------------------------------------------- |
+| [Benutzer & Auth](./benutzer-auth.md)                                                     | `user.js`                                  | Benutzerverwaltung                                 |
+| [Einstellungen](../verwaltung/einstellungen.md)                                           | `setting.js`                               | Systemeinstellungen                                |
+| [Dashboard-Notizen](./dashboard-notes.md)                                                 | `dashboard_note.js`                        | Dashboard-Notizen                                  |
+| [Audit-Log](../verwaltung/audit-log.md)                                                   | `audit-log.js`                             | Protokollierung                                    |
+| [Analytics-/Nginx-Optionen](../verwaltung/einstellungen.md#analytics--und-nginx-optionen) | `analytics-options.js`, `nginx-options.js` | Aufbewahrung und Formatierungswahl                 |
+| Gemeinsame Options-Services                                                               | `application-options.js`                   | Validiertes Lesen, serialisierte Updates und Audit |
+| [Maintenance](./maintenance.md)                                                           | `maintenance.js`                           | Wartungsfenster                                    |
+| [Report](../verwaltung/report.md)                                                         | `report.js`                                | System-Reports                                     |
+| Remote-Version                                                                            | `remote-version.js`                        | Versionsprüfung                                    |
 
 ## Verwandte Seiten
 

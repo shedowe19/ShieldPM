@@ -70,6 +70,12 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
   lesen. `generateConfig()` schreibt das Ergebnis und startet danach optional `nginxbeautifier`.
   Der Vorschau-Diff normalisiert nur Einrückung und Leerzeilen; erst das Speichern führt `nginx -tq` aus.
 
+### Datenbankgesteuerte Formatierung
+
+`nginx-options.meta.beautifier_enabled` steuert `nginxbeautifier` (Standard `true`). `generateConfig()` liest und validiert die gespeicherte Option vor Rendern und Schreiben. Fehlende oder ungültige gespeicherte Optionen sowie Datenbankfehler brechen damit vor Dateiveränderungen ab. Bei Aktivierung folgt der Formatter auf das Schreiben; Fehler des Formatter-Kommandos werden weiterhin ignoriert.
+
+Die UI unter Einstellungen → Nginx speichert die Wahl ohne Neustart. Das Speichern allein erzeugt keine Dateien neu und lädt Nginx nicht neu; die nächste Konfigurationsgenerierung verwendet den Wert. Die Migration übernimmt `DISABLE_NGINX_BEAUTIFIER` einmalig für einen fehlenden Datensatz und setzt die Option nur bei einem alten Wert von exakt `true` auf `false`. Anschließend gibt es keine Umgebungsrückfallebene. Siehe [Einstellungen](../verwaltung/einstellungen.md#analytics--und-nginx-optionen).
+
 ### Anubis-Integration
 
 Nach einem erfolgreichen `configure()` wird `internalAnubis.generatePolicy()` **asynchron** aufgerufen (non-blocking). Dies aktualisiert die Anubis-Sicherheitspolicy basierend auf der neuen Nginx-Konfiguration, ohne den Configure-Flow zu blockieren. Fehler werden separat protokolliert und rollen eine bereits akzeptierte Nginx-Konfiguration nicht zurück.

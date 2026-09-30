@@ -23,9 +23,11 @@ import settingModel from "../models/setting.js";
 import Stream from "../models/stream.js";
 import User from "../models/user.js";
 import { getValidationSchema } from "../schema/index.js";
+import internalAnalyticsOptions from "./analytics-options.js";
 import internalCertificateOptions from "./certificate-options.js";
 import internalIpRangesOptions from "./ip-ranges-options.js";
 import internalNginx from "./nginx.js";
+import internalNginxOptions from "./nginx-options.js";
 import internalProxyHostMonitor, { assertMonitorConfig } from "./proxy-host-monitor.js";
 import { relayConfigForHost, validateRelayConfigForHost } from "./upload-relay.js";
 
@@ -1346,7 +1348,13 @@ const internalGitOps = {
 								}
 
 								if (settingData.id === "gitops-config") return;
-								if (["certificate-options", "ip-ranges-options"].includes(settingData.id)) {
+								const optionServices = {
+									"certificate-options": internalCertificateOptions,
+									"ip-ranges-options": internalIpRangesOptions,
+									"analytics-options": internalAnalyticsOptions,
+									"nginx-options": internalNginxOptions,
+								};
+								if (Object.hasOwn(optionServices, settingData.id)) {
 									if (settingData.value !== "configured") {
 										throw new errs.ValidationError(
 											"Application options must use the configured value",
@@ -1356,10 +1364,7 @@ const internalGitOps = {
 										getValidationSchema(`/settings/${settingData.id}`, "put"),
 										settingData.meta,
 									);
-									const service =
-										settingData.id === "certificate-options"
-											? internalCertificateOptions
-											: internalIpRangesOptions;
+									const service = optionServices[settingData.id];
 									await service.update(access, policy);
 									imported++;
 									return;

@@ -3,6 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("../../internal/nginx-options.js", () => ({
+	default: { getPolicy: async () => ({ beautifier_enabled: false }) },
+}));
+
 vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn() } }));
 vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: () => "test-token" }));
 
@@ -24,7 +28,6 @@ describe("third review Nginx activation and static location regressions", () => 
 	let directory;
 	beforeEach(async () => {
 		directory = await fs.promises.mkdtemp(path.join(os.tmpdir(), "shieldpm-third-nginx-"));
-		vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", "true");
 		vi.spyOn(nginx, "getConfigName").mockImplementation((_type, id) => path.join(directory, `${id}.conf`));
 	});
 	afterEach(async () => {

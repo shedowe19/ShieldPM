@@ -10,6 +10,10 @@ const api = vi.hoisted(() => ({
 	updateCertificateOptions: vi.fn(),
 	getIpRangesOptions: vi.fn(),
 	updateIpRangesOptions: vi.fn(),
+	getAnalyticsOptions: vi.fn(),
+	updateAnalyticsOptions: vi.fn(),
+	getNginxOptions: vi.fn(),
+	updateNginxOptions: vi.fn(),
 }));
 vi.mock("src/api/backend/runtimeOptions", () => api);
 vi.mock("src/locale", () => ({ T: ({ id }: { id: string }) => id }));

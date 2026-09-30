@@ -453,6 +453,22 @@
 				"$ref": "./paths/settings/ip-ranges-options/put.json"
 			}
 		},
+		"/settings/analytics-options": {
+			"get": {
+				"$ref": "./paths/settings/analytics-options/get.json"
+			},
+			"put": {
+				"$ref": "./paths/settings/analytics-options/put.json"
+			}
+		},
+		"/settings/nginx-options": {
+			"get": {
+				"$ref": "./paths/settings/nginx-options/get.json"
+			},
+			"put": {
+				"$ref": "./paths/settings/nginx-options/put.json"
+			}
+		},
 		"/settings/{settingID}": {
 			"get": {
 				"$ref": "./paths/settings/settingID/get.json"

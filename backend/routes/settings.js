@@ -1,6 +1,8 @@
 import express from "express";
+import internalAnalyticsOptions from "../internal/analytics-options.js";
 import internalCertificateOptions from "../internal/certificate-options.js";
 import internalIpRangesOptions from "../internal/ip-ranges-options.js";
+import internalNginxOptions from "../internal/nginx-options.js";
 import internalSetting from "../internal/setting.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
@@ -37,6 +39,8 @@ router
 for (const [id, service] of [
 	["certificate-options", internalCertificateOptions],
 	["ip-ranges-options", internalIpRangesOptions],
+	["analytics-options", internalAnalyticsOptions],
+	["nginx-options", internalNginxOptions],
 ]) {
 	router
 		.route(`/${id}`)

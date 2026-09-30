@@ -182,7 +182,6 @@ const boolDefaults = {
     'NGINX_404_REDIRECT': 'false',
     'NGINX_HSTS_SUBDOMAINS': 'true',
     'NGINX_DISABLE_PROXY_BUFFERING': 'false',
-    'DISABLE_NGINX_BEAUTIFIER': 'false',
     'FULLCLEAN': 'false',
     'LOGROTATE': 'false',
     'GOA': 'false',

@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+	getAnalyticsOptions,
 	getCertificateOptions,
 	getIpRangesOptions,
+	getNginxOptions,
+	updateAnalyticsOptions,
 	updateCertificateOptions,
 	updateIpRangesOptions,
+	updateNginxOptions,
 } from "./runtimeOptions";
 
 vi.mock("src/modules/AuthStore", () => ({
@@ -40,6 +44,36 @@ describe("runtime options API contract", () => {
 		expect(await updateIpRangesOptions(values)).toEqual(values);
 		const [url, options] = vi.mocked(fetch).mock.calls[1];
 		expect(url).toBe("/api/settings/ip-ranges-options");
+		expect(options?.method).toBe("PUT");
+		expect(JSON.parse(options?.body as string)).toEqual(wire);
+	});
+
+	it("round-trips both analytics retention units without capping large supported values", async () => {
+		const wire = { detailed_retention_hours: Number.MAX_SAFE_INTEGER, aggregation_retention_days: 100000 };
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify(wire)))),
+		);
+		const values = { detailedRetentionHours: Number.MAX_SAFE_INTEGER, aggregationRetentionDays: 100000 };
+		expect(await getAnalyticsOptions()).toEqual(values);
+		expect(await updateAnalyticsOptions(values)).toEqual(values);
+		const [url, options] = vi.mocked(fetch).mock.calls[1];
+		expect(url).toBe("/api/settings/analytics-options");
+		expect(options?.method).toBe("PUT");
+		expect(JSON.parse(options?.body as string)).toEqual(wire);
+	});
+
+	it("round-trips the Nginx formatting toggle through its flat options API", async () => {
+		const wire = { beautifier_enabled: false };
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify(wire)))),
+		);
+		const values = { beautifierEnabled: false };
+		expect(await getNginxOptions()).toEqual(values);
+		expect(await updateNginxOptions(values)).toEqual(values);
+		const [url, options] = vi.mocked(fetch).mock.calls[1];
+		expect(url).toBe("/api/settings/nginx-options");
 		expect(options?.method).toBe("PUT");
 		expect(JSON.parse(options?.body as string)).toEqual(wire);
 	});

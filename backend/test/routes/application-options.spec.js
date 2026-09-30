@@ -4,6 +4,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 const state = vi.hoisted(() => ({
 	certificate: { get: vi.fn(), update: vi.fn() },
 	ipRanges: { get: vi.fn(), update: vi.fn() },
+	analytics: { get: vi.fn(), update: vi.fn() },
+	nginx: { get: vi.fn(), update: vi.fn() },
 	generic: { get: vi.fn(), update: vi.fn(), getAll: vi.fn() },
 	access: { can: vi.fn() },
 }));
@@ -15,6 +17,8 @@ vi.mock("../../lib/express/jwt-decode.js", () => ({
 }));
 vi.mock("../../internal/certificate-options.js", () => ({ default: state.certificate }));
 vi.mock("../../internal/ip-ranges-options.js", () => ({ default: state.ipRanges }));
+vi.mock("../../internal/analytics-options.js", () => ({ default: state.analytics }));
+vi.mock("../../internal/nginx-options.js", () => ({ default: state.nginx }));
 vi.mock("../../internal/setting.js", () => ({ default: state.generic }));
 
 import errs from "../../lib/error.js";
@@ -33,6 +37,8 @@ describe("typed application options HTTP routes", () => {
 	const cases = [
 		["certificate-options", state.certificate, { key_type: "rsa", renewal_interval_hours: 3 }],
 		["ip-ranges-options", state.ipRanges, { enabled: true, refresh_interval_hours: 18 }],
+		["analytics-options", state.analytics, { detailed_retention_hours: 48, aggregation_retention_days: 90 }],
+		["nginx-options", state.nginx, { beautifier_enabled: false }],
 	];
 	beforeAll(async () => {
 		await getCompiledSchema();
@@ -83,11 +89,24 @@ describe("typed application options HTTP routes", () => {
 		["ip-ranges-options", { enabled: true, refresh_interval_hours: 600 }],
 		["ip-ranges-options", { enabled: true, refresh_interval_hours: 7 }],
 		["ip-ranges-options", { enabled: true, refresh_interval_hours: 12, meta: {} }],
+		["analytics-options", {}],
+		["analytics-options", { detailed_retention_hours: 0, aggregation_retention_days: 35 }],
+		["analytics-options", { detailed_retention_hours: 24, aggregation_retention_days: -1 }],
+		["analytics-options", { detailed_retention_hours: 1.5, aggregation_retention_days: 35 }],
+		[
+			"analytics-options",
+			{ detailed_retention_hours: 24, aggregation_retention_days: Number.MAX_SAFE_INTEGER + 1 },
+		],
+		["analytics-options", { detailed_retention_hours: 24, aggregation_retention_days: 35, value: "configured" }],
+		["nginx-options", {}],
+		["nginx-options", { beautifier_enabled: false, meta: {} }],
 	])("rejects invalid %s payload %j before mutation", async (id, policy) => {
 		const response = await send(id, policy);
 		expect(response.status).toBe(400);
 		expect(state.certificate.update).not.toHaveBeenCalled();
 		expect(state.ipRanges.update).not.toHaveBeenCalled();
+		expect(state.analytics.update).not.toHaveBeenCalled();
+		expect(state.nginx.update).not.toHaveBeenCalled();
 		expect(state.generic.update).not.toHaveBeenCalled();
 	});
 	it.each(cases)("propagates denied permission and persistence failures for %s", async (id, service, policy) => {

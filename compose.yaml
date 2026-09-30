@@ -107,7 +107,6 @@ services:
       # - "X_FRAME_OPTIONS=deny"                   # deny | sameorigin | none
       # - "NGINX_WORKER_PROCESSES=8"               # default: auto
       # - "NGINX_WORKER_CONNECTIONS=1024"           # default: 512
-      # - "DISABLE_NGINX_BEAUTIFIER=true"          # Skip config beautification
       # - "FULLCLEAN=true"                         # Remove unused config folders
 
       # ── Nginx Modules ─────────────────────────────────────────────────────

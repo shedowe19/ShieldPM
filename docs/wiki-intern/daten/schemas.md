@@ -60,6 +60,8 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 Die Datensätze `certificate-options` und `ip-ranges-options` verwenden die bestehende Tabelle `setting`, jeweils mit `value: "configured"`. `meta` speichert `{ key_type, renewal_interval_hours }` beziehungsweise `{ enabled, refresh_interval_hours }`. Die Migration `20260930000200_add_application_options.js` importiert alte Umgebungswerte einmalig bei fehlenden Datensätzen und erhält bereits gespeicherte Optionen. Sie ergänzt keine neuen Spalten. API und Grenzen stehen unter [Einstellungen](../verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen).
 
+Weitere Optionsdatensätze sind `analytics-options` mit `{ detailed_retention_hours, aggregation_retention_days }` und `nginx-options` mit `{ beautifier_enabled }`, ebenfalls in `setting.meta` bei `value: "configured"`. Die Migration `20260930000300_add_analytics_nginx_options.js` importiert alte Umgebungswerte einmalig für fehlende Datensätze und erhält vorhandene gespeicherte Werte. Ungültige ausdrücklich gesetzte Retention-Werte werden zur maximalen sicheren Ganzzahl, um Daten bis zur Korrektur zu erhalten. Details stehen unter [Einstellungen](../verwaltung/einstellungen.md#analytics--und-nginx-optionen).
+
 ## Verwandte Seiten
 
 - [Datenmodell](./datenmodell.md)

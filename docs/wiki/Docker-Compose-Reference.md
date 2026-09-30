@@ -88,7 +88,6 @@ services:
 #      - "NGINX_DISABLE_PROXY_BUFFERING=true" # Disables the proxy_buffering/proxy_request_buffering options of nginx by default for all hosts, default false, may not work if you use crowdsec/appsec
 #      - "NGINX_WORKER_PROCESSES=8" # value of worker_processes, default and recommended: auto
 #      - "NGINX_WORKER_CONNECTIONS=1024" # value of worker_connections, default: 512
-#      - "DISABLE_NGINX_BEAUTIFIER=true" # disables nginxbeautifier, useful when it fails parsing non-standard custom/advanced configs, default false
 #      - "FULLCLEAN=true" # Cleans unused config folders, default false
 #      - "LOGROTATE=true" # Enables writing http access logs to /opt/shieldpm/nginx/json_access.log, stream access logs to /opt/shieldpm/nginx/stream.log and enables daily logrotation, default false
 #      - "LOGROTATIONS=7" # Set how often the json_access.log should be rotated until it is deleted, default 3

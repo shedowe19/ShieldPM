@@ -11,6 +11,8 @@ vi.mock("./Ai", () => ({ default: () => <div>AI settings</div> }));
 vi.mock("./GitOps", () => ({ default: () => <div>GitOps settings</div> }));
 vi.mock("./Certificates", () => ({ default: () => <div>Certificate profile settings</div> }));
 vi.mock("./Network", () => ({ default: () => <div>Network settings</div> }));
+vi.mock("./Analytics", () => ({ default: () => <div>Analytics retention settings</div> }));
+vi.mock("./Nginx", () => ({ default: () => <div>Nginx formatting settings</div> }));
 
 beforeEach(() => {
 	health.data.demo = false;
@@ -47,5 +49,16 @@ it("loads the Network tab when selected", async () => {
 	expect(screen.queryByText("Network settings")).not.toBeInTheDocument();
 	fireEvent.click(screen.getByRole("button", { name: "settings.network.title" }));
 	expect(await screen.findByText("Network settings")).toBeInTheDocument();
+	expect(screen.queryByText("Default site settings")).not.toBeInTheDocument();
+});
+
+it.each([
+	["settings.analytics.title", "Analytics retention settings"],
+	["settings.nginx.title", "Nginx formatting settings"],
+])("loads %s only when its tab is selected", async (label, content) => {
+	render(<Layout />);
+	expect(screen.queryByText(content)).not.toBeInTheDocument();
+	fireEvent.click(screen.getByRole("button", { name: label }));
+	expect(await screen.findByText(content)).toBeInTheDocument();
 	expect(screen.queryByText("Default site settings")).not.toBeInTheDocument();
 });

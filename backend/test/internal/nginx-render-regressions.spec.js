@@ -1,6 +1,10 @@
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("../../internal/nginx-options.js", () => ({
+	default: { getPolicy: async () => ({ beautifier_enabled: false }) },
+}));
+
 vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn().mockResolvedValue() } }));
 vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: vi.fn().mockReturnValue("host-token") }));
 
@@ -24,7 +28,6 @@ const host = (overrides = {}) => ({
 
 describe("Nginx configuration regressions", () => {
 	beforeEach(() => {
-		vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", "true");
 		vi.mocked(getTerminalAccessToken).mockClear();
 		vi.spyOn(fs.promises, "writeFile").mockResolvedValue();
 	});

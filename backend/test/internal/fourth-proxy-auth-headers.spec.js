@@ -1,6 +1,10 @@
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("../../internal/nginx-options.js", () => ({
+	default: { getPolicy: async () => ({ beautifier_enabled: false }) },
+}));
+
 vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn() } }));
 vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: () => "test-token" }));
 
@@ -30,7 +34,6 @@ const locations = (config, route = "/") =>
 
 describe("authentication headers at the forwarding location", () => {
 	beforeEach(() => {
-		vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", "true");
 		vi.spyOn(fs.promises, "writeFile").mockResolvedValue();
 	});
 	afterEach(() => {

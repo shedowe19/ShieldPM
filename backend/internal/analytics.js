@@ -7,12 +7,11 @@ import { analytics as logger } from "../logger.js";
 import AnalyticCount from "../models/analytic_count.js";
 import AnalyticsLogs from "../models/analytics_logs.js";
 import ProxyHost from "../models/proxy_host.js";
+import internalAnalyticsOptions from "./analytics-options.js";
 
 const LOG_FILE = "/data/nginx/json_access.log";
 const FLUSH_INTERVAL_MS = 10 * 1000; // 10 seconds flush
 const RETENTION_INTERVAL_MS = 60 * 60 * 1000; // 1 hour check
-const DETAILED_RETENTION_HOURS = Number.parseInt(process.env.ANALYTICS_DETAILED_RETENTION_HOURS || "24", 10);
-const AGGREGATION_RETENTION_DAYS = Number.parseInt(process.env.ANALYTICS_AGGREGATION_RETENTION_DAYS || "35", 10);
 const SUMMARY_CACHE_TTL_MS = FLUSH_INTERVAL_MS;
 const DETAILED_LOG_BUFFER_LIMIT = 1000;
 const AGGREGATION_BUFFER_LIMIT = 500;
@@ -38,6 +37,7 @@ export class AnalyticsService {
 		this.hostCache = new Map(); // hostname -> id
 		this.flushTimer = null;
 		this.retentionTimer = null;
+		this.retentionPromise = null;
 		this.flushPromise = null;
 		this.initializationPromise = null;
 		this.isInitialized = false;
@@ -419,14 +419,50 @@ export class AnalyticsService {
 		}
 	}
 
+	/** @returns {Promise<void>} One cleanup shared by overlapping startup, scheduled, or manual callers. */
 	async runRetention() {
+		if (this.retentionPromise) return this.retentionPromise;
+		const retention = this.applyRetention();
+		this.retentionPromise = retention;
 		try {
-			const detailedCutoff = dayjs().subtract(DETAILED_RETENTION_HOURS, "hour").toISOString();
-			const aggregateCutoff = dayjs().subtract(AGGREGATION_RETENTION_DAYS, "day").toISOString();
-			const [deletedDetailed, deletedAggregates] = await Promise.all([
-				AnalyticsLogs.query().where("time", "<", detailedCutoff).delete(),
-				AnalyticCount.query().where("timestamp", "<", aggregateCutoff).delete(),
+			await retention;
+		} finally {
+			if (this.retentionPromise === retention) this.retentionPromise = null;
+		}
+	}
+
+	/** @returns {Promise<void>} Apply one stored snapshot after validating both calendar cutoffs. */
+	async applyRetention() {
+		try {
+			const policy = await internalAnalyticsOptions.getPolicy();
+			const now = dayjs();
+			const detailedDate = now.subtract(policy.detailed_retention_hours, "hour");
+			const aggregateDate = now.subtract(policy.aggregation_retention_days, "day");
+			if (
+				!detailedDate.isValid() ||
+				!aggregateDate.isValid() ||
+				detailedDate.year() < 1 ||
+				aggregateDate.year() < 1
+			) {
+				throw new errs.ConfigurationError(
+					"Analytics retention policy produces invalid date cutoffs; no rows were deleted",
+				);
+			}
+			const detailedCutoff = detailedDate.toISOString();
+			const aggregateCutoff = aggregateDate.toISOString();
+			const removeBefore = async (model, field, cutoff) => {
+				const removed = await model.query().where(field, "<", cutoff).delete();
+				if (removed > 0) this.summaryCache.clear();
+				return removed;
+			};
+			const [detailedResult, aggregateResult] = await Promise.allSettled([
+				removeBefore(AnalyticsLogs, "time", detailedCutoff),
+				removeBefore(AnalyticCount, "timestamp", aggregateCutoff),
 			]);
+			if (detailedResult.status === "rejected") throw detailedResult.reason;
+			if (aggregateResult.status === "rejected") throw aggregateResult.reason;
+			const deletedDetailed = detailedResult.value;
+			const deletedAggregates = aggregateResult.value;
 			if (deletedDetailed > 0 || deletedAggregates > 0) {
 				logger.info(
 					`Analytics retention: removed ${deletedDetailed} detailed rows and ${deletedAggregates} aggregate rows.`,

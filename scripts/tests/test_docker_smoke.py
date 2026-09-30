@@ -77,7 +77,9 @@ elif args[0] == 'logs':
             self.assertEqual(call[call.index("--pull") + 1], "never")
             for value in (f"PUID={uid}", f"PGID={uid}", "TZ=UTC", "DISABLE_IPV6=true"):
                 self.assertIn(value, call)
-            for key in ("ACME_PROFILE", "ACME_KEY_TYPE", "CRT", "SKIP_IP_RANGES", "IPRT"):
+            for key in ("ACME_PROFILE", "ACME_KEY_TYPE", "CRT", "SKIP_IP_RANGES", "IPRT",
+                        "DISABLE_NGINX_BEAUTIFIER", "ANALYTICS_DETAILED_RETENTION_HOURS",
+                        "ANALYTICS_AGGREGATION_RETENTION_DAYS"):
                 self.assertFalse(any(value.startswith(f"{key}=") for value in call))
         executions = [call for call in calls if call[0] == "exec"]
         self.assertEqual([call[call.index("--user") + 1] for call in executions], ["0:0", "1000:1000"])

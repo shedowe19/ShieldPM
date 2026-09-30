@@ -93,6 +93,8 @@ Schlüsseltyp und Zertifikat-Prüfintervall werden unter Einstellungen → Zerti
 
 `20260930000200_add_application_options.js` übernimmt `ACME_KEY_TYPE`, `CRT`, `SKIP_IP_RANGES` und `IPRT` einmalig für noch fehlende Datensätze. Ein gültiger alter `CRT` wird auf höchstens 12 Stunden begrenzt, ein gültiger `IPRT` von 1 bis 99 wird mit sechs Stunden multipliziert. Ungültige oder fehlende Werte ergeben ECDSA, 12 Stunden, deaktivierten Abruf und sechs Stunden. Vorhandene Einstellungen werden nicht überschrieben. Die alten Variablen werden danach nicht mehr als Rückfallebene verwendet. Siehe [Einstellungen](../verwaltung/einstellungen.md) und [Konfigurationsstrategie](./config-dateien.md#schrittweise-verlagerung-von-anwendungsoptionen).
 
+`analytics-options` verwaltet die Detail-/Aggregat-Aufbewahrung unter Einstellungen → Analysen; `nginx-options` verwaltet die Formatierungswahl unter Einstellungen → Nginx. `20260930000300_add_analytics_nginx_options.js` übernimmt die bisherigen `ANALYTICS_DETAILED_RETENTION_HOURS`, `ANALYTICS_AGGREGATION_RETENTION_DAYS` und `DISABLE_NGINX_BEAUTIFIER` nur bei der Anlage fehlender Datensätze. Fehlende/leere Retention-Werte ergeben 24/35; positive sichere Ergebnisse der bisherigen Integer-Auswertung bleiben erhalten. Ungültige nichtleere Werte ergeben eine maximale sichere Ganzzahl mit einer Warnung ohne Rohwertausgabe und bewahren so Daten bis zur UI-Korrektur. Danach haben diese Variablen keine Laufzeitwirkung. Siehe [Einstellungen](../verwaltung/einstellungen.md#analytics--und-nginx-optionen).
+
 ## Analytics & Logging
 
 | Variable       | Standard | Beschreibung                     |
@@ -116,19 +118,18 @@ Schlüsseltyp und Zertifikat-Prüfintervall werden unter Einstellungen → Zerti
 
 ## Nginx (Erweitert)
 
-| Variable                        | Standard     | Beschreibung                                                                |
-| ------------------------------- | ------------ | --------------------------------------------------------------------------- |
-| `FULLCLEAN`                     | `false`      | Volles Cleanup bei Nginx-Reload aktivieren                                  |
-| `NC_AIO`                        | —            | Nextcloud AIO-Modus aktivieren                                              |
-| `NC_DOMAIN`                     | —            | Nextcloud AIO Domain (erforderlich wenn NC_AIO=true)                        |
-| `NGINX_404_REDIRECT`            | `false`      | 404-Anfragen auf Standard-Site umleiten                                     |
-| `NGINX_HSTS_SUBDOMAINS`         | `true`       | HSTS-Header für Subdomains einschließen                                     |
-| `NGINX_LOG_NOT_FOUND`           | `false`      | 404-Fehler (Not Found) in Nginx-Logs protokollieren                         |
-| `NGINX_WORKER_PROCESSES`        | `auto`       | Anzahl der Nginx-Worker-Prozesse                                            |
-| `NGINX_WORKER_CONNECTIONS`      | `512`        | Anzahl der Verbindungen pro Worker                                          |
-| `X_FRAME_OPTIONS`               | `sameorigin` | Header-Wert: `none`, `sameorigin` oder `deny` (kleingeschrieben)            |
-| `DISABLE_NGINX_BEAUTIFIER`      | `false`      | Nginx Config Beautifier deaktivieren (Config wird unformatiert geschrieben) |
-| `NGINX_DISABLE_PROXY_BUFFERING` | `false`      | Proxy-Buffering global für alle Proxy-Verbindungen deaktivieren             |
+| Variable                        | Standard     | Beschreibung                                                     |
+| ------------------------------- | ------------ | ---------------------------------------------------------------- |
+| `FULLCLEAN`                     | `false`      | Volles Cleanup bei Nginx-Reload aktivieren                       |
+| `NC_AIO`                        | —            | Nextcloud AIO-Modus aktivieren                                   |
+| `NC_DOMAIN`                     | —            | Nextcloud AIO Domain (erforderlich wenn NC_AIO=true)             |
+| `NGINX_404_REDIRECT`            | `false`      | 404-Anfragen auf Standard-Site umleiten                          |
+| `NGINX_HSTS_SUBDOMAINS`         | `true`       | HSTS-Header für Subdomains einschließen                          |
+| `NGINX_LOG_NOT_FOUND`           | `false`      | 404-Fehler (Not Found) in Nginx-Logs protokollieren              |
+| `NGINX_WORKER_PROCESSES`        | `auto`       | Anzahl der Nginx-Worker-Prozesse                                 |
+| `NGINX_WORKER_CONNECTIONS`      | `512`        | Anzahl der Verbindungen pro Worker                               |
+| `X_FRAME_OPTIONS`               | `sameorigin` | Header-Wert: `none`, `sameorigin` oder `deny` (kleingeschrieben) |
+| `NGINX_DISABLE_PROXY_BUFFERING` | `false`      | Proxy-Buffering global für alle Proxy-Verbindungen deaktivieren  |
 
 ## Nginx-Module
 

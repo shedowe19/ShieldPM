@@ -342,9 +342,11 @@ Altzertifikate ohne Profilfeld folgen ihr bei der nächsten Erneuerung. Details 
 `OptionsCard.tsx` verwaltet die lokalen Entwürfe und zeigt Lade-/Fehlerzustände an; ohne geladene Daten wird kein
 Formular mit Ersatzwerten angeboten. Ungespeicherte Eingaben bleiben bei Hintergrundabfragen erhalten.
 `useRuntimeOptions.ts` verwendet die Cache-Schlüssel `["certificate-options"]` und `["ip-ranges-options"]`,
-bricht vor dem Speichern ältere GETs ab und übernimmt erfolgreiche Antworten unmittelbar in den Cache.
+bricht vor dem Speichern ältere GETs ab und übernimmt erfolgreiche Antworten unmittelbar in den Cache. Dasselbe Muster gilt für die neuen Schlüssel `["analytics-options"]` und `["nginx-options"]`.
 Die API-Clients übertragen komplette Optionsobjekte und wandeln ihre camelCase-Feldnamen zu snake_case um.
 Details zu Datenbankwerten und Live-Anwendung stehen unter [Einstellungen](../verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen).
+
+`Settings/Analytics.tsx` und `Settings/Nginx.tsx` werden erst beim Öffnen ihrer Tabs geladen und verwenden jeweils eine eigene `OptionsCard`. Der Tab „Analysen“ bietet Detailstunden und Aggregattage als positive sichere Ganzzahlen ohne zusätzliche Produktobergrenze oder feldübergreifende Bedingung. Ein Wert von `Number.MAX_SAFE_INTEGER` zeigt einen Hinweis zur Überprüfung der Aufbewahrung an. Der Nginx-Tab enthält die Formatierungswahl. Speichern beginnt weder sofortige Datenbereinigung noch Nginx-Regenerierung/Reload; die nächsten Verbraucheraufrufe lesen die neue Wahl. Ladefehler, ausstehende Mutationen und ungespeicherte Entwürfe folgen dem bestehenden OptionsCard-Verhalten.
 
 `useAcmeProfile.ts` verwendet den React-Query-Schlüssel `["acme-profile"]`. Vor dem Speichern werden ältere GETs
 abgebrochen; nach Erfolg wird die Antwort direkt in den Cache übernommen, damit eine verspätete Abfrage die neue

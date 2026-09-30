@@ -13,9 +13,10 @@ Die Anwendung benötigt globale Konfigurationswerte, die in der Datenbank gespei
 - `backend/internal/setting.js` — Business-Logik für Einstellungen
 - `backend/internal/acme-profile.js` — Geprüfte ACME-Profilvorgabe und dedizierte API
 - `backend/internal/certificate-options.js`, `backend/internal/ip-ranges-options.js` — Validierte Anwendungsoptionen mit Live-Anwendung
+- `backend/internal/analytics-options.js`, `backend/internal/nginx-options.js` — Aufbewahrung und Formatierungswahl aus der Datenbank
 - `backend/models/setting.js` — Einstellungs-Modell
 - `backend/routes/settings.js` — REST-API unter `/api/settings`
-- `frontend/src/pages/Settings/` — UI mit Tabs (DefaultSite, ACME/Zertifikate, Netzwerk, Ai, GitOps, Layout)
+- `frontend/src/pages/Settings/` — UI mit Tabs (DefaultSite, ACME/Zertifikate, Netzwerk, Analytics, Nginx, Ai, GitOps, Layout)
 
 ## Verhalten
 
@@ -60,6 +61,23 @@ Zertifikatsänderungen benötigen keinen Neustart: Das Prüfintervall ersetzt de
 GitOps-Restore leitet diese beiden Optionsdatensätze ebenfalls durch dieselben Schema- und Serviceprüfungen samt Live-Anwendung. Importierte Werte müssen `value: "configured"` und vollständige gültige Metadaten verwenden. Ungültige Daten werden als Importfehler gemeldet und ersetzen die vorhandenen Optionen nicht. Regressionen prüfen Migration, API-Vertrag, Berechtigungen und Timer-Anwendung unter `backend/test/migrations/application-options.spec.js`, `backend/test/schema/application-options-contract.spec.js`, `backend/test/routes/application-options.spec.js` und den beiden `internal/*-options.spec.js`-Dateien; die UI-Zustände unter `Settings/RuntimeOptions.test.tsx`.
 
 Die Migration `20260930000200_add_application_options.js` importiert die bisherigen `ACME_KEY_TYPE`-, `CRT`-, `SKIP_IP_RANGES`- und `IPRT`-Werte nur bei der ersten Anlage fehlender Datensätze. Vorhandene Datenbankwerte bleiben erhalten. Danach gibt es keine Umgebungsrückfallebene für diese Optionen. Die verbleibenden Konfigurationsgruppen und die geplante Reihenfolge ihrer Verlagerung stehen unter [Konfigurationsstrategie](../konfiguration/config-dateien.md#schrittweise-verlagerung-von-anwendungsoptionen).
+
+## Analytics- und Nginx-Optionen
+
+Einstellungen → Analysen verwaltet Detail-Aufbewahrung in Stunden und Aggregat-Aufbewahrung in Tagen. Einstellungen → Nginx bietet die automatische Konfigurationsformatierung an. Die Datensätze `analytics-options` und `nginx-options` verwenden `value: "configured"` und speichern ihre Optionsobjekte in `meta`.
+
+| Datensatz           | Metadaten                                                                                             | Vorgabe             |
+| ------------------- | ----------------------------------------------------------------------------------------------------- | ------------------- |
+| `analytics-options` | `detailed_retention_hours`, `aggregation_retention_days`: jeweils sichere Ganzzahl 1–9007199254740991 | 24 Stunden, 35 Tage |
+| `nginx-options`     | `beautifier_enabled`: Boolean                                                                         | `true`              |
+
+Es gibt keine zusätzliche Produktobergrenze und keine feldübergreifende Bedingung für die beiden Aufbewahrungswerte. `GET` und `PUT /api/settings/analytics-options` beziehungsweise `/api/settings/nginx-options` verwenden vollständige flache Optionsobjekte als Antwort und PUT-Body. GET verlangt `settings:get`, PUT `settings:update` für die betreffende ID. Zusätzliche Felder oder ungültige Typen werden abgewiesen; generische Settings-Updates und GitOps-Restore verwenden ebenfalls die dafür vorgesehenen Guards beziehungsweise validierten Services. Erfolgreiche Updates werden im Audit protokolliert.
+
+Die Aufbewahrungswahl gilt ohne Neustart für die nächste Start-/Stundenbereinigung. Speichern startet keine sofortige Löschung. Jede Bereinigung liest einen Options- und Uhrzeit-Snapshot, validiert beide Cutoffs einschließlich eines positiven Jahres vor jeder DELETE-Abfrage und überspringt bei unbrauchbaren Werten oder Lesefehlern beide Tabellen. Laufende Bereinigungen überlappen nicht und geben ihre Sperre erst nach beiden Löschungsantworten frei. Erfolgreiche Löschungen leeren den Summary-Cache auch bei einem Fehler der anderen Tabelle. Fehlende Datensätze führen zu einem Konfigurationsfehler; Standardwerte werden ausschließlich durch die Migration angelegt. Die Formatierungswahl gilt für die nächste Konfigurationsgenerierung; Speichern allein schreibt keine Konfiguration neu und lädt Nginx nicht neu.
+
+`20260930000300_add_analytics_nginx_options.js` legt fehlende Datensätze einmalig aus den bisherigen Umgebungswerten an und überschreibt gespeicherte Einstellungen nicht. Positive sichere Retention-Ergebnisse der bisherigen Integer-Auswertung bleiben erhalten; fehlende/leere Werte ergeben 24/35. Ungültige nichtleere Werte werden ohne Rohwertausgabe gewarnt und als maximale sichere Ganzzahl gespeichert, sodass die Bereinigung bis zur UI-Korrektur keine Daten verkürzt. `DISABLE_NGINX_BEAUTIFIER=true` wird zu `beautifier_enabled: false`, alle anderen Werte zu `true`. Danach gelten ausschließlich die Datenbankoptionen.
+
+Regressionen für die neuen Gruppen liegen unter `backend/test/migrations/analytics-nginx-options.spec.js`, `backend/test/schema/analytics-nginx-options-contract.spec.js` und `backend/test/internal/analytics-nginx-options.spec.js`; die Routen und GitOps-Guards werden gemeinsam mit den bisherigen Anwendungsoptionen geprüft. `Settings/RuntimeOptions.test.tsx` und `useRuntimeOptions.test.tsx` sichern Formular- und Cachezustände ab.
 
 ## Standardseite und Fehlerbehandlung
 

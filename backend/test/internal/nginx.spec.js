@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 vi.mock("../../db.js", () => ({ default: () => ({}) }));
@@ -15,9 +15,12 @@ vi.mock("../../lib/config.js", () => ({
 	isDemoMode: vi.fn().mockReturnValue(false),
 }));
 vi.mock("../../internal/anubis.js", () => ({ default: {} }));
+const state = vi.hoisted(() => ({ policy: vi.fn() }));
+vi.mock("../../internal/nginx-options.js", () => ({ default: { getPolicy: state.policy } }));
 
 import fs from "node:fs";
 import internalNginx from "../../internal/nginx.js";
+import utils from "../../lib/utils.js";
 
 // Spy on fs.promises.readFile after import so we can control it per test
 const readFileSpy = vi.spyOn(fs.promises, "readFile");
@@ -96,32 +99,54 @@ describe("Fix #59: internalNginx.getLogs", () => {
 	});
 });
 
-describe("Fix #63: DISABLE_NGINX_BEAUTIFIER env var logic", () => {
-	it("beautifier runs when env var is unset (default on)", () => {
-		delete process.env.DISABLE_NGINX_BEAUTIFIER;
-		expect(process.env.DISABLE_NGINX_BEAUTIFIER !== "true").toBe(true);
+describe("saved Nginx formatting options", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		state.policy.mockResolvedValue({ beautifier_enabled: true });
+		vi.spyOn(internalNginx, "renderConfig").mockResolvedValue("server { listen 80; }\n");
+		vi.spyOn(fs.promises, "writeFile").mockResolvedValue();
+		vi.spyOn(utils, "execFile").mockResolvedValue("");
 	});
-
-	it("beautifier is disabled when DISABLE_NGINX_BEAUTIFIER=true", () => {
-		process.env.DISABLE_NGINX_BEAUTIFIER = "true";
-		expect(process.env.DISABLE_NGINX_BEAUTIFIER !== "true").toBe(false);
-		delete process.env.DISABLE_NGINX_BEAUTIFIER;
+	afterEach(() => {
+		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
 	});
-
-	it("beautifier runs when DISABLE_NGINX_BEAUTIFIER=false (explicitly enabled)", () => {
-		process.env.DISABLE_NGINX_BEAUTIFIER = "false";
-		expect(process.env.DISABLE_NGINX_BEAUTIFIER !== "true").toBe(true);
-		delete process.env.DISABLE_NGINX_BEAUTIFIER;
+	it.each([true, false])("uses saved beautifier_enabled=%s despite a conflicting obsolete env", async (enabled) => {
+		state.policy.mockResolvedValue({ beautifier_enabled: enabled });
+		vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", enabled ? "true" : "false");
+		await expect(internalNginx.generateConfig("proxy_host", { id: 7 })).resolves.toBe(true);
+		expect(fs.promises.writeFile).toHaveBeenCalledWith("/data/nginx/proxy_host/7.conf", "server { listen 80; }\n", {
+			encoding: "utf8",
+		});
+		if (enabled)
+			expect(utils.execFile).toHaveBeenCalledExactlyOnceWith("nginxbeautifier", [
+				"-s",
+				"4",
+				"/data/nginx/proxy_host/7.conf",
+			]);
+		else expect(utils.execFile).not.toHaveBeenCalled();
 	});
-
-	it("OLD bug: === 'false' was always truthy when var was unset or set to 'true'", () => {
-		// When unset: undefined === 'false' → false (beautifier would NOT run — wrong!)
-		delete process.env.DISABLE_NGINX_BEAUTIFIER;
-		expect(process.env.DISABLE_NGINX_BEAUTIFIER === "false").toBe(false);
-
-		// When set to 'true' to disable: 'true' === 'false' → false (beautifier would NOT run — accidentally correct, but wrong reason)
-		process.env.DISABLE_NGINX_BEAUTIFIER = "true";
-		expect(process.env.DISABLE_NGINX_BEAUTIFIER === "false").toBe(false);
-		delete process.env.DISABLE_NGINX_BEAUTIFIER;
+	it("rejects a failed saved-policy read before rendering, writing or starting the formatter", async () => {
+		state.policy.mockRejectedValueOnce(new Error("saved policy is invalid"));
+		await expect(internalNginx.generateConfig("proxy_host", { id: 7 })).rejects.toThrow("saved policy is invalid");
+		expect(internalNginx.renderConfig).not.toHaveBeenCalled();
+		expect(fs.promises.writeFile).not.toHaveBeenCalled();
+		expect(utils.execFile).not.toHaveBeenCalled();
+	});
+	it("waits for the saved policy before any file rendering or write", async () => {
+		const pending = Promise.withResolvers();
+		state.policy.mockReturnValueOnce(pending.promise);
+		const generating = internalNginx.generateConfig("proxy_host", { id: 7 });
+		expect(internalNginx.renderConfig).not.toHaveBeenCalled();
+		expect(fs.promises.writeFile).not.toHaveBeenCalled();
+		pending.resolve({ beautifier_enabled: false });
+		await generating;
+		expect(internalNginx.renderConfig).toHaveBeenCalledOnce();
+		expect(fs.promises.writeFile).toHaveBeenCalledOnce();
+	});
+	it("retains the generated configuration if the optional formatter fails", async () => {
+		vi.mocked(utils.execFile).mockRejectedValueOnce(new Error("formatter unavailable"));
+		await expect(internalNginx.generateConfig("proxy_host", { id: 7 })).resolves.toBe(true);
+		expect(fs.promises.writeFile).toHaveBeenCalledOnce();
 	});
 });

@@ -12,6 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useHealth } from "@/hooks/useHealth";
 
 const Network = lazy(() => import("./Network"));
+const Analytics = lazy(() => import("./Analytics"));
+const Nginx = lazy(() => import("./Nginx"));
 
 export default function Layout() {
 	const health = useHealth();
@@ -54,6 +56,8 @@ export default function Layout() {
 							{ id: SETTINGS_TAB.GITOPS, label: "settings.gitops", Icon: IconGitBranch },
 							{ id: SETTINGS_TAB.CERTIFICATES, label: "settings.certificates.title", Icon: IconShield },
 							{ id: SETTINGS_TAB.NETWORK, label: "settings.network.title", Icon: IconSettings },
+							{ id: SETTINGS_TAB.ANALYTICS, label: "settings.analytics.title", Icon: IconSettings },
+							{ id: SETTINGS_TAB.NGINX, label: "settings.nginx.title", Icon: IconSettings },
 						].map(({ id, label, Icon }) => (
 							<button
 								key={id}
@@ -75,6 +79,16 @@ export default function Layout() {
 					{activeTab === SETTINGS_TAB.NETWORK && (
 						<Suspense fallback={<Loading noLogo />}>
 							<Network />
+						</Suspense>
+					)}
+					{activeTab === SETTINGS_TAB.ANALYTICS && (
+						<Suspense fallback={<Loading noLogo />}>
+							<Analytics />
+						</Suspense>
+					)}
+					{activeTab === SETTINGS_TAB.NGINX && (
+						<Suspense fallback={<Loading noLogo />}>
+							<Nginx />
 						</Suspense>
 					)}
 				</div>

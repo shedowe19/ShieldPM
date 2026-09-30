@@ -110,6 +110,29 @@ Administrators use **GET/PUT** `/api/settings/certificate-options` with this com
 
 The refresh interval is an integer from 6 to 594 hours in six-hour steps. Enabling starts a background fetch and periodic updates; disabling retains the cached ranges and stops automatic updates. Both endpoints require administrative settings permissions (`settings:get` for GET, `settings:update` for PUT). Each PUT sends the complete options object, without a settings `meta` wrapper. Changes apply without restarting; generic updates of these setting IDs are rejected.
 
+### Analytics retention and Nginx formatting
+
+**GET/PUT** `/api/settings/analytics-options` uses this complete body/response:
+
+```json
+{
+  "detailed_retention_hours": 24,
+  "aggregation_retention_days": 35
+}
+```
+
+Both values are integers from 1 to `9007199254740991`, with no additional product cap or relationship between them. Saving applies to the next startup/hourly cleanup and does not immediately purge data. Both cutoff dates must be usable before either table is cleaned; an invalid policy or extreme period skips both deletions.
+
+**GET/PUT** `/api/settings/nginx-options` uses:
+
+```json
+{
+  "beautifier_enabled": true
+}
+```
+
+Formatting changes apply when a configuration is next generated. Saving does not rewrite files or reload Nginx. Both endpoints require `settings:get` for GET and `settings:update` for PUT, use flat complete objects without a `meta` wrapper, and reject generic settings updates that would bypass validation.
+
 Most API errors use an `error` object with a numeric `code` and public `message`. A CSRF rejection before route execution responds with HTTP 403 and `error.reason: "EBADCSRFTOKEN"`. Some analytics routes return a shorter `error` string for host-not-found or forbidden responses; check the endpoint's response contract when handling errors.
 
 ---

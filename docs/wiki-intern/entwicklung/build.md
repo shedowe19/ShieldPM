@@ -93,6 +93,11 @@ geladen, und die Texte sind in allen 13 Sprachen vorhanden; neue Abhängigkeiten
 steigt dafür um 6.000 auf 1.261.000 Byte und behält 2.674 Byte Spielraum. Größter JavaScript-Chunk (284.537 Byte) und
 Stylesheets (16.098 Byte) bleiben innerhalb ihrer unveränderten Grenzen von 299.000 beziehungsweise 16.600 Byte.
 
+Die anschließenden Analytics- und Nginx-Einstellungen in PR #146 erhöhen den Gesamtumfang um 5.263 auf 1.263.589 Byte.
+Beide Tabs werden verzögert geladen und verwenden den gemeinsamen Formularablauf; die Hinweise und Felder sind in
+allen 13 Sprachen verfügbar. Das Gesamtbudget steigt um weitere 6.000 auf 1.267.000 Byte und lässt 3.411 Byte Spielraum.
+Größter JavaScript-Chunk und Stylesheets bleiben bei 284.537 beziehungsweise 16.098 Byte; ihre Grenzen ändern sich nicht.
+
 ## Native / LXC Build
 
 Vor dem Export des LXC-Rootfs entfernt der Workflow SSH-Hostkeys und leert die Maschinen-ID. Ein aktivierter Systemd-Dienst erzeugt fehlende SSH-Hostkeys vor dem SSH-Start pro Instanz. Bereinigungs-Globs werden innerhalb des Builder-Containers ausgewertet, damit sie dessen Dateisystem erfassen.

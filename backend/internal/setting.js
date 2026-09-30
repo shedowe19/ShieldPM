@@ -18,7 +18,7 @@ const internalSetting = {
 		if (data.id === "acme-profile") {
 			throw new errs.ValidationError("Use the certificate ACME profile endpoint to update this setting");
 		}
-		if (["certificate-options", "ip-ranges-options"].includes(data.id)) {
+		if (["certificate-options", "ip-ranges-options", "analytics-options", "nginx-options"].includes(data.id)) {
 			throw new errs.ValidationError("Use the application options endpoint to update this setting");
 		}
 		const performUpdate = async () => {

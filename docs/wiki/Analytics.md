@@ -41,7 +41,11 @@ flowchart TD
 
 ## Privacy
 
-The built-in analytics service does not need a third-party analytics provider. It stores IP addresses and other request details locally. By default, detailed database rows are deleted after 24 hours and minute aggregates after 35 days; the retention job runs on startup and hourly. Set `ANALYTICS_DETAILED_RETENTION_HOURS` and `ANALYTICS_AGGREGATION_RETENTION_DAYS` to change those periods. Nginx log-file rotation is a separate mechanism. GoAccess can be configured independently with its own `GOACLA` options, including IP anonymization.
+The built-in analytics service does not need a third-party analytics provider. It stores IP addresses and other request details locally. By default, detailed database rows are deleted after 24 hours and minute aggregates after 35 days; cleanup runs at startup and hourly. Administrators change these periods under **Settings → Analytics**, without restarting. Saving applies to the next cleanup and does not immediately purge data. Shorter periods remove older rows on that pass; longer periods cannot restore rows already deleted. Nginx log-file rotation is separate. GoAccess can be configured independently with its own `GOACLA` options, including IP anonymization.
+
+The retention fields accept positive whole hours/days up to JavaScript's maximum safe integer (`9007199254740991`). There is no required relationship between them. Each cleanup uses one policy and clock snapshot and checks both cutoff dates before deleting from either table. An extreme period, invalid saved policy or database read error skips both deletions and logs an error. Concurrent cleanup runs do not overlap.
+
+On upgrade, the previous `ANALYTICS_DETAILED_RETENTION_HOURS` and `ANALYTICS_AGGREGATION_RETENTION_DAYS` values are imported once for a missing database setting, preserving valid parsed values. Missing or empty values use the defaults. Invalid nonempty values import the maximum safe integer with a warning to preserve history until the saved period is repaired in the UI; afterward, the environment variables no longer control retention.
 
 ## Configuration
 

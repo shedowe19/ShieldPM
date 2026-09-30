@@ -1,6 +1,10 @@
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("../../internal/nginx-options.js", () => ({
+	default: { getPolicy: async () => ({ beautifier_enabled: false }) },
+}));
+
 vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn().mockResolvedValue() } }));
 vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: vi.fn().mockReturnValue("host-token") }));
 
@@ -28,7 +32,6 @@ const readJson = (path) => JSON.parse(fs.readFileSync(new URL(path, import.meta.
 
 describe("Proxy Host upload relay contract", () => {
 	beforeEach(() => {
-		vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", "true");
 		vi.spyOn(fs.promises, "writeFile").mockResolvedValue();
 	});
 	afterEach(() => {

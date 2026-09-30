@@ -197,6 +197,14 @@ yarn dev # Nodemon
 - **API**: GET/PUT `/api/settings/certificate-options` and `/api/settings/ip-ranges-options` use complete flat option objects. Permissions are `settings:get`/`settings:update` for each setting ID; generic setting updates are guarded.
 - **Upgrade**: `20260930000200_add_application_options` imports `ACME_KEY_TYPE`, `CRT`, `SKIP_IP_RANGES` and `IPRT` once for missing rows, preserving saved settings. Runtime reads only database options afterward. Other environment settings remain deployment configuration or await later migration; see [configuration strategy](./docs/wiki-intern/konfiguration/config-dateien.md#schrittweise-verlagerung-von-anwendungsoptionen).
 
+### 6.1d Analytics Retention and Nginx Formatting
+
+- **Database options**: `analytics-options.meta` stores `detailed_retention_hours` and `aggregation_retention_days`, each a positive safe integer (1–9007199254740991), defaults 24/35 and no cross-field condition. `nginx-options.meta.beautifier_enabled` is boolean, default true. Settings has separate lazy Analytics/Nginx tabs.
+- **Retention**: Each startup/hourly run reads one database policy and clock snapshot, validates both cutoff dates and positive ISO years before deleting either table, and skips both on invalid policy/read/cutoff errors. Runs wait for both deletion results before releasing their single-flight promise; successful deletions clear the summary cache even if the other delete fails. Missing rows are configuration errors; initial defaults come only from migration. Saving does not start an immediate purge.
+- **Formatting**: `generateConfig()` reads the database option before rendering/writing and optionally formats the resulting file. Saving alone does not regenerate/reload Nginx; formatter command errors remain ignored.
+- **Contract**: GET/PUT `/api/settings/analytics-options` and `/api/settings/nginx-options` use flat complete option objects with settings:get/update permissions, generic guards, validated GitOps restore and audit.
+- **Upgrade**: `20260930000300_add_analytics_nginx_options` imports the retired variables once for missing rows, preserving positive safe legacy parseInt results and saved choices. Missing/empty retention values use 24/35; invalid nonempty values import MAX_SAFE_INTEGER with a raw-value-free warning, preserving history until repair. Runtime uses database settings only. Roadmap phase 1 is complete; later phases remain planned.
+
 ### 6.2 AI Core (`backend/internal/ai/`)
 
 - **Orchestrator**: `executor.js` manages the chat loop.

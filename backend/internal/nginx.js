@@ -14,6 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 import internalAnubis from "./anubis.js";
+import internalNginxOptions from "./nginx-options.js";
 
 /** @type {Promise<unknown>} */
 let configurationQueue = Promise.resolve();
@@ -357,6 +358,7 @@ const internalNginx = {
 	 * @returns {Promise<boolean>}
 	 */
 	generateConfig: async (host_type, host_row) => {
+		const options = await internalNginxOptions.getPolicy();
 		const filename = internalNginx.getConfigName(host_type, host_row.id);
 		try {
 			const config_text = await internalNginx.renderConfig(host_type, host_row);
@@ -367,7 +369,7 @@ const internalNginx = {
 			throw new errs.ConfigurationError(err.message);
 		}
 
-		if (process.env.DISABLE_NGINX_BEAUTIFIER !== "true") {
+		if (options.beautifier_enabled) {
 			try {
 				await utils.execFile("nginxbeautifier", ["-s", "4", filename]);
 			} catch {

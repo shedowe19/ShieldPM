@@ -25,6 +25,9 @@ describe("startup network configuration", () => {
 		["CRT", "invalid-interval"],
 		["SKIP_IP_RANGES", "invalid-boolean"],
 		["IPRT", "invalid-interval"],
+		["DISABLE_NGINX_BEAUTIFIER", "invalid-boolean"],
+		["ANALYTICS_DETAILED_RETENTION_HOURS", "invalid-interval"],
+		["ANALYTICS_AGGREGATION_RETENTION_DAYS", "invalid-interval"],
 	])("leaves removed %s to the one-time settings migration", (key, value) => {
 		const result = validate({ [key]: value });
 		expect(result.status).toBe(0);
@@ -76,7 +79,15 @@ describe("startup network configuration", () => {
 		expect(result.status).toBe(0);
 		expect(result.stdout).toContain("export HTTP_PORT='80'");
 		expect(result.stdout).not.toContain("ACME_PROFILE");
-		for (const key of ["ACME_KEY_TYPE", "CRT", "SKIP_IP_RANGES", "IPRT"])
+		for (const key of [
+			"ACME_KEY_TYPE",
+			"CRT",
+			"SKIP_IP_RANGES",
+			"IPRT",
+			"DISABLE_NGINX_BEAUTIFIER",
+			"ANALYTICS_DETAILED_RETENTION_HOURS",
+			"ANALYTICS_AGGREGATION_RETENTION_DAYS",
+		])
 			expect(result.stdout).not.toContain(`export ${key}=`);
 	});
 });
