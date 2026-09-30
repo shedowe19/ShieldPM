@@ -99,14 +99,13 @@ ShieldPM runs schema migrations for the **selected** database on startup. When y
 | `ACME_EAB_HMAC_KEY`      | External Account Binding HMAC Key                                                                         | —                        |
 | `ACME_MUST_STAPLE`       | Enable OCSP Must-Staple extension                                                                         | `false`                  |
 | `ACME_OCSP_STAPLING`     | Enable OCSP Stapling                                                                                      | `false`                  |
-| `ACME_PROFILE`           | Compatibility fallback until the global profile is saved in Settings → Certificates / ACME                | `none`                   |
 | `ACME_KEY_TYPE`          | Key type: `rsa` or `ecdsa`                                                                                | `ecdsa`                  |
 | `ACME_SERVER_TLS_VERIFY` | Verify the ACME server TLS certificate                                                                    | `true`                   |
 | `CUSTOM_OCSP_STAPLING`   | Enable OCSP Stapling for custom certificates                                                              | `false`                  |
 | `DEFAULT_CERT_ID`        | Default certificate ID for otherwise unmatched hosts (`0` uses the dummy certificate)                     | `0`                      |
 | `CRT`                    | Configured hours between renewal checks; runtime caps the effective interval at 12 hours                  | `23` (effective: `12`)   |
 
-Use **Settings → Certificates / ACME** to save the global **Standard** or **Short-lived** profile in ShieldPM. It applies immediately without changing environment files or restarting. New certificate dialogs use this default and allow an individual override; certificates with an explicit saved profile keep it. Before the first UI save, `ACME_PROFILE=shortlived` selects Short-lived for new certificates; other values select Standard. Legacy certificates without profile metadata retain their prior ACME configuration until the global setting is saved, then use the saved choice on renewal. See [SSL Certificates](SSL-Certificates).
+Use **Settings → Certificates / ACME** to save the global **Standard** or **Short-lived** profile in ShieldPM. The database default is Standard, and a saved change applies immediately without restarting. New certificate dialogs use this default and allow an individual override; certificates with an explicit saved profile keep it. Legacy certificates without profile metadata use the global choice on renewal. The former `ACME_PROFILE` environment variable is ignored; remove it from existing configuration and review the saved choice in Settings after upgrading. See [SSL Certificates](SSL-Certificates).
 
 > [!WARNING]
 > Set `ACME_EMAIL` for account notices and to use providers that require it. For Let's Encrypt, the runtime can register without an email; ZeroSSL requires one, and EAB settings must include an email.

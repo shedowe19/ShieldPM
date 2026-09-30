@@ -36,7 +36,6 @@ vi.mock("../../lib/utils.js", () => ({ default: { execFile: state.execFile } }))
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: state.audit } }));
 
 import profile from "../../internal/acme-profile.js";
-import { resolveDefaultProfile } from "../../lib/certificate-profile.js";
 import errs from "../../lib/error.js";
 
 const access = { can: vi.fn() };
@@ -58,7 +57,6 @@ describe("persistent ACME profile defaults", () => {
 
 	beforeEach(async () => {
 		vi.resetAllMocks();
-		vi.stubEnv("ACME_PROFILE", "");
 		vi.stubEnv("ACME_SERVER", "");
 		vi.stubEnv("ACME_SERVER_TLS_VERIFY", "");
 		temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "shieldpm-acme-profile-"));
@@ -72,7 +70,7 @@ describe("persistent ACME profile defaults", () => {
 			table.string("id").primary();
 			table.string("value");
 		});
-		await state.db("setting").insert({ id: "acme-profile", value: "inherit" });
+		await state.db("setting").insert({ id: "acme-profile", value: "standard" });
 		await state.db.schema.createTable("certificate", (table) => {
 			table.integer("id").primary();
 			table.string("provider");
@@ -89,34 +87,31 @@ describe("persistent ACME profile defaults", () => {
 		fs.rmSync(temporaryDirectory, { recursive: true, force: true });
 	});
 
-	it.each([
-		["", "standard"],
-		["classic", "standard"],
-		["custom-profile", "standard"],
-		["shortlived", "shortlived"],
-	])("inherits ACME_PROFILE=%s only when no explicit default is saved", async (environment, expected) => {
-		vi.stubEnv("ACME_PROFILE", environment);
-		expect(await profile.getPolicy()).toBe("inherit");
-		expect(await profile.get(access)).toEqual({
-			profile: expected,
-			source: "environment",
-			environmentProfile: environment || "none",
-		});
-		expect(access.can).toHaveBeenCalledWith("certificates:list");
-		expect(state.execFile).not.toHaveBeenCalled();
-	});
+	it.each(["", "none", "classic", "custom-profile", "shortlived", "shortlived --force-renewal"])(
+		"ignores the removed ACME_PROFILE=%s environment control",
+		async (environment) => {
+			vi.stubEnv("ACME_PROFILE", environment);
+			expect(await profile.getPolicy()).toBe("standard");
+			expect(await profile.get(access)).toEqual({ profile: "standard" });
+			expect(access.can).toHaveBeenCalledWith("certificates:list");
+			expect(state.execFile).not.toHaveBeenCalled();
+		},
+	);
 
-	it("uses the environment fallback for installations without the setting row", async () => {
+	it("defaults missing settings to Standard without an environment fallback", async () => {
 		await state.db("setting").delete();
 		vi.stubEnv("ACME_PROFILE", "shortlived");
-		expect(await profile.getPolicy()).toBe("inherit");
-		expect(resolveDefaultProfile(await profile.getPolicy())).toBe("shortlived");
+		expect(await profile.getPolicy()).toBe("standard");
+		expect(await profile.get(access)).toEqual({ profile: "standard" });
 	});
 
-	it.each(["invalid", "", "SHORTLIVED"])("rejects corrupt saved policy %s", async (value) => {
-		await state.db("setting").update({ value });
-		await expect(profile.get(access)).rejects.toMatchObject({ name: "ConfigurationError", status: 400 });
-	});
+	it.each(["invalid", "", "SHORTLIVED", "inherit"])(
+		"rejects corrupt or unmigrated saved policy %s",
+		async (value) => {
+			await state.db("setting").update({ value });
+			await expect(profile.get(access)).rejects.toMatchObject({ name: "ConfigurationError", status: 400 });
+		},
+	);
 
 	it.each(["get", "update"])(
 		"checks %s permissions before reading settings or executing external commands",
@@ -141,43 +136,36 @@ describe("persistent ACME profile defaults", () => {
 			await expect(profile.update(access, { profile: value })).rejects.toMatchObject({ status: 400 });
 			expect(state.query).not.toHaveBeenCalled();
 			expect(state.execFile).not.toHaveBeenCalled();
-			expect(await profile.getPolicy()).toBe("inherit");
+			expect(await profile.getPolicy()).toBe("standard");
 		},
 	);
 
-	it("persists an explicit Standard override across database reconnection and changed environment", async () => {
-		vi.stubEnv("ACME_PROFILE", "shortlived");
-		expect(await profile.update(access, { profile: "standard" })).toEqual({
-			profile: "standard",
-			source: "settings",
-			environmentProfile: "shortlived",
-		});
-		expect(state.execFile).toHaveBeenCalledExactlyOnceWith("certbot", ["--help", "all"]);
-		expect(state.certificateQuery).not.toHaveBeenCalled();
-		await state.db.destroy();
-		state.db = knex(databaseConfig);
-		vi.stubEnv("ACME_PROFILE", "custom-profile");
-		expect(await profile.getPolicy()).toBe("standard");
-		expect(await profile.get(access)).toEqual({
-			profile: "standard",
-			source: "settings",
-			environmentProfile: "custom-profile",
-		});
-		expect(state.audit).toHaveBeenCalledExactlyOnceWith(access, {
-			action: "updated",
-			object_type: "setting",
-			object_id: 0,
-			meta: { setting_id: "acme-profile", name: "ACME Certificate Profile", value: "standard" },
-		});
-	});
+	it.each(["standard", "shortlived"])(
+		"persists %s across database reconnection regardless of changed environment",
+		async (savedProfile) => {
+			vi.stubEnv("ACME_PROFILE", savedProfile === "standard" ? "shortlived" : "standard");
+			expect(await profile.update(access, { profile: savedProfile })).toEqual({ profile: savedProfile });
+			if (savedProfile === "standard") {
+				expect(state.execFile).toHaveBeenCalledExactlyOnceWith("certbot", ["--help", "all"]);
+				expect(state.certificateQuery).not.toHaveBeenCalled();
+			}
+			await state.db.destroy();
+			state.db = knex(databaseConfig);
+			vi.stubEnv("ACME_PROFILE", "custom-profile --force-renewal");
+			expect(await profile.getPolicy()).toBe(savedProfile);
+			expect(await profile.get(access)).toEqual({ profile: savedProfile });
+			expect(state.audit).toHaveBeenCalledExactlyOnceWith(access, {
+				action: "updated",
+				object_type: "setting",
+				object_id: 0,
+				meta: { setting_id: "acme-profile", name: "ACME Certificate Profile", value: savedProfile },
+			});
+		},
+	);
 
 	it("requires the selected CA to advertise shortlived before saving and auditing the default", async () => {
 		vi.stubEnv("ACME_SERVER", "https://ca.example.test/directory");
-		expect(await profile.update(access, { profile: "shortlived" })).toEqual({
-			profile: "shortlived",
-			source: "settings",
-			environmentProfile: "none",
-		});
+		expect(await profile.update(access, { profile: "shortlived" })).toEqual({ profile: "shortlived" });
 		expect(state.execFile.mock.calls).toEqual([
 			["certbot", ["--help", "all"]],
 			[
@@ -301,7 +289,7 @@ describe("persistent ACME profile defaults", () => {
 		);
 		const updating = profile.update(access, { profile: "shortlived" });
 		await vi.waitFor(() => expect(resolveDirectory).toBeTypeOf("function"));
-		expect(await profile.getPolicy()).toBe("inherit");
+		expect(await profile.getPolicy()).toBe("standard");
 		expect(state.audit).not.toHaveBeenCalled();
 		resolveDirectory(directory);
 		await updating;

@@ -140,7 +140,7 @@ export const renewCertbot = async (certificate) => {
 	logger.info(`Renewing Certbot certificates for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`);
 
 	const policy =
-		certificate.meta?.letsencrypt_profile === undefined ? await internalAcmeProfile.getPolicy() : "inherit";
+		certificate.meta?.letsencrypt_profile === undefined ? await internalAcmeProfile.getPolicy() : "standard";
 	const renewResult = await runCertbot([
 		"--config",
 		"/etc/certbot.ini",
@@ -174,7 +174,7 @@ export const renewCertbotWithDnsChallenge = async (certificate) => {
 	);
 
 	const policy =
-		certificate.meta?.letsencrypt_profile === undefined ? await internalAcmeProfile.getPolicy() : "inherit";
+		certificate.meta?.letsencrypt_profile === undefined ? await internalAcmeProfile.getPolicy() : "standard";
 	const renewResult = await runCertbot([
 		"--config",
 		"/etc/certbot.ini",

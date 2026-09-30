@@ -22,7 +22,7 @@ const mocks = vi.hoisted(() => ({
 	deleteConfig: vi.fn(),
 	createLeadCert: vi.fn(),
 	gitops: vi.fn(),
-	policy: vi.fn().mockResolvedValue("inherit"),
+	policy: vi.fn().mockResolvedValue("standard"),
 }));
 vi.mock("../../internal/acme-profile.js", () => ({ default: { getPolicy: mocks.policy } }));
 vi.mock("../../models/certificate.js", () => ({ default: { query: mocks.query } }));
@@ -70,7 +70,7 @@ describe("certificate lifecycle regressions", () => {
 	const temporaryDirs = [];
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mocks.policy.mockResolvedValue("inherit");
+		mocks.policy.mockResolvedValue("standard");
 		mocks.configurationLock.mockImplementation(async (operation) => operation());
 	});
 	afterEach(async () => {
@@ -162,7 +162,7 @@ describe("certificate lifecycle regressions", () => {
 		expect(query.insertAndFetch.mock.calls[0][0].meta.letsencrypt_profile).toBe("shortlived");
 		expect(data.meta).toEqual({});
 	});
-	it("rejects an oversized inherited Short-lived request before certificate persistence", async () => {
+	it("rejects an oversized default Short-lived request before certificate persistence", async () => {
 		mocks.policy.mockResolvedValue("shortlived");
 		await expect(
 			internalCertificate.create(access(), {
@@ -609,7 +609,6 @@ describe("certificate lifecycle regressions", () => {
 		expect(internalCertificate.intervalProcessing).toBe(false);
 	});
 	it("renews mixed profiles individually and continues after a failure without forcing issuance", async () => {
-		vi.stubEnv("ACME_PROFILE", "shortlived");
 		const certificates = [
 			{ id: 1, meta: { letsencrypt_profile: "standard" } },
 			{ id: 2, meta: { letsencrypt_profile: "shortlived" } },
@@ -628,7 +627,12 @@ describe("certificate lifecycle regressions", () => {
 			"",
 		]);
 		expect(args[1].slice(args[1].indexOf("--required-profile"))).toEqual(["--required-profile", "shortlived"]);
-		expect(args[2]).not.toContain("--required-profile");
+		expect(args[2].slice(args[2].indexOf("--required-profile"))).toEqual([
+			"--required-profile",
+			"",
+			"--preferred-profile",
+			"",
+		]);
 		for (const [i, command] of args.entries()) {
 			expect(command).toContain(`npm-${i + 1}`);
 			expect(command).not.toContain("--force-renewal");
@@ -640,7 +644,6 @@ describe("certificate lifecycle regressions", () => {
 	it.each(["standard", "shortlived"])(
 		"applies saved global %s only to legacy rows during scheduled renewal",
 		async (policy) => {
-			vi.stubEnv("ACME_PROFILE", "none");
 			mocks.policy.mockResolvedValue(policy);
 			mocks.query.mockReturnValue(
 				queryFor([
@@ -657,7 +660,12 @@ describe("certificate lifecycle regressions", () => {
 			expect(mocks.policy).toHaveBeenCalledOnce();
 			const commands = mocks.runCertbot.mock.calls.map(([command]) => command);
 			expect(commands).toHaveLength(3);
-			expect(commands[0]).not.toContain("--required-profile");
+			expect(commands[0].slice(commands[0].indexOf("--required-profile"))).toEqual([
+				"--required-profile",
+				"",
+				"--preferred-profile",
+				"",
+			]);
 			expect(commands[1].slice(commands[1].indexOf("--required-profile"))).toEqual([
 				"--required-profile",
 				"shortlived",

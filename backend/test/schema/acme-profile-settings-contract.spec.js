@@ -22,7 +22,7 @@ describe("global ACME profile API contract", () => {
 		},
 	);
 
-	it("requires a profile and rejects changes to read-only response fields", async () => {
+	it("requires a profile and rejects obsolete fields and arbitrary settings", async () => {
 		await expect(apiValidator(updateSchema, {})).rejects.toThrow(/profile/);
 		for (const field of ["source", "environmentProfile", "meta", "value"]) {
 			await expect(apiValidator(updateSchema, { profile: "standard", [field]: "unexpected" })).rejects.toThrow(
@@ -31,27 +31,18 @@ describe("global ACME profile API contract", () => {
 		}
 	});
 
-	it.each(["get", "put"])("documents %s responses with effective profiles and their source", async (method) => {
+	it.each(["get", "put"])("documents %s responses containing only the selected profile", async (method) => {
 		const responseSchema = operation[method].responses[200].content["application/json"].schema;
 		for (const profile of ["standard", "shortlived"]) {
-			for (const source of ["environment", "settings"]) {
-				await expect(apiValidator(responseSchema, { profile, source })).resolves.toEqual({ profile, source });
-				await expect(
-					apiValidator(responseSchema, { profile, source, environmentProfile: "custom-acme-profile" }),
-				).resolves.toEqual({ profile, source, environmentProfile: "custom-acme-profile" });
+			await expect(apiValidator(responseSchema, { profile })).resolves.toEqual({ profile });
+			for (const field of ["source", "environmentProfile", "credentials"]) {
+				await expect(apiValidator(responseSchema, { profile, [field]: "unexpected" })).rejects.toThrow(
+					/additional properties/,
+				);
 			}
 		}
-		await expect(apiValidator(responseSchema, { profile: "standard" })).rejects.toThrow(/source/);
-		await expect(apiValidator(responseSchema, { source: "settings" })).rejects.toThrow(/profile/);
-		await expect(apiValidator(responseSchema, { profile: "inherit", source: "environment" })).rejects.toThrow(
-			/profile/,
-		);
-		await expect(apiValidator(responseSchema, { profile: "standard", source: "unknown" })).rejects.toThrow(
-			/source/,
-		);
-		await expect(
-			apiValidator(responseSchema, { profile: "standard", source: "settings", credentials: "private" }),
-		).rejects.toThrow(/additional properties/);
+		await expect(apiValidator(responseSchema, {})).rejects.toThrow(/profile/);
+		await expect(apiValidator(responseSchema, { profile: "inherit" })).rejects.toThrow(/profile/);
 	});
 
 	it("documents certificate read permission and administrator-only writes", () => {

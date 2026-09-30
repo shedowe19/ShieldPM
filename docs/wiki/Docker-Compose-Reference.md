@@ -58,7 +58,6 @@ services:
 #      - "ACME_EAB_HMAC_KEY=123456789abcdef" # HMAC key for External Account Binding for the acme server, not supported by letsencrypt, optional for zerossl (Login on their site => Developer), but required for google public ca: https://cloud.google.com/certificate-manager/docs/public-ca-tutorial?hl=de#request-key-hmac
 #      - "ACME_MUST_STAPLE=true" # enables must-staple, default false; verify CA support, also enables ACME_OCSP_STAPLING
 #      - "ACME_OCSP_STAPLING=true" # enables ocsp stapling, default false, I recommend enabling this if your CA supports it, supported by zerossl and google public ca
-#      - "ACME_PROFILE=shortlived" # legacy fallback until saved in Settings -> Certificates / ACME; default none
 #      - "ACME_KEY_TYPE=rsa" # which key type to use ecdsa or rsa, default and recommended: ecdsa
 #      - "ACME_SERVER_TLS_VERIFY=false" # disables ACME server TLS certificate verification; default and recommended: true
 #      - "CUSTOM_OCSP_STAPLING=true" # enables ocsp stapling for custom certs, default false, I recommend enabling this if your custom certs support it

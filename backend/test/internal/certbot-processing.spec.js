@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ execFile: vi.fn(), requests: [], policy: vi.fn().mockResolvedValue("inherit") }));
+const mocks = vi.hoisted(() => ({ execFile: vi.fn(), requests: [], policy: vi.fn().mockResolvedValue("standard") }));
 vi.mock("../../internal/acme-profile.js", () => ({ default: { getPolicy: mocks.policy } }));
 vi.mock("../../lib/utils.js", () => ({ default: { execFile: mocks.execFile } }));
 vi.mock("../../lib/certbot.js", () => ({ installPlugin: vi.fn() }));
@@ -47,7 +47,7 @@ const certificate = { id: 1, domain_names: ["example.test"], meta: {} };
 describe("Certbot process coordination", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mocks.policy.mockResolvedValue("inherit");
+		mocks.policy.mockResolvedValue("standard");
 		mocks.requests.length = 0;
 	});
 	afterEach(() => {
@@ -58,7 +58,6 @@ describe("Certbot process coordination", () => {
 	it.each([requestCertbot, renewCertbot, renewCertbotWithDnsChallenge])(
 		"requires the selected shortlived profile for %s",
 		async (operation) => {
-			vi.stubEnv("ACME_PROFILE", "classic");
 			mocks.execFile.mockResolvedValue("issued");
 			await operation({
 				...certificate,
@@ -69,16 +68,21 @@ describe("Certbot process coordination", () => {
 			expect(args).not.toContain("--preferred-profile");
 		},
 	);
-	it("retains existing ACME configuration for legacy requests", async () => {
+	it("ignores an obsolete environment profile for a default Standard request", async () => {
 		vi.stubEnv("ACME_PROFILE", "shortlived");
 		mocks.execFile.mockResolvedValue("issued");
 		await requestCertbot(certificate);
-		expect(mocks.execFile.mock.calls[0][1]).not.toContain("--required-profile");
+		const args = mocks.execFile.mock.calls[0][1];
+		expect(args.slice(args.indexOf("--required-profile"))).toEqual([
+			"--required-profile",
+			"",
+			"--preferred-profile",
+			"",
+		]);
 	});
 	it.each([renewCertbot, renewCertbotWithDnsChallenge])(
 		"uses the saved global profile for legacy certificates in %s",
 		async (operation) => {
-			vi.stubEnv("ACME_PROFILE", "none");
 			mocks.execFile.mockResolvedValue("renewed");
 			mocks.policy.mockResolvedValueOnce("standard");
 			await operation({ ...certificate, meta: { dns_provider: "cloudflare" } });
@@ -97,9 +101,8 @@ describe("Certbot process coordination", () => {
 		},
 	);
 	it.each([requestCertbot, renewCertbot, renewCertbotWithDnsChallenge])(
-		"clears both global profile settings for explicit standard in %s",
+		"clears obsolete configuration and lineage profiles for explicit standard in %s",
 		async (operation) => {
-			vi.stubEnv("ACME_PROFILE", "shortlived");
 			mocks.execFile.mockResolvedValue("issued");
 			await operation({ ...certificate, meta: { letsencrypt_profile: "standard", dns_provider: "cloudflare" } });
 			const args = mocks.execFile.mock.calls[0][1];
@@ -109,15 +112,6 @@ describe("Certbot process coordination", () => {
 				"--preferred-profile",
 				"",
 			]);
-		},
-	);
-	it.each([undefined, "none"])(
-		"keeps standard compatible with older Certbot when ACME_PROFILE=%s",
-		async (profile) => {
-			vi.stubEnv("ACME_PROFILE", profile);
-			mocks.execFile.mockResolvedValue("issued");
-			await requestCertbot({ ...certificate, meta: { letsencrypt_profile: "standard" } });
-			expect(mocks.execFile.mock.calls[0][1]).not.toContain("--required-profile");
 		},
 	);
 	it("passes shortlived to DNS issuance while retaining plugin options", async () => {

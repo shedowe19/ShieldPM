@@ -18,7 +18,7 @@ export default function Certificates() {
 	const saveProfile = useSetAcmeProfile();
 	const [draft, setDraft] = useState<CertificateProfile>();
 	const profile = draft ?? data?.profile;
-	const canSave = data && profile && (profile !== data.profile || data.source === "environment");
+	const canSave = data && profile && profile !== data.profile;
 
 	const save = async () => {
 		if (!canSave || saveProfile.isPending) return;
@@ -86,16 +86,6 @@ export default function Certificates() {
 								)}
 							</p>
 						</div>
-						<p className="text-sm text-muted-foreground">
-							{data.source === "environment" ? (
-								<T id="settings.certificates.source-environment" />
-							) : (
-								<T id="settings.certificates.source-settings" />
-							)}
-							{data.source === "environment" && data.environmentProfile && (
-								<code className="ml-1 text-xs">({data.environmentProfile})</code>
-							)}
-						</p>
 						<p className="text-sm text-muted-foreground">
 							<T id="settings.certificates.applies" />
 						</p>

@@ -61,16 +61,16 @@ The global choice preselects the profile for new HTTP and DNS certificates, incl
 
 | Selection       | Behavior                                                                                                                 |
 | :-------------- | :----------------------------------------------------------------------------------------------------------------------- |
-| **Standard**    | Requests the CA's default profile and lifetime, overriding a legacy `ACME_PROFILE` for this certificate when necessary.  |
+| **Standard**    | Requests the CA's default profile and lifetime, clearing any previous Certbot profile options for this certificate.      |
 | **Short-lived** | Requires the ACME profile `shortlived`. Let's Encrypt issues certificates valid for **160 hours (6 days and 16 hours)**. |
 
-See the [Let's Encrypt profile documentation](https://letsencrypt.org/docs/profiles/) for the CA's current profile rules. Short-lived certificates are limited to **25 domain names** per certificate and require **Certbot 4.0 or newer** and an ACME server offering `shortlived`. If the client or CA does not support the requested profile, issuance fails; ShieldPM does not silently obtain a Standard certificate instead. Standard requests without a global `ACME_PROFILE` retain compatibility with older Certbot versions.
+See the [Let's Encrypt profile documentation](https://letsencrypt.org/docs/profiles/) for the CA's current profile rules. Both choices require **Certbot 4.0 or newer**. Short-lived certificates are limited to **25 domain names** per certificate and require an ACME server offering `shortlived`. If the client or CA does not support the requested profile, issuance fails; ShieldPM does not silently obtain a Standard certificate instead.
 
 The selection is saved with the certificate and reapplied during automatic and manual renewal. New API requests that omit the selection use the global default and save the resolved profile on the new certificate. To change an existing certificate with an explicit profile, request a new certificate with the other profile and assign it to the host.
 
-Before the global setting is first saved, ShieldPM preserves `ACME_PROFILE` as a compatibility fallback: `shortlived` selects the Short-lived default, while `none`, an unset value or another profile selects Standard for new certificates. Older certificates without profile metadata continue to use their existing Certbot configuration, including custom environment profiles. After the setting is saved, these older certificates use the saved global choice on renewal; their current files are not replaced simply by saving the setting. Saving Standard or Short-lived in the UI takes precedence over the environment fallback.
+The database default is Standard. Older certificates without profile metadata use the current global choice on renewal; saving the setting does not replace their current files or immediately issue new certificates. Upgrades preserve an explicitly saved global Standard or Short-lived choice and convert the obsolete internal `inherit` value to Standard.
 
-Standard and Short-lived certificates can coexist on the same instance, including when a global `ACME_PROFILE` is set. This selection does not add support for requesting IP-address certificates in ShieldPM.
+Standard and Short-lived certificates can coexist on the same instance. This selection does not add support for requesting IP-address certificates in ShieldPM.
 
 ### DNS Provider Examples
 

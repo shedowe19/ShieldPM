@@ -721,8 +721,6 @@
 	"settings.certificates.applies": "Zmeny sa okamžite uplatnia na nové certifikáty. Existujúce certifikáty bez uloženého profilu použijú pri najbližšom obnovení globálnu predvolenú hodnotu; výslovne uložené profily zostanú nezmenené.",
 	"settings.certificates.description": "Vyber predvolený profil Let’s Encrypt pre novo požadované certifikáty. Jednotlivé certifikáty môžu naďalej používať iný profil.",
 	"settings.certificates.profile": "Predvolený profil certifikátu",
-	"settings.certificates.source-environment": "Aktuálna predvolená hodnota pochádza z prostredia servera.",
-	"settings.certificates.source-settings": "Aktuálna predvolená hodnota je uložená v ShieldPM.",
 	"settings.certificates.title": "Certifikáty / ACME",
 	"settings.default-site": "Predvolená stránka",
 	"settings.default-site.404": "Stránka 404",

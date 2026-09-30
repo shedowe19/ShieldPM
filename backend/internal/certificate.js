@@ -5,7 +5,7 @@ import { ZipArchive } from "archiver";
 import dayjs from "dayjs";
 import _ from "lodash";
 import tempWrite from "temp-write";
-import { getCertificateProfile, getCertificateProfileArgs, resolveDefaultProfile } from "../lib/certificate-profile.js";
+import { getCertificateProfile, getCertificateProfileArgs } from "../lib/certificate-profile.js";
 import error from "../lib/error.js";
 import { sanitizeProxyHost } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
@@ -727,7 +727,7 @@ const internalCertificate = {
 		}
 		const profile =
 			prepared.meta?.letsencrypt_profile === undefined
-				? resolveDefaultProfile(await internalAcmeProfile.getPolicy())
+				? await internalAcmeProfile.getPolicy()
 				: getCertificateProfile(prepared.meta);
 		if (profile === "shortlived" && prepared.domain_names.length > 25) {
 			throw new error.ValidationError("Short-lived certificates support at most 25 domain names");

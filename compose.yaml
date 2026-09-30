@@ -80,7 +80,6 @@ services:
       # - "ACME_EAB_HMAC_KEY=123456789abcdef"      # External Account Binding HMAC
       # - "ACME_MUST_STAPLE=true"                  # Enable must-staple extension
       # - "ACME_OCSP_STAPLING=true"                # Enable OCSP stapling
-      # - "ACME_PROFILE=shortlived"                # ACME profile, default: none
       # - "ACME_KEY_TYPE=rsa"                      # Key type: ecdsa (default) or rsa
       # - "ACME_SERVER_TLS_VERIFY=false"           # Verify ACME server TLS cert
       # - "DEFAULT_CERT_ID=1"                      # Use cert ID instead of dummy certs

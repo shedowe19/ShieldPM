@@ -28,20 +28,32 @@ class RuntimeConfigTests(unittest.TestCase):
     def test_certbot_options_can_be_changed_back_after_restart(self):
         config = self.root / "certbot.ini"
         config.write_text((REPO / "rootfs/etc/certbot.ini").read_text())
-        for key_type, staple, verify, profile in [
-            ("rsa", "false", "false", "shortlived"),
-            ("ecdsa", "true", "true", "none"),
-            ("rsa", "false", "true", "tlsserver"),
+        for key_type, staple, verify in [
+            ("rsa", "false", "false"),
+            ("ecdsa", "true", "true"),
+            ("rsa", "false", "true"),
         ]:
-            with self.subTest(profile=profile):
+            with self.subTest(key_type=key_type, staple=staple, verify=verify):
                 self.shell('configure_certbot_ini "$1"', config, ACME_KEY_TYPE=key_type,
-                           ACME_MUST_STAPLE=staple, ACME_SERVER_TLS_VERIFY=verify, ACME_PROFILE=profile)
+                           ACME_MUST_STAPLE=staple, ACME_SERVER_TLS_VERIFY=verify)
                 lines = config.read_text().splitlines()
                 self.assertIn(f"key-type = {key_type}", lines)
                 self.assertIn(f"must-staple = {staple}", lines)
                 self.assertIn(f"no-verify-ssl = {'true' if verify == 'false' else 'false'}", lines)
-                expected_profile = "#required-profile" if profile == "none" else f"required-profile = {profile}"
-                self.assertEqual([line for line in lines if "required-profile" in line], [expected_profile])
+                self.assertFalse(any("required-profile" in line or "preferred-profile" in line for line in lines))
+
+    def test_profiles_ignore_removed_environment_variable_and_clear_old_global_options(self):
+        config = self.root / "certbot.ini"
+        baseline = (REPO / "rootfs/etc/certbot.ini").read_text()
+        for profile in ("shortlived", "none", "tlsserver", "invalid&value\nextra"):
+            with self.subTest(profile=profile):
+                config.write_text(baseline + "required-profile = shortlived\n"
+                                  "  preferred-profile=classic\n#required-profile\n"
+                                  "  # preferred-profile = old-profile\n")
+                for _ in range(2):
+                    self.shell('configure_certbot_ini "$1"', config, ACME_KEY_TYPE="ecdsa",
+                               ACME_MUST_STAPLE="true", ACME_SERVER_TLS_VERIFY="true", ACME_PROFILE=profile)
+                    self.assertEqual(config.read_text(), baseline)
 
     def test_listener_updates_preserve_parameters_and_reenable_ipv6(self):
         config = self.root / "listeners.conf"

@@ -721,8 +721,6 @@
 	"settings.certificates.applies": "Le modifiche si applicano immediatamente ai nuovi certificati. I certificati esistenti senza un profilo salvato usano il valore predefinito globale al prossimo rinnovo; i profili salvati esplicitamente rimangono invariati.",
 	"settings.certificates.description": "Scegli il profilo predefinito di Let’s Encrypt per i nuovi certificati richiesti. I singoli certificati possono comunque usare un profilo diverso.",
 	"settings.certificates.profile": "Profilo predefinito dei certificati",
-	"settings.certificates.source-environment": "Il valore predefinito attuale proviene dall’ambiente del server.",
-	"settings.certificates.source-settings": "Il valore predefinito attuale è salvato in ShieldPM.",
 	"settings.certificates.title": "Certificati / ACME",
 	"settings.default-site": "Sito Predefinito",
 	"settings.default-site.404": "Pagina 404",

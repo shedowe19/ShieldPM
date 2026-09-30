@@ -721,8 +721,6 @@
 	"settings.certificates.applies": "Zmiany obowiązują natychmiast dla nowych certyfikatów. Istniejące certyfikaty bez zapisanego profilu użyją globalnego ustawienia domyślnego przy następnym odnowieniu; jawnie zapisane profile pozostaną bez zmian.",
 	"settings.certificates.description": "Wybierz domyślny profil Let’s Encrypt dla nowo zamawianych certyfikatów. Poszczególne certyfikaty nadal mogą używać innego profilu.",
 	"settings.certificates.profile": "Domyślny profil certyfikatu",
-	"settings.certificates.source-environment": "Bieżące ustawienie domyślne pochodzi ze środowiska serwera.",
-	"settings.certificates.source-settings": "Bieżące ustawienie domyślne jest zapisane w ShieldPM.",
 	"settings.certificates.title": "Certyfikaty / ACME",
 	"settings.default-site": "Domyślna strona",
 	"settings.default-site.404": "Strona 404",

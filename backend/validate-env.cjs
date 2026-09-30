@@ -1,5 +1,4 @@
 const fs = require('node:fs');
-const { execFileSync } = require('node:child_process');
 const { isIP } = require('node:net');
 
 // Utility to read env vars with defaults
@@ -112,7 +111,6 @@ checkBool('ACME_MUST_STAPLE');
 ensureDefault('ACME_OCSP_STAPLING', 'false');
 checkBool('ACME_OCSP_STAPLING');
 
-ensureDefault('ACME_PROFILE', 'none');
 ensureDefault('ACME_KEY_TYPE', 'ecdsa');
 ensureDefault('ACME_SERVER_TLS_VERIFY', 'true');
 ensureDefault('CUSTOM_OCSP_STAPLING', 'false');
@@ -122,21 +120,6 @@ checkBool('CUSTOM_OCSP_STAPLING');
 
 if (process.env.ACME_KEY_TYPE && !['ecdsa', 'rsa'].includes(process.env.ACME_KEY_TYPE)) {
     fatal('ACME_KEY_TYPE needs to be ecdsa or rsa.');
-}
-
-// ACME Profile Check
-const acmeProfile = getEnv('ACME_PROFILE', 'none');
-if (/[^A-Za-z0-9_-]/.test(acmeProfile)) fatal('ACME_PROFILE needs to be an alphanumeric profile name.');
-if (acmeProfile !== 'none') {
-    try {
-        const res = execFileSync('curl', ['-fsSL', '--connect-timeout', '10', '--max-time', '30', acmeServer], { encoding: 'utf8', timeout: 35000 });
-        const json = JSON.parse(res);
-        if (!json.meta?.profiles || !Object.hasOwn(json.meta.profiles, acmeProfile)) {
-            fatal('The ACME_PROFILE seems to be not supported by the ACME_SERVER.');
-        }
-    } catch {
-        // Ignore curl errors
-    }
 }
 
 // IDs

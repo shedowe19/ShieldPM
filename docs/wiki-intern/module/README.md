@@ -33,7 +33,7 @@ Die Module unter `backend/internal/` bündeln Geschäftslogik. Viele CRUD-Module
 | [Access-List](./access-lists.md)                                                  | `access-list.js`          | Basic Auth, IP-Filter, mTLS                 |
 | [Zertifikate](./zertifikate.md)                                                   | `certificate.js`          | SSL/TLS-Zertifikatsverwaltung               |
 | [Certbot](./certbot.md)                                                           | `certbot.js`              | Let's Encrypt Automatisierung               |
-| [Globale ACME-Vorgabe](../verwaltung/einstellungen.md#globale-acme-profilvorgabe) | `acme-profile.js`         | Geprüfte Profilvorgabe aus UI oder Umgebung |
+| [Globale ACME-Vorgabe](../verwaltung/einstellungen.md#globale-acme-profilvorgabe) | `acme-profile.js`         | Geprüfte Profilvorgabe aus UI und Datenbank |
 | [Token](./token.md)                                                               | `token.js`                | JWT-Token-Verwaltung                        |
 | [Anubis](./anubis.md)                                                             | `anubis.js`               | PoW-Gate gegen Bots                         |
 | [OAuth2-Proxy](./oauth2-proxy.md)                                                 | `oauth2-proxy.js`         | SSO-Integration                             |

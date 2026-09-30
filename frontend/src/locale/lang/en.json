@@ -721,8 +721,6 @@
 	"settings.certificates.applies": "Changes take effect immediately for new certificates. Existing certificates without a saved profile use the global default at their next renewal; explicitly saved profiles stay unchanged.",
 	"settings.certificates.description": "Choose the default Let’s Encrypt profile for newly requested certificates. Individual certificates can still use a different profile.",
 	"settings.certificates.profile": "Default certificate profile",
-	"settings.certificates.source-environment": "The current default comes from the server environment.",
-	"settings.certificates.source-settings": "The current default is saved in ShieldPM.",
 	"settings.certificates.title": "Certificates / ACME",
 	"settings.default-site": "Default Site",
 	"settings.default-site.404": "404 Page",

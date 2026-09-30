@@ -721,8 +721,6 @@
 	"settings.certificates.applies": "Изменения сразу применяются к новым сертификатам. Существующие сертификаты без сохранённого профиля используют глобальное значение по умолчанию при следующем продлении; явно сохранённые профили не меняются.",
 	"settings.certificates.description": "Выберите профиль Let’s Encrypt по умолчанию для новых запросов сертификатов. Для отдельных сертификатов по-прежнему можно выбрать другой профиль.",
 	"settings.certificates.profile": "Профиль сертификата по умолчанию",
-	"settings.certificates.source-environment": "Текущее значение по умолчанию взято из окружения сервера.",
-	"settings.certificates.source-settings": "Текущее значение по умолчанию сохранено в ShieldPM.",
 	"settings.certificates.title": "Сертификаты / ACME",
 	"settings.default-site": "Страница по умолчанию",
 	"settings.default-site.404": "404-страница",

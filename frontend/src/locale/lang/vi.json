@@ -721,8 +721,6 @@
 	"settings.certificates.applies": "Các thay đổi có hiệu lực ngay đối với chứng chỉ mới. Các chứng chỉ hiện có chưa lưu hồ sơ sẽ sử dụng giá trị mặc định chung khi gia hạn lần tới; các hồ sơ được lưu rõ ràng sẽ giữ nguyên.",
 	"settings.certificates.description": "Chọn hồ sơ Let’s Encrypt mặc định cho các chứng chỉ mới được yêu cầu. Từng chứng chỉ vẫn có thể sử dụng hồ sơ khác.",
 	"settings.certificates.profile": "Hồ sơ chứng chỉ mặc định",
-	"settings.certificates.source-environment": "Giá trị mặc định hiện tại được lấy từ môi trường máy chủ.",
-	"settings.certificates.source-settings": "Giá trị mặc định hiện tại được lưu trong ShieldPM.",
 	"settings.certificates.title": "Chứng chỉ / ACME",
 	"settings.default-site": "Trang web mặc định",
 	"settings.default-site.404": "Trang 404",

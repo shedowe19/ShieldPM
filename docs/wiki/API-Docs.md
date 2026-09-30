@@ -72,12 +72,9 @@ These four fields are required. Optional fields such as `certificate_id`, `ssl_f
 
 ```json
 {
-  "profile": "standard",
-  "source": "environment"
+  "profile": "standard"
 }
 ```
-
-`source` is `environment` until the global setting is saved, then `settings`. The optional `environmentProfile` reports the configured environment fallback without making it override the saved UI choice.
 
 An administrator saves the choice with **PUT** `/api/nginx/certificates/acme-profile`:
 
@@ -87,7 +84,7 @@ An administrator saves the choice with **PUT** `/api/nginx/certificates/acme-pro
 }
 ```
 
-The response has the same shape with `source: "settings"`. Only `standard` and `shortlived` are accepted. Certbot profile support is validated before saving; Short-lived also requires the ACME server to advertise that profile. A failed validation preserves the previous value. Saving applies immediately to new requests without an explicit profile and to renewal of legacy certificates without profile metadata. Explicit per-certificate profiles remain unchanged. The generic `/api/settings/acme-profile` update is rejected; use this dedicated endpoint.
+The response contains only the saved `profile`. Only `standard` and `shortlived` are accepted; Standard is the initial database default. Certbot 4.0 or newer and its profile support are required. Short-lived also requires the ACME server to advertise that profile and rejects active legacy certificates without a saved profile if they have more than 25 domain names. A failed validation preserves the previous value. Saving applies immediately to new requests without an explicit profile and to renewal of legacy certificates without profile metadata. Explicit per-certificate profiles remain unchanged. The generic `/api/settings/acme-profile` update is rejected; use this dedicated endpoint.
 
 Most API errors use an `error` object with a numeric `code` and public `message`. A CSRF rejection before route execution responds with HTTP 403 and `error.reason: "EBADCSRFTOKEN"`. Some analytics routes return a shorter `error` string for host-not-found or forbidden responses; check the endpoint's response contract when handling errors.
 

@@ -2,6 +2,7 @@ import knex from "knex";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as settingsTable from "../../migrations/20190227065017_settings.js";
 import * as acmeProfile from "../../migrations/20260930000000_add_acme_profile_setting.js";
+import * as normalizeAcmeProfile from "../../migrations/20260930000100_normalize_acme_profile_setting.js";
 import { createPostgres } from "../helpers/postgres.js";
 
 vi.mock("../../logger.js", () => ({ migrate: { info: vi.fn(), warn: vi.fn() } }));
@@ -34,11 +35,11 @@ describe.each(["sqlite", "postgres"])("ACME profile setting migration on %s", (e
 		else await database?.destroy();
 	});
 
-	it("inherits the environment on upgrade and preserves unrelated settings on repeated runs", async () => {
+	it("defaults to Standard and preserves unrelated settings on repeated runs", async () => {
 		await acmeProfile.up(database);
 		expect(parseMeta(await database("setting").where({ id: "acme-profile" }).first())).toMatchObject({
 			id: "acme-profile",
-			value: "inherit",
+			value: "standard",
 			meta: {},
 		});
 		await acmeProfile.up(database);
@@ -66,8 +67,55 @@ describe.each(["sqlite", "postgres"])("ACME profile setting migration on %s", (e
 
 		await acmeProfile.up(database);
 		expect(parseMeta(await database("setting").where({ id: "acme-profile" }).first())).toMatchObject({
-			value: "inherit",
+			value: "standard",
 			meta: {},
 		});
+	});
+
+	it("normalizes an installed inheritance row without losing metadata or restoring inheritance on rollback", async () => {
+		await database("setting").insert({
+			id: "acme-profile",
+			name: "Existing ACME profile",
+			description: "Previous default inherited ACME_PROFILE",
+			value: "inherit",
+			meta: JSON.stringify({ marker: "preserve inherited row" }),
+		});
+		const original = await database("setting").where({ id: "acme-profile" }).first();
+		await normalizeAcmeProfile.up(database);
+		const normalized = await database("setting").where({ id: "acme-profile" }).first();
+		expect(normalized).toEqual({ ...original, value: "standard", description: normalized.description });
+		expect(normalized.description).not.toMatch(/inherit|ACME_PROFILE/);
+		await normalizeAcmeProfile.up(database);
+		await normalizeAcmeProfile.down(database);
+		await normalizeAcmeProfile.down(database);
+		expect(await database("setting").where({ id: "acme-profile" }).first()).toEqual(normalized);
+		expect(await database("setting").where({ id: "default-site" }).first()).toEqual(existingSetting);
+	});
+
+	it.each(["standard", "shortlived"])("preserves explicit %s across normalization and rollback", async (profile) => {
+		await database("setting").insert({
+			id: "acme-profile",
+			name: "User-selected profile",
+			description: "Legacy description with ACME_PROFILE fallback",
+			value: profile,
+			meta: JSON.stringify({ marker: `saved ${profile}` }),
+		});
+		const original = await database("setting").where({ id: "acme-profile" }).first();
+		await normalizeAcmeProfile.up(database);
+		const normalized = await database("setting").where({ id: "acme-profile" }).first();
+		expect(normalized).toEqual({ ...original, description: normalized.description });
+		expect(normalized.description).not.toMatch(/inherit|ACME_PROFILE/);
+		await normalizeAcmeProfile.down(database);
+		await normalizeAcmeProfile.up(database);
+		expect(await database("setting").where({ id: "acme-profile" }).first()).toEqual(normalized);
+		expect(await database("setting").where({ id: "default-site" }).first()).toEqual(existingSetting);
+	});
+
+	it("leaves unrelated settings unchanged when the ACME row is missing", async () => {
+		await normalizeAcmeProfile.up(database);
+		await normalizeAcmeProfile.up(database);
+		await normalizeAcmeProfile.down(database);
+		expect(await database("setting").where({ id: "acme-profile" })).toHaveLength(0);
+		expect(await database("setting").where({ id: "default-site" }).first()).toEqual(existingSetting);
 	});
 });

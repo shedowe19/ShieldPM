@@ -33,26 +33,26 @@ describe("global ACME profile queries", () => {
 		const { result } = renderHook(() => useAcmeProfile(), { wrapper });
 		expect(result.current.data).toBeUndefined();
 		expect(result.current.isPending).toBe(true);
-		await act(async () => resolve({ profile: "shortlived", source: "settings" }));
+		await act(async () => resolve({ profile: "shortlived" }));
 		await waitFor(() => expect(result.current.data?.profile).toBe("shortlived"));
 	});
 
 	it("publishes a saved profile immediately and prevents an older outstanding GET from replacing it", async () => {
 		const { queryClient, wrapper } = createWrapper();
-		queryClient.setQueryData(acmeProfileQueryKey, { profile: "standard", source: "environment" });
+		queryClient.setQueryData(acmeProfileQueryKey, { profile: "standard" });
 		let resolveRead: (value: AcmeProfileSettings) => void = () => undefined;
 		api.getAcmeProfile.mockReturnValue(
 			new Promise((done) => {
 				resolveRead = done;
 			}),
 		);
-		api.updateAcmeProfile.mockResolvedValue({ profile: "shortlived", source: "settings" });
+		api.updateAcmeProfile.mockResolvedValue({ profile: "shortlived" });
 		const { result } = renderHook(() => ({ read: useAcmeProfile(), save: useSetAcmeProfile() }), { wrapper });
 		await waitFor(() => expect(api.getAcmeProfile).toHaveBeenCalledOnce());
 		await act(async () => result.current.save.mutateAsync({ profile: "shortlived" }));
-		expect(queryClient.getQueryData(acmeProfileQueryKey)).toEqual({ profile: "shortlived", source: "settings" });
-		await act(async () => resolveRead({ profile: "standard", source: "environment" }));
-		expect(queryClient.getQueryData(acmeProfileQueryKey)).toEqual({ profile: "shortlived", source: "settings" });
+		expect(queryClient.getQueryData(acmeProfileQueryKey)).toEqual({ profile: "shortlived" });
+		await act(async () => resolveRead({ profile: "standard" }));
+		expect(queryClient.getQueryData(acmeProfileQueryKey)).toEqual({ profile: "shortlived" });
 		expect(result.current.read.data?.profile).toBe("shortlived");
 	});
 });

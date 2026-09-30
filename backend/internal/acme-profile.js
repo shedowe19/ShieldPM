@@ -1,4 +1,3 @@
-import { resolveDefaultProfile } from "../lib/certificate-profile.js";
 import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
 import certificateModel from "../models/certificate.js";
@@ -7,18 +6,12 @@ import internalAuditLog from "./audit-log.js";
 
 const settingId = "acme-profile";
 
-const describePolicy = (policy) => ({
-	profile: resolveDefaultProfile(policy),
-	source: policy === "inherit" ? "environment" : "settings",
-	environmentProfile: process.env.ACME_PROFILE || "none",
-});
-
 const internalAcmeProfile = {
-	/** @returns {Promise<"inherit"|"standard"|"shortlived">} Internal renewal/issuance policy. */
+	/** @returns {Promise<"standard"|"shortlived">} Stored renewal/issuance policy. */
 	getPolicy: async () => {
 		const row = await settingModel.query().where("id", settingId).first();
-		const policy = row?.value ?? "inherit";
-		if (!["inherit", "standard", "shortlived"].includes(policy)) {
+		const policy = row?.value ?? "standard";
+		if (!["standard", "shortlived"].includes(policy)) {
 			throw new errs.ConfigurationError("The saved ACME profile is invalid");
 		}
 		return policy;
@@ -27,7 +20,7 @@ const internalAcmeProfile = {
 	/** @param {import("../lib/types.js").Access} access @returns {Promise<Object>} */
 	get: async (access) => {
 		await access.can("certificates:list");
-		return describePolicy(await internalAcmeProfile.getPolicy());
+		return { profile: await internalAcmeProfile.getPolicy() };
 	},
 
 	/**
@@ -94,7 +87,7 @@ const internalAcmeProfile = {
 			object_id: 0,
 			meta: { setting_id: settingId, name: "ACME Certificate Profile", value: data.profile },
 		});
-		return describePolicy(data.profile);
+		return { profile: data.profile };
 	},
 };
 

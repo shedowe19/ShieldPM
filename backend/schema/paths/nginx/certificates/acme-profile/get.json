@@ -13,15 +13,14 @@
 	],
 	"responses": {
 		"200": {
-			"description": "The effective profile and the source of the default",
+			"description": "The configured default profile",
 			"content": {
 				"application/json": {
 					"schema": {
 						"$ref": "../../../../components/acme-profile-object.json"
 					},
 					"example": {
-						"profile": "standard",
-						"source": "environment"
+						"profile": "standard"
 					}
 				}
 			}

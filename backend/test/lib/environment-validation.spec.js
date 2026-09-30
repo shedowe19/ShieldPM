@@ -1,4 +1,7 @@
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { backendSourcePath } from "../helpers/source-path.js";
 
@@ -9,12 +12,41 @@ const validate = (values) =>
 	});
 
 describe("startup network configuration", () => {
-	it.each(["profile&value", "profile\nvalue", "profile/value"])(
-		"rejects configuration delimiters in ACME profile %s",
+	it.each(["shortlived", "profile&value", "profile\nvalue", "profile/value"])(
+		"ignores the removed ACME profile environment value %s",
 		(profile) => {
-			expect(validate({ ACME_PROFILE: profile }).status).toBe(1);
+			const result = validate({ ACME_PROFILE: profile });
+			expect(result.status).toBe(0);
+			expect(result.stdout).not.toContain("ACME_PROFILE");
 		},
 	);
+	it("does not contact the CA during startup for an obsolete environment profile", () => {
+		const directory = fs.mkdtempSync(path.join(os.tmpdir(), "shieldpm-profile-validation-"));
+		try {
+			const trace = path.join(directory, "curl-trace");
+			fs.writeFileSync(
+				path.join(directory, "curl"),
+				'#!/bin/sh\nprintf "%s\\n" "$@" > "$PROFILE_CURL_TRACE"\nprintf \'{"meta":{"profiles":{"shortlived":"supported"}}}\'\n',
+				{ mode: 0o700 },
+			);
+			const result = validate({
+				ACME_PROFILE: "shortlived",
+				PATH: `${directory}:${process.env.PATH}`,
+				PROFILE_CURL_TRACE: trace,
+			});
+			expect(result.status).toBe(0);
+			expect(fs.existsSync(trace)).toBe(false);
+		} finally {
+			fs.rmSync(directory, { recursive: true, force: true });
+		}
+	});
+	it.each([
+		["ACME_SERVER", "invalid-url"],
+		["ACME_KEY_TYPE", "invalid-key"],
+		["ACME_SERVER_TLS_VERIFY", "invalid-boolean"],
+	])("still validates %s after moving profiles to the UI", (key, value) => {
+		expect(validate({ [key]: value, ACME_PROFILE: "shortlived" }).status).toBe(1);
+	});
 	it("compares actual listener ports even with leading zeros", () => {
 		expect(validate({ HTTP_PORT: "080", HTTPS_PORT: "80" }).status).toBe(1);
 	});
@@ -34,5 +66,6 @@ describe("startup network configuration", () => {
 		const result = validate({ NPM_PORT: "65535" });
 		expect(result.status).toBe(0);
 		expect(result.stdout).toContain("export HTTP_PORT='80'");
+		expect(result.stdout).not.toContain("ACME_PROFILE");
 	});
 });

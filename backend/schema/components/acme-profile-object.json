@@ -3,24 +3,11 @@
 	"description": "The effective default profile for newly issued Let's Encrypt certificates",
 	"additionalProperties": false,
 	"required": [
-		"profile",
-		"source"
+		"profile"
 	],
 	"properties": {
 		"profile": {
 			"$ref": "../common.json#/properties/letsencrypt_profile"
-		},
-		"source": {
-			"type": "string",
-			"enum": [
-				"environment",
-				"settings"
-			],
-			"description": "Whether the effective default comes from the environment fallback or the saved setting"
-		},
-		"environmentProfile": {
-			"type": "string",
-			"description": "The ACME_PROFILE environment value, when configured"
 		}
 	}
 }

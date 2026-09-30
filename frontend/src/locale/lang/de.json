@@ -721,8 +721,6 @@
 	"settings.certificates.applies": "Änderungen gelten sofort für neue Zertifikate. Bestehende Zertifikate ohne gespeichertes Profil verwenden bei ihrer nächsten Erneuerung den globalen Standard; ausdrücklich gespeicherte Profile bleiben unverändert.",
 	"settings.certificates.description": "Wähle das Standardprofil von Let’s Encrypt für neu angeforderte Zertifikate. Einzelne Zertifikate können weiterhin ein anderes Profil verwenden.",
 	"settings.certificates.profile": "Standardprofil für Zertifikate",
-	"settings.certificates.source-environment": "Der aktuelle Standard stammt aus der Serverumgebung.",
-	"settings.certificates.source-settings": "Der aktuelle Standard ist in ShieldPM gespeichert.",
 	"settings.certificates.title": "Zertifikate / ACME",
 	"settings.default-site": "Standard Seite",
 	"settings.default-site.404": "404 Page",

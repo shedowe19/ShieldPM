@@ -3,7 +3,7 @@ import { migrate as logger } from "../logger.js";
 const migrateName = "add_acme_profile_setting";
 
 /**
- * Add the global ACME profile without overriding the environment on upgrade.
+ * Add the global ACME profile with Standard as the initial setting.
  *
  * @param {import("knex").Knex} knex
  * @returns {Promise<void>}
@@ -15,8 +15,8 @@ const up = async (knex) => {
 			id: "acme-profile",
 			name: "ACME Certificate Profile",
 			description:
-				"Default Let's Encrypt certificate profile; inherit uses ACME_PROFILE until configured in ShieldPM",
-			value: "inherit",
+				"Default Let's Encrypt certificate profile for new certificates and renewals without an explicit certificate profile",
+			value: "standard",
 			meta: JSON.stringify({}),
 		})
 		.onConflict("id")

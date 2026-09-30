@@ -721,8 +721,6 @@
 	"settings.certificates.applies": "Промените се прилагат веднага към новите сертификати. Съществуващите сертификати без запазен профил използват глобалната стойност по подразбиране при следващото подновяване; изрично запазените профили остават непроменени.",
 	"settings.certificates.description": "Избери профила по подразбиране на Let’s Encrypt за новозаявени сертификати. Отделните сертификати могат да използват различен профил.",
 	"settings.certificates.profile": "Профил на сертификата по подразбиране",
-	"settings.certificates.source-environment": "Текущата стойност по подразбиране идва от средата на сървъра.",
-	"settings.certificates.source-settings": "Текущата стойност по подразбиране е запазена в ShieldPM.",
 	"settings.certificates.title": "Сертификати / ACME",
 	"settings.default-site": "Сайт по подразбиране",
 	"settings.default-site.404": "404 страница",

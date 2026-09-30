@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 
 const state = vi.hoisted(() => ({
 	access: { can: vi.fn() },
-	policy: "inherit",
+	policy: "standard",
 	db: null,
 	query: vi.fn(),
 	certificateQuery: vi.fn(),
@@ -74,10 +74,9 @@ describe("ACME default profile HTTP routes", () => {
 	beforeEach(async () => {
 		vi.resetAllMocks();
 		await state.db("certificate").delete();
-		vi.stubEnv("ACME_PROFILE", "");
 		vi.stubEnv("ACME_SERVER", "");
 		vi.stubEnv("ACME_SERVER_TLS_VERIFY", "");
-		state.policy = "inherit";
+		state.policy = "standard";
 		state.query.mockImplementation(() => ({
 			where: () => ({
 				first: async () => ({ id: "acme-profile", value: state.policy }),
@@ -104,33 +103,33 @@ describe("ACME default profile HTTP routes", () => {
 		await new Promise((resolve) => server.close(resolve));
 	});
 
-	it("returns the effective default through the dedicated static route without client checks", async () => {
-		vi.stubEnv("ACME_PROFILE", "shortlived");
-		const response = await fetch(`${origin}/nginx/certificates/acme-profile`);
-		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual({
-			profile: "shortlived",
-			source: "environment",
-			environmentProfile: "shortlived",
-		});
-		expect(state.access.can).toHaveBeenCalledExactlyOnceWith("certificates:list");
-		expect(state.execFile).not.toHaveBeenCalled();
-		expect(state.certificateQuery).not.toHaveBeenCalled();
-		expect(state.updateCertificate).not.toHaveBeenCalled();
-	});
+	it.each(["shortlived", "custom-profile", "shortlived --force-renewal"])(
+		"returns only the saved default through the static route while ignoring ACME_PROFILE=%s",
+		async (environment) => {
+			vi.stubEnv("ACME_PROFILE", environment);
+			const response = await fetch(`${origin}/nginx/certificates/acme-profile`);
+			expect(response.status).toBe(200);
+			expect(await response.json()).toEqual({ profile: "standard" });
+			expect(state.access.can).toHaveBeenCalledExactlyOnceWith("certificates:list");
+			expect(state.execFile).not.toHaveBeenCalled();
+			expect(state.certificateQuery).not.toHaveBeenCalled();
+			expect(state.updateCertificate).not.toHaveBeenCalled();
+		},
+	);
 
 	it.each(["standard", "shortlived"])(
-		"updates %s with administrator authorization and returns the saved source",
+		"updates %s with administrator authorization and returns only the saved profile",
 		async (profile) => {
+			vi.stubEnv("ACME_PROFILE", profile === "standard" ? "shortlived" : "classic");
 			const response = await send({ profile });
 			expect(response.status).toBe(200);
-			expect(await response.json()).toEqual({ profile, source: "settings", environmentProfile: "none" });
+			expect(await response.json()).toEqual({ profile });
 			expect(state.access.can).toHaveBeenCalledExactlyOnceWith("settings:update", "acme-profile");
 			expect(state.patch).toHaveBeenCalledExactlyOnceWith({ value: profile });
 			expect(state.policy).toBe(profile);
 			expect(state.updateCertificate).not.toHaveBeenCalled();
 			const saved = await fetch(`${origin}/nginx/certificates/acme-profile`);
-			expect(await saved.json()).toEqual({ profile, source: "settings", environmentProfile: "none" });
+			expect(await saved.json()).toEqual({ profile });
 		},
 	);
 

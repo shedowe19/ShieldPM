@@ -721,8 +721,6 @@
 	"settings.certificates.applies": "変更は新しい証明書に直ちに適用されます。プロファイルが保存されていない既存の証明書は、次回の更新時に全体の既定値を使用します。明示的に保存されたプロファイルは変更されません。",
 	"settings.certificates.description": "新しく要求する証明書に使用するLet’s Encryptの既定のプロファイルを選択します。各証明書に別のプロファイルを使用することもできます。",
 	"settings.certificates.profile": "証明書の既定のプロファイル",
-	"settings.certificates.source-environment": "現在の既定値はサーバー環境から取得されています。",
-	"settings.certificates.source-settings": "現在の既定値はShieldPMに保存されています。",
 	"settings.certificates.title": "証明書 / ACME",
 	"settings.default-site": "デフォルトサイト",
 	"settings.default-site.404": "404ページ",

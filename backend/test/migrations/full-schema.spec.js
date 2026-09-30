@@ -44,6 +44,9 @@ describe("complete database migration chain", () => {
 				);
 				const meta = (await database("setting").where("id", "ai-config").first()).meta;
 				expect((typeof meta === "string" ? JSON.parse(meta) : meta).num_ctx).toBe(8192);
+				const acmeProfile = await database("setting").where({ id: "acme-profile" }).first();
+				expect(acmeProfile.value).toBe("standard");
+				expect(acmeProfile.description).not.toMatch(/inherit|ACME_PROFILE/);
 			} finally {
 				if (embedded) await embedded.close();
 				else await database.destroy();

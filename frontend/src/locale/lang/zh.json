@@ -721,8 +721,6 @@
 	"settings.certificates.applies": "更改会立即应用于新证书。未保存配置档的现有证书会在下次续期时使用全局默认值；明确保存的配置档保持不变。",
 	"settings.certificates.description": "选择新申请证书时使用的默认 Let’s Encrypt 配置档。每个证书仍可使用不同的配置档。",
 	"settings.certificates.profile": "默认证书配置档",
-	"settings.certificates.source-environment": "当前默认值来自服务器环境。",
-	"settings.certificates.source-settings": "当前默认值已保存在 ShieldPM 中。",
 	"settings.certificates.title": "证书 / ACME",
 	"settings.default-site": "默认站点",
 	"settings.default-site.404": "错误页面",

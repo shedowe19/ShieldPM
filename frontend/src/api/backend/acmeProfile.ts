@@ -3,8 +3,6 @@ import type { CertificateProfile } from "./models";
 
 export interface AcmeProfileSettings {
 	profile: CertificateProfile;
-	source: "environment" | "settings";
-	environmentProfile?: string;
 }
 
 export async function getAcmeProfile(): Promise<AcmeProfileSettings> {

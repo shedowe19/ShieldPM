@@ -328,15 +328,14 @@ vom Dialog ab.
 `/api/nginx/certificates/acme-profile` geladene globale Vorgabe initialisiert nur ein noch nicht gewähltes Profil;
 eine individuelle Wahl wird nicht durch eine spätere Antwort überschrieben. Ein vorhandenes Zertifikat bietet keinen Profilwechsel an; die Zertifikatsliste zeigt das
 explizit gespeicherte Profil für Let's-Encrypt-Zertifikate als Badge. Alte Datensätze ohne Profilfeld bekommen
-keinen Badge, weil ihre bisherige globale Profilkonfiguration daraus nicht hervorgeht. Details zur Laufzeit und Erneuerung stehen unter
+keinen Badge; ihre Erneuerung verwendet die aktuelle globale Vorgabe. Details zur Laufzeit und Erneuerung stehen unter
 [Zertifikate](../module/zertifikate.md).
 
 `Settings/Certificates.tsx` bietet unter Einstellungen → Zertifikate / ACME Administratoren die persistente globale Auswahl Standard/Short-lived.
-Die dedizierte API prüft die Voraussetzungen vor dem Speichern; der neue Wert gilt für nachfolgende Aufträge
-ohne Neustart. Die UI zeigt an, ob die Vorgabe aus der Umgebung oder aus den gespeicherten Einstellungen stammt;
-bei der Umgebungsrückfallebene zeigt sie zusätzlich den aktuellen `environmentProfile`-Wert als Code-Text an.
-Neue Formulare verwenden die Vorgabe, vorhandene explizite Zertifikatsprofile bleiben unverändert. Details zu
-Altzertifikaten und der anfänglichen Umgebungsrückfallebene stehen unter [Einstellungen](../verwaltung/einstellungen.md).
+Die Datenbankvorgabe beginnt mit Standard. Die dedizierte API prüft die Voraussetzungen vor dem Speichern;
+der neue Wert gilt für nachfolgende Aufträge ohne Neustart. Die UI ermöglicht das Speichern einer geänderten
+Auswahl. Neue Formulare verwenden die Vorgabe, vorhandene explizite Zertifikatsprofile bleiben unverändert.
+Altzertifikate ohne Profilfeld folgen ihr bei der nächsten Erneuerung. Details stehen unter [Einstellungen](../verwaltung/einstellungen.md).
 
 `useAcmeProfile.ts` verwendet den React-Query-Schlüssel `["acme-profile"]`. Vor dem Speichern werden ältere GETs
 abgebrochen; nach Erfolg wird die Antwort direkt in den Cache übernommen, damit eine verspätete Abfrage die neue

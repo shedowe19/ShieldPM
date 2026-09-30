@@ -43,8 +43,7 @@
 						"$ref": "../../../../components/acme-profile-object.json"
 					},
 					"example": {
-						"profile": "shortlived",
-						"source": "settings"
+						"profile": "shortlived"
 					}
 				}
 			}

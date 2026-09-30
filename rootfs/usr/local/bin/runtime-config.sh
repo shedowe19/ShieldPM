@@ -116,13 +116,12 @@ configure_certbot_ini() {
     certbot_ini=$1
     certbot_no_verify=false
     [ "$ACME_SERVER_TLS_VERIFY" = false ] && certbot_no_verify=true
-    certbot_profile="#required-profile"
-    [ "$ACME_PROFILE" = none ] || certbot_profile="required-profile = $ACME_PROFILE"
+    # Profiles are selected in ShieldPM. Remove global options from older installs.
     sed -i -E \
         -e "s|^key-type[[:space:]]*=.*|key-type = $ACME_KEY_TYPE|" \
         -e "s|^must-staple[[:space:]]*=.*|must-staple = $ACME_MUST_STAPLE|" \
         -e "s|^no-verify-ssl[[:space:]]*=.*|no-verify-ssl = $certbot_no_verify|" \
-        -e "s|^#?required-profile([[:space:]]*=.*)?$|$certbot_profile|" "$certbot_ini"
+        -e '/^[[:space:]]*#?[[:space:]]*(required-profile|preferred-profile)([[:space:]]*=.*)?[[:space:]]*$/d' "$certbot_ini"
 }
 
 configure_ui_listeners() {

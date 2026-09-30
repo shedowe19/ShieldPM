@@ -63,7 +63,7 @@ function deferred<T>() {
 
 beforeEach(() => {
 	vi.resetAllMocks();
-	mocks.get.mockResolvedValue({ profile: "standard", source: "settings" });
+	mocks.get.mockResolvedValue({ profile: "standard" });
 });
 
 afterEach(() => {
@@ -82,7 +82,7 @@ describe("global ACME profile settings", () => {
 		expect(screen.queryByRole("button", { name: "save" })).not.toBeInTheDocument();
 		expect(mocks.update).not.toHaveBeenCalled();
 
-		initial.resolve({ profile: "shortlived", source: "environment" });
+		initial.resolve({ profile: "shortlived" });
 		expect(await screen.findByLabelText("settings.certificates.profile")).toHaveValue("shortlived");
 		expect(screen.queryByRole("status")).not.toBeInTheDocument();
 	});
@@ -97,46 +97,48 @@ describe("global ACME profile settings", () => {
 		expect(mocks.update).not.toHaveBeenCalled();
 	});
 
-	it.each<AcmeProfileSettings>([
-		{ profile: "standard", source: "settings" },
-		{ profile: "shortlived", source: "settings" },
-		{ profile: "standard", source: "environment" },
-		{ profile: "shortlived", source: "environment" },
-	])("loads $profile from $source and allows persisting an environment override", async (settings) => {
-		mocks.get.mockResolvedValue(settings);
-		renderCertificates();
+	it.each<AcmeProfileSettings>([{ profile: "standard" }, { profile: "shortlived" }])(
+		"loads the saved $profile and enables saving only a changed selection",
+		async (settings) => {
+			mocks.get.mockResolvedValue(settings);
+			renderCertificates();
 
-		expect(await screen.findByLabelText("settings.certificates.profile")).toHaveValue(settings.profile);
-		expect(screen.getByText(`certificates.profile.${settings.profile}-description`)).toBeInTheDocument();
-		expect(screen.getByText(`settings.certificates.source-${settings.source}`)).toBeInTheDocument();
-		const save = screen.getByRole("button", { name: "save" });
-		if (settings.source === "environment") {
-			mocks.update.mockResolvedValue({ profile: settings.profile, source: "settings" });
-			expect(save).toBeEnabled();
-			fireEvent.click(save);
-			await waitFor(() => expect(mocks.update).toHaveBeenCalledOnce());
-			expect(mocks.update.mock.calls[0][0]).toEqual({ profile: settings.profile });
-			expect(await screen.findByText("settings.certificates.source-settings")).toBeInTheDocument();
-			expect(save).toBeDisabled();
-		} else {
+			const profile = await screen.findByLabelText("settings.certificates.profile");
+			expect(profile).toHaveValue(settings.profile);
+			expect(screen.getByText(`certificates.profile.${settings.profile}-description`)).toBeInTheDocument();
+			const save = screen.getByRole("button", { name: "save" });
 			expect(save).toBeDisabled();
 			fireEvent.click(save);
 			expect(mocks.update).not.toHaveBeenCalled();
-		}
-	});
+
+			fireEvent.change(profile, {
+				target: { value: settings.profile === "standard" ? "shortlived" : "standard" },
+			});
+			expect(save).toBeEnabled();
+			fireEvent.change(profile, { target: { value: settings.profile } });
+			expect(save).toBeDisabled();
+		},
+	);
 
 	it("preserves a selected draft across changed background settings and a failed refresh", async () => {
-		mocks.get.mockResolvedValueOnce({ profile: "shortlived", source: "settings" });
+		mocks.get.mockResolvedValueOnce({ profile: "shortlived" });
 		const client = renderCertificates();
 		const profile = await screen.findByLabelText("settings.certificates.profile");
 		fireEvent.change(profile, { target: { value: "standard" } });
 
-		mocks.get.mockResolvedValueOnce({ profile: "shortlived", source: "environment" });
+		mocks.get.mockResolvedValueOnce({ profile: "standard" });
 		await act(async () => {
 			await client.refetchQueries({ queryKey: acmeProfileQueryKey });
 		});
 		expect(profile).toHaveValue("standard");
-		expect(await screen.findByText("settings.certificates.source-environment")).toBeInTheDocument();
+		await waitFor(() => expect(screen.getByRole("button", { name: "save" })).toBeDisabled());
+
+		mocks.get.mockResolvedValueOnce({ profile: "shortlived" });
+		await act(async () => {
+			await client.refetchQueries({ queryKey: acmeProfileQueryKey });
+		});
+		await waitFor(() => expect(screen.getByRole("button", { name: "save" })).toBeEnabled());
+		expect(profile).toHaveValue("standard");
 
 		mocks.get.mockRejectedValueOnce(new Error("Background refresh failed"));
 		await act(async () => {
@@ -166,7 +168,7 @@ describe("global ACME profile settings", () => {
 	});
 
 	it("saves the selected profile, updates the shared cache, and clears the draft after success", async () => {
-		mocks.update.mockResolvedValue({ profile: "shortlived", source: "settings" });
+		mocks.update.mockResolvedValue({ profile: "shortlived" });
 		const client = renderCertificates();
 		const profile = await screen.findByLabelText("settings.certificates.profile");
 		fireEvent.change(profile, { target: { value: "shortlived" } });
@@ -175,11 +177,11 @@ describe("global ACME profile settings", () => {
 		await waitFor(() => expect(mocks.success).toHaveBeenCalledWith(AUDIT_LOG_OBJECT_TYPE.SETTING, "saved"));
 		expect(mocks.update).toHaveBeenCalledOnce();
 		expect(mocks.update.mock.calls[0][0]).toEqual({ profile: "shortlived" });
-		expect(client.getQueryData(acmeProfileQueryKey)).toEqual({ profile: "shortlived", source: "settings" });
+		expect(client.getQueryData(acmeProfileQueryKey)).toEqual({ profile: "shortlived" });
 		expect(screen.getByRole("button", { name: "save" })).toBeDisabled();
 
 		act(() => {
-			client.setQueryData(acmeProfileQueryKey, { profile: "standard", source: "settings" });
+			client.setQueryData(acmeProfileQueryKey, { profile: "standard" });
 		});
 		await waitFor(() => expect(profile).toHaveValue("standard"));
 		expect(screen.getByRole("button", { name: "save" })).toBeDisabled();
@@ -199,7 +201,7 @@ describe("global ACME profile settings", () => {
 		fireEvent.click(save);
 		expect(mocks.update).toHaveBeenCalledOnce();
 
-		saved.resolve({ profile: "shortlived", source: "settings" });
+		saved.resolve({ profile: "shortlived" });
 		await waitFor(() => expect(profile).toBeEnabled());
 		expect(save).toBeDisabled();
 	});

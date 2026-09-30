@@ -721,8 +721,6 @@
 	"settings.certificates.applies": "Wijzigingen gelden meteen voor nieuwe certificaten. Bestaande certificaten zonder opgeslagen profiel gebruiken bij hun volgende vernieuwing de algemene standaard; expliciet opgeslagen profielen blijven ongewijzigd.",
 	"settings.certificates.description": "Kies het standaardprofiel van Let’s Encrypt voor nieuw aangevraagde certificaten. Afzonderlijke certificaten kunnen nog steeds een ander profiel gebruiken.",
 	"settings.certificates.profile": "Standaard certificaatprofiel",
-	"settings.certificates.source-environment": "De huidige standaard komt uit de serveromgeving.",
-	"settings.certificates.source-settings": "De huidige standaard is opgeslagen in ShieldPM.",
 	"settings.certificates.title": "Certificaten / ACME",
 	"settings.default-site": "Standaard Site",
 	"settings.default-site.404": "404 Pagina",
