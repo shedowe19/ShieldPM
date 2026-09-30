@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
 	patch: vi.fn(),
 	execFile: vi.fn(),
 	audit: vi.fn(),
+	acme: vi.fn(),
 	updateCertificate: vi.fn(),
 }));
 vi.mock("../../lib/express/jwt-decode.js", () => ({
@@ -32,6 +33,7 @@ vi.mock("../../models/certificate.js", async () => {
 	}
 	return { default: { query: (...args) => state.certificateQuery(...args) || Certificate.query(state.db) } };
 });
+vi.mock("../../internal/acme-options.js", () => ({ default: { getPublicPolicy: state.acme } }));
 vi.mock("../../lib/utils.js", () => ({ default: { execFile: state.execFile } }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: state.audit } }));
 vi.mock("../../internal/certificate.js", () => ({ default: { update: state.updateCertificate } }));
@@ -73,6 +75,10 @@ describe("ACME default profile HTTP routes", () => {
 
 	beforeEach(async () => {
 		vi.resetAllMocks();
+		state.acme.mockResolvedValue({
+			server: "https://acme-v02.api.letsencrypt.org/directory",
+			server_tls_verify: true,
+		});
 		await state.db("certificate").delete();
 		vi.stubEnv("ACME_SERVER", "");
 		vi.stubEnv("ACME_SERVER_TLS_VERIFY", "");
@@ -205,7 +211,7 @@ describe("ACME default profile HTTP routes", () => {
 			error: "Certificate 17 has more than 25 domain names and no explicit profile. Keep Standard or replace this certificate with certificates containing at most 25 domain names before selecting the global Short-lived default.",
 		});
 		expect(state.policy).toBe("standard");
-		expect(state.execFile).toHaveBeenCalledExactlyOnceWith("certbot", ["--help", "all"]);
+		expect(state.execFile).not.toHaveBeenCalled();
 		expect(state.patch).not.toHaveBeenCalled();
 		expect(state.audit).not.toHaveBeenCalled();
 	});

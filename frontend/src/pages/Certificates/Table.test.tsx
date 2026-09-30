@@ -36,6 +36,21 @@ afterEach(() => {
 	mocks.canManage = true;
 });
 describe("certificate renewal availability", () => {
+	it("labels managed certificates as ACME without assuming their issuer is Let's Encrypt", () => {
+		render(
+			<Table
+				data={[
+					{
+						...certificate,
+						provider: "letsencrypt",
+						meta: { acmeServer: "https://ca.example.test/directory" },
+					},
+				]}
+			/>,
+		);
+		expect(screen.getByText("certificates.acme")).toBeInTheDocument();
+		expect(screen.queryByText("lets-encrypt")).not.toBeInTheDocument();
+	});
 	it.each(["other", "internal"])("does not offer ACME renewal for %s certificates", (provider) => {
 		render(<Table data={[{ ...certificate, provider }]} />);
 		expect(screen.queryByText("action.renew")).not.toBeInTheDocument();

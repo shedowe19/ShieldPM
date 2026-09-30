@@ -1,3 +1,15 @@
+vi.mock("../../internal/acme-options.js", () => ({
+	default: {
+		getPublicPolicy: async () => ({ ocsp_stapling: false, custom_ocsp_stapling: false, default_certificate_id: 0 }),
+	},
+}));
+vi.mock("../../internal/acme-tls.js", () => ({
+	default: {
+		getDefaultIncludePath: () => "/data/nginx/include/default-tls.conf",
+		refreshDefaultInclude: async () => {},
+	},
+}));
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({ hosts: [] }));

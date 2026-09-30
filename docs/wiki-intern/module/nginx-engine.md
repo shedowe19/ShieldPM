@@ -11,6 +11,7 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 ## Wichtige Dateien
 
 - `backend/internal/nginx.js` — Hauptlogik
+- `backend/internal/acme-tls.js` — Standard-TLS-Include und live angewendete OCSP-/Zertifikatswahl
 - `backend/templates/proxy_host.conf` — Proxy-Host-Template
 - `backend/templates/_proxy_logic.conf` — Gemeinsame Proxy-Logik
 - `backend/templates/_upload_relay.conf` — Spezielle Upload-Locations für Proxy-Hosts mit aktiviertem Relay
@@ -21,6 +22,14 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 - `backend/templates/dead_host.conf` — 404-Template
 - `backend/templates/default.conf` — Default-Server
 - `backend/templates/ip_ranges.conf` — IP-Ranges
+
+## TLS-Optionen aus der Datenbank
+
+Die Engine liest die öffentlichen `acme-options` für OCSP und Standard-TLS; weder EAB-Kennung noch Secret werden als vollständiger Einstellungsdatensatz an Templates gereicht. Der Template-Kontext `acme_options` enthält nur die beiden Stapling-Schalter. ACME-/Custom-OCSP-Abrufe beim Reload stammen ebenfalls aus der Datenbankwahl. Sie verwenden weiterhin den installierten OCSP-Fetcher; interne Zertifikate erhalten keinen OCSP-Block.
+
+`acme-tls.js` erzeugt `/data/nginx/include/default-tls.conf` für Verwaltungsoberfläche, GoAccess und Default-Site. Es wählt nur verwaltete Zertifikat-/Schlüsselpaare; `0` verwendet das Dummy-Paar. Beim Start bleibt eine nicht mehr verfügbare importierte Auswahl in den Settings erhalten, während das Include auf Dummy zurückfällt, damit die UI zur Korrektur erreichbar bleibt. Neue gespeicherte TLS-Auswahlen werden dagegen vor der Aktivierung geprüft.
+
+OCSP-/Standardzertifikat-Änderungen sichern das Include und die aktiven TLS-Hostdateien unter der gemeinsamen Nginx-Sperre, regenerieren mit einem Optionssnapshot und führen `nginx -tq` aus. Datenbankpersistenz und Reload folgen im validierten Aktivierungspfad. Fehler stellen die gesicherten Dateien und vorherige Einstellung wieder her; ein Fehler des Wiederherstellungs-Reloads wird zusätzlich protokolliert. Ein als Standard ausgewähltes Zertifikat muss vor dem Löschen durch eine andere Auswahl ersetzt werden. Details stehen unter [ACME-Einstellungen](../verwaltung/einstellungen.md#acme-konto-und-tls-optionen).
 
 ## Verhalten
 

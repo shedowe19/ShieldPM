@@ -16,6 +16,7 @@ vi.mock("src/api/backend/acmeProfile", () => ({
 vi.mock("src/locale", () => ({ T: ({ id }: { id: string }) => id }));
 vi.mock("src/notifications", () => ({ showObjectSuccess: mocks.success }));
 vi.mock("./CertificateOptionsCard", () => ({ default: () => null }));
+vi.mock("./AcmeOptionsCard", () => ({ default: () => null }));
 vi.mock("src/components/Loading", () => ({ Loading: () => <div role="status">Loading certificates</div> }));
 vi.mock("src/components/ui/select", () => ({
 	Select: ({

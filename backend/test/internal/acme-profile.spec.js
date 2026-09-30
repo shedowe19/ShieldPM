@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
 	certificateQuery: vi.fn(),
 	execFile: vi.fn(),
 	audit: vi.fn(),
+	acme: vi.fn(),
 }));
 vi.mock("../../models/setting.js", async () => {
 	const { Model } = await import("objection");
@@ -32,6 +33,7 @@ vi.mock("../../models/certificate.js", async () => {
 	}
 	return { default: { query: (...args) => state.certificateQuery(...args) || Certificate.query(state.db) } };
 });
+vi.mock("../../internal/acme-options.js", () => ({ default: { getPublicPolicy: state.acme } }));
 vi.mock("../../lib/utils.js", () => ({ default: { execFile: state.execFile } }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: state.audit } }));
 
@@ -57,6 +59,10 @@ describe("persistent ACME profile defaults", () => {
 
 	beforeEach(async () => {
 		vi.resetAllMocks();
+		state.acme.mockResolvedValue({
+			server: "https://acme-v02.api.letsencrypt.org/directory",
+			server_tls_verify: true,
+		});
 		vi.stubEnv("ACME_SERVER", "");
 		vi.stubEnv("ACME_SERVER_TLS_VERIFY", "");
 		temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "shieldpm-acme-profile-"));
@@ -164,7 +170,8 @@ describe("persistent ACME profile defaults", () => {
 	);
 
 	it("requires the selected CA to advertise shortlived before saving and auditing the default", async () => {
-		vi.stubEnv("ACME_SERVER", "https://ca.example.test/directory");
+		vi.stubEnv("ACME_SERVER", "https://obsolete-env.example.test/directory");
+		state.acme.mockResolvedValue({ server: "https://ca.example.test/directory", server_tls_verify: true });
 		expect(await profile.update(access, { profile: "shortlived" })).toEqual({ profile: "shortlived" });
 		expect(state.execFile.mock.calls).toEqual([
 			["certbot", ["--help", "all"]],
@@ -189,7 +196,11 @@ describe("persistent ACME profile defaults", () => {
 	});
 
 	it("honors configured CA TLS verification when checking the selected CA", async () => {
-		vi.stubEnv("ACME_SERVER_TLS_VERIFY", "false");
+		vi.stubEnv("ACME_SERVER_TLS_VERIFY", "true");
+		state.acme.mockResolvedValue({
+			server: "https://acme-v02.api.letsencrypt.org/directory",
+			server_tls_verify: false,
+		});
 		await profile.update(access, { profile: "shortlived" });
 		expect(state.execFile.mock.calls[1][1]).toContain("--insecure");
 		expect(state.execFile.mock.calls[1][1].at(-1)).toBe("https://acme-v02.api.letsencrypt.org/directory");
@@ -205,7 +216,7 @@ describe("persistent ACME profile defaults", () => {
 				message:
 					"Certificate 41 has more than 25 domain names and no explicit profile. Keep Standard or replace this certificate with certificates containing at most 25 domain names before selecting the global Short-lived default.",
 			});
-			expect(state.execFile).toHaveBeenCalledExactlyOnceWith("certbot", ["--help", "all"]);
+			expect(state.execFile).not.toHaveBeenCalled();
 			expect(await profile.getPolicy()).toBe("standard");
 			expect(state.audit).not.toHaveBeenCalled();
 			expect((await state.db("certificate").where({ id: 41 }).first()).meta).toBe(meta);

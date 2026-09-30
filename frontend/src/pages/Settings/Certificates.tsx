@@ -12,6 +12,7 @@ import { useAcmeProfile, useSetAcmeProfile } from "src/hooks/useAcmeProfile";
 import { T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import AcmeOptionsCard from "./AcmeOptionsCard";
 import CertificateOptionsCard from "./CertificateOptionsCard";
 
 export default function Certificates() {
@@ -34,6 +35,7 @@ export default function Certificates() {
 
 	return (
 		<div className="space-y-6">
+			<AcmeOptionsCard />
 			<Card className="border-t-4 border-lime-500/50">
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2">

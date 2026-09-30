@@ -74,8 +74,8 @@ const deprecated = [
     { key: 'NIBEP', msg: 'NIBEP env is not supported. ShieldPM now uses a unix socket instead.' },
     { key: 'GOAIWSP', msg: 'GOAIWSP env is not supported. ShieldPM now uses a unix socket instead.' },
     { key: 'NGINX_HSTS_SUBDMAINS', msg: 'NGINX_HSTS_SUBDMAINS env is replaced by NGINX_HSTS_SUBDOMAINS, please change it to NGINX_HSTS_SUBDOMAINS' },
-    { key: 'LE_SERVER', msg: 'LE_SERVER env is replaced by ACME_SERVER, please change it to ACME_SERVER' },
-    { key: 'LE_STAGING', msg: 'LE_STAGING env is not supported, please use ACME_SERVER.' },
+    { key: 'LE_SERVER', msg: 'LE_SERVER env is not supported. Configure ACME in the ShieldPM web UI.' },
+    { key: 'LE_STAGING', msg: 'LE_STAGING env is not supported. Configure ACME in the ShieldPM web UI.' },
     { key: 'DEBUG', msg: 'DEBUG env is not supported.' },
     { key: 'SKIP_CERTBOT_OWNERSHIP', msg: 'SKIP_CERTBOT_OWNERSHIP env is not supported.' },
     { key: 'IP_RANGES_FETCH_ENABLED', msg: 'IP_RANGES_FETCH_ENABLED env is not supported. Configure IP ranges in the ShieldPM web UI.' },
@@ -90,32 +90,6 @@ deprecated.forEach(item => {
 if (!process.env.TZ || !fs.existsSync(`/usr/share/zoneinfo/${process.env.TZ}`)) {
     fatal('TZ is unset or invalid.');
 }
-
-// ACME Checks
-ensureDefault('ACME_SERVER', 'https://acme-v02.api.letsencrypt.org/directory');
-const acmeServer = getEnv('ACME_SERVER', 'https://acme-v02.api.letsencrypt.org/directory');
-
-if (!/^https?:\/\//.test(acmeServer)) fatal('ACME_SERVER needs to start with http:// or https://');
-
-const acmeEmail = process.env.ACME_EMAIL;
-if (acmeEmail && !acmeEmail.includes('@')) fatal('ACME_EMAIL needs to contains @.');
-
-if ((process.env.ACME_EAB_KID || process.env.ACME_EAB_HMAC_KEY) &&
-    (!process.env.ACME_EAB_KID || !process.env.ACME_EAB_HMAC_KEY || !acmeEmail)) {
-    fatal('You need to set ACME_EAB_KID, ACME_EAB_HMAC_KEY AND ACME_EMAIL (all are needed) or none of them or ONLY ACME_EMAIL.');
-}
-
-ensureDefault('ACME_MUST_STAPLE', 'false');
-checkBool('ACME_MUST_STAPLE');
-
-ensureDefault('ACME_OCSP_STAPLING', 'false');
-checkBool('ACME_OCSP_STAPLING');
-
-ensureDefault('ACME_SERVER_TLS_VERIFY', 'true');
-ensureDefault('CUSTOM_OCSP_STAPLING', 'false');
-
-checkBool('ACME_SERVER_TLS_VERIFY');
-checkBool('CUSTOM_OCSP_STAPLING');
 
 // IDs
 ensureDefault('PUID', '0');
@@ -224,10 +198,8 @@ if (workerProcesses !== 'auto' && !isInt(workerProcesses)) fatal('NGINX_WORKER_P
 checkInt('NGINX_WORKER_CONNECTIONS');
 
 ensureDefault('LOGROTATIONS', '3');
-ensureDefault('DEFAULT_CERT_ID', '0');
 
 checkInt('LOGROTATIONS');
-checkInt('DEFAULT_CERT_ID');
 
 ensureDefault('GOACLA', "--agent-list --real-os --double-decode --anonymize-ip --anonymize-level=1 --keep-last=30 --with-output-resolver --no-query-string");
 ensureDefault('INITIAL_DEFAULT_PAGE', 'congratulations');
@@ -288,12 +260,6 @@ const isPhp84 = exportsMap.PHP84 === 'true' || (exportsMap.PHP84 === undefined &
 
 if (process.env.PHP_APKS && !isPhp82 && !isPhp83 && !isPhp84) {
     fatal('PHP_APKS is set, but PHP82, PHP83 and PHP84 is disabled.');
-}
-
-// ACME Stapling logic
-if (getEnvBool('ACME_MUST_STAPLE', false) && getEnv('ACME_OCSP_STAPLING', 'false') === 'false') {
-    setExport('ACME_OCSP_STAPLING', 'true');
-    info('setting ACME_OCSP_STAPLING to true, since ACME_MUST_STAPLE is set to true.');
 }
 
 // Proxy Protocol logic

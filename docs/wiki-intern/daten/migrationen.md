@@ -6,7 +6,7 @@ Dokumentation des Migrations-Systems und aller vorhandenen Migrationen.
 
 ## Kontext
 
-Migrationen liegen unter `backend/migrations/` und verwenden Knex.js. Alle Dateien sind ESM-Module.
+Migrationen liegen unter `backend/migrations/` und verwenden Knex.js. Alle Dateien sind ESM-Module. Mit der ACME-Optionsmigration umfasst das Verzeichnis 87 Migrationsdateien.
 
 ## Namenskonvention
 
@@ -100,6 +100,8 @@ export { up, down };
 - `20260930000200_add_application_options` — ergänzt `certificate-options` und `ip-ranges-options` mit `value: "configured"` und den jeweiligen JSON-Metadaten. Importiert `ACME_KEY_TYPE`, `CRT`, `SKIP_IP_RANGES` und `IPRT` nur für noch fehlende Datensätze; vorhandene Optionen bleiben erhalten. Gültige alte Prüfintervalle werden auf 12 Stunden begrenzt, gültige IP-Multiplikatoren mit sechs Stunden multipliziert. Die Vorgaben sind ECDSA, 12 Stunden, deaktivierter Abruf und sechs Stunden. Der Rollback entfernt ausschließlich diese beiden Einstellungsdatensätze.
 
 - `20260930000300_add_analytics_nginx_options` — ergänzt `analytics-options` und `nginx-options` bei `value: "configured"`. Importiert die bisherige Retention-Auswertung (`parseInt(raw || default, 10)`) nur bei fehlenden Datensätzen: positive sichere Ganzzahlen bleiben unverändert, fehlende/leere Werte verwenden 24/35, ausdrücklich ungültige nichtleere Werte verwenden `Number.MAX_SAFE_INTEGER` mit einer Warnung ohne Rohwert. Formatierung ist aktiviert, außer `DISABLE_NGINX_BEAUTIFIER` war exakt `true`. Vorhandene Optionen bleiben erhalten; nach Anlage gibt es keine Laufzeit-Rückfallebene zur Umgebung.
+
+- `20260930000400_add_acme_options` — ergänzt ausschließlich den noch fehlenden `acme-options`-Datensatz mit `value: "configured"`. Importiert einmalig CA-Verzeichnis, E-Mail, EAB-Paar, Must-Staple, beide OCSP-Optionen, TLS-Prüfung und Standardzertifikat-ID aus den neun alten Umgebungsvariablen. EAB-HMAC wird vor der Anlage verschlüsselt; bestehende gespeicherte Optionen bleiben erhalten. Ungültige Server-/E-Mail-/EAB-Kombinationen bleiben zur Reparatur sichtbar und werden ohne Rohwertausgabe gemeldet. Boolesche Werte werden exakt als `true`/`false` importiert; ungültige Werte verwenden ihre technischen Vorgaben. Must-Staple schaltet ACME-OCSP mit ein, ungültige Standardzertifikat-IDs ergeben `0`. Account-ID ist anfangs leer, die bisherige Zustimmung zu den Bedingungen bleibt `true`. Die Migration registriert keinen Account und fragt keinen externen Dienst ab. Der Rollback entfernt ausschließlich diesen Einstellungsdatensatz.
 
 ## Datenintegrität bei Migrationen
 

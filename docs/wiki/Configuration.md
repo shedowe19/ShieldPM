@@ -115,22 +115,15 @@ On upgrade, `20260930000300_add_analytics_nginx_options` imports `ANALYTICS_DETA
 
 ## 🔐 SSL & ACME (Let's Encrypt)
 
-| Variable                 | Description                                                                                               | Default                  |
-| :----------------------- | :-------------------------------------------------------------------------------------------------------- | :----------------------- |
-| `ACME_EMAIL`             | ACME registration email; recommended for Let's Encrypt and required for ZeroSSL/Google Public CA with EAB | —                        |
-| `ACME_SERVER`            | Custom ACME server URL                                                                                    | Let's Encrypt Production |
-| `ACME_EAB_KID`           | External Account Binding Key ID                                                                           | —                        |
-| `ACME_EAB_HMAC_KEY`      | External Account Binding HMAC Key                                                                         | —                        |
-| `ACME_MUST_STAPLE`       | Enable OCSP Must-Staple extension                                                                         | `false`                  |
-| `ACME_OCSP_STAPLING`     | Enable OCSP Stapling                                                                                      | `false`                  |
-| `ACME_SERVER_TLS_VERIFY` | Verify the ACME server TLS certificate                                                                    | `true`                   |
-| `CUSTOM_OCSP_STAPLING`   | Enable OCSP Stapling for custom certificates                                                              | `false`                  |
-| `DEFAULT_CERT_ID`        | Default certificate ID for otherwise unmatched hosts (`0` uses the dummy certificate)                     | `0`                      |
+**Settings → Certificates / ACME** manages the CA directory, registration email, EAB credentials, terms agreement, CA TLS verification, Must-Staple, ACME/custom OCSP stapling and default TLS certificate in the database. Let's Encrypt production, verified CA TLS and the dummy default certificate (`0`) are the initial defaults; Must-Staple and OCSP are disabled.
 
 Use **Settings → Certificates / ACME** to save the global **Standard** or **Short-lived** profile in ShieldPM. The database default is Standard, and a saved change applies immediately without restarting. New certificate dialogs use this default and allow an individual override; certificates with an explicit saved profile keep it. Legacy certificates without profile metadata use the global choice on renewal. The former `ACME_PROFILE` environment variable is ignored; remove it from existing configuration and review the saved choice in Settings after upgrading. See [SSL Certificates](SSL-Certificates).
 
-> [!WARNING]
-> Set `ACME_EMAIL` for account notices and to use providers that require it. For Let's Encrypt, the runtime can register without an email; ZeroSSL requires one, and EAB settings must include an email.
+The CA default applies to new certificates. Existing certificates keep their original CA/account during renewal and revocation; saved issuer metadata is checked against their Certbot lineage. Registration is performed when needed by the backend, and failures leave the UI accessible. EAB credentials can be retained, replaced together or explicitly cleared; the encrypted HMAC secret is never returned by GET, audit or GitOps export.
+
+OCSP/default-certificate changes regenerate, test and reload Nginx, rolling back the setting and configuration if activation fails. Other fields apply to the next certificate operation without a restart or forced renewal. Let's Encrypt no longer supports Must-Staple or OCSP; see the [SSL guide](SSL-Certificates) for official references and provider-specific options.
+
+On upgrade, the ACME-options migration imports `ACME_SERVER`, `ACME_EMAIL`, `ACME_EAB_KID`, `ACME_EAB_HMAC_KEY`, `ACME_MUST_STAPLE`, `ACME_OCSP_STAPLING`, `ACME_SERVER_TLS_VERIFY`, `CUSTOM_OCSP_STAPLING` and `DEFAULT_CERT_ID` only when creating a missing settings row. Saved database settings are preserved. Invalid legacy server/email/EAB combinations can be repaired in the UI. These retired variables no longer control runtime behavior; remove them after reviewing the migrated settings.
 
 ---
 

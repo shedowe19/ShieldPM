@@ -289,37 +289,16 @@ else
 fi
 
 
-select_default_certificate /data/tls "$DEFAULT_CERT_ID"
-echo "DEFAULT_CERT set to $DEFAULT_CERT"
-echo "DEFAULT_KEY set to $DEFAULT_KEY"
-
-if { [ "$DEFAULT_CERT" = "/data/tls/dummycert.pem" ] && [ "$DEFAULT_KEY" != "/data/tls/dummykey.pem" ]; } || { [ "$DEFAULT_CERT" != "/data/tls/dummycert.pem" ] && [ "$DEFAULT_KEY" = "/data/tls/dummykey.pem" ]; }; then
-    export DEFAULT_CERT=/data/tls/dummycert.pem
-    export DEFAULT_KEY=/data/tls/dummykey.pem
-    echo "something went wrong, using dummycerts."
+# Bootstrap Nginx with a complete fallback pair. The backend applies saved TLS options.
+if [ ! -s /data/tls/dummycert.pem ] || [ ! -s /data/tls/dummykey.pem ]; then
+    rm -f /data/tls/dummycert.pem /data/tls/dummykey.pem
+    openssl req -new -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -days 365000 -nodes -x509 -subj '/CN=*' -sha512 -keyout /data/tls/dummykey.pem -out /data/tls/dummycert.pem || exit 1
 fi
-
-if [ "$DEFAULT_CERT" = "/data/tls/dummycert.pem" ] || [ "$DEFAULT_KEY" = "/data/tls/dummykey.pem" ]; then
-    if [ ! -s /data/tls/dummycert.pem ] || [ ! -s /data/tls/dummykey.pem ]; then
-        rm -vrf /data/tls/dummycert.pem /data/tls/dummykey.pem
-        openssl req -new -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -days 365000 -nodes -x509 -subj '/CN=*' -sha512 -keyout /data/tls/dummykey.pem -out /data/tls/dummycert.pem
-    fi
-    unset DEFAULT_STAPLING_FILE
-else
-    rm -vrf /data/tls/dummycert.pem /data/tls/dummykey.pem
-fi
-
-sed -i "s|ssl_certificate .*|ssl_certificate $DEFAULT_CERT;|g" /app/templates/default.conf
-sed -i "s|ssl_certificate_key .*|ssl_certificate_key $DEFAULT_KEY;|g" /app/templates/default.conf
-configure_certificate_stapling /app/templates/default.conf || exit 1
-
-sed -i "s|ssl_certificate .*|ssl_certificate $DEFAULT_CERT;|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
-sed -i "s|ssl_certificate_key .*|ssl_certificate_key $DEFAULT_KEY;|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
-configure_certificate_stapling /usr/local/nginx/conf/conf.d/shieldpm.conf || exit 1
-
-sed -i "s|ssl_certificate .*|ssl_certificate $DEFAULT_CERT;|g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
-sed -i "s|ssl_certificate_key .*|ssl_certificate_key $DEFAULT_KEY;|g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
-configure_certificate_stapling /usr/local/nginx/conf/conf.d/include/goaccess.conf || exit 1
+mkdir -p /data/nginx/include || exit 1
+printf '%s\n' 'ssl_certificate /data/tls/dummycert.pem;' 'ssl_certificate_key /data/tls/dummykey.pem;' > /data/nginx/include/default-tls.conf || exit 1
+configure_default_tls_include /app/templates/default.conf '{{ default_tls_include }}' || exit 1
+configure_default_tls_include /usr/local/nginx/conf/conf.d/shieldpm.conf /data/nginx/include/default-tls.conf || exit 1
+configure_default_tls_include /usr/local/nginx/conf/conf.d/include/goaccess.conf /data/nginx/include/default-tls.conf || exit 1
 
 configure_ui_listeners /usr/local/nginx/conf/conf.d/shieldpm.conf "$NPM_IPV4_BINDING" "$NPM_IPV6_BINDING" "$NPM_PORT" || exit 1
 configure_ui_listeners /usr/local/nginx/conf/conf.d/include/goaccess.conf "$GOA_IPV4_BINDING" "$GOA_IPV6_BINDING" "$GOA_PORT" || exit 1
@@ -349,6 +328,8 @@ else
     fi
 fi
 migrate_default_nginx_config /usr/local/nginx/conf/conf.d/default.conf /data/nginx/default.conf /data/shieldpm/migration-backups || exit 1
+configure_default_tls_include /data/nginx/default.conf /data/nginx/include/default-tls.conf || exit 1
+configure_stale_stapling_files /data/nginx || exit 1
 
 if [ "$REGENERATE_ALL" = "true" ]; then
     find /data/nginx/proxy_host /data/nginx/redirection_host /data/nginx/dead_host /data/nginx/stream -name "*.conf" -delete

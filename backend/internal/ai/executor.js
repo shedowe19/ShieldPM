@@ -646,7 +646,7 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				case "force_nginx_reload": {
 					await access.can("settings:update");
-					await internalNginx.reload();
+					await internalNginx.withConfigurationLock(() => internalNginx.reload());
 					result = "Nginx Reloaded";
 					break;
 				}

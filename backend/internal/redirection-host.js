@@ -294,7 +294,7 @@ const internalRedirectionHost = {
 				await redirectionHostModel.transaction(async (trx) => {
 					await redirectionHostModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
 					await internalNginx.deleteConfig("redirection_host", row);
-					await internalNginx.reload();
+					await internalNginx.reload({ trx });
 				});
 			} catch (error) {
 				// The database transaction has rolled back. Restore the listener
@@ -393,7 +393,7 @@ const internalRedirectionHost = {
 				await redirectionHostModel.transaction(async (trx) => {
 					await redirectionHostModel.query(trx).where("id", row.id).patch({ enabled: 0 });
 					await internalNginx.deleteConfig("redirection_host", row);
-					await internalNginx.reload();
+					await internalNginx.reload({ trx });
 				});
 			} catch (error) {
 				// The database transaction has rolled back. Restore the listener

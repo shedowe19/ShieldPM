@@ -49,7 +49,7 @@ Vom Docker-Workflow erfasste Pushes auf `develop` veröffentlichen nach erfolgre
 
 Nach dem Build führt `scripts/ci/docker-smoke.sh` in beiden Architektur-Jobs einen echten Containerstart mit PUID/PGID `0` und `1000` aus: Bei Pull Requests aus dem lokal geladenen Image, bei Pushes aus dem veröffentlichten Architekturbild. Die Runner `ubuntu-latest` und `ubuntu-24.04-arm` passen nativ zu ihren Images; QEMU ist dafür nicht erforderlich. Jeder Container erhält ein eigenes temporäres Datenvolume und `--network none`. `TZ=UTC`, deaktiviertes IPv6 und die auf dem frischen Datenvolume standardmäßig deaktivierte Cloudflare-IP-Aktualisierung halten die Prüfung unabhängig von externen Diensten.
 
-Ein ausdrücklich als Testfixture gekennzeichneter Marker im ACME-Account-Verzeichnis überspringt ausschließlich die sonst vor dem Dienststart versuchte Registrierung. Er enthält keine Zugangsdaten und ist kein nutzbarer ACME-Account. Die Prüfung wartet höchstens 180 Sekunden pro Container auf den vorhandenen Healthcheck. Anschließend prüft sie als jeweilige Service-UID den Backend-Socket, schreibt in die generierte Standardkonfiguration und das Certbot-Plugin-Verzeichnis, führt `nginx -tq`, Reload und Healthcheck aus und kontrolliert, dass `/run`, `/tmp` und `/usr/local` weiterhin Root gehören. Bei Fehlern werden Status und begrenzte Containerlogs ausgegeben; Container, Volumes und lokale Fixtures werden auch im Fehlerfall entfernt. Der Workflow-Schritt ist zusätzlich auf zehn Minuten begrenzt.
+ACME-Konten werden erst bei einer späteren Zertifikatsoperation registriert; eine Registrierung blockiert den Dienststart nicht. Die Prüfung wartet höchstens 180 Sekunden pro Container auf den vorhandenen Healthcheck. Anschließend prüft sie als jeweilige Service-UID den Backend-Socket, schreibt in die generierte Standardkonfiguration und das Certbot-Plugin-Verzeichnis, führt `nginx -tq`, Reload und Healthcheck aus und kontrolliert, dass `/run`, `/tmp` und `/usr/local` weiterhin Root gehören. Bei Fehlern werden Status und begrenzte Containerlogs ausgegeben; Container, Volumes und lokale Fixtures werden auch im Fehlerfall entfernt. Der Workflow-Schritt ist zusätzlich auf zehn Minuten begrenzt.
 
 Lokal verwendet `bash scripts/ci/docker-smoke.sh IMAGE` ausschließlich ein bereits geladenes Image derselben Architektur. `scripts/tests/test_docker_smoke.py` prüft Erfolg, Health-Timeout und Schreibfehler einschließlich Cleanup mit einem simulierten Docker-CLI; der Docker-Build-Job führt den tatsächlichen Docker-Lauf aus.
 
@@ -97,6 +97,12 @@ Die anschließenden Analytics- und Nginx-Einstellungen in PR #146 erhöhen den G
 Beide Tabs werden verzögert geladen und verwenden den gemeinsamen Formularablauf; die Hinweise und Felder sind in
 allen 13 Sprachen verfügbar. Das Gesamtbudget steigt um weitere 6.000 auf 1.267.000 Byte und lässt 3.411 Byte Spielraum.
 Größter JavaScript-Chunk und Stylesheets bleiben bei 284.537 beziehungsweise 16.098 Byte; ihre Grenzen ändern sich nicht.
+
+Die vollständigen ACME-Einstellungen in PR #146 ergänzen Konto-/CA-Auswahl, geschützte EAB-Eingaben und die TLS-Optionen
+im vorhandenen Zertifikatstab. Der frische Produktions-Build misst 1.272.930 Byte JavaScript insgesamt, also 9.341 Byte
+mehr als die vorherige Baseline. Die Felder und Hinweise sind in allen 13 Sprachen übersetzt; neue Abhängigkeiten wurden
+nicht ergänzt. Das Gesamtbudget steigt um 10.000 auf 1.277.000 Byte und lässt 4.070 Byte Spielraum. Der größte
+JavaScript-Chunk (284.537 Byte) und die Stylesheets (16.098 Byte) behalten ihre bisherigen Grenzen.
 
 ## Native / LXC Build
 

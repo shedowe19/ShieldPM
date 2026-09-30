@@ -2,8 +2,9 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import knex from "knex";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { runMigrations } from "../../migrate.js";
 import { backendSourcePath } from "../helpers/source-path.js";
 
@@ -23,6 +24,7 @@ const connection = {
 };
 
 afterEach(async () => {
+	vi.unstubAllEnvs();
 	for (const databaseName of databases.splice(0)) {
 		const admin = knex({ client: "mysql2", connection });
 		try {
@@ -42,8 +44,11 @@ const createMigrationDirectory = () => {
 	temporaryDirectories.push(root);
 	fs.mkdirSync(directory);
 	fs.mkdirSync(join(root, "internal"));
+	fs.mkdirSync(join(root, "lib"));
 	fs.symlinkSync(backendSourcePath("node_modules"), join(root, "node_modules"), "dir");
 	fs.writeFileSync(join(root, "logger.js"), "export const migrate = { info() {}, warn() {} };\n");
+	fs.copyFileSync(backendSourcePath("lib", "encryption.js"), join(root, "lib", "encryption.js"));
+	fs.writeFileSync(join(root, "lib", "config.js"), 'export const getEncryptionKey = () => "ab".repeat(32);\n');
 	fs.writeFileSync(
 		join(root, "internal", "nginx.js"),
 		"export default { deleteConfig: async () => true, generateConfig: async () => true, reload: async () => true, test: async () => true };\n",
@@ -58,6 +63,10 @@ const mariaDb = shouldRunMariaDb ? describe : describe.skip;
 
 mariaDb("complete MariaDB migration chain", () => {
 	it("applies every migration through the production runner to a fresh database", async () => {
+		const syntheticSecret = "SYNTHETIC_MARIADB_FULL_SCHEMA_EAB_KEY";
+		vi.stubEnv("ACME_EAB_HMAC_KEY", syntheticSecret);
+		vi.stubEnv("ACME_EAB_KID", "synthetic-kid");
+		vi.stubEnv("ACME_EMAIL", "account@example.test");
 		const databaseName = `shieldpm_full_migration_${randomUUID().replaceAll("-", "")}`;
 		databases.push(databaseName);
 		const admin = knex({ client: "mysql2", connection });
@@ -90,9 +99,23 @@ mariaDb("complete MariaDB migration chain", () => {
 			}
 			expect(await database.schema.hasColumn("auth_sessions", "replaced_by_session_id")).toBe(true);
 			expect(await database("setting").where("id", "ai-config").first()).toBeTruthy();
-			for (const id of ["certificate-options", "ip-ranges-options", "analytics-options", "nginx-options"]) {
+			for (const id of [
+				"certificate-options",
+				"ip-ranges-options",
+				"analytics-options",
+				"nginx-options",
+				"acme-options",
+			]) {
 				expect(await database("setting").where({ id }).first()).toMatchObject({ id, value: "configured" });
 			}
+			const acmeRow = await database("setting").where({ id: "acme-options" }).first();
+			const acmeMeta = typeof acmeRow.meta === "string" ? JSON.parse(acmeRow.meta) : acmeRow.meta;
+			const { decrypt } = await import(
+				pathToFileURL(join(migrationRunDirectory, "..", "lib", "encryption.js")).href
+			);
+			expect(acmeMeta.account_id).toBe("");
+			expect(decrypt(acmeMeta.encrypted_eab_hmac_key)).toBe(syntheticSecret);
+			expect(JSON.stringify(acmeRow)).not.toContain(syntheticSecret);
 
 			await expect(runMigrations(database, migrationRunDirectory)).resolves.toBeTruthy();
 			expect(await database("migrations").count({ count: "id" }).first()).toMatchObject({

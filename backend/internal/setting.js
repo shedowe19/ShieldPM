@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import errs from "../lib/error.js";
 import settingModel from "../models/setting.js";
+import internalAcmeOptions from "./acme-options.js";
+import { redactAcmeSetting } from "./acme-options-public.js";
 import internalAuditLog from "./audit-log.js";
 import internalNginx from "./nginx.js";
 
@@ -18,7 +20,11 @@ const internalSetting = {
 		if (data.id === "acme-profile") {
 			throw new errs.ValidationError("Use the certificate ACME profile endpoint to update this setting");
 		}
-		if (["certificate-options", "ip-ranges-options", "analytics-options", "nginx-options"].includes(data.id)) {
+		if (
+			["acme-options", "certificate-options", "ip-ranges-options", "analytics-options", "nginx-options"].includes(
+				data.id,
+			)
+		) {
 			throw new errs.ValidationError("Use the application options endpoint to update this setting");
 		}
 		const performUpdate = async () => {
@@ -39,6 +45,7 @@ const internalSetting = {
 			}
 
 			const updatedRow = { ...row, ...patch };
+			const acmePolicy = await internalAcmeOptions.getPublicPolicy();
 			const htmlPath = "/data/html/index.html";
 			const changesHtml = updatedRow.value === "html";
 			const previousHtml = changesHtml && fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath) : null;
@@ -53,7 +60,7 @@ const internalSetting = {
 				await internalNginx.test();
 				await settingModel.transaction(async (trx) => {
 					await settingModel.query(trx).where({ id: data.id }).patch(patch);
-					await internalNginx.reload();
+					await internalNginx.reload({ acme_options: acmePolicy, trx });
 				});
 			} catch (_error) {
 				// Restore files as well as the database transaction before reloading.
@@ -64,7 +71,7 @@ const internalSetting = {
 				if (hadConfig) await internalNginx.restoreConfig("default", row);
 				else await internalNginx.deleteConfig("default");
 				await internalNginx.test();
-				await internalNginx.reload();
+				await internalNginx.reload({ acme_options: acmePolicy });
 				throw new errs.ValidationError(
 					"Could not reconfigure Nginx. Previous configuration restored. Please check logs.",
 				);
@@ -104,7 +111,7 @@ const internalSetting = {
 		await access.can("settings:get", data.id);
 		const row = await settingModel.query().where("id", data.id).first();
 		if (row) {
-			return row;
+			return redactAcmeSetting(row);
 		}
 		throw new errs.ItemNotFoundError(data.id);
 	},
@@ -129,7 +136,7 @@ const internalSetting = {
 	 */
 	getAll: async (access) => {
 		await access.can("settings:list");
-		return settingModel.query().orderBy("description", "ASC");
+		return (await settingModel.query().orderBy("description", "ASC")).map(redactAcmeSetting);
 	},
 };
 

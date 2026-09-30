@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import knex from "knex";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { decrypt } from "../../lib/encryption.js";
 import { createPostgres } from "../helpers/postgres.js";
 import { backendSourcePath } from "../helpers/source-path.js";
 
@@ -14,11 +15,18 @@ vi.mock("../../internal/nginx.js", () => ({
 	},
 }));
 vi.mock("../../logger.js", () => ({ migrate: { info: vi.fn(), warn: vi.fn() } }));
+vi.mock("../../lib/config.js", () => ({ getEncryptionKey: () => "ab".repeat(32) }));
+
+afterEach(() => vi.unstubAllEnvs());
 
 describe("complete database migration chain", () => {
 	it.each(["sqlite", "postgres"])(
 		"builds a fresh %s schema in one transaction",
 		async (engine) => {
+			const syntheticSecret = "SYNTHETIC_FULL_SCHEMA_EAB_KEY";
+			vi.stubEnv("ACME_EAB_HMAC_KEY", syntheticSecret);
+			vi.stubEnv("ACME_EAB_KID", "synthetic-kid");
+			vi.stubEnv("ACME_EMAIL", "account@example.test");
 			const embedded = engine === "postgres" ? await createPostgres() : null;
 			const database =
 				embedded?.database ||
@@ -47,9 +55,20 @@ describe("complete database migration chain", () => {
 				const acmeProfile = await database("setting").where({ id: "acme-profile" }).first();
 				expect(acmeProfile.value).toBe("standard");
 				expect(acmeProfile.description).not.toMatch(/inherit|ACME_PROFILE/);
-				for (const id of ["certificate-options", "ip-ranges-options", "analytics-options", "nginx-options"]) {
+				for (const id of [
+					"certificate-options",
+					"ip-ranges-options",
+					"analytics-options",
+					"nginx-options",
+					"acme-options",
+				]) {
 					expect(await database("setting").where({ id }).first()).toMatchObject({ id, value: "configured" });
 				}
+				const acmeRow = await database("setting").where({ id: "acme-options" }).first();
+				const acmeMeta = typeof acmeRow.meta === "string" ? JSON.parse(acmeRow.meta) : acmeRow.meta;
+				expect(acmeMeta.account_id).toBe("");
+				expect(decrypt(acmeMeta.encrypted_eab_hmac_key)).toBe(syntheticSecret);
+				expect(JSON.stringify(acmeRow)).not.toContain(syntheticSecret);
 			} finally {
 				if (embedded) await embedded.close();
 				else await database.destroy();

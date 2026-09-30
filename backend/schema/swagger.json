@@ -437,6 +437,14 @@
 				"$ref": "./paths/settings/get.json"
 			}
 		},
+		"/settings/acme-options": {
+			"get": {
+				"$ref": "./paths/settings/acme-options/get.json"
+			},
+			"put": {
+				"$ref": "./paths/settings/acme-options/put.json"
+			}
+		},
 		"/settings/certificate-options": {
 			"get": {
 				"$ref": "./paths/settings/certificate-options/get.json"

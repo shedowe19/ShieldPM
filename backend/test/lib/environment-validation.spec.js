@@ -22,6 +22,15 @@ describe("startup network configuration", () => {
 	);
 	it.each([
 		["ACME_KEY_TYPE", "invalid-key"],
+		["ACME_SERVER", "invalid-url"],
+		["ACME_EMAIL", "invalid-email"],
+		["ACME_EAB_KID", "invalid-kid"],
+		["ACME_EAB_HMAC_KEY", "invalid-key"],
+		["ACME_MUST_STAPLE", "invalid-boolean"],
+		["ACME_OCSP_STAPLING", "invalid-boolean"],
+		["ACME_SERVER_TLS_VERIFY", "invalid-boolean"],
+		["CUSTOM_OCSP_STAPLING", "invalid-boolean"],
+		["DEFAULT_CERT_ID", "invalid-id"],
 		["CRT", "invalid-interval"],
 		["SKIP_IP_RANGES", "invalid-boolean"],
 		["IPRT", "invalid-interval"],
@@ -52,12 +61,6 @@ describe("startup network configuration", () => {
 		} finally {
 			fs.rmSync(directory, { recursive: true, force: true });
 		}
-	});
-	it.each([
-		["ACME_SERVER", "invalid-url"],
-		["ACME_SERVER_TLS_VERIFY", "invalid-boolean"],
-	])("still validates %s after moving profiles to the UI", (key, value) => {
-		expect(validate({ [key]: value, ACME_PROFILE: "shortlived" }).status).toBe(1);
 	});
 	it("compares actual listener ports even with leading zeros", () => {
 		expect(validate({ HTTP_PORT: "080", HTTPS_PORT: "80" }).status).toBe(1);

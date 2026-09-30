@@ -84,7 +84,7 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 							return (
 								<div className="space-y-1">
 									<div>
-										<T id="lets-encrypt" />
+										<T id="certificates.acme" />
 										{r.meta?.dnsChallenge && r.meta?.dnsProvider ? ` – ${r.meta.dnsProvider}` : ""}
 									</div>
 									{r.meta?.letsencryptProfile && (
@@ -200,10 +200,10 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 			</DropdownMenuTrigger>
 			<DropdownMenuContent>
 				<DropdownMenuItem onClick={() => showHTTPCertificateModal()}>
-					<T id="lets-encrypt-via-http" />
+					<T id="certificates.acme-via-http" />
 				</DropdownMenuItem>
 				<DropdownMenuItem onClick={() => showDNSCertificateModal()}>
-					<T id="lets-encrypt-via-dns" />
+					<T id="certificates.acme-via-dns" />
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem onClick={() => showCustomCertificateModal()}>

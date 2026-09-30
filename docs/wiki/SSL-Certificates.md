@@ -34,7 +34,7 @@ ShieldPM makes managing SSL/TLS certificates easy with built-in support for **Le
 6. Click Save
 
 > [!IMPORTANT]
-> `ACME_EMAIL` is recommended so your ACME provider can contact you. ShieldPM can register without an email for providers that allow it; ZeroSSL's automatic registration and any EAB configuration require an email. See [Configuration](Configuration).
+> Configure the CA, registration email and any External Account Binding (EAB) credentials under **Settings → Certificates / ACME**. Providers that allow it can register without an email; ZeroSSL's automatic registration and EAB require one. Registration happens when a certificate operation needs the account, so a provider failure does not block the administration UI. See [Configuration](Configuration).
 
 ### DNS-01 Challenge (For Wildcards)
 
@@ -126,19 +126,39 @@ ShieldPM validates the PEM data and checks that the certificate matches the priv
 
 Use **Settings → Certificates / ACME** to choose the key type (`ecdsa` or `rsa`) and the renewal check interval (1–12 whole hours). The defaults are ECDSA and 12 hours. Saving applies without restarting: the key type is used on the next issuance or renewal, including existing lineages, and the interval replaces the running timer. Neither change immediately issues a new certificate. An automatic renewal batch already in progress keeps its initial key type; a saved change applies to the next batch. Existing `ACME_KEY_TYPE` and `CRT` values are imported once on upgrade when the database setting is created; afterward, use the UI.
 
-The following certificate options still use environment variables:
+The same tab manages the remaining ACME and default-TLS settings:
 
-| Variable             | Description                                                                                    | Default                                                    |
-| :------------------- | :--------------------------------------------------------------------------------------------- | :--------------------------------------------------------- |
-| `ACME_EMAIL`         | Registration email (recommended; required for ZeroSSL's email registration and when using EAB) | —                                                          |
-| `ACME_SERVER`        | Custom ACME server URL                                                                         | Let's Encrypt Production                                   |
-| `ACME_MUST_STAPLE`   | Request OCSP Must-Staple extension                                                             | `false`                                                    |
-| `ACME_OCSP_STAPLING` | Enable OCSP Stapling                                                                           | `false` (automatically enabled if `ACME_MUST_STAPLE=true`) |
-| `DEFAULT_CERT_ID`    | Default cert ID for unconfigured hosts                                                         | `0` (none)                                                 |
+| Option                        | Behavior                                                                                                                        |
+| :---------------------------- | :------------------------------------------------------------------------------------------------------------------------------ |
+| **CA directory**              | Let's Encrypt production/staging, ZeroSSL or a custom ACME directory; applies to new certificates                               |
+| **Registration email**        | Used for the actual ACME account; required with EAB and ZeroSSL's automatic EAB registration                                    |
+| **Account ID**                | Optional Certbot account selection for the chosen CA; required when multiple existing accounts cannot be selected automatically |
+| **EAB credentials**           | Keep the saved pair, replace both values, or explicitly clear it; the HMAC key is write-only and stored encrypted               |
+| **Terms agreement**           | Required for account registration; upgrades retain the previous agreement                                                       |
+| **Verify CA TLS**             | Enabled by default; controls the next ACME connection, including existing-certificate operations                                |
+| **Must-Staple**               | Requests the extension on the next issuance or renewal and enables ACME OCSP stapling; unavailable with Let's Encrypt           |
+| **ACME/custom OCSP stapling** | Enables stapling for the respective certificate type when the issuer supports OCSP                                              |
+| **Default certificate**       | Selects the default TLS certificate; `0` uses ShieldPM's dummy certificate                                                      |
+
+EAB secrets are never returned by GET, audit events or GitOps export. Leaving the replacement fields blank retains the saved credentials; use the explicit clear action to remove them. When changing the CA or EAB identity, replace the matching pair or clear it. ZeroSSL can obtain EAB credentials from the registration email when no pair is supplied.
+
+Changing the CA affects new certificates. Existing certificates retain their original CA and account for renewal and revocation from their Certbot lineage; any saved issuer metadata must match it. To move an existing certificate to another CA, issue a replacement and reassign its hosts. Account registration is performed in the backend when needed, and email changes are applied to the account.
+
+Leave Account ID empty to use a single matching account or register a new one if none exists. Select the desired ID when the CA directory has multiple accounts. Invalid or ambiguous account selection fails the certificate operation while the administration UI remains available.
+
+To delete a certificate selected as the default, first save another default selection (or `0` for the dummy certificate). If an imported selection is unavailable at startup, ShieldPM uses the dummy pair and keeps the saved selection visible for correction in Settings.
+
+OCSP and default-certificate changes regenerate, validate and reload the affected Nginx configuration without a restart. A failed activation restores the previous setting and configuration. Other ACME options apply to subsequent certificate operations; saving alone does not issue or force-renew a certificate or update an account contact. TLS verification and Must-Staple are global policies even for existing lineages: their original CA/account remain unchanged, but enabling verification can cause renewal against an untrusted private CA to fail.
+
+Turning off the Must-Staple request option does not remove the extension from an already issued certificate. ShieldPM rejects disabling the corresponding OCSP setting while an active host, stream or selected default uses a Must-Staple certificate. Keep OCSP enabled, renew or replace those certificates without Must-Staple, then disable OCSP.
+
+Let's Encrypt [stopped accepting Must-Staple requests in 2025](https://letsencrypt.org/2024/12/05/ending-ocsp/) and [closed its OCSP service on August 6, 2025](https://letsencrypt.org/2025/08/06/ocsp-service-has-reached-end-of-life/). Keep both options disabled for Let's Encrypt; ShieldPM rejects Must-Staple with its production and staging directories. Enable these options for another CA only when it supports them.
+
+On upgrade, the ACME-options migration imports the old `ACME_SERVER`, `ACME_EMAIL`, `ACME_EAB_KID`, `ACME_EAB_HMAC_KEY`, `ACME_MUST_STAPLE`, `ACME_OCSP_STAPLING`, `ACME_SERVER_TLS_VERIFY`, `CUSTOM_OCSP_STAPLING` and `DEFAULT_CERT_ID` values once for a missing settings row. Existing saved settings remain authoritative. Invalid old server, email or EAB combinations remain visible for repair rather than silently selecting a different CA. After migration, remove these retired variables and manage the values in the UI.
 
 ### Alternative ACME Providers
 
-You can use any ACME-compatible provider by setting `ACME_SERVER`:
+Choose a preset or enter the ACME directory under **Settings → Certificates / ACME**:
 
 | Provider                    | Server URL                                               |
 | :-------------------------- | :------------------------------------------------------- |
@@ -147,7 +167,7 @@ You can use any ACME-compatible provider by setting `ACME_SERVER`:
 | **ZeroSSL**                 | `https://acme.zerossl.com/v2/DV90`                       |
 | **Google Trust Services**   | `https://dv.acme-v02.api.pki.goog/directory`             |
 
-Buypass [discontinued TLS/SSL and ACME certificate issuance](https://www.buypass.com/products/tls-ssl-certificates/discontinues-issuance-of-tls-ssl-certificates) in October 2025. If an existing installation uses its ACME directory in `ACME_SERVER`, switch to an issuing provider and obtain a replacement certificate before the existing one expires.
+Buypass [discontinued TLS/SSL and ACME certificate issuance](https://www.buypass.com/products/tls-ssl-certificates/discontinues-issuance-of-tls-ssl-certificates) in October 2025. If an existing installation uses that directory, select an issuing provider in Settings and obtain replacement certificates before the existing ones expire.
 
 > [!TIP]
 > Use **Let's Encrypt Staging** for testing to avoid hitting rate limits during development.
@@ -158,12 +178,12 @@ Buypass [discontinued TLS/SSL and ACME certificate issuance](https://www.buypass
 
 ### "Failed to obtain certificate"
 
-| Cause                                  | Fix                                                                                                          |
-| :------------------------------------- | :----------------------------------------------------------------------------------------------------------- |
-| Port 80 not reachable                  | Check firewall, router port forwarding                                                                       |
-| Domain not pointing to server          | Verify DNS A/AAAA records                                                                                    |
-| ACME provider requires an email or EAB | Configure the provider's required `ACME_EMAIL` and, where applicable, `ACME_EAB_KID` and `ACME_EAB_HMAC_KEY` |
-| ACME rate limit exceeded               | Check the provider's retry guidance; use a staging endpoint for future test requests                         |
+| Cause                                  | Fix                                                                                         |
+| :------------------------------------- | :------------------------------------------------------------------------------------------ |
+| Port 80 not reachable                  | Check firewall, router port forwarding                                                      |
+| Domain not pointing to server          | Verify DNS A/AAAA records                                                                   |
+| ACME provider requires an email or EAB | Configure the registration email and required EAB pair under Settings → Certificates / ACME |
+| ACME rate limit exceeded               | Check the provider's retry guidance; use a staging endpoint for future test requests        |
 
 ### "Certificate not renewing"
 

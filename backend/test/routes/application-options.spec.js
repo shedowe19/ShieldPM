@@ -15,6 +15,7 @@ vi.mock("../../lib/express/jwt-decode.js", () => ({
 		next();
 	},
 }));
+vi.mock("../../internal/acme-options.js", () => ({ default: { get: vi.fn(), update: vi.fn() } }));
 vi.mock("../../internal/certificate-options.js", () => ({ default: state.certificate }));
 vi.mock("../../internal/ip-ranges-options.js", () => ({ default: state.ipRanges }));
 vi.mock("../../internal/analytics-options.js", () => ({ default: state.analytics }));

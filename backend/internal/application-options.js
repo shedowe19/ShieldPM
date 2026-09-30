@@ -12,9 +12,9 @@ import internalAuditLog from "./audit-log.js";
 export const createApplicationOptions = (id, name, validate) => {
 	let updates = Promise.resolve();
 	const service = {
-		/** @returns {Promise<T>} */
-		getPolicy: async () => {
-			const row = await settingModel.query().where("id", id).first();
+		/** @param {import("knex").Knex.Transaction} [trx] @returns {Promise<T>} */
+		getPolicy: async (trx) => {
+			const row = await settingModel.query(trx).where("id", id).first();
 			if (!row) throw new errs.ConfigurationError(`The saved ${name.toLowerCase()} are missing`);
 			try {
 				if (row.value !== "configured") throw new errs.ValidationError("Invalid options state");

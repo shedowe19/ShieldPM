@@ -15,7 +15,9 @@ import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
 import { ssl as logger } from "../logger.js";
 import pjson from "../package.json" with { type: "json" };
+import internalAcmeOptions from "./acme-options.js";
 import internalAcmeProfile from "./acme-profile.js";
+import { createAcmeConfig, ensureAcmeAccount, getCertificateIssuer } from "./acme-runtime.js";
 import internalCertificateOptions from "./certificate-options.js";
 
 // State variable for processing lock
@@ -28,19 +30,84 @@ let processing = false;
 export const isProcessing = () => processing;
 
 /** Execute all ACME operations under the same lock, including scheduled renewals. */
-export const runCertbot = async (args, prepare) => {
+const withCertbotLock = async (operation) => {
 	if (processing) {
 		throw new errs.ValidationError("Another Certbot process is currently running. Please try again later.");
 	}
 	processing = true;
 	try {
-		const resolvedArgs = typeof args === "function" ? await args() : args;
-		if (prepare) await prepare();
-		return await utils.execFile("certbot", resolvedArgs);
+		return await operation();
 	} finally {
 		processing = false;
 	}
 };
+
+export const runCertbot = (args, prepare) =>
+	withCertbotLock(async () => {
+		const resolvedArgs = typeof args === "function" ? await args() : args;
+		if (prepare) await prepare();
+		return utils.execFile("certbot", resolvedArgs);
+	});
+
+/** @param {any} certificate @param {string} command @param {string[]} args @param {Function} [prepare] @param {any} [snapshot] */
+const runCertificateCommand = (certificate, command, args, prepare, snapshot) =>
+	withCertbotLock(async () => {
+		const policy = snapshot?.acme || (await internalAcmeOptions.getRuntimePolicy());
+		const profile =
+			command !== "revoke" && certificate.meta?.letsencrypt_profile === undefined
+				? snapshot?.profile || (await internalAcmeProfile.getPolicy())
+				: "standard";
+		const profileArgs = command === "revoke" ? [] : getCertificateProfileArgs(certificate, profile);
+		const keyType =
+			command === "revoke" ? null : snapshot?.key_type || (await internalCertificateOptions.getPolicy()).key_type;
+		const issuer =
+			command === "certonly" ? { server: policy.server, account: null } : await getCertificateIssuer(certificate);
+		if (
+			command !== "revoke" &&
+			policy.must_staple &&
+			/^acme(?:-staging)?-v02\.api\.letsencrypt\.org$/i.test(new URL(issuer.server).hostname)
+		) {
+			throw new errs.ConfigurationError(
+				"Let's Encrypt no longer supports Must-Staple certificates. Disable Must-Staple in Settings.",
+			);
+		}
+		if (profileArgs.includes("shortlived"))
+			await internalAcmeProfile.validatePolicyForServer(issuer.server, policy.server_tls_verify, "shortlived");
+		const config = await createAcmeConfig(policy, issuer.server);
+		try {
+			if (certificate.meta?.dns_provider_credentials) {
+				config.secrets.push(certificate.meta.dns_provider_credentials);
+				for (const line of certificate.meta.dns_provider_credentials.split(/\r?\n/)) {
+					const value = line.match(/^\s*[^#=]+\s*=\s*(.*?)\s*$/)?.[1];
+					if (value) config.secrets.push(value);
+				}
+			}
+			const account = await ensureAcmeAccount(config, policy, issuer, {
+				allowRegistration: command === "certonly",
+			});
+			if (prepare) await prepare();
+			const result = await config.exec([
+				command,
+				"--server",
+				issuer.server,
+				"--account",
+				account,
+				...args,
+				...(keyType ? ["--key-type", keyType] : []),
+				...profileArgs,
+			]);
+			if (command === "certonly") {
+				certificate.meta ||= {};
+				Object.assign(certificate.meta, {
+					acme_server: issuer.server,
+					acme_account: account,
+				});
+			}
+			return result;
+		} finally {
+			await config.cleanup();
+		}
+	});
 
 /**
  * Request a certificate using HTTP challenge
@@ -50,21 +117,13 @@ export const runCertbot = async (args, prepare) => {
 export const requestCertbot = async (certificate) => {
 	logger.info(`Requesting Certbot certificates for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`);
 
-	const result = await runCertbot(async () => [
-		"--config",
-		"/etc/certbot.ini",
-		"certonly",
+	const result = await runCertificateCommand(certificate, "certonly", [
 		"--cert-name",
 		`npm-${certificate.id}`,
 		"--domains",
 		certificate.domain_names.map((domain_name) => punycode.toASCII(domain_name)).join(","),
-		"--server",
-		process.env.ACME_SERVER,
 		"--authenticator",
 		"webroot",
-		"--key-type",
-		(await internalCertificateOptions.getPolicy()).key_type,
-		...getCertificateProfileArgs(certificate),
 	]);
 	logger.success(result);
 	return result;
@@ -98,11 +157,10 @@ export const requestCertbotWithDnsChallenge = async (certificate) => {
 	const pluginName = dnsPlugin.full_plugin_name || `dns-${certificate.meta.dns_provider}`;
 	const credentialsArg = dnsPlugin.credentials_argument || `${pluginName}-credentials`;
 
-	const result = await runCertbot(
-		async () => [
-			"--config",
-			"/etc/certbot.ini",
-			"certonly",
+	const result = await runCertificateCommand(
+		certificate,
+		"certonly",
+		[
 			"--cert-name",
 			`npm-${certificate.id}`,
 			"--domains",
@@ -117,11 +175,6 @@ export const requestCertbotWithDnsChallenge = async (certificate) => {
 						String(certificate.meta.propagation_seconds),
 					]
 				: []),
-			"--server",
-			process.env.ACME_SERVER,
-			"--key-type",
-			(await internalCertificateOptions.getPolicy()).key_type,
-			...getCertificateProfileArgs(certificate),
 		],
 		async () => {
 			// Installing/upgrading plugins and replacing credentials must not race a running renewal.
@@ -142,29 +195,17 @@ export const requestCertbotWithDnsChallenge = async (certificate) => {
  * @param {Object} certificate - The certificate row
  * @returns {Promise<string>}
  */
-export const renewCertbot = async (certificate) => {
+export const renewCertbot = async (certificate, options = {}) => {
 	logger.info(`Renewing Certbot certificates for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`);
-
-	const renewResult = await runCertbot(async () => {
-		const policy =
-			certificate.meta?.letsencrypt_profile === undefined ? await internalAcmeProfile.getPolicy() : "standard";
-		const options = await internalCertificateOptions.getPolicy();
-		return [
-			"--config",
-			"/etc/certbot.ini",
-			"renew",
-			"--server",
-			process.env.ACME_SERVER,
-			"--cert-name",
-			`npm-${certificate.id}`,
-			"--force-renewal",
-			"--key-type",
-			options.key_type,
-			...getCertificateProfileArgs(certificate, policy),
-		];
-	});
-	logger.info(renewResult);
-	return renewResult;
+	const result = await runCertificateCommand(
+		certificate,
+		"renew",
+		["--cert-name", `npm-${certificate.id}`, ...(options.force === false ? ["--quiet"] : ["--force-renewal"])],
+		undefined,
+		options.snapshot,
+	);
+	if (result) logger.info(result);
+	return result;
 };
 
 /**
@@ -184,26 +225,7 @@ export const renewCertbotWithDnsChallenge = async (certificate) => {
 		`Renewing LetsEncrypt certificates via ${dnsPlugin.name} for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`,
 	);
 
-	const renewResult = await runCertbot(async () => {
-		const policy =
-			certificate.meta?.letsencrypt_profile === undefined ? await internalAcmeProfile.getPolicy() : "standard";
-		const options = await internalCertificateOptions.getPolicy();
-		return [
-			"--config",
-			"/etc/certbot.ini",
-			"renew",
-			"--server",
-			process.env.ACME_SERVER,
-			"--cert-name",
-			`npm-${certificate.id}`,
-			"--force-renewal",
-			"--key-type",
-			options.key_type,
-			...getCertificateProfileArgs(certificate, policy),
-		];
-	});
-	logger.info(renewResult);
-	return renewResult;
+	return renewCertbot(certificate);
 };
 
 /**
@@ -217,17 +239,10 @@ export const revokeCertbot = async (certificate, throwErrors, prepare) => {
 	logger.info(`Revoking Certbot certificates for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`);
 
 	try {
-		const result = await runCertbot(
-			[
-				"--config",
-				"/etc/certbot.ini",
-				"revoke",
-				"--cert-name",
-				`npm-${certificate.id}`,
-				"--reason",
-				"unspecified",
-				"--delete-after-revoke",
-			],
+		const result = await runCertificateCommand(
+			certificate,
+			"revoke",
+			["--cert-name", `npm-${certificate.id}`, "--reason", "unspecified", "--delete-after-revoke"],
 			prepare,
 		);
 		fs.rmSync(`/data/tls/certbot/live/npm-${certificate.id}.der`, { force: true });

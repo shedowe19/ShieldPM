@@ -25,22 +25,18 @@ class RuntimeConfigTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         return result.stdout
 
-    def test_certbot_options_can_be_changed_back_after_restart(self):
+    def test_certbot_cleans_all_retired_settings_without_reading_environment(self):
         config = self.root / "certbot.ini"
-        config.write_text((REPO / "rootfs/etc/certbot.ini").read_text())
-        for staple, verify in [
-            ("false", "false"),
-            ("true", "true"),
-            ("false", "true"),
-        ]:
-            with self.subTest(staple=staple, verify=verify):
-                self.shell('configure_certbot_ini "$1"', config,
-                           ACME_MUST_STAPLE=staple, ACME_SERVER_TLS_VERIFY=verify)
-                lines = config.read_text().splitlines()
-                self.assertIn(f"must-staple = {staple}", lines)
-                self.assertIn(f"no-verify-ssl = {'true' if verify == 'false' else 'false'}", lines)
-                self.assertFalse(any("required-profile" in line or "preferred-profile" in line
-                                     or "key-type" in line for line in lines))
+        baseline = (REPO / "rootfs/etc/certbot.ini").read_text()
+        directives = ["server", "email", "eab-kid", "eab-hmac-key", "must-staple",
+                      "no-verify-ssl", "register-unsafely-without-email"]
+        config.write_text(baseline + "".join(f"{key} = obsolete\n  # {key} = obsolete\n" for key in directives))
+        for _ in range(2):
+            self.shell('configure_certbot_ini "$1"', config, ACME_SERVER="invalid", ACME_EMAIL="invalid",
+                       ACME_EAB_KID="obsolete", ACME_EAB_HMAC_KEY="obsolete", ACME_MUST_STAPLE="invalid",
+                       ACME_SERVER_TLS_VERIFY="invalid", ACME_OCSP_STAPLING="invalid",
+                       CUSTOM_OCSP_STAPLING="invalid", DEFAULT_CERT_ID="invalid")
+            self.assertEqual(config.read_text(), baseline)
 
     def test_profiles_ignore_removed_environment_variable_and_clear_old_global_options(self):
         config = self.root / "certbot.ini"
@@ -67,13 +63,6 @@ class RuntimeConfigTests(unittest.TestCase):
                    "192.0.2.2", "[2001:db8::2]", "9443", DISABLE_IPV6="false")
         self.assertEqual(config.read_text(), "  listen 192.0.2.2:9443 ssl proxy_protocol;\n  listen [2001:db8::2]:9443 ssl;\n  listen unix:/run/internal.sock;\n")
 
-    def certificate(self, provider, identifier=7):
-        directory = self.root / provider / f"npm-{identifier}"
-        directory.mkdir(parents=True)
-        (directory / "fullchain.pem").write_text("certificate")
-        (directory / "privkey.pem").write_text("key")
-        return directory
-
     def test_nginx_toggles_and_workers_return_to_defaults(self):
         config = self.root / "nginx.conf"
         baseline = ("log_not_found off;\n#error_page 404 = @redirect;\nproxy_buffering on;\n"
@@ -91,41 +80,44 @@ class RuntimeConfigTests(unittest.TestCase):
                    NGINX_WORKER_PROCESSES="auto", NGINX_WORKER_CONNECTIONS="512")
         self.assertEqual(config.read_text(), baseline)
 
-    def selection(self, identifier, **environment):
-        return self.shell('select_default_certificate "$1" "$2"; printf "%s\\n%s\\n%s" "$DEFAULT_CERT" "$DEFAULT_KEY" "${DEFAULT_STAPLING_FILE:-}"',
-                          self.root, identifier, ACME_OCSP_STAPLING="true", CUSTOM_OCSP_STAPLING="true", **environment).split("\n")
-
-    def test_internal_default_certificate_is_selected_without_stale_stapling(self):
-        directory = self.certificate("internal")
-        self.assertEqual(self.selection(7, DEFAULT_STAPLING_FILE="stale.der"),
-                         [str(directory / "fullchain.pem"), str(directory / "privkey.pem"), ""])
-
-    def test_incomplete_certificate_pair_falls_back_together(self):
-        directory = self.certificate("custom")
-        (directory / "privkey.pem").unlink()
-        self.assertEqual(self.selection(7), [str(self.root / "dummycert.pem"), str(self.root / "dummykey.pem"), ""])
-
-    def test_stapling_is_removed_when_disabled_or_certificate_changes(self):
-        directory = self.certificate("certbot/live")
-        staple = directory.with_suffix(".der")
-        staple.write_text("OCSP response")
-        self.assertEqual(self.selection(7)[2], str(staple))
-        output = self.shell('select_default_certificate "$1" 7; ACME_OCSP_STAPLING=false; select_default_certificate "$1" 7; printf "%s" "${DEFAULT_STAPLING_FILE:-}"',
-                            self.root, ACME_OCSP_STAPLING="true", CUSTOM_OCSP_STAPLING="true")
-        self.assertEqual(output, "")
-        self.assertEqual(self.selection(0, DEFAULT_STAPLING_FILE=str(staple))[2], "")
-
-    def test_stapling_directives_toggle_without_duplicate_comments(self):
-        config, staple = self.root / "nginx.conf", self.root / "response.der"
-        config.write_text("  #ssl_stapling on;\n  #ssl_stapling_verify on;\n  #ssl_stapling_file /old.der;\n  ssl_certificate /cert.pem;\n")
-        staple.write_text("OCSP response")
-        self.shell('configure_certificate_stapling "$1"', config, DEFAULT_STAPLING_FILE=str(staple))
-        self.assertIn(f"  ssl_stapling_file {staple};", config.read_text())
+    def test_default_tls_include_migrates_each_server_and_is_idempotent(self):
+        config = self.root / "nginx.conf"
+        config.write_text("server {\n  ssl_certificate /old.pem;\n  ssl_certificate_key /old.key;\n"
+                          "  #ssl_stapling on;\n  ssl_stapling_verify on;\n  ssl_stapling_file /old.der;\n}\n"
+                          "server {\n  ssl_certificate /other.pem;\n  ssl_certificate_key /other.key;\n}\n")
+        expected = "server {\n  include /data/nginx/include/default-tls.conf;\n}\n" * 2
         for _ in range(2):
-            self.shell('configure_certificate_stapling "$1"', config, DEFAULT_STAPLING_FILE="")
-        self.assertEqual(config.read_text().count("#ssl_stapling"), 3)
-        self.assertNotIn("##", config.read_text())
-        self.assertIn("  ssl_certificate /cert.pem;", config.read_text())
+            self.shell('configure_default_tls_include "$1" "$2"', config, "/data/nginx/include/default-tls.conf",
+                       DEFAULT_CERT_ID="999", ACME_OCSP_STAPLING="true", CUSTOM_OCSP_STAPLING="true")
+            self.assertEqual(config.read_text(), expected)
+
+    def test_default_tls_template_retains_liquid_expression_and_foreign_directives(self):
+        config = self.root / "default.conf"
+        config.write_text("server {\n  {% if value != '444' %}\n  ssl_certificate /old.pem;\n"
+                          "  ssl_certificate_key /old.key;\n  #ssl_stapling_file /old.der;\n"
+                          "  {% endif %}\n  ssl_protocols TLSv1.3;\n  # ssl_ciphers documentation;\n}\n")
+        self.shell('configure_default_tls_include "$1" "$2"', config, "{{ default_tls_include }}")
+        expected = config.read_text()
+        self.assertIn("include {{ default_tls_include }};", expected)
+        self.assertIn("  ssl_protocols TLSv1.3;\n  # ssl_ciphers documentation;", expected)
+        self.assertNotIn("/old", expected)
+        self.shell('configure_default_tls_include "$1" "$2"', config, "{{ default_tls_include }}")
+        self.assertEqual(config.read_text(), expected)
+
+    def test_missing_managed_ocsp_cache_is_removed_before_startup(self):
+        config = self.root / "nginx/stream/7.conf"
+        config.parent.mkdir(parents=True)
+        tls = self.root / "tls"
+        (tls / "custom").mkdir(parents=True)
+        (tls / "custom/npm-8.der").write_text("response")
+        config.write_text("ssl_stapling on;\nssl_stapling_file /data/tls/certbot/live/npm-7.der;\n"
+                          "ssl_stapling_file /data/tls/custom/npm-8.der;\n"
+                          "ssl_stapling_file /data/custom_nginx/user.der;\n")
+        expected = ("ssl_stapling on;\nssl_stapling_file /data/tls/custom/npm-8.der;\n"
+                    "ssl_stapling_file /data/custom_nginx/user.der;\n")
+        for _ in range(2):
+            self.shell('configure_stale_stapling_files "$1" "$2"', self.root / "nginx", tls)
+            self.assertEqual(config.read_text(), expected)
 
     def test_disabled_goaccess_removes_listener_and_preserves_data(self):
         # Run the actual startup branch with only its paths redirected into a fixture.

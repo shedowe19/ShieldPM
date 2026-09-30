@@ -9,6 +9,27 @@
 		"meta"
 	],
 	"additionalProperties": false,
+	"allOf": [
+		{
+			"if": {
+				"properties": {
+					"id": {
+						"const": "acme-options"
+					}
+				},
+				"required": [
+					"id"
+				]
+			},
+			"then": {
+				"properties": {
+					"meta": {
+						"$ref": "./acme-options-object.json"
+					}
+				}
+			}
+		}
+	],
 	"properties": {
 		"id": {
 			"type": "string",

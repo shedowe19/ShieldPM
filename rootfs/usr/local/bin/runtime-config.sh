@@ -114,13 +114,9 @@ PY
 
 configure_certbot_ini() {
     certbot_ini=$1
-    certbot_no_verify=false
-    [ "$ACME_SERVER_TLS_VERIFY" = false ] && certbot_no_verify=true
-    # Profiles and key types are selected in ShieldPM. Remove old global options.
+    # All ACME options are selected in ShieldPM. Remove global options from old installs.
     sed -i -E \
-        -e "s|^must-staple[[:space:]]*=.*|must-staple = $ACME_MUST_STAPLE|" \
-        -e "s|^no-verify-ssl[[:space:]]*=.*|no-verify-ssl = $certbot_no_verify|" \
-        -e '/^[[:space:]]*#?[[:space:]]*(required-profile|preferred-profile|key-type)([[:space:]]*=.*)?[[:space:]]*$/d' "$certbot_ini"
+        -e '/^[[:space:]]*#?[[:space:]]*(required-profile|preferred-profile|key-type|server|email|eab-kid|eab-hmac-key|must-staple|no-verify-ssl|register-unsafely-without-email)([[:space:]]*=.*)?[[:space:]]*$/d' "$certbot_ini"
 }
 
 configure_ui_listeners() {
@@ -225,38 +221,73 @@ finally:
 PY
 }
 
-select_default_certificate() {
-    default_tls_root=$1
-    default_certificate_id=$2
-    DEFAULT_CERT="$default_tls_root/dummycert.pem"
-    DEFAULT_KEY="$default_tls_root/dummykey.pem"
-    unset DEFAULT_STAPLING_FILE
-    if [ "$default_certificate_id" != 0 ]; then
-        for default_certificate_type in certbot/live custom internal; do
-            default_certificate_dir="$default_tls_root/$default_certificate_type/npm-$default_certificate_id"
-            if [ -s "$default_certificate_dir/fullchain.pem" ] && [ -s "$default_certificate_dir/privkey.pem" ]; then
-                DEFAULT_CERT="$default_certificate_dir/fullchain.pem"
-                DEFAULT_KEY="$default_certificate_dir/privkey.pem"
-                if { [ "$default_certificate_type" = certbot/live ] && [ "$ACME_OCSP_STAPLING" = true ]; } || \
-                   { [ "$default_certificate_type" = custom ] && [ "$CUSTOM_OCSP_STAPLING" = true ]; }; then
-                    if [ -s "$default_certificate_dir.der" ]; then
-                        export DEFAULT_STAPLING_FILE="$default_certificate_dir.der"
-                    fi
-                fi
-                break
-            fi
-        done
-    fi
-    export DEFAULT_CERT DEFAULT_KEY
+configure_default_tls_include() {
+    python3 - "$1" "$2" <<'PY'
+import os
+from pathlib import Path
+import re
+import sys
+import tempfile
+
+path, include = Path(sys.argv[1]), sys.argv[2]
+source = path.read_text()
+include_line = f"include {include};"
+output = []
+depth = 0
+included_depths = set()
+for line in source.splitlines(keepends=True):
+    if line.strip() == include_line:
+        if depth not in included_depths:
+            output.append(line)
+            included_depths.add(depth)
+        continue
+    match = re.match(r"^([ \t]*)#?[ \t]*ssl_(certificate|certificate_key|stapling|stapling_verify|stapling_file)\b.*;[ \t]*(?:#.*)?$", line.rstrip("\n"))
+    if match:
+        if match[2] == "certificate" and depth not in included_depths:
+            output.append(f"{match[1]}{include_line}\n")
+            included_depths.add(depth)
+        continue
+    output.append(line)
+    previous_depth = depth
+    depth += line.count("{") - line.count("}")
+    if depth < previous_depth:
+        included_depths = {value for value in included_depths if value <= depth}
+content = "".join(output)
+if content != source:
+    descriptor, temporary = tempfile.mkstemp(prefix=".tls-include-", dir=path.parent)
+    try:
+        with os.fdopen(descriptor, "w") as handle:
+            handle.write(content)
+            os.fchmod(handle.fileno(), path.stat().st_mode & 0o777)
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+PY
 }
 
-configure_certificate_stapling() {
-    stapling_config=$1
-    if [ -n "${DEFAULT_STAPLING_FILE:-}" ] && [ -s "$DEFAULT_STAPLING_FILE" ]; then
-        sed -i -E \
-            -e 's|^([[:space:]]*)#?[[:space:]]*(ssl_stapling)|\1\2|' \
-            -e "s|ssl_stapling_file[[:space:]]+[^;]*;|ssl_stapling_file $DEFAULT_STAPLING_FILE;|" "$stapling_config"
-    else
-        sed -i -E 's|^([[:space:]]*)#?[[:space:]]*(ssl_stapling)|\1#\2|' "$stapling_config"
-    fi
+# Old managed configs required an OCSP cache file before the backend could start.
+# Drop only missing managed response files; Nginx can obtain OCSP responses itself.
+configure_stale_stapling_files() {
+    python3 - "$1" "${2:-/data/tls}" <<'PYTHON'
+from pathlib import Path
+import re
+import sys
+
+root, tls = map(Path, sys.argv[1:])
+pattern = re.compile(r"^\s*ssl_stapling_file\s+(/data/tls/(?:certbot/live|custom)/npm-[0-9]+\.der);\s*(?:#.*)?$")
+for path in root.rglob("*.conf"):
+    lines = path.read_text().splitlines(keepends=True)
+    output = []
+    for line in lines:
+        match = pattern.match(line)
+        if match:
+            response = tls / Path(match[1]).relative_to("/data/tls")
+            if not response.is_file() or response.stat().st_size == 0:
+                continue
+        output.append(line)
+    content = "".join(output)
+    if content != "".join(lines):
+        path.write_text(content)
+PYTHON
 }

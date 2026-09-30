@@ -73,17 +73,9 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 
 ## SSL & ACME
 
-| Variable                 | Standard      | Beschreibung                                             |
-| ------------------------ | ------------- | -------------------------------------------------------- |
-| `ACME_EMAIL`             | —             | E-Mail für Zertifikate                                   |
-| `ACME_SERVER`            | Let's Encrypt | ACME-Server-URL                                          |
-| `ACME_EAB_KID`           | —             | External Account Binding Key                             |
-| `ACME_EAB_HMAC_KEY`      | —             | External Account Binding HMAC. Wert nicht dokumentieren. |
-| `ACME_MUST_STAPLE`       | `false`       | Must-Staple Extension                                    |
-| `ACME_OCSP_STAPLING`     | `false`       | OCSP Stapling                                            |
-| `ACME_SERVER_TLS_VERIFY` | `true`        | TLS-Zertifikat des ACME-Servers verifizieren             |
-| `CUSTOM_OCSP_STAPLING`   | `false`       | Eigenes OCSP-Stapling aktivieren                         |
-| `DEFAULT_CERT_ID`        | `0`           | Standard-Zertifikat-ID für neue Hosts                    |
+ACME-Server, Registrierungskontakt, EAB, Bedingungen, TLS-Prüfung, Must-Staple, ACME-/Custom-OCSP und Standardzertifikat werden unter Einstellungen → Zertifikate / ACME im Datensatz `acme-options` verwaltet. Diese Einstellungen haben keine Umgebungsrückfallebene. Neue Zertifikate verwenden die aktuelle CA-Vorgabe; Erneuerung und Widerruf vorhandener Zertifikate behalten deren ursprüngliche CA und Accountzuordnung. Details stehen unter [ACME-Einstellungen](../verwaltung/einstellungen.md#acme-konto-und-tls-optionen).
+
+`20260930000400_add_acme_options.js` übernimmt `ACME_SERVER`, `ACME_EMAIL`, `ACME_EAB_KID`, `ACME_EAB_HMAC_KEY`, `ACME_MUST_STAPLE`, `ACME_OCSP_STAPLING`, `ACME_SERVER_TLS_VERIFY`, `CUSTOM_OCSP_STAPLING` und `DEFAULT_CERT_ID` nur bei der Anlage eines fehlenden Datensatzes. EAB-HMAC wird vor dem Speichern verschlüsselt. Ungültige alte Server-/E-Mail-/EAB-Kombinationen werden ohne Rohwertausgabe gemeldet und bleiben zur Korrektur in der UI erhalten. Boolesche Standardwerte sind deaktiviertes Must-Staple/OCSP und aktivierte TLS-Prüfung; Must-Staple aktiviert ACME-OCSP mit. Ungültige Standardzertifikat-IDs werden zu `0` (Dummy-Zertifikat). Bereits gespeicherte Optionen werden nicht überschrieben. Die alten Variablen können nach Kontrolle der Migration entfernt werden.
 
 Die Profilwahl eines einzelnen Zertifikats steht in `meta.letsencrypt_profile` und hat Vorrang vor der globalen Datenbankeinstellung `acme-profile`. Diese beginnt mit `standard` und wird unter Einstellungen → Zertifikate / ACME geändert; es gibt dafür keine Umgebungsvariable. `shortlived` verlangt das gleichnamige Profil, `standard` leert erforderliche und bevorzugte Profile für jeden Auftrag. Ausstellung sowie manuelle und automatische Erneuerung wenden diese Auswahl erneut an. Ältere gespeicherte Zertifikate ohne Profilfeld verwenden die globale Vorgabe bei ihrer nächsten Erneuerung; Details stehen unter [Certbot](../module/certbot.md).
 

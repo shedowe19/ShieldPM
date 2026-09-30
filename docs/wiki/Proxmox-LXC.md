@@ -64,7 +64,7 @@ ShieldPM in LXC does NOT use `compose.yaml`. Instead, it reads a single `.env` f
     ```bash
     nano /data/.env
     ```
-3.  **Uncomment and Set** your variables (e.g., `TZ`, optional `DB_MYSQL_...`, `ACME_EMAIL`). SQLite needs no database variables.
+3.  **Uncomment and Set** your deployment variables (e.g., `TZ` and optional `DB_MYSQL_...`). SQLite needs no database variables. Manage CA, registration email and certificate options under **Settings → Certificates / ACME**.
 4.  **Restart** the container or service:
     ```bash
     systemctl restart shieldpm

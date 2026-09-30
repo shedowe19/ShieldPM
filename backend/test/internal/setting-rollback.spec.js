@@ -43,6 +43,11 @@ vi.mock("../../models/setting.js", async () => {
 		},
 	};
 });
+vi.mock("../../internal/acme-options.js", () => ({
+	default: {
+		getPublicPolicy: async () => ({ ocsp_stapling: false, custom_ocsp_stapling: false, default_certificate_id: 0 }),
+	},
+}));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: vi.fn() } }));
 vi.mock("../../internal/nginx.js", () => {
 	const config = () => path.join(state.directory, "default.conf");

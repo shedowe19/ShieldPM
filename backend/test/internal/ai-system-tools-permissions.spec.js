@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
 	reloadNginx: vi.fn(),
 	requestCertbot: vi.fn(),
 	testNginx: vi.fn(),
+	configurationLock: vi.fn((callback) => callback()),
 }));
 
 vi.mock("../../internal/ip_ranges.js", () => ({
@@ -19,6 +20,7 @@ vi.mock("../../internal/nginx.js", () => ({
 	default: {
 		reload: mocks.reloadNginx,
 		test: mocks.testNginx,
+		withConfigurationLock: mocks.configurationLock,
 	},
 }));
 vi.mock("systeminformation", () => ({ default: { networkStats: mocks.getNetworkStats } }));
@@ -229,6 +231,7 @@ describe("AI system tool permissions", () => {
 		expect(mocks.testNginx).not.toHaveBeenCalled();
 		expect(mocks.reloadNginx).not.toHaveBeenCalled();
 		expect(mocks.fetchIpRanges).not.toHaveBeenCalled();
+		expect(mocks.configurationLock).not.toHaveBeenCalled();
 	});
 
 	it("executes global Nginx and IP-range tools for users with settings:update", async () => {

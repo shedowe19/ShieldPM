@@ -338,6 +338,11 @@ Auswahl. Neue Formulare verwenden die Vorgabe, vorhandene explizite Zertifikatsp
 Altzertifikate ohne Profilfeld folgen ihr bei der nächsten Erneuerung. Details stehen unter [Einstellungen](../verwaltung/einstellungen.md).
 
 `CertificateOptionsCard.tsx` ergänzt den Zertifikats-Tab um ECDSA/RSA und das Prüfintervall von 1 bis 12 Stunden.
+
+`AcmeOptionsCard.tsx` ergänzt denselben Tab um Let's-Encrypt-Production-/Staging-, ZeroSSL- und benutzerdefinierte CA-Verzeichnisse, E-Mail, optionale Account-ID, EAB, Bedingungen, TLS-Prüfung, Must-Staple, beide OCSP-Optionen und das Standardzertifikat (`0` für Dummy). Das HMAC-Feld bleibt leer und verwendet ausschließlich einen Vorhandenseinsmarker. Ein ausgelassenes Schreibfeld erhält den gespeicherten Schlüssel; Ersetzen verwendet einen neuen Wert, die ausdrückliche Löschaktion entfernt Kennung und Schlüssel. Ein CA-/EAB-Identitätswechsel verlangt ein passendes neues Paar oder Löschen. Die UI aktiviert OCSP beim Einschalten von Must-Staple mit und erklärt dessen fehlende Let's-Encrypt-Unterstützung. Accountregistrierung und E-Mail-Pflege gelten erst beim nächsten passenden Backend-Auftrag.
+
+`useAcmeOptions.ts` verwendet den Query-Schlüssel `["acme-options"]`, bricht ältere GETs vor dem Speichern ab und übernimmt die bereinigte Antwort direkt in den Cache. Ohne erste gültige Antwort zeigt die Karte keine geratenen Einstellungswerte; lokale Entwürfe und Secret-Ersetzungen bleiben bei Fehlern erhalten. Erfolgreiches Speichern leert das HMAC-Eingabefeld. Der API-Client sendet die gewöhnlichen Felder vollständig, lässt den reinen Antwortmarker aus und wandelt camelCase in snake_case um. Details stehen unter [ACME-Einstellungen](../verwaltung/einstellungen.md#acme-konto-und-tls-optionen).
+
 `Settings/Network.tsx` bietet den Cloudflare-IP-Abruf und ein Intervall von 6 bis 594 Stunden in Sechs-Stunden-Schritten.
 `OptionsCard.tsx` verwaltet die lokalen Entwürfe und zeigt Lade-/Fehlerzustände an; ohne geladene Daten wird kein
 Formular mit Ersatzwerten angeboten. Ungespeicherte Eingaben bleiben bei Hintergrundabfragen erhalten.

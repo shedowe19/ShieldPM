@@ -10,7 +10,7 @@ Dokumentation der Deployment-Optionen.
 # compose.yaml herunterladen
 curl -fL -o compose.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/refs/heads/develop/compose.yaml
 
-# Anpassen: TZ, ACME_EMAIL, etc.
+# Bereitstellung anpassen: TZ, Datenbank, etc.; ACME-Optionen in der Weboberfläche verwalten
 # Starten
 docker compose up -d
 ```

@@ -9,6 +9,7 @@ const settingsRouteFiles = [
 	"src/pages/Settings/DefaultSite.tsx",
 	"src/pages/Settings/Certificates.tsx",
 	"src/pages/Settings/CertificateOptionsCard.tsx",
+	"src/pages/Settings/AcmeOptionsCard.tsx",
 	"src/pages/Settings/Network.tsx",
 	"src/pages/Settings/OptionsCard.tsx",
 	"src/pages/Settings/Analytics.tsx",

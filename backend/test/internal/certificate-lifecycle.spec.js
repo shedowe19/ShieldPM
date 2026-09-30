@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
 	query: vi.fn(),
 	runCertbot: vi.fn(),
+	acme: vi.fn(),
 	configurationLock: vi.fn(),
 	backupConfig: vi.fn(),
 	restoreConfig: vi.fn(),
@@ -26,6 +27,8 @@ const mocks = vi.hoisted(() => ({
 	options: vi.fn().mockResolvedValue({ key_type: "ecdsa", renewal_interval_hours: 12 }),
 }));
 vi.mock("../../internal/acme-profile.js", () => ({ default: { getPolicy: mocks.policy } }));
+vi.mock("../../internal/acme-options.js", () => ({ default: { getRuntimePolicy: mocks.acme } }));
+vi.mock("../../internal/acme-tls.js", () => ({ default: { assertCertificateDeletable: vi.fn().mockResolvedValue() } }));
 vi.mock("../../internal/certificate-options.js", () => ({ default: { getPolicy: mocks.options } }));
 vi.mock("../../models/certificate.js", () => ({ default: { query: mocks.query } }));
 vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.proxyQuery } }));
@@ -45,8 +48,9 @@ vi.mock("../../internal/nginx.js", () => ({
 	},
 }));
 vi.mock("../../internal/certbot.js", () => ({
-	renewCertbot: vi.fn().mockResolvedValue("renewed"),
+	renewCertbot: mocks.runCertbot,
 	runCertbot: mocks.runCertbot,
+	getLiveCertPath: (id) => `/data/tls/certbot/live/npm-${id}`,
 }));
 vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: mocks.gitops } }));
 vi.mock("../../internal/pki.js", () => ({ default: { createLeadCert: mocks.createLeadCert } }));
@@ -73,6 +77,7 @@ describe("certificate lifecycle regressions", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.policy.mockResolvedValue("standard");
+		mocks.acme.mockResolvedValue({ server: "https://new-ca.example.test/directory", must_staple: false });
 		mocks.options.mockResolvedValue({ key_type: "ecdsa", renewal_interval_hours: 12 });
 		mocks.configurationLock.mockImplementation(async (operation) => operation());
 	});
@@ -147,6 +152,54 @@ describe("certificate lifecycle regressions", () => {
 			}),
 		).rejects.toThrow("at most 25 domain names");
 		expect(mocks.query).not.toHaveBeenCalled();
+	});
+	it.each(["acme_server", "acme_account"])(
+		"rejects client-owned issuer field %s before creation writes",
+		async (field) => {
+			await expect(
+				internalCertificate.create(access(), {
+					provider: "letsencrypt",
+					domain_names: ["test.example"],
+					meta: { [field]: "injected" },
+				}),
+			).rejects.toThrow("managed by ShieldPM");
+			expect(mocks.query).not.toHaveBeenCalled();
+		},
+	);
+	it("hides issuer/account bindings and DNS credentials from public certificate metadata", () => {
+		expect(
+			internalCertificate.cleanMeta({
+				acme_server: "https://ca.example.test/directory",
+				acme_account: "account",
+				dns_provider_credentials: "synthetic",
+				letsencrypt_profile: "standard",
+			}),
+		).toEqual({ letsencrypt_profile: "standard" });
+	});
+	it("preserves existing issuer bindings through ordinary metadata updates and rejects injected replacements", async () => {
+		const row = {
+			id: 7,
+			provider: "letsencrypt",
+			meta: { acme_server: "https://old-ca.example.test/directory", acme_account: "original" },
+		};
+		vi.spyOn(internalCertificate, "get").mockResolvedValue(row);
+		let persisted;
+		const patch = vi.fn(async (_id, data) => {
+			persisted = structuredClone(data);
+			return { ...row, ...data };
+		});
+		mocks.query.mockReturnValue({ patchAndFetchById: patch });
+		await expect(
+			internalCertificate.update(access(), {
+				id: 7,
+				meta: { acme_server: "https://new-ca.example.test/directory" },
+			}),
+		).rejects.toThrow("managed by ShieldPM");
+		expect(patch).not.toHaveBeenCalled();
+		const result = await internalCertificate.update(access(), { id: 7, meta: { letsencrypt_profile: "standard" } });
+		expect(persisted.meta).toMatchObject({ acme_server: row.meta.acme_server, acme_account: "original" });
+		expect(result.meta).toEqual({ letsencrypt_profile: "standard" });
+		expect(mocks.audit.mock.calls[0][1].meta.meta).toEqual({ letsencrypt_profile: "standard" });
 	});
 	it("resolves an omitted profile from the saved default before any certificate write", async () => {
 		mocks.policy.mockResolvedValue("shortlived");
@@ -631,28 +684,15 @@ describe("certificate lifecycle regressions", () => {
 		mocks.runCertbot.mockRejectedValueOnce(new Error("first renewal failed")).mockResolvedValue("");
 		await internalCertificate.processExpiringHosts();
 		expect(mocks.runCertbot).toHaveBeenCalledTimes(3);
-		const args = mocks.runCertbot.mock.calls.map(([command]) => command);
-		expect(args[0].slice(args[0].indexOf("--required-profile"))).toEqual([
-			"--required-profile",
-			"",
-			"--preferred-profile",
-			"",
-		]);
-		expect(args[1].slice(args[1].indexOf("--required-profile"))).toEqual(["--required-profile", "shortlived"]);
-		expect(args[2].slice(args[2].indexOf("--required-profile"))).toEqual([
-			"--required-profile",
-			"",
-			"--preferred-profile",
-			"",
-		]);
-		for (const [i, command] of args.entries()) {
-			expect(command).toContain(`npm-${i + 1}`);
-			expect(command).not.toContain("--force-renewal");
-			expect(command.slice(command.indexOf("--key-type"), command.indexOf("--key-type") + 2)).toEqual([
-				"--key-type",
-				"rsa",
-			]);
+		const calls = mocks.runCertbot.mock.calls;
+		for (const [i, [certificate, options]] of calls.entries()) {
+			expect(certificate).toBe(certificates[i]);
+			expect(options.force).toBe(false);
+			expect(options.snapshot.key_type).toBe("rsa");
+			expect(options.snapshot.profile).toBe("standard");
+			expect(options.snapshot).toBe(calls[0][1].snapshot);
 		}
+		expect(mocks.acme).toHaveBeenCalledOnce();
 		expect(mocks.options).toHaveBeenCalledOnce();
 		expect(mocks.reload).toHaveBeenCalledOnce();
 		expect(internalCertificate.intervalProcessing).toBe(false);
@@ -675,23 +715,14 @@ describe("certificate lifecycle regressions", () => {
 			mocks.runCertbot.mockResolvedValue("");
 			await internalCertificate.processExpiringHosts();
 			expect(mocks.policy).toHaveBeenCalledOnce();
-			const commands = mocks.runCertbot.mock.calls.map(([command]) => command);
-			expect(commands).toHaveLength(3);
-			expect(commands[0].slice(commands[0].indexOf("--required-profile"))).toEqual([
-				"--required-profile",
-				"",
-				"--preferred-profile",
-				"",
-			]);
-			expect(commands[1].slice(commands[1].indexOf("--required-profile"))).toEqual([
-				"--required-profile",
-				"shortlived",
-			]);
-			expect(commands[2].slice(commands[2].indexOf("--required-profile"))).toEqual(
-				policy === "shortlived"
-					? ["--required-profile", "shortlived"]
-					: ["--required-profile", "", "--preferred-profile", ""],
-			);
+			expect(mocks.runCertbot.mock.calls).toHaveLength(3);
+			for (const [certificate, options] of mocks.runCertbot.mock.calls) {
+				expect(options.snapshot.profile).toBe(policy);
+				expect(options.force).toBe(false);
+				expect(certificate.meta.letsencrypt_profile).toBe(
+					certificate.id === 1 ? "standard" : certificate.id === 2 ? "shortlived" : undefined,
+				);
+			}
 			expect(internalCertificate.intervalProcessing).toBe(false);
 		},
 	);

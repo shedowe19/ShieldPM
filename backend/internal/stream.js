@@ -302,7 +302,7 @@ const internalStream = {
 				await streamModel.transaction(async (trx) => {
 					await streamModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
 					await internalNginx.deleteConfig("stream", row);
-					await internalNginx.reload();
+					await internalNginx.reload({ trx });
 				});
 			} catch (error) {
 				// The database transaction has rolled back. Restore the listener
@@ -401,7 +401,7 @@ const internalStream = {
 				await streamModel.transaction(async (trx) => {
 					await streamModel.query(trx).where("id", row.id).patch({ enabled: 0 });
 					await internalNginx.deleteConfig("stream", row);
-					await internalNginx.reload();
+					await internalNginx.reload({ trx });
 				});
 			} catch (error) {
 				// The database transaction has rolled back. Restore the listener

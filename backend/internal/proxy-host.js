@@ -474,7 +474,7 @@ const internalProxyHost = {
 				await proxyHostModel.transaction(async (trx) => {
 					await proxyHostModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
 					await internalNginx.deleteConfig("proxy_host", row);
-					await internalNginx.reload();
+					await internalNginx.reload({ trx });
 				});
 			} catch (error) {
 				// The database transaction has rolled back. Restore the listener
@@ -592,7 +592,7 @@ const internalProxyHost = {
 				await proxyHostModel.transaction(async (trx) => {
 					await proxyHostModel.query(trx).where("id", row.id).patch({ enabled: 0 });
 					await internalNginx.deleteConfig("proxy_host", row);
-					await internalNginx.reload();
+					await internalNginx.reload({ trx });
 				});
 			} catch (error) {
 				// The database transaction has rolled back. Restore the listener

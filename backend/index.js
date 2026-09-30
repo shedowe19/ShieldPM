@@ -10,6 +10,7 @@ process.on("uncaughtException", (err) => {
 });
 
 import app from "./app.js";
+import internalAcmeTls from "./internal/acme-tls.js";
 import analyticsService from "./internal/analytics.js";
 import internalCertificate from "./internal/certificate.js";
 import internalChat from "./internal/chat.js";
@@ -38,6 +39,7 @@ async function appStart() {
 	try {
 		await migrateFromSqliteToNewDb();
 		await migrateUp();
+		await internalAcmeTls.initialize();
 		await analyticsService.init();
 		internalUploadRelay.init();
 		await setup();

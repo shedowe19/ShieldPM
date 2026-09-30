@@ -52,6 +52,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Zertifikate](./module/zertifikate.md)
 - [ACME-Profile (Standard/Short-lived)](./module/zertifikate.md#acme-profile)
 - [Globale ACME-Vorgabe in den Einstellungen](./verwaltung/einstellungen.md#globale-acme-profilvorgabe)
+- [ACME-Konto und TLS-Optionen](./verwaltung/einstellungen.md#acme-konto-und-tls-optionen)
 - [Zertifikats- und Netzwerkoptionen](./verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen)
 - [Analytics- und Nginx-Optionen](./verwaltung/einstellungen.md#analytics--und-nginx-optionen)
 - [Konfigurationsstrategie und weitere UI-Migrationen](./konfiguration/config-dateien.md#schrittweise-verlagerung-von-anwendungsoptionen)

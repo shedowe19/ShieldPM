@@ -5,9 +5,27 @@ const mocks = vi.hoisted(() => ({
 	execFile: vi.fn(),
 	requests: [],
 	policy: vi.fn().mockResolvedValue("standard"),
+	runtime: vi.fn(),
+	validate: vi.fn(),
+	issuer: vi.fn(),
+	account: vi.fn(),
+	cleanup: vi.fn(),
 	options: vi.fn().mockResolvedValue({ key_type: "ecdsa", renewal_interval_hours: 12 }),
 }));
-vi.mock("../../internal/acme-profile.js", () => ({ default: { getPolicy: mocks.policy } }));
+vi.mock("../../internal/acme-profile.js", () => ({
+	default: { getPolicy: mocks.policy, validatePolicyForServer: mocks.validate },
+}));
+vi.mock("../../internal/acme-options.js", () => ({ default: { getRuntimePolicy: mocks.runtime } }));
+vi.mock("../../internal/acme-runtime.js", () => ({
+	getCertificateIssuer: mocks.issuer,
+	ensureAcmeAccount: mocks.account,
+	createAcmeConfig: vi.fn(async () => ({
+		filename: "/private/config.ini",
+		secrets: [],
+		cleanup: mocks.cleanup,
+		exec: (args) => mocks.execFile("certbot", ["--config", "/private/config.ini", ...args]),
+	})),
+}));
 vi.mock("../../internal/certificate-options.js", () => ({ default: { getPolicy: mocks.options } }));
 vi.mock("../../lib/utils.js", () => ({ default: { execFile: mocks.execFile } }));
 vi.mock("../../lib/certbot.js", () => ({ installPlugin: vi.fn() }));
@@ -54,6 +72,15 @@ describe("Certbot process coordination", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.policy.mockResolvedValue("standard");
+		certificate.meta = {};
+		mocks.runtime.mockResolvedValue({
+			server: "https://new-ca.example.test/directory",
+			server_tls_verify: true,
+			agree_tos: true,
+			must_staple: false,
+		});
+		mocks.issuer.mockResolvedValue({ server: "https://old-ca.example.test/directory", account: "old-account" });
+		mocks.account.mockResolvedValue("old-account");
 		mocks.options.mockResolvedValue({ key_type: "ecdsa", renewal_interval_hours: 12 });
 		mocks.requests.length = 0;
 	});
@@ -87,6 +114,69 @@ describe("Certbot process coordination", () => {
 			}),
 		).rejects.toThrow("invalid saved options");
 		expect(installPlugin).not.toHaveBeenCalled();
+		expect(mocks.execFile).not.toHaveBeenCalled();
+		expect(isProcessing()).toBe(false);
+	});
+	it("uses saved CA options for new issuance and records server-owned account bindings", async () => {
+		vi.stubEnv("ACME_SERVER", "https://obsolete-env.example.test/directory");
+		mocks.execFile.mockResolvedValue("issued");
+		const row = { ...certificate, meta: {} };
+		await requestCertbot(row);
+		const args = mocks.execFile.mock.calls[0][1];
+		expect(args).toEqual(
+			expect.arrayContaining(["--server", "https://new-ca.example.test/directory", "--account", "old-account"]),
+		);
+		expect(row.meta).toMatchObject({
+			acme_server: "https://new-ca.example.test/directory",
+			acme_account: "old-account",
+		});
+		expect(mocks.issuer).not.toHaveBeenCalled();
+		expect(mocks.cleanup).toHaveBeenCalledOnce();
+	});
+	it.each([renewCertbot, renewCertbotWithDnsChallenge, revokeCertbot])(
+		"keeps the original issuer and account after global CA changes in %s",
+		async (operation) => {
+			mocks.execFile.mockResolvedValue("complete");
+			vi.spyOn(fs, "rmSync").mockImplementation(() => {});
+			const row = { ...certificate, meta: { dns_provider: "cloudflare" } };
+			await operation(row);
+			expect(mocks.execFile.mock.calls[0][1]).toEqual(
+				expect.arrayContaining([
+					"--server",
+					"https://old-ca.example.test/directory",
+					"--account",
+					"old-account",
+				]),
+			);
+			expect(mocks.account.mock.calls[0][2]).toEqual({
+				server: "https://old-ca.example.test/directory",
+				account: "old-account",
+			});
+			expect(row.meta.acme_server).toBeUndefined();
+			expect(mocks.cleanup).toHaveBeenCalledOnce();
+		},
+	);
+	it("verifies shortlived against the original issuer, and cleans private files after command failure", async () => {
+		mocks.execFile.mockRejectedValueOnce(new Error("synthetic issuance failure"));
+		await expect(renewCertbot({ ...certificate, meta: { letsencrypt_profile: "shortlived" } })).rejects.toThrow(
+			"synthetic issuance failure",
+		);
+		expect(mocks.validate).toHaveBeenCalledExactlyOnceWith(
+			"https://old-ca.example.test/directory",
+			true,
+			"shortlived",
+		);
+		expect(mocks.cleanup).toHaveBeenCalledOnce();
+		expect(isProcessing()).toBe(false);
+	});
+	it("rejects unsupported Must-Staple for original Let's Encrypt lineages before account changes", async () => {
+		mocks.runtime.mockResolvedValue({ server: "https://new-ca.example.test/directory", must_staple: true });
+		mocks.issuer.mockResolvedValue({
+			server: "https://acme-v02.api.letsencrypt.org/directory",
+			account: "old-account",
+		});
+		await expect(renewCertbot({ ...certificate, meta: {} })).rejects.toThrow("no longer supports Must-Staple");
+		expect(mocks.account).not.toHaveBeenCalled();
 		expect(mocks.execFile).not.toHaveBeenCalled();
 		expect(isProcessing()).toBe(false);
 	});
@@ -200,6 +290,7 @@ describe("Certbot process coordination", () => {
 		expect(isProcessing()).toBe(true);
 		await expect(renewCertbot(certificate)).rejects.toThrow("Another Certbot process");
 		await expect(runCertbot(["renew"])).rejects.toThrow("Another Certbot process");
+		await vi.waitFor(() => expect(release).toBeTypeOf("function"));
 		release("created");
 		await request;
 		expect(isProcessing()).toBe(false);
@@ -246,6 +337,7 @@ describe("Certbot process coordination", () => {
 		expect(isProcessing()).toBe(true);
 		await expect(renewCertbot(certificate)).rejects.toThrow("Another Certbot process");
 		expect(fs.promises.writeFile).not.toHaveBeenCalled();
+		await vi.waitFor(() => expect(release).toBeTypeOf("function"));
 		release();
 		await pending;
 		const args = mocks.execFile.mock.calls[0][1];

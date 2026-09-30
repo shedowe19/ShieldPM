@@ -150,7 +150,7 @@ After installation, you may want to:
 
 1. **[Configure Environment Variables](Configuration)** — Customize ports, database, SSL, and more
 2. **[Create Your First Proxy Host](Proxy-Hosts)** — Set up a reverse proxy for your first service
-3. **[Enable Let's Encrypt](SSL-Certificates)** — Configure your domain and certificate request; setting `ACME_EMAIL` is recommended for account notices
+3. **[Enable Let's Encrypt](SSL-Certificates)** — Review Settings → Certificates / ACME, then configure your domain and certificate request
 4. **[Enable CrowdSec](CrowdSec)** — Protect against brute force and malicious bots
 5. **[Review Best Practices](Best-Practices)** — Security hardening and performance tips
 

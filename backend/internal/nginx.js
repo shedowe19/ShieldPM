@@ -13,6 +13,8 @@ import { debug, nginx as logger } from "../logger.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+import internalAcmeOptions from "./acme-options.js";
+import internalAcmeTls from "./acme-tls.js";
 import internalAnubis from "./anubis.js";
 import internalNginxOptions from "./nginx-options.js";
 
@@ -155,10 +157,20 @@ const internalNginx = {
 	/**
 	 * @returns {Promise}
 	 */
-	reload: async () => {
+	/** @param {{acme_options?: any, trx?: any}} [options] */
+	reload: async (options = {}) => {
+		const policy = options.acme_options ?? (await internalAcmeOptions.getPublicPolicy(options.trx));
+		await internalNginx.refreshOcsp(policy);
+		await internalAcmeTls.refreshDefaultInclude(policy, { trx: options.trx });
+		await internalNginx.test();
+		await utils.execFile("nginx", ["-s", "reload"]);
+	},
+
+	/** @param {{ocsp_stapling?: boolean, custom_ocsp_stapling?: boolean}} policy @returns {Promise<void>} */
+	refreshOcsp: async (policy) => {
 		const promises = [];
 
-		if (process.env.ACME_OCSP_STAPLING === "true") {
+		if (policy.ocsp_stapling) {
 			promises.push(
 				utils
 					.execFile("certbot-ocsp-fetcher.sh", [
@@ -173,7 +185,7 @@ const internalNginx = {
 			);
 		}
 
-		if (process.env.CUSTOM_OCSP_STAPLING === "true") {
+		if (policy.custom_ocsp_stapling) {
 			promises.push(
 				utils
 					.execFile("certbot-ocsp-fetcher.sh", [
@@ -189,9 +201,6 @@ const internalNginx = {
 		}
 
 		await Promise.all(promises);
-
-		await internalNginx.test();
-		await utils.execFile("nginx", ["-s", "reload"]);
 	},
 
 	/**
@@ -259,10 +268,11 @@ const internalNginx = {
 	 * Render a host configuration without writing it. The same output is used by generateConfig().
 	 * @param   {String}  host_type
 	 * @param   {Object}  host_row
-	 * @param   {{preview?: boolean}} [options]
+	 * @param   {{preview?: boolean, acme_options?: Object, trx?: any}} [options]
 	 * @returns {Promise<string>}
 	 */
 	renderConfig: async (host_type, host_row, options = {}) => {
+		const acmePolicy = options.acme_options ?? (await internalAcmeOptions.getPublicPolicy(options.trx));
 		// Prevent modifying the original object:
 		const host = JSON.parse(JSON.stringify(host_row));
 		if (host.is_deleted) host.enabled = false;
@@ -314,6 +324,23 @@ const internalNginx = {
 		}
 
 		host.env = process.env;
+		host.acme_options = {
+			ocsp_stapling: acmePolicy.ocsp_stapling === true,
+			custom_ocsp_stapling: acmePolicy.custom_ocsp_stapling === true,
+		};
+		host.default_tls_include = internalAcmeTls.getDefaultIncludePath();
+		if (Number.isSafeInteger(host.certificate_id) && host.certificate_id > 0 && host.certificate) {
+			const providerDirectory = { letsencrypt: "certbot/live", other: "custom" }[host.certificate.provider];
+			if (providerDirectory) {
+				const responseFile = `/data/tls/${providerDirectory}/npm-${host.certificate_id}.der`;
+				try {
+					const response = await fs.promises.stat(responseFile);
+					if (response.isFile() && response.size > 0) host.stapling_file = responseFile;
+				} catch (err) {
+					if (err.code !== "ENOENT") throw err;
+				}
+			}
+		}
 		if (host.access_list?.meta?.oauth2_proxy_prefix) {
 			host.access_list.meta.oauth2_proxy_prefix = host.access_list.meta.oauth2_proxy_prefix.replace(/\/?$/, "/");
 		}
@@ -355,13 +382,14 @@ const internalNginx = {
 	 * Render through the same template path used by previews, then install the host config.
 	 * @param {string} host_type
 	 * @param {{id: number}} host_row
+	 * @param {{acme_options?: Object, trx?: any}} [options]
 	 * @returns {Promise<boolean>}
 	 */
-	generateConfig: async (host_type, host_row) => {
-		const options = await internalNginxOptions.getPolicy();
+	generateConfig: async (host_type, host_row, options = {}) => {
+		const formatting = await internalNginxOptions.getPolicy(options.trx);
 		const filename = internalNginx.getConfigName(host_type, host_row.id);
 		try {
-			const config_text = await internalNginx.renderConfig(host_type, host_row);
+			const config_text = await internalNginx.renderConfig(host_type, host_row, options);
 			await fs.promises.writeFile(filename, config_text, { encoding: "utf8" });
 			debug(logger, "Wrote config:", filename);
 		} catch (err) {
@@ -369,7 +397,7 @@ const internalNginx = {
 			throw new errs.ConfigurationError(err.message);
 		}
 
-		if (options.beautifier_enabled) {
+		if (formatting.beautifier_enabled) {
 			try {
 				await utils.execFile("nginxbeautifier", ["-s", "4", filename]);
 			} catch {

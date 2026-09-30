@@ -1,7 +1,14 @@
 import { EventEmitter } from "node:events";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ insert: vi.fn(), upsert: vi.fn(), resetHost: vi.fn(), hosts: [] }));
+const mocks = vi.hoisted(() => ({
+	insert: vi.fn(),
+	upsert: vi.fn(),
+	resetHost: vi.fn(),
+	reload: vi.fn(),
+	configurationQueue: Promise.resolve(),
+	hosts: [],
+}));
 vi.mock("../../db.js", () => ({ default: () => ({}) }));
 vi.mock("dockerode", () => ({ default: class {} }));
 vi.mock("../../models/proxy_host.js", () => ({
@@ -14,20 +21,58 @@ vi.mock("../../models/proxy_host.js", () => ({
 	},
 }));
 vi.mock("../../internal/certificate.js", () => ({ default: {} }));
-vi.mock("../../internal/nginx.js", () => ({ default: {} }));
+vi.mock("../../internal/nginx.js", () => ({
+	default: {
+		withConfigurationLock: (callback) => {
+			const result = mocks.configurationQueue.then(callback);
+			mocks.configurationQueue = result.catch(() => {});
+			return result;
+		},
+		reload: mocks.reload,
+	},
+}));
 vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: { resetHost: mocks.resetHost } }));
 vi.mock("../../logger.js", () => ({ global: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 import docker from "../../internal/docker.js";
+import nginx from "../../internal/nginx.js";
 
 describe("Docker discovery", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.hosts = [];
+		mocks.configurationQueue = Promise.resolve();
 		mocks.insert.mockResolvedValue({ id: 1 });
 		mocks.upsert.mockResolvedValue({ id: 7 });
 		mocks.resetHost.mockResolvedValue();
 		vi.spyOn(docker, "configureNginx").mockResolvedValue();
+	});
+	afterEach(() => vi.useRealTimers());
+	it("waits for a settings activation before refreshing the shared TLS include", async () => {
+		vi.useFakeTimers();
+		let release;
+		let activePolicy = "previous";
+		const settingsActivation = nginx.withConfigurationLock(
+			() =>
+				new Promise((resolve) => {
+					release = () => {
+						activePolicy = "saved";
+						resolve();
+					};
+				}),
+		);
+		await Promise.resolve();
+		const appliedPolicies = [];
+		mocks.reload.mockImplementation(async () => appliedPolicies.push(activePolicy));
+		docker.pendingHostIds.clear();
+		docker.triggerReload();
+		vi.advanceTimersByTime(2000);
+		await Promise.resolve();
+		expect(mocks.reload).not.toHaveBeenCalled();
+		release();
+		await settingsActivation;
+		await vi.advanceTimersByTimeAsync(0);
+		expect(appliedPolicies).toEqual(["saved"]);
 	});
 	it("creates normalized domain relations and uses published ports from listContainers", async () => {
 		await docker.processContainer(

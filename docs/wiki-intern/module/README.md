@@ -28,21 +28,24 @@ Die Module unter `backend/internal/` bündeln Geschäftslogik. Viele CRUD-Module
 
 ### Sicherheit
 
-| Modul                                                                                   | Datei                     | Beschreibung                                      |
-| --------------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------- |
-| [Access-List](./access-lists.md)                                                        | `access-list.js`          | Basic Auth, IP-Filter, mTLS                       |
-| [Zertifikate](./zertifikate.md)                                                         | `certificate.js`          | SSL/TLS-Zertifikatsverwaltung                     |
-| [Certbot](./certbot.md)                                                                 | `certbot.js`              | Let's Encrypt Automatisierung                     |
-| [Globale ACME-Vorgabe](../verwaltung/einstellungen.md#globale-acme-profilvorgabe)       | `acme-profile.js`         | Geprüfte Profilvorgabe aus UI und Datenbank       |
-| [Zertifikatsoptionen](../verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen) | `certificate-options.js`  | Schlüsseltyp und laufender Prüftimer              |
-| [IP-Range-Optionen](./ip-ranges.md#konfiguration)                                       | `ip-ranges-options.js`    | Abrufsteuerung und laufender Aktualisierungstimer |
-| [Token](./token.md)                                                                     | `token.js`                | JWT-Token-Verwaltung                              |
-| [Anubis](./anubis.md)                                                                   | `anubis.js`               | PoW-Gate gegen Bots                               |
-| [OAuth2-Proxy](./oauth2-proxy.md)                                                       | `oauth2-proxy.js`         | SSO-Integration                                   |
-| [2FA-Service](./2fa-service.md)                                                         | `2fa-service.js`          | TOTP, WebAuthn, Duo Security                      |
-| Auth-Session (siehe Benutzer & Auth)                                                    | `auth-session-service.js` | Session-Verwaltung                                |
-| [IP-Ranges](./ip-ranges.md)                                                             | `ip_ranges.js`            | Cloudflare-IP-Ranges                              |
-| [PKI (interne CA)](./pki.md)                                                            | `pki.js`                  | Interne CA / ML-KEM                               |
+| Modul                                                                                     | Datei                                       | Beschreibung                                          |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------- |
+| [Access-List](./access-lists.md)                                                          | `access-list.js`                            | Basic Auth, IP-Filter, mTLS                           |
+| [Zertifikate](./zertifikate.md)                                                           | `certificate.js`                            | SSL/TLS-Zertifikatsverwaltung                         |
+| [Certbot](./certbot.md)                                                                   | `certbot.js`                                | Let's Encrypt Automatisierung                         |
+| [Globale ACME-Vorgabe](../verwaltung/einstellungen.md#globale-acme-profilvorgabe)         | `acme-profile.js`                           | Geprüfte Profilvorgabe aus UI und Datenbank           |
+| [ACME-Konto und TLS-Optionen](../verwaltung/einstellungen.md#acme-konto-und-tls-optionen) | `acme-options.js`, `acme-options-public.js` | Konto-/TLS-Optionen und Geheimnisbereinigung          |
+| [ACME-Aufträge](./certbot.md)                                                             | `acme-runtime.js`, `acme-settings-lock.js`  | Account-/Ausstellerkontinuität und private Ausführung |
+| [ACME-TLS-Aktivierung](./nginx-engine.md#tls-optionen-aus-der-datenbank)                  | `acme-tls.js`                               | Standardzertifikat, OCSP und Rollback                 |
+| [Zertifikatsoptionen](../verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen)   | `certificate-options.js`                    | Schlüsseltyp und laufender Prüftimer                  |
+| [IP-Range-Optionen](./ip-ranges.md#konfiguration)                                         | `ip-ranges-options.js`                      | Abrufsteuerung und laufender Aktualisierungstimer     |
+| [Token](./token.md)                                                                       | `token.js`                                  | JWT-Token-Verwaltung                                  |
+| [Anubis](./anubis.md)                                                                     | `anubis.js`                                 | PoW-Gate gegen Bots                                   |
+| [OAuth2-Proxy](./oauth2-proxy.md)                                                         | `oauth2-proxy.js`                           | SSO-Integration                                       |
+| [2FA-Service](./2fa-service.md)                                                           | `2fa-service.js`                            | TOTP, WebAuthn, Duo Security                          |
+| Auth-Session (siehe Benutzer & Auth)                                                      | `auth-session-service.js`                   | Session-Verwaltung                                    |
+| [IP-Ranges](./ip-ranges.md)                                                               | `ip_ranges.js`                              | Cloudflare-IP-Ranges                                  |
+| [PKI (interne CA)](./pki.md)                                                              | `pki.js`                                    | Interne CA / ML-KEM                                   |
 
 ### Tunnel & Netzwerk
 

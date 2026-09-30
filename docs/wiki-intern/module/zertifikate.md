@@ -13,6 +13,7 @@ ShieldPM automatisiert die Zertifikatsverwaltung über Let's Encrypt (ACME) und 
 - `backend/internal/certificate.js` (27 KB) — Business-Logik
 - `backend/internal/certbot.js` (10 KB) — Let's Encrypt Automatisierung
 - `backend/internal/acme-profile.js` — Globale Profilvorgabe, Prüfung und Einstellungs-API
+- `backend/internal/acme-options.js`, `acme-runtime.js` — CA-/Accountvorgabe und bestehende Ausstellerzuordnung
 - `backend/internal/pki.js` (7 KB) — Interne CA / ML-KEM
 - `backend/models/certificate.js` (3 KB) — Objection.js-Modell
 - `backend/routes/nginx/certificates.js` (10 KB) — API-Routen
@@ -42,6 +43,16 @@ Die Anlage-Migration übernimmt vorhandene `ACME_KEY_TYPE`-/`CRT`-Werte einmalig
 - Manuelle und automatische Erneuerung übernehmen die explizite Profilwahl jedes gespeicherten Zertifikats. Die automatische Prüfung ruft `certbot renew` ohne erzwungene Erneuerung pro Zertifikat auf, damit globale Profile die individuelle Wahl nicht überschreiben. Ein Fehler stoppt die Prüfungen der übrigen Zertifikate nicht. Details stehen unter [Certbot](./certbot.md).
 - `GET /api/nginx/certificates/acme-profile` verlangt `certificates:list` und liefert ausschließlich `{ "profile": "standard" | "shortlived" }`. Der administrative PUT verlangt `settings:update`. Vor dem Speichern wird Certbots Profilunterstützung geprüft; Short-lived verlangt zusätzlich das vom ACME-Verzeichnis angebotene Profil. Bei einem Fehler bleibt die vorherige Einstellung unverändert. Der generische Settings-PUT für `acme-profile` wird abgewiesen, damit er diese Prüfung nicht umgeht.
 - Proxy-, Redirection-, Dead-Hosts und Streams lösen die Profilwahl und die Begrenzung auf 25 Short-lived-Domains bereits vor ihren Datenbankänderungen auf. Ein globales Short-lived-Profil greift damit auch für Inline-Ausstellungen ohne ausdrücklich mitgesendetes Profil.
+
+## ACME-Aussteller und Standard-TLS
+
+Die CA-Vorgabe und Konto-/TLS-Einstellungen stehen vollständig unter Einstellungen → Zertifikate / ACME (`acme-options`). Neue Ausstellungen speichern die verwendete CA und Account-ID in `meta.acme_server` beziehungsweise `meta.acme_account`. Eine später geänderte globale CA verschiebt vorhandene Zertifikate nicht: Erneuerung und Widerruf lesen die ursprüngliche Zuordnung aus der eigenen Certbot-Lineage und prüfen vorhandene Metadaten dagegen. Fehlt eine sichere ursprüngliche Zuordnung oder widersprechen die Metadaten der Lineage, scheitert der Auftrag statt einen anderen Aussteller zu wählen. Eine CA-Umstellung verlangt eine neue Ausstellung und Host-Neuzuordnung.
+
+Diese Ausstellerfelder werden ausschließlich vom Backend gesetzt. Client-Erstellung/-Updates dürfen sie nicht überschreiben; Zertifikatsantworten und Audit entfernen sie aus den Metadaten.
+
+Accountregistrierung und Kontaktpflege erfolgen bei Bedarf im Backend. Die Account-ID ist optional, solange genau ein Account im betreffenden CA-Verzeichnis vorhanden ist; mehrdeutige oder ungültige Auswahl bleibt als Fehler sichtbar. Der UI-Start hängt nicht von erfolgreicher Registrierung ab. EAB-HMAC bleibt verschlüsselt und wird weder in öffentlichen Antworten noch Audit/GitOps-Export ausgegeben.
+
+Die UI verwaltet auch Must-Staple, TLS-Prüfung, ACME-/Custom-OCSP und die Standardzertifikat-ID (`0` für Dummy). OCSP-/Standardzertifikat-Änderungen werden mit Nginx-Regenerierung, Prüfung, Reload und Wiederherstellung bei Fehlern angewendet. Let's Encrypt unterstützt Must-Staple und OCSP nicht mehr. Die genaue Validierung steht unter [ACME-Einstellungen](../verwaltung/einstellungen.md#acme-konto-und-tls-optionen); die Auftrags- und Lineage-Regeln unter [Certbot](./certbot.md).
 
 ## Sicherheits- und Lebenszyklusregeln
 

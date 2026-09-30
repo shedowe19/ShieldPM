@@ -34,8 +34,8 @@ elif args[0] == 'inspect':
         print('true healthy' if mode != 'unhealthy' else 'true unhealthy')
 elif args[0] == 'cp':
     fixture = Path(args[1])
-    marker = fixture / 'tls/certbot/accounts/acme-v02.api.letsencrypt.org/directory/ci-offline/marker'
-    assert marker.is_file() and (fixture / '.env').is_file()
+    assert (fixture / '.env').is_file()
+    assert not (fixture / 'tls/certbot/accounts').exists()
     assert (fixture / 'grpc-smoke.mjs').is_file()
 elif args[0] == 'exec' and mode == 'write-failure':
     print('Permission denied: simulated runtime write', file=sys.stderr)
@@ -79,7 +79,9 @@ elif args[0] == 'logs':
                 self.assertIn(value, call)
             for key in ("ACME_PROFILE", "ACME_KEY_TYPE", "CRT", "SKIP_IP_RANGES", "IPRT",
                         "DISABLE_NGINX_BEAUTIFIER", "ANALYTICS_DETAILED_RETENTION_HOURS",
-                        "ANALYTICS_AGGREGATION_RETENTION_DAYS"):
+                        "ANALYTICS_AGGREGATION_RETENTION_DAYS", "ACME_SERVER", "ACME_EMAIL",
+                        "ACME_EAB_KID", "ACME_EAB_HMAC_KEY", "ACME_MUST_STAPLE", "ACME_OCSP_STAPLING",
+                        "ACME_SERVER_TLS_VERIFY", "CUSTOM_OCSP_STAPLING", "DEFAULT_CERT_ID"):
                 self.assertFalse(any(value.startswith(f"{key}=") for value in call))
         executions = [call for call in calls if call[0] == "exec"]
         self.assertEqual([call[call.index("--user") + 1] for call in executions], ["0:0", "1000:1000"])

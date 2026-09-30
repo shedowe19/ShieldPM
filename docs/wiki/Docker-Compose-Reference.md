@@ -52,14 +52,6 @@ services:
 #      - "DB_POSTGRES_USER=npm" # Postgres User
 #      - "DB_POSTGRES_PASSWORD=<match-POSTGRES_PASSWORD>" # Postgres Password
 #      - "DB_POSTGRES_NAME=npm" # Postgres Database Name
-#      - "ACME_EMAIL=your-email" # email address to use for acme, currently optional, may be required in the future, so I recommend entering your email here, optional for letsencrypt, but required for zerossl and google public ca
-#      - "ACME_SERVER=https://acme-v02.api.letsencrypt.org/directory" # set exactly one ACME directory URL; this is the default
-#      - "ACME_EAB_KID=123456789abcdef" # Key Identifier for External Account Binding for the acme server, not supported by letsencrypt, optional for zerossl (Login on their site => Developer), but required for google public ca: https://cloud.google.com/certificate-manager/docs/public-ca-tutorial?hl=de#request-key-hmac
-#      - "ACME_EAB_HMAC_KEY=123456789abcdef" # HMAC key for External Account Binding for the acme server, not supported by letsencrypt, optional for zerossl (Login on their site => Developer), but required for google public ca: https://cloud.google.com/certificate-manager/docs/public-ca-tutorial?hl=de#request-key-hmac
-#      - "ACME_MUST_STAPLE=true" # enables must-staple, default false; verify CA support, also enables ACME_OCSP_STAPLING
-#      - "ACME_OCSP_STAPLING=true" # enables ocsp stapling, default false, I recommend enabling this if your CA supports it, supported by zerossl and google public ca
-#      - "ACME_SERVER_TLS_VERIFY=false" # disables ACME server TLS certificate verification; default and recommended: true
-#      - "CUSTOM_OCSP_STAPLING=true" # enables ocsp stapling for custom certs, default false, I recommend enabling this if your custom certs support it
 #      - "PUID=1000" # set user id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root)
 #      - "PGID=1000" # set group id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root), requires non-zero PUID
 #      - "NPM_PORT=82" # Port the NPM UI should be bound to, default 81, change this if you want to run multiple npm instances in network mode host
@@ -73,7 +65,6 @@ services:
 #      - "DISABLE_IPV6=true" # fully disables listening on IPv6 and the IPv6 resolver of nginx, overrides IPV6_BINDING/NPM_IPV6_BINDING/GOA_IPV6_BINDING, default false
 #      - "NPM_LISTEN_LOCALHOST=true" # Binds the NPM UI only to localhost (IPv4+IPv6), overrides NPM_IPV4_BINDING/NPM_IPV6_BINDING, default false
 #      - "GOA_LISTEN_LOCALHOST=true" # Binds goaccess only to localhost (IPv4+IPv6), overrides GOA_IPV4_BINDING/GOA_IPV6_BINDING, default false
-#      - "DEFAULT_CERT_ID=1" # ID of cert to use instead of dummycerts, default 0/unset/dummycerts
 #      - "HTTP_PORT=8080" # tcp port to use for http traffic, changing this may break certbot http challenge, default 80
 #      - "HTTPS_PORT=8443" # udp and tcp port to use for https traffic, changing this may break certbot http challenge, default 443
 #      - "HTTP3_ALT_SVC_PORT=8443" # please change this if the udp port the clients connect to is not 443, default 443

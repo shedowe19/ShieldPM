@@ -5,7 +5,7 @@ import { ZipArchive } from "archiver";
 import dayjs from "dayjs";
 import _ from "lodash";
 import tempWrite from "temp-write";
-import { getCertificateProfile, getCertificateProfileArgs } from "../lib/certificate-profile.js";
+import { getCertificateProfile } from "../lib/certificate-profile.js";
 import error from "../lib/error.js";
 import { sanitizeProxyHost } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
@@ -15,6 +15,7 @@ import deadHostModel from "../models/dead_host.js";
 import proxyHostModel from "../models/proxy_host.js";
 import redirectionHostModel from "../models/redirection_host.js";
 import streamModel from "../models/stream.js";
+import internalAcmeOptions from "./acme-options.js";
 import internalAcmeProfile from "./acme-profile.js";
 import internalAuditLog from "./audit-log.js";
 import * as certbot from "./certbot.js";
@@ -180,23 +181,16 @@ const internalCertificate = {
 					.andWhere("provider", "letsencrypt");
 				const policy = await internalAcmeProfile.getPolicy();
 				const options = await internalCertificateOptions.getPolicy();
+				const acme = Object.freeze(await internalAcmeOptions.getRuntimePolicy());
+				const snapshot = Object.freeze({ acme, profile: policy, key_type: options.key_type });
 				// A profile in certbot.ini overrides saved lineage options, so renew each managed
 				// certificate with its own selection. Certbot still decides whether it is due.
 				for (const certificate of certificates || []) {
 					try {
-						const result = await certbot.runCertbot([
-							"--config",
-							"/etc/certbot.ini",
-							"renew",
-							"--server",
-							process.env.ACME_SERVER,
-							"--cert-name",
-							`npm-${certificate.id}`,
-							"--quiet",
-							"--key-type",
-							options.key_type,
-							...getCertificateProfileArgs(certificate, policy),
-						]);
+						const result = await certbot.renewCertbot(certificate, {
+							force: false,
+							snapshot,
+						});
 						if (result) logger.info(`Renew Result for Cert #${certificate.id}: ${result}`);
 					} catch (err) {
 						logger.error(`Renewal failed for Cert #${certificate.id}: ${err.message}`);
@@ -251,6 +245,12 @@ const internalCertificate = {
 	create: async (access, data) => {
 		const thisData = /** @type {any} */ (_.cloneDeep(data));
 		await access.can("certificates:create", thisData);
+		if (
+			thisData.meta &&
+			(Object.hasOwn(thisData.meta, "acme_server") || Object.hasOwn(thisData.meta, "acme_account"))
+		) {
+			throw new error.ValidationError("ACME issuer metadata is managed by ShieldPM");
+		}
 		thisData.owner_user_id = access.token.getUserId(1);
 		if (thisData.provider === "letsencrypt") {
 			const prepared = await internalCertificate.prepareQuickCertificate(access, thisData);
@@ -340,7 +340,21 @@ const internalCertificate = {
 	update: async (access, data) => {
 		const thisData = /** @type {any} */ (data);
 		await access.can("certificates:update", thisData.id);
-		const row = await internalCertificate.get(access, { id: thisData.id });
+		const row = await internalCertificate.get(access, { id: thisData.id }, { includeCertificateData: true });
+		if (
+			thisData.meta &&
+			(Object.hasOwn(thisData.meta, "acme_server") || Object.hasOwn(thisData.meta, "acme_account"))
+		) {
+			throw new error.ValidationError("ACME issuer metadata is managed by ShieldPM");
+		}
+		if (thisData.meta && row.provider === "letsencrypt") {
+			thisData.meta = {
+				...thisData.meta,
+				...(row.meta.acme_server !== undefined
+					? { acme_server: row.meta.acme_server, acme_account: row.meta.acme_account }
+					: {}),
+			};
+		}
 		if (thisData.provider !== undefined && thisData.provider !== row.provider) {
 			throw new error.ValidationError(
 				"Certificate provider cannot be changed. Create a new certificate instead.",
@@ -408,7 +422,11 @@ const internalCertificate = {
 			query.withGraphFetched(`[${thisData.expand.join(", ")}]`);
 		}
 
-		const row = await query.then(/** @type {any} */ (utils.omitRow(omissions())));
+		const row = await query.then(
+			/** @type {any} */ (
+				utils.omitRow(options.includeCertificateData ? ["is_deleted", "owner.is_deleted"] : omissions())
+			),
+		);
 		if (!row?.id) {
 			throw new error.ItemNotFoundError(thisData.id);
 		}
@@ -532,13 +550,15 @@ const internalCertificate = {
 	delete: (access, data) =>
 		withCertificateLock(data.id, async () => {
 			await access.can("certificates:delete", data.id);
-			const row = await internalCertificate.get(access, { id: data.id });
+			const row = await internalCertificate.get(access, { id: data.id }, { includeCertificateData: true });
 
 			if (!row?.id) {
 				throw new error.ItemNotFoundError(data.id);
 			}
 
 			await internalNginx.withConfigurationLock(async () => {
+				const { default: acmeTls } = await import("./acme-tls.js");
+				await acmeTls.assertCertificateDeletable(row.id);
 				const detachCertificate = async () => {
 					await certificateModel.query().where("id", row.id).patch({ is_deleted: 1 });
 					try {
@@ -732,6 +752,12 @@ const internalCertificate = {
 	prepareQuickCertificate: async (access, data) => {
 		await access.can("certificates:create", data);
 		const prepared = _.cloneDeep(data);
+		if (
+			prepared.meta &&
+			(Object.hasOwn(prepared.meta, "acme_server") || Object.hasOwn(prepared.meta, "acme_account"))
+		) {
+			throw new error.ValidationError("ACME issuer metadata is managed by ShieldPM");
+		}
 		if (!Array.isArray(prepared.domain_names) || prepared.domain_names.length === 0) {
 			throw new error.ValidationError("At least one domain name is required for certificate creation");
 		}
@@ -1006,6 +1032,8 @@ const internalCertificate = {
 	cleanMeta: (meta, remove) => {
 		const clean = { ...meta };
 		delete clean.dns_provider_credentials;
+		delete clean.acme_server;
+		delete clean.acme_account;
 		internalCertificate.allowedSslFiles.map((key) => {
 			if (typeof clean[key] !== "undefined" && clean[key]) {
 				if (remove) {
@@ -1041,7 +1069,7 @@ const internalCertificate = {
 	renew: (access, data) =>
 		withCertificateLock(data.id, async () => {
 			await access.can("certificates:update", data.id);
-			const certificate = await internalCertificate.get(access, data);
+			const certificate = await internalCertificate.get(access, data, { includeCertificateData: true });
 
 			if (certificate.provider === "letsencrypt") {
 				const renewMethod = certificate.meta.dns_challenge

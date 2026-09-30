@@ -74,15 +74,6 @@ services:
       # - "DB_POSTGRES_NAME=npm"
 
       # ── SSL & ACME ────────────────────────────────────────────────────────
-      # - "ACME_EMAIL=your-email"                  # Recommended (required for ZeroSSL/Google)
-      # - "ACME_SERVER=https://acme-v02.api.letsencrypt.org/directory"
-      # - "ACME_EAB_KID=123456789abcdef"           # External Account Binding key
-      # - "ACME_EAB_HMAC_KEY=123456789abcdef"      # External Account Binding HMAC
-      # - "ACME_MUST_STAPLE=true"                  # Enable must-staple extension
-      # - "ACME_OCSP_STAPLING=true"                # Enable OCSP stapling
-      # - "ACME_SERVER_TLS_VERIFY=false"           # Verify ACME server TLS cert
-      # - "DEFAULT_CERT_ID=1"                      # Use cert ID instead of dummy certs
-      # - "CUSTOM_OCSP_STAPLING=true"              # OCSP stapling for custom certs
 
       # ── Logging & Analytics ────────────────────────────────────────────────
       # - "LOGROTATE=true"                         # Enable access logs + daily rotation

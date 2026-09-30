@@ -1,0 +1,39 @@
+{
+	"operationId": "getAcmeOptions",
+	"summary": "Get ACME account and certificate security options",
+	"tags": [
+		"settings"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "The configured public ACME options; neither plaintext nor encrypted HMAC keys are returned",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/acme-options-object.json"
+					},
+					"example": {
+						"server": "https://acme-v02.api.letsencrypt.org/directory",
+						"email": "",
+						"account_id": "",
+						"eab_kid": "",
+						"agree_tos": true,
+						"must_staple": false,
+						"ocsp_stapling": false,
+						"server_tls_verify": true,
+						"custom_ocsp_stapling": false,
+						"default_certificate_id": 0,
+						"eab_hmac_key_set": false
+					}
+				}
+			}
+		}
+	}
+}

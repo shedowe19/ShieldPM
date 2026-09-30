@@ -47,6 +47,8 @@ Die globale Vorgabe liegt im vorhandenen `setting`-Datensatz mit `id: "acme-prof
 
 Certbot persistiert die Ausstellungsoptionen zusätzlich je Lineage in `/data/tls/certbot/renewal/npm-<id>.conf`. ShieldPM wendet bei jeder Erneuerung pro Zertifikat dessen explizites Profil oder die aktuelle globale Vorgabe erneut an. Standard leert dabei erforderliche und bevorzugte Profiloptionen, sodass alte INI-/Lineage-Profile nicht weiterwirken. Bestehende Zertifikate ohne Profilfeld folgen der globalen Datenbankvorgabe. Siehe [Zertifikate](../module/zertifikate.md) und [Einstellungen](../verwaltung/einstellungen.md).
 
+Neue ACME-Zertifikate speichern zusätzlich `meta.acme_server` und `meta.acme_account` als interne Ausstellerzuordnung. Diese Felder sind vom Backend kontrolliert, aus Client-Schreibanfragen ausgeschlossen und in Antworten sowie Audit verborgen. Erneuerung und Widerruf lesen die ursprüngliche CA-/Accountwahl aus der eigenen Certbot-Lineage und prüfen vorhandene Metadaten dagegen. Ungültige oder fehlende Lineage-Angaben sowie widersprüchliche Metadaten werden nicht aus den aktuellen Settings ersetzt.
+
 ## Abhängigkeiten
 
 - Knex.js für Schema-Definition
@@ -61,6 +63,8 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 Die Datensätze `certificate-options` und `ip-ranges-options` verwenden die bestehende Tabelle `setting`, jeweils mit `value: "configured"`. `meta` speichert `{ key_type, renewal_interval_hours }` beziehungsweise `{ enabled, refresh_interval_hours }`. Die Migration `20260930000200_add_application_options.js` importiert alte Umgebungswerte einmalig bei fehlenden Datensätzen und erhält bereits gespeicherte Optionen. Sie ergänzt keine neuen Spalten. API und Grenzen stehen unter [Einstellungen](../verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen).
 
 Weitere Optionsdatensätze sind `analytics-options` mit `{ detailed_retention_hours, aggregation_retention_days }` und `nginx-options` mit `{ beautifier_enabled }`, ebenfalls in `setting.meta` bei `value: "configured"`. Die Migration `20260930000300_add_analytics_nginx_options.js` importiert alte Umgebungswerte einmalig für fehlende Datensätze und erhält vorhandene gespeicherte Werte. Ungültige ausdrücklich gesetzte Retention-Werte werden zur maximalen sicheren Ganzzahl, um Daten bis zur Korrektur zu erhalten. Details stehen unter [Einstellungen](../verwaltung/einstellungen.md#analytics--und-nginx-optionen).
+
+`acme-options` verwendet ebenfalls `value: "configured"` und speichert CA-/Account-/TLS-Felder in `meta`; EAB-HMAC liegt ausschließlich als `encrypted_eab_hmac_key` vor. `20260930000400_add_acme_options.js` übernimmt die neun alten ACME-/Standardzertifikat-Umgebungswerte nur bei fehlendem Datensatz, ohne Registrierung oder Netzwerkzugriff. Vorhandene Optionen bleiben erhalten. Die öffentliche Darstellung verwendet ein Feld-Allowlisting und nur `eab_hmac_key_set`; GET, Audit und GitOps-Export geben weder Secret noch Ciphertext aus. Siehe [ACME-Einstellungen](../verwaltung/einstellungen.md#acme-konto-und-tls-optionen).
 
 ## Verwandte Seiten
 

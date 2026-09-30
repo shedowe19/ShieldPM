@@ -82,7 +82,7 @@ export function SSLCertificateField({
 		data?.map((cert: Certificate) => ({
 			value: String(cert.id),
 			label: cert.niceName,
-			subLabel: `${cert.provider === CERTIFICATE_PROVIDER.LETSENCRYPT ? intl.formatMessage({ id: "lets-encrypt" }) : cert.provider} — ${intl.formatMessage({ id: "expires.on" }, { date: cert.expiresOn ? formatDateTime(cert.expiresOn) : "N/A" })}`,
+			subLabel: `${cert.provider === CERTIFICATE_PROVIDER.LETSENCRYPT ? intl.formatMessage({ id: "certificates.acme" }) : cert.provider} — ${intl.formatMessage({ id: "expires.on" }, { date: cert.expiresOn ? formatDateTime(cert.expiresOn) : "N/A" })}`,
 			icon: <IconShield size={14} className="text-pink-500" />,
 		})) || [];
 

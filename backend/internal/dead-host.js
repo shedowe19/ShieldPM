@@ -276,7 +276,7 @@ const internalDeadHost = {
 				await deadHostModel.transaction(async (trx) => {
 					await deadHostModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
 					await internalNginx.deleteConfig("dead_host", row);
-					await internalNginx.reload();
+					await internalNginx.reload({ trx });
 				});
 			} catch (error) {
 				// The database transaction has rolled back. Restore the listener
@@ -374,7 +374,7 @@ const internalDeadHost = {
 				await deadHostModel.transaction(async (trx) => {
 					await deadHostModel.query(trx).where("id", row.id).patch({ enabled: 0 });
 					await internalNginx.deleteConfig("dead_host", row);
-					await internalNginx.reload();
+					await internalNginx.reload({ trx });
 				});
 			} catch (error) {
 				// The database transaction has rolled back. Restore the listener

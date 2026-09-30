@@ -86,6 +86,31 @@ An administrator saves the choice with **PUT** `/api/nginx/certificates/acme-pro
 
 The response contains only the saved `profile`. Only `standard` and `shortlived` are accepted; Standard is the initial database default. Certbot 4.0 or newer and its profile support are required. Short-lived also requires the ACME server to advertise that profile and rejects active legacy certificates without a saved profile if they have more than 25 domain names. A failed validation preserves the previous value. Saving applies immediately to new requests without an explicit profile and to renewal of legacy certificates without profile metadata. Explicit per-certificate profiles remain unchanged. The generic `/api/settings/acme-profile` update is rejected; use this dedicated endpoint.
 
+### ACME account and TLS options
+
+Administrators use **GET/PUT** `/api/settings/acme-options`. PUT sends the complete ordinary fields, without a `meta` wrapper:
+
+```json
+{
+  "server": "https://acme-v02.api.letsencrypt.org/directory",
+  "email": "",
+  "account_id": "",
+  "eab_kid": "",
+  "agree_tos": true,
+  "must_staple": false,
+  "ocsp_stapling": false,
+  "server_tls_verify": true,
+  "custom_ocsp_stapling": false,
+  "default_certificate_id": 0
+}
+```
+
+GET and successful PUT return those public fields plus `eab_hmac_key_set`, a boolean presence marker. They never return the HMAC secret or its ciphertext. The optional, write-only PUT field `eab_hmac_key` is omitted to retain the saved secret, a nonempty base64url string to replace it, or `null` to clear it. Clear the EAB identifier too when removing the pair. Changing the CA or EAB identifier while a key exists requires explicit replacement or clearing. Audit and GitOps export omit both plaintext and ciphertext.
+
+GET requires `settings:get`, PUT `settings:update` for `acme-options`. Additional fields and wrong types are rejected; generic setting updates cannot bypass this endpoint. `account_id` is empty for automatic selection or identifies an existing account for the complete CA directory. `default_certificate_id` is a nonnegative safe integer; `0` selects the dummy certificate. Must-Staple requires ACME OCSP and is rejected for Let's Encrypt production/staging.
+
+Changing the CA affects new certificates; existing renewal and revocation read the original CA/account from the Certbot lineage and reject mismatched saved issuer metadata. Client certificate requests cannot set `meta.acme_server` or `meta.acme_account`; responses and audit omit these backend-owned fields. Registration is lazy and does not block the UI. OCSP/default-certificate changes regenerate, test and reload Nginx with rollback on failure. Other options apply to the next operation, without forcing issuance. See [SSL Certificates](SSL-Certificates).
+
 ### Certificate and Cloudflare update options
 
 Administrators use **GET/PUT** `/api/settings/certificate-options` with this complete body/response:

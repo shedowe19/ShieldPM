@@ -1,3 +1,15 @@
+vi.mock("../../internal/acme-options.js", () => ({
+	default: {
+		getPublicPolicy: async () => ({ ocsp_stapling: false, custom_ocsp_stapling: false, default_certificate_id: 0 }),
+	},
+}));
+vi.mock("../../internal/acme-tls.js", () => ({
+	default: {
+		getDefaultIncludePath: () => "/data/nginx/include/default-tls.conf",
+		refreshDefaultInclude: async () => {},
+	},
+}));
+
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -83,6 +95,33 @@ describe("Nginx configuration regressions", () => {
 		expect(rendered).toContain("disable_symlinks on;");
 		expect(rendered).toContain("location ~ /\\.git(?:/|$)");
 	});
+
+	it.each(["proxy_host", "stream"])(
+		"renders %s OCSP policy from saved/staged settings despite obsolete env",
+		async (type) => {
+			for (const provider of ["letsencrypt", "other"]) {
+				for (const enabled of [true, false]) {
+					vi.stubEnv("ACME_OCSP_STAPLING", enabled ? "false" : "true");
+					vi.stubEnv("CUSTOM_OCSP_STAPLING", enabled ? "false" : "true");
+					const rendered = await internalNginx.renderConfig(
+						type,
+						host({
+							incoming_port: 8443,
+							tcp_forwarding: true,
+							forwarding_host: "127.0.0.1",
+							forwarding_port: 443,
+							certificate_id: 7,
+							certificate: { provider },
+						}),
+						{ acme_options: { ocsp_stapling: enabled, custom_ocsp_stapling: enabled } },
+					);
+					if (enabled) expect(rendered).toContain("ssl_stapling on;");
+					else expect(rendered).not.toContain("ssl_stapling on;");
+					expect(rendered).not.toContain("ssl_stapling_file");
+				}
+			}
+		},
+	);
 
 	it("uses internal certificate files for TLS streams", async () => {
 		await internalNginx.generateConfig(

@@ -1,3 +1,15 @@
+vi.mock("../../internal/acme-options.js", () => ({
+	default: {
+		getPublicPolicy: state.acmePolicy,
+	},
+}));
+vi.mock("../../internal/acme-tls.js", () => ({
+	default: {
+		getDefaultIncludePath: () => "/data/nginx/include/default-tls.conf",
+		refreshDefaultInclude: state.include,
+	},
+}));
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
@@ -15,7 +27,13 @@ vi.mock("../../lib/config.js", () => ({
 	isDemoMode: vi.fn().mockReturnValue(false),
 }));
 vi.mock("../../internal/anubis.js", () => ({ default: {} }));
-const state = vi.hoisted(() => ({ policy: vi.fn() }));
+const state = vi.hoisted(() => ({
+	policy: vi.fn(),
+	acmePolicy: vi
+		.fn()
+		.mockResolvedValue({ ocsp_stapling: false, custom_ocsp_stapling: false, default_certificate_id: 0 }),
+	include: vi.fn().mockResolvedValue(),
+}));
 vi.mock("../../internal/nginx-options.js", () => ({ default: { getPolicy: state.policy } }));
 
 import fs from "node:fs";
@@ -148,5 +166,33 @@ describe("saved Nginx formatting options", () => {
 		vi.mocked(utils.execFile).mockRejectedValueOnce(new Error("formatter unavailable"));
 		await expect(internalNginx.generateConfig("proxy_host", { id: 7 })).resolves.toBe(true);
 		expect(fs.promises.writeFile).toHaveBeenCalledOnce();
+	});
+});
+
+describe("transaction-aware TLS reload", () => {
+	afterEach(() => vi.restoreAllMocks());
+	it("uses the active transaction for saved policy and shared default certificate include", async () => {
+		vi.clearAllMocks();
+		const trx = { transaction: "active" };
+		vi.spyOn(utils, "execFile").mockResolvedValue("");
+		await internalNginx.reload({ trx });
+		expect(state.acmePolicy).toHaveBeenCalledExactlyOnceWith(trx);
+		expect(state.include).toHaveBeenCalledWith(
+			{ ocsp_stapling: false, custom_ocsp_stapling: false, default_certificate_id: 0 },
+			{ trx },
+		);
+		expect(utils.execFile.mock.calls).toEqual([
+			["nginx", ["-tq"]],
+			["nginx", ["-s", "reload"]],
+		]);
+	});
+	it("uses a staged policy without fetching settings again while retaining the transaction", async () => {
+		vi.clearAllMocks();
+		const trx = { transaction: "active" };
+		const policy = { ocsp_stapling: false, custom_ocsp_stapling: false, default_certificate_id: 7 };
+		vi.spyOn(utils, "execFile").mockResolvedValue("");
+		await internalNginx.reload({ acme_options: policy, trx });
+		expect(state.acmePolicy).not.toHaveBeenCalled();
+		expect(state.include).toHaveBeenCalledExactlyOnceWith(policy, { trx });
 	});
 });
