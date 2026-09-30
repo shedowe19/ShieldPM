@@ -1371,6 +1371,11 @@ const internalGitOps = {
 								}
 
 								const existing = await settingModel.query().findById(settingData.id);
+								if (existing && existing.id !== settingData.id) {
+									throw new errs.ValidationError(
+										"Imported setting IDs must match the stored IDs exactly",
+									);
+								}
 								if (existing) {
 									await settingModel.query().patchAndFetchById(settingData.id, settingData);
 								} else {

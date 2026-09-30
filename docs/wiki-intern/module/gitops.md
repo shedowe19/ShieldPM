@@ -45,6 +45,8 @@ Unklar: Der Import ist weiterhin nicht als Gesamttransaktion über alle Module i
 
 Die Einstellungsdatensätze `certificate-options`, `ip-ranges-options`, `analytics-options` und `nginx-options` werden beim Restore nicht direkt gepatcht: `value: "configured"` und ihre Metadaten werden gegen die dedizierten Optionsschemas geprüft und durch die jeweiligen Update-Services angewendet. Dadurch ändern sich laufende Timer beziehungsweise die für nächste Bereinigung oder Konfigurationsgenerierung gelesenen Optionen ohne Neustart. Ungültige Metadaten oder Zustände werden als Importfehler gemeldet; die bisher gespeicherten Optionen bleiben erhalten. Siehe [Einstellungen](../verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen).
 
+Vor generischen Einstellungsupdates muss die importierte ID exakt mit der zurückgegebenen gespeicherten ID übereinstimmen. Damit können Datenbank-Kollationen, die Groß-/Kleinschreibung oder Akzente ignorieren, keinen abweichend geschriebenen Optionsnamen am validierten Restore-Pfad vorbeileiten. Solche Aliase ergeben einen Importfehler ohne Datenbankänderung.
+
 ### Einstellungen und manuelle Aktionen
 
 Die GitOps-Seite zeigt bei fehlgeschlagener Erstabfrage keine speicherbaren Standardwerte an. Verbindungstests und Git-Aktionen verwenden die gespeicherte Backend-Konfiguration und bleiben gesperrt, solange die angezeigten Einstellungen ungespeicherte Änderungen enthalten. Während einer Mutation sind weitere Git-Aktionen und Änderungen der Konfiguration gesperrt. Ein neu eingegebener Token wird nach erfolgreichem Speichern aus dem Formular entfernt; leere Token-Felder erhalten die gespeicherten Zugangsdaten.

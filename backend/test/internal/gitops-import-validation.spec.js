@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => {
 	const prunes = [];
 	const rows = {};
 	const pruneError = { value: null };
+	const settingLookup = { insensitive: false };
 	const makeModel = (name) => ({
 		name,
 		query: () => {
@@ -31,7 +32,11 @@ const mocks = vi.hoisted(() => {
 					return Promise.resolve([]);
 				},
 				findById: (id) => {
-					const row = (rows[name] || []).find((entry) => entry.id === id);
+					const row = (rows[name] || []).find((entry) =>
+						name === "Setting" && settingLookup.insensitive
+							? entry.id.localeCompare(id, "en", { sensitivity: "base" }) === 0
+							: entry.id === id,
+					);
 					const result = Promise.resolve(row);
 					result.withGraphFetched = () => result;
 					result.patch = async (data) => {
@@ -63,7 +68,7 @@ const mocks = vi.hoisted(() => {
 			return query;
 		},
 	});
-	return { files, writes, prunes, rows, makeModel, pruneError };
+	return { files, writes, prunes, rows, makeModel, pruneError, settingLookup };
 });
 vi.mock("node:fs", () => ({
 	default: {
@@ -144,8 +149,30 @@ describe("GitOps import sanitization and safe restore", () => {
 		mocks.writes.length = 0;
 		mocks.prunes.length = 0;
 		mocks.pruneError.value = null;
+		mocks.settingLookup.insensitive = false;
 		for (const key of Object.keys(mocks.rows)) delete mocks.rows[key];
 	});
+	it.each(["ANALYTICS-OPTIONS", "analytics-optiöns", "NGINX-OPTIONS", "CERTIFICATE-OPTIONS", "IP-RANGES-OPTIONS"])(
+		"rejects a collation alias %s before a generic setting write",
+		async (id) => {
+			mocks.settingLookup.insensitive = true;
+			mocks.rows.Setting = [
+				{ id: "analytics-options" },
+				{ id: "nginx-options" },
+				{ id: "certificate-options" },
+				{ id: "ip-ranges-options" },
+			];
+			file("settings", { id, value: "configured", meta: { injected: true } });
+			const result = await gitops.importConfig(access, { overwrite: true });
+			expect(result).toMatchObject({ success: false, imported: 0 });
+			expect(result.errors).toEqual(["settings/1.yaml: Imported setting IDs must match the stored IDs exactly"]);
+			expect(mocks.writes).toEqual([]);
+			expect(analyticsOptions.update).not.toHaveBeenCalled();
+			expect(nginxOptions.update).not.toHaveBeenCalled();
+			expect(certificateOptions.update).not.toHaveBeenCalled();
+			expect(ipRangesOptions.update).not.toHaveBeenCalled();
+		},
+	);
 	it.each([
 		["certificate-options", certificateOptions, { key_type: "rsa", renewal_interval_hours: 4 }],
 		["ip-ranges-options", ipRangesOptions, { enabled: true, refresh_interval_hours: 24 }],
