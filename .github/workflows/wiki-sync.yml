@@ -23,11 +23,39 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v7
 
-      - name: Sync docs to wiki
-        uses: newrelic/wiki-sync-action@main
-        with:
-          source: docs/wiki
-          destination: wiki
-          token: ${{ secrets.WIKI_TOKEN }}
-          gitAuthorName: ${{ env.GIT_AUTHOR_NAME }}
-          gitAuthorEmail: ${{ env.GIT_AUTHOR_EMAIL }}
+      - name: Sync docs/wiki to the project wiki
+        env:
+          WIKI_TOKEN: ${{ secrets.WIKI_TOKEN }}
+          WIKI_COMMIT_MESSAGE: "chore(docs): Sync docs/wiki to wiki [skip-cd]"
+        run: |
+          set -euo pipefail
+          echo "::add-mask::${WIKI_TOKEN}"
+
+          wiki_dir="$(mktemp -d)"
+          trap 'rm -rf "$wiki_dir"' EXIT
+
+          git -C "$wiki_dir" init --quiet
+          git -C "$wiki_dir" remote add origin "https://x-access-token:${WIKI_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git"
+          git -C "$wiki_dir" fetch --depth 1 origin master
+          git -C "$wiki_dir" checkout --quiet -B master FETCH_HEAD
+          git -C "$wiki_dir" config user.name "${GIT_AUTHOR_NAME}"
+          git -C "$wiki_dir" config user.email "${GIT_AUTHOR_EMAIL}"
+
+          # Content-aware copy: --checksum compares file contents instead of size+mtime,
+          # so same-size edits (e.g. "v8.2" -> "v8.3") are no longer skipped silently.
+          rsync -ai --checksum --delete --exclude='.git/' docs/wiki/ "$wiki_dir"/
+
+          # Fail loudly instead of reporting a green no-op sync.
+          if ! diff -rq --exclude=.git docs/wiki "$wiki_dir"; then
+            echo "::error::Post-sync verification failed: wiki working copy differs from docs/wiki."
+            exit 1
+          fi
+
+          git -C "$wiki_dir" add --all
+          if git -C "$wiki_dir" diff --cached --quiet; then
+            echo "Wiki is already up to date; nothing to commit."
+            exit 0
+          fi
+
+          git -C "$wiki_dir" commit -m "$WIKI_COMMIT_MESSAGE"
+          git -C "$wiki_dir" push origin master
