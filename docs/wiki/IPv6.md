@@ -30,8 +30,8 @@ If you use `network_mode: host`, ShieldPM shares the host's network stack:
 
 ```yaml
 services:
-  app:
-    image: "ghcr.io/shedowe19/shieldpm:latest"
+  shieldpm:
+    image: "ghcr.io/shedowe19/shieldpm:develop"
     network_mode: host
 ```
 
@@ -65,8 +65,8 @@ sudo systemctl restart docker
 
 ```yaml
 services:
-  app:
-    image: "ghcr.io/shedowe19/shieldpm:latest"
+  shieldpm:
+    image: "ghcr.io/shedowe19/shieldpm:develop"
     ports:
       - "80:80"
       - "81:81"

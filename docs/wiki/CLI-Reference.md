@@ -31,7 +31,7 @@ This is the standard system utility, not a ShieldPM-specific command. The bundle
 
 ### `npm-reset-password` (SQLite only)
 
-Run `sudo npm-reset-password USER_EMAIL NEW_PASSWORD` on native/LXC or `docker compose exec shieldpm npm-reset-password USER_EMAIL NEW_PASSWORD` in Docker (use `app` for the [Installation Quick Start](Installation)). This command updates the local SQLite database and revokes refresh sessions; it does not connect to MySQL or PostgreSQL. For other database engines, use the application's authenticated account recovery/management flow.
+Run `sudo npm-reset-password USER_EMAIL NEW_PASSWORD` on native/LXC or `docker compose exec shieldpm npm-reset-password USER_EMAIL NEW_PASSWORD` in Docker. This command updates the local SQLite database and revokes refresh sessions; it does not connect to MySQL or PostgreSQL. For other database engines, use the application's authenticated account recovery/management flow.
 
 ## CrowdSec CLI (`cscli`)
 

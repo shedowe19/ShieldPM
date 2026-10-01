@@ -17,7 +17,7 @@
 * **Base**: Advanced fork of Nginx Proxy Manager (NPM).
 * **Core Function**: Web UI for managing Nginx Reverse Proxies with heavy emphasis on security (WAF, IPS), modern protocols (HTTP/3, QUIC), and native performance.
 * **Current Version**: `v4.4.1`
-* **Primary Output**: Docker Image (`shedowe19/shieldpm:latest`) & Native Installer Script (`install.sh`).
+* **Primary Output**: Docker Image (`shedowe19/shieldpm:develop`) & Native Installer Script (`install.sh`).
 
 ### Key Features
 

@@ -12,7 +12,7 @@ This is an annotated example using host networking. The repository's checked-in 
 services:
   shieldpm:
     container_name: shieldpm
-    image: ghcr.io/shedowe19/shieldpm:latest
+    image: ghcr.io/shedowe19/shieldpm:develop
     restart: always
     network_mode: host
 #    ipc: host # required when you want to use the openappsec attachment module

@@ -64,7 +64,7 @@ To expose a container, add the `shieldpm.hostname` label. All other labels are o
 ```yaml
 services:
   shieldpm:
-    image: ghcr.io/shedowe19/shieldpm:latest
+    image: ghcr.io/shedowe19/shieldpm:develop
     ports:
       - "80:80"
       - "81:81"

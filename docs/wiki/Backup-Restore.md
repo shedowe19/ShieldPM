@@ -29,7 +29,7 @@ Back up the full `/data` directory **and** any external database or external ser
 
 ```bash
 # 1. Stop the container for database consistency
-docker compose stop shieldpm # use `app` if your service is named app
+docker compose stop shieldpm
 
 # 2. Create a timestamped archive
 tar -czvf shieldpm-backup-$(date +%F).tar.gz ./data ./compose.yaml
@@ -131,7 +131,7 @@ Schedule the stop/archive/start procedure above, or use SQLite's `.backup` comma
    journalctl -u shieldpm -f         # Native / LXC
    ```
 
-6. **Check generated Nginx configuration** after startup with `docker compose exec shieldpm nginx -t` (Docker; use `app` for the Quick Start) or `nginx -t` (native/LXC). If you intentionally need to regenerate host files, set `REGENERATE_ALL=true` for a single startup, then remove it and restart. `FULLCLEAN` controls cleanup of other runtime data; there is no `fullclean` CLI command.
+6. **Check generated Nginx configuration** after startup with `docker compose exec shieldpm nginx -t` (Docker) or `nginx -t` (native/LXC). If you intentionally need to regenerate host files, set `REGENERATE_ALL=true` for a single startup, then remove it and restart. `FULLCLEAN` controls cleanup of other runtime data; there is no `fullclean` CLI command.
 
 ### Restoring an External Database
 
