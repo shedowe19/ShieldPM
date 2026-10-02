@@ -247,7 +247,7 @@ class DockerService {
 					await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", hosts);
 				}
 				logger.info("Docker Auto-Discovery: Triggering batched Nginx reload...");
-				await internalNginx.reload();
+				await internalNginx.withConfigurationLock(() => internalNginx.reload());
 			} catch (err) {
 				logger.error("Docker Auto-Discovery: Batch configuration or reload failed", err);
 			}

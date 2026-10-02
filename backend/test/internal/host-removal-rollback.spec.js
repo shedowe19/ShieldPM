@@ -12,6 +12,7 @@ const state = vi.hoisted(() => ({
 	audit: vi.fn(),
 	autoPush: vi.fn(),
 	stopPolling: vi.fn(),
+	readPolicy: vi.fn(),
 	runningConfig: null,
 	model: async (table) => {
 		const { Model } = await import("objection");
@@ -62,7 +63,9 @@ vi.mock("../../internal/nginx.js", () => {
 					throw new Error("delete failed");
 				}
 			},
-			reload: async () => {
+			reload: async (options = {}) => {
+				// Settings reads during activation share SQLite's sole transaction connection.
+				state.readPolicy(await (options.trx || state.db)("setting").where("id", "acme-options").first());
 				if (state.failure === "reload") {
 					state.failure = null;
 					throw new Error("reload failed");
@@ -91,10 +94,20 @@ describe.each(cases)("$kind $action keeps database and active config consistent"
 	let filename;
 	beforeEach(async () => {
 		vi.clearAllMocks();
-		state.db = knex({ client: "better-sqlite3", connection: { filename: ":memory:" }, useNullAsDefault: true });
+		state.db = knex({
+			client: "better-sqlite3",
+			connection: { filename: ":memory:" },
+			useNullAsDefault: true,
+			acquireConnectionTimeout: 250,
+		});
 		state.directory = fs.mkdtempSync(path.join(os.tmpdir(), "shieldpm-host-removal-"));
 		state.queue = Promise.resolve();
 		state.failure = null;
+		await state.db.schema.createTable("setting", (table) => {
+			table.string("id").primary();
+			table.string("value");
+		});
+		await state.db("setting").insert({ id: "acme-options", value: "configured" });
 		await state.db.schema.createTable(kind, (table) => {
 			table.increments("id");
 			table.integer("enabled");
@@ -136,6 +149,7 @@ describe.each(cases)("$kind $action keeps database and active config consistent"
 		expect(fs.existsSync(filename)).toBe(false);
 		expect(fs.existsSync(`${filename}.bak`)).toBe(false);
 		expect(state.runningConfig).toEqual([]);
+		expect(state.readPolicy).toHaveBeenCalledWith({ id: "acme-options", value: "configured" });
 		expect(state.audit).toHaveBeenCalledOnce();
 	});
 

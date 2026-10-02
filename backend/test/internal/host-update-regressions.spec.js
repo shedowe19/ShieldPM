@@ -19,6 +19,7 @@ vi.mock("../../internal/audit-log.js", () => ({ default: { add: vi.fn() } }));
 vi.mock("../../internal/nginx.js", () => ({ default: { configure: mocks.configure } }));
 vi.mock("../../internal/certificate.js", () => ({
 	default: {
+		prepareQuickCertificate: vi.fn(async (_access, data) => structuredClone(data)),
 		createQuickCertificate: vi.fn().mockResolvedValue({ id: 8 }),
 		get: vi.fn().mockResolvedValue({ id: 8 }),
 	},

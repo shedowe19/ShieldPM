@@ -54,6 +54,34 @@ auszustellenden Zertifikaten `certificate-pending`). Die gerenderte Konfiguratio
 Formatierung und maskiert bekannte Geheimnisse; der Diff vergleicht mit der aktiven Konfiguration nur
 des berechtigten Hosts. Ein `nginx -tq` der vorgeschlagenen Konfiguration erfolgt erst beim Speichern.
 
+### Zertifikatsprofile
+
+`POST /api/nginx/certificates` akzeptiert bei `provider: "letsencrypt"` das optionale Feld
+`meta.letsencrypt_profile` (`standard` oder `shortlived`, fehlend verwendet die globale Vorgabe). Dieselbe
+Auswahl wird bei Host-Erstellung oder -Aktualisierung mit `certificate_id: "new"` an die Ausstellung
+weitergereicht; Streams benötigen hierfür DNS-Verifikation. Die bestehenden Renew-Routen behalten
+das gespeicherte Profil bei. Der Update-Endpunkt eines vorhandenen Zertifikats erlaubt keinen
+Profilwechsel. Details und Grenzen stehen unter [Zertifikate](../module/zertifikate.md).
+
+`GET /api/nginx/certificates/acme-profile` liefert mit `certificates:list` die globale
+Datenbankvorgabe als `{ profile }`, anfänglich `standard`. `PUT` auf demselben Pfad speichert mit
+`settings:update` und dem Body `{ "profile": "standard" | "shortlived" }` die Vorgabe nach
+Validierung von Certbot und gegebenenfalls dem ACME-Verzeichnis. Die Antwort enthält ebenfalls nur
+`profile`. Diese dedizierte Route ersetzt für den Schlüssel `acme-profile` den generischen Settings-PUT,
+der dafür abgewiesen wird. Siehe [Einstellungen](../verwaltung/einstellungen.md).
+
+### ACME-Konto und TLS-Optionen
+
+`GET`/`PUT /api/settings/acme-options` verwenden vollständige flache öffentliche Optionen mit `settings:get` beziehungsweise `settings:update` für `acme-options`. Die statische Route steht vor der generischen Settings-Route. Der PUT erlaubt als einziges Geheimnis-Schreibfeld `eab_hmac_key`; dessen Auslassen erhält den gespeicherten Wert, `null` löscht ihn ausdrücklich. Antworten liefern nur `eab_hmac_key_set` und niemals Klartext oder Ciphertext. Server-/Accountwahl, Paarvalidierung, Profilprüfung und Nginx-Aktivierung werden durch die dedizierten Services geprüft. Details stehen unter [ACME-Einstellungen](../verwaltung/einstellungen.md#acme-konto-und-tls-optionen).
+
+### Zertifikats- und Netzwerkoptionen
+
+`GET` und `PUT /api/settings/certificate-options` lesen/speichern `{ key_type, renewal_interval_hours }`; `GET` und `PUT /api/settings/ip-ranges-options` lesen/speichern `{ enabled, refresh_interval_hours }`. Beide PUTs verlangen das vollständige jeweilige Objekt. GET prüft `settings:get`, PUT `settings:update` für die betreffende ID. Die statischen Routen stehen vor der generischen Settings-Route; deren Service blockiert Updates dieser Schlüssel, um Validierung und Live-Anwendung zu erhalten. Grenzen und Wirkung stehen unter [Einstellungen](../verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen).
+
+### Analytics- und Nginx-Optionen
+
+`GET`/`PUT /api/settings/analytics-options` lesen/speichern `{ detailed_retention_hours, aggregation_retention_days }`; `GET`/`PUT /api/settings/nginx-options` lesen/speichern `{ beautifier_enabled }`. PUT verlangt jeweils das vollständige Optionsobjekt. Die statischen Routen prüfen `settings:get` beziehungsweise `settings:update` für die ID und stehen vor der generischen Settings-Route, deren Update-Service diese IDs schützt. Gültige Updates werden auditiert und benötigen keinen Neustart; ihre Wirkung gilt bei der nächsten Bereinigung beziehungsweise Konfigurationsgenerierung. Grenzen stehen unter [Einstellungen](../verwaltung/einstellungen.md#analytics--und-nginx-optionen).
+
 ### Proxy-Host-Diagnose
 
 `POST /api/nginx/proxy-hosts/:host_id/diagnostics` startet die [Proxy-Host-Diagnose](../features/proxy-host-diagnostics.md). Die Route akzeptiert keine frei wählbaren Netzwerkziele.

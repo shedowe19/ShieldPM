@@ -1,0 +1,29 @@
+{
+	"operationId": "getACMEProfile",
+	"summary": "Get the default Let's Encrypt certificate profile",
+	"tags": [
+		"certificates"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"certificates.view"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "The configured default profile",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../components/acme-profile-object.json"
+					},
+					"example": {
+						"profile": "standard"
+					}
+				}
+			}
+		}
+	}
+}

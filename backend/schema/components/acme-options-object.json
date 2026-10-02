@@ -1,0 +1,67 @@
+{
+	"type": "object",
+	"description": "Public ACME options with a secret presence marker; legacy account values remain visible for repair",
+	"additionalProperties": false,
+	"required": [
+		"server",
+		"email",
+		"account_id",
+		"eab_kid",
+		"agree_tos",
+		"must_staple",
+		"ocsp_stapling",
+		"server_tls_verify",
+		"custom_ocsp_stapling",
+		"default_certificate_id",
+		"eab_hmac_key_set"
+	],
+	"properties": {
+		"server": {
+			"type": "string",
+			"description": "ACME directory URL"
+		},
+		"email": {
+			"type": "string",
+			"description": "Account contact email; empty when no contact email is configured"
+		},
+		"account_id": {
+			"type": "string",
+			"description": "Selected Certbot account identifier; empty uses automatic account selection"
+		},
+		"eab_kid": {
+			"type": "string",
+			"description": "External Account Binding key identifier"
+		},
+		"agree_tos": {
+			"type": "boolean",
+			"description": "Whether the configured ACME subscriber agreement is accepted"
+		},
+		"must_staple": {
+			"type": "boolean",
+			"description": "Whether new ACME certificates request the OCSP Must-Staple extension"
+		},
+		"ocsp_stapling": {
+			"type": "boolean",
+			"description": "Whether ACME certificates use OCSP stapling"
+		},
+		"server_tls_verify": {
+			"type": "boolean",
+			"description": "Whether the ACME server TLS certificate is verified"
+		},
+		"custom_ocsp_stapling": {
+			"type": "boolean",
+			"description": "Whether uploaded certificates use OCSP stapling"
+		},
+		"default_certificate_id": {
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 9007199254740991,
+			"description": "Certificate used for application and default-site TLS; zero selects the generated dummy certificate"
+		},
+		"eab_hmac_key_set": {
+			"type": "boolean",
+			"readOnly": true,
+			"description": "Whether an encrypted External Account Binding HMAC key is saved"
+		}
+	}
+}

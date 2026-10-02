@@ -43,6 +43,11 @@ vi.mock("../../models/setting.js", async () => {
 		},
 	};
 });
+vi.mock("../../internal/acme-options.js", () => ({
+	default: {
+		getPublicPolicy: async () => ({ ocsp_stapling: false, custom_ocsp_stapling: false, default_certificate_id: 0 }),
+	},
+}));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: vi.fn() } }));
 vi.mock("../../internal/nginx.js", () => {
 	const config = () => path.join(state.directory, "default.conf");
@@ -178,5 +183,13 @@ describe("default-site configuration recovery", () => {
 		await expect(update("new-html")).rejects.toThrow("Previous configuration restored");
 		expect(fs.existsSync("/data/html/index.html")).toBe(false);
 		expect(fs.existsSync(path.join(state.directory, "default.conf"))).toBe(false);
+	});
+
+	it.each(["certificate-options", "ip-ranges-options"])("blocks generic updates of %s", async (id) => {
+		await state.db("setting").insert({ id, value: "configured", meta: "{}" });
+		await expect(settings.update(access, { id, value: "injected", meta: { injected: true } })).rejects.toThrow(
+			"application options endpoint",
+		);
+		expect(await state.db("setting").where({ id }).first()).toMatchObject({ value: "configured", meta: "{}" });
 	});
 });

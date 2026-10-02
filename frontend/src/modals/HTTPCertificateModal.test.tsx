@@ -3,6 +3,9 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ show: vi.fn(), test: vi.fn() }));
+vi.mock("src/hooks/useAcmeProfile", () => ({
+	useAcmeProfile: () => ({ data: { profile: "standard" }, isPending: false, isFetching: false, error: null }),
+}));
 vi.mock("ez-modal-react", () => ({ default: { create: <T,>(c: T) => c, show: mocks.show } }));
 vi.mock("src/api/backend", () => ({ createCertificate: vi.fn(), testHttpCertificate: mocks.test }));
 vi.mock("src/components", () => ({

@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 
 const state = vi.hoisted(() => ({
 	db: null,
+	settingReads: [],
 	reload: vi.fn(),
 	generate: vi.fn(),
 	backup: vi.fn(),
@@ -14,7 +15,12 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("../../db.js", async () => {
 	const { default: knex } = await import("knex");
-	state.db = knex({ client: "better-sqlite3", connection: { filename: ":memory:" }, useNullAsDefault: true });
+	state.db = knex({
+		client: "better-sqlite3",
+		connection: { filename: ":memory:" },
+		useNullAsDefault: true,
+		acquireConnectionTimeout: 250,
+	});
 	return { default: () => state.db };
 });
 vi.mock("../../lib/config.js", () => ({
@@ -37,6 +43,7 @@ vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: state.po
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: { start: state.oauth } }));
 vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: state.gitops } }));
 
+import nginxOptions from "../../internal/nginx-options.js";
 import tor from "../../internal/tor.js";
 import ProxyHost from "../../models/proxy_host.js";
 import TorOnion from "../../models/tor_onion.js";
@@ -48,6 +55,16 @@ const currentService = () => TorOnion.query().findById(1);
 
 describe("transactional Tor proxy-host reassignment", () => {
 	beforeAll(async () => {
+		await state.db.schema.createTable("setting", (table) => {
+			table.string("id").primary();
+			table.string("value");
+			table.text("meta");
+		});
+		await state.db("setting").insert({
+			id: "nginx-options",
+			value: "configured",
+			meta: JSON.stringify({ beautifier_enabled: true }),
+		});
 		await state.db.schema.createTable("proxy_host", (t) => {
 			t.increments("id");
 			t.integer("owner_user_id");
@@ -91,8 +108,12 @@ describe("transactional Tor proxy-host reassignment", () => {
 	});
 	beforeEach(async () => {
 		vi.clearAllMocks();
-		state.reload.mockReset().mockResolvedValue();
-		state.generate.mockReset().mockResolvedValue();
+		state.settingReads = [];
+		const readSettings = async (options = {}) => {
+			state.settingReads.push(await nginxOptions.getPolicy(options.trx));
+		};
+		state.reload.mockReset().mockImplementation(readSettings);
+		state.generate.mockReset().mockImplementation(async (_type, _host, options) => readSettings(options));
 		state.policy.mockResolvedValue();
 		access.can.mockReset().mockResolvedValue({ permission_visibility: "user" });
 		await state.db.raw("DROP TRIGGER IF EXISTS reject_tor_update");
@@ -136,6 +157,7 @@ describe("transactional Tor proxy-host reassignment", () => {
 			["new.example.test", onion],
 		]);
 		expect(state.reload).toHaveBeenCalledOnce();
+		expect(state.settingReads).toEqual(Array.from({ length: 3 }, () => ({ beautifier_enabled: true })));
 		expect(state.oauth).toHaveBeenCalledWith(expect.objectContaining({ id: 2 }));
 		expect(state.policy).toHaveBeenCalledOnce();
 	});

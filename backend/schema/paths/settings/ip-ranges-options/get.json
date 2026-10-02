@@ -1,0 +1,30 @@
+{
+	"operationId": "getIPRangeOptions",
+	"summary": "Get automatic IP range options",
+	"tags": [
+		"settings"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "The configured automatic IP range options",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/ip-ranges-options-object.json"
+					},
+					"example": {
+						"enabled": false,
+						"refresh_interval_hours": 6
+					}
+				}
+			}
+		}
+	}
+}

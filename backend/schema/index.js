@@ -23,8 +23,9 @@ const getCompiledSchema = async () => {
 				mutateInputSchema: false,
 			})
 			.then((schema) => {
-				schema.info.version = PACKAGE.version;
-				compiledSchema = schema;
+				const document = /** @type {import("openapi-types").OpenAPIV3_1.Document} */ (schema);
+				document.info.version = PACKAGE.version;
+				compiledSchema = document;
 				return schema;
 			})
 			.finally(() => {

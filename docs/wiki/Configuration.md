@@ -1,6 +1,6 @@
 # Configuration
 
-ShieldPM is configured via **Environment Variables**. No config file editing is required for basic setup — just set the variables and restart.
+ShieldPM stores its migrated application options in the database and manages them through **Settings**. Certificate, Cloudflare IP-range, analytics retention and Nginx formatting options apply without restarting. Deployment configuration and the remaining environment-based options are configured below and generally require a restart.
 
 - **Docker:** Set them in `compose.yaml` under the configured service's `environment:` (`shieldpm` in the main repository samples, `app` in `docker-compose.demo.yaml`). The main samples use host networking; the demo and other bridge deployments must publish the required ports, including `443/udp` for HTTP/3.
 - **Native / LXC:** Edit the file `/data/.env`.
@@ -89,25 +89,41 @@ ShieldPM runs schema migrations for the **selected** database on startup. When y
 
 ---
 
+## Application Settings
+
+Administrators manage these database settings in the UI:
+
+| Location                           | Option                                | Allowed values                    | Default  |
+| :--------------------------------- | :------------------------------------ | :-------------------------------- | :------- |
+| **Settings → Certificates / ACME** | Certificate key type                  | `ecdsa` or `rsa`                  | `ecdsa`  |
+| **Settings → Certificates / ACME** | Renewal check interval                | Whole hours from 1 to 12          | 12 hours |
+| **Settings → Network**             | Automatic Cloudflare IP-range updates | Enabled or disabled               | Disabled |
+| **Settings → Network**             | IP-range refresh interval             | 6 to 594 hours, in six-hour steps | 6 hours  |
+| **Settings → Analytics**           | Detailed request retention            | Positive whole hours              | 24 hours |
+| **Settings → Analytics**           | Aggregate retention                   | Positive whole days               | 35 days  |
+| **Settings → Nginx**               | Automatic config formatting           | Enabled or disabled               | Enabled  |
+
+**Settings → Analytics** manages detailed-log retention in whole hours (default **24**) and aggregate retention in whole days (default **35**). **Settings → Nginx** controls automatic configuration formatting (enabled by default). Retention values must be positive safe integers, up to `9007199254740991`, without an additional product limit or relationship between the two fields.
+
+Retention changes are used by the next startup/hourly cleanup; saving does not immediately delete data. Both cutoffs must be usable dates with a positive year before either table is cleaned. An unusable policy or extreme period skips both deletions and logs an error. Formatting changes apply when a configuration is next generated; saving does not rewrite files or reload Nginx.
+
+The key type applies to the next Let's Encrypt issuance or renewal, including existing Certbot lineages. Changing the check interval replaces the running timer; Certbot still decides when renewal is due. Enabling IP-range updates starts a background fetch and the periodic timer. Disabling them stops automatic updates and keeps the last known ranges.
+
+On upgrade, `ACME_KEY_TYPE`, `CRT`, `SKIP_IP_RANGES` and `IPRT` are imported once when their database settings are first created; existing saved settings are preserved. Legacy renewal intervals are capped at 12 hours, and `IPRT` becomes a refresh interval of six hours times its valid multiplier. After creation, the database values are authoritative and these old variables no longer control runtime behavior. Remove them from deployment configuration after checking the migrated values in Settings.
+
+On upgrade, `20260930000300_add_analytics_nginx_options` imports `ANALYTICS_DETAILED_RETENTION_HOURS`, `ANALYTICS_AGGREGATION_RETENTION_DAYS` and `DISABLE_NGINX_BEAUTIFIER` once for missing database settings. Existing saved choices are preserved. Legacy retention values use their previous integer parsing; missing or empty values keep the 24-hour/35-day defaults. Invalid nonempty values preserve history by importing a maximum safe integer and logging a warning, rather than silently shortening retention. Review and repair such values under **Settings → Analytics**. Formatting is disabled only when the old flag was exactly `true`. These variables no longer provide a runtime fallback after migration.
+
 ## 🔐 SSL & ACME (Let's Encrypt)
 
-| Variable                 | Description                                                                                               | Default                  |
-| :----------------------- | :-------------------------------------------------------------------------------------------------------- | :----------------------- |
-| `ACME_EMAIL`             | ACME registration email; recommended for Let's Encrypt and required for ZeroSSL/Google Public CA with EAB | —                        |
-| `ACME_SERVER`            | Custom ACME server URL                                                                                    | Let's Encrypt Production |
-| `ACME_EAB_KID`           | External Account Binding Key ID                                                                           | —                        |
-| `ACME_EAB_HMAC_KEY`      | External Account Binding HMAC Key                                                                         | —                        |
-| `ACME_MUST_STAPLE`       | Enable OCSP Must-Staple extension                                                                         | `false`                  |
-| `ACME_OCSP_STAPLING`     | Enable OCSP Stapling                                                                                      | `false`                  |
-| `ACME_PROFILE`           | Optional ACME profile name                                                                                | `none`                   |
-| `ACME_KEY_TYPE`          | Key type: `rsa` or `ecdsa`                                                                                | `ecdsa`                  |
-| `ACME_SERVER_TLS_VERIFY` | Verify the ACME server TLS certificate                                                                    | `true`                   |
-| `CUSTOM_OCSP_STAPLING`   | Enable OCSP Stapling for custom certificates                                                              | `false`                  |
-| `DEFAULT_CERT_ID`        | Default certificate ID for otherwise unmatched hosts (`0` uses the dummy certificate)                     | `0`                      |
-| `CRT`                    | Hours between certificate renewal checks                                                                  | `23`                     |
+**Settings → Certificates / ACME** manages the CA directory, registration email, EAB credentials, terms agreement, CA TLS verification, Must-Staple, ACME/custom OCSP stapling and default TLS certificate in the database. Let's Encrypt production, verified CA TLS and the dummy default certificate (`0`) are the initial defaults; Must-Staple and OCSP are disabled.
 
-> [!WARNING]
-> Set `ACME_EMAIL` for account notices and to use providers that require it. For Let's Encrypt, the runtime can register without an email; ZeroSSL requires one, and EAB settings must include an email.
+Use **Settings → Certificates / ACME** to save the global **Standard** or **Short-lived** profile in ShieldPM. The database default is Standard, and a saved change applies immediately without restarting. New certificate dialogs use this default and allow an individual override; certificates with an explicit saved profile keep it. Legacy certificates without profile metadata use the global choice on renewal. The former `ACME_PROFILE` environment variable is ignored; remove it from existing configuration and review the saved choice in Settings after upgrading. See [SSL Certificates](SSL-Certificates).
+
+The CA default applies to new certificates. Existing certificates keep their original CA/account during renewal and revocation; saved issuer metadata is checked against their Certbot lineage. Registration is performed when needed by the backend, and failures leave the UI accessible. EAB credentials can be retained, replaced together or explicitly cleared; the encrypted HMAC secret is never returned by GET, audit or GitOps export.
+
+OCSP/default-certificate changes regenerate, test and reload Nginx, rolling back the setting and configuration if activation fails. Other fields apply to the next certificate operation without a restart or forced renewal. Let's Encrypt no longer supports Must-Staple or OCSP; see the [SSL guide](SSL-Certificates) for official references and provider-specific options.
+
+On upgrade, the ACME-options migration imports `ACME_SERVER`, `ACME_EMAIL`, `ACME_EAB_KID`, `ACME_EAB_HMAC_KEY`, `ACME_MUST_STAPLE`, `ACME_OCSP_STAPLING`, `ACME_SERVER_TLS_VERIFY`, `CUSTOM_OCSP_STAPLING` and `DEFAULT_CERT_ID` only when creating a missing settings row. Saved database settings are preserved. Invalid legacy server/email/EAB combinations can be repaired in the UI. These retired variables no longer control runtime behavior; remove them after reviewing the migrated settings.
 
 ---
 
@@ -134,11 +150,8 @@ ShieldPM runs schema migrations for the **selected** database on startup. When y
 | `NGINX_404_REDIRECT`            | Redirect 404 hosts to the default site                                                   | `false`              |
 | `NGINX_HSTS_SUBDOMAINS`         | Include subdomains in HSTS header when enabled                                           | `true`               |
 | `X_FRAME_OPTIONS`               | X-Frame-Options header value                                                             | `sameorigin`         |
-| `DISABLE_NGINX_BEAUTIFIER`      | Disable automatic formatting of Nginx configs                                            | `false`              |
 | `FULLCLEAN`                     | Remove selected unused runtime/log data during startup; it does not rebuild host configs | `false`              |
 | `REGENERATE_ALL`                | Remove generated host `.conf` files during startup so the backend can regenerate them    | `false`              |
-| `SKIP_IP_RANGES`                | Skip fetching real IP ranges (Cloudflare, etc.)                                          | `true`               |
-| `IPRT`                          | Multiplier for the 6-hour Cloudflare IP-range refresh interval when fetching is enabled  | `1`                  |
 
 ---
 

@@ -1,0 +1,13 @@
+{
+	"type": "object",
+	"description": "The effective default profile for newly issued Let's Encrypt certificates",
+	"additionalProperties": false,
+	"required": [
+		"profile"
+	],
+	"properties": {
+		"profile": {
+			"$ref": "../common.json#/properties/letsencrypt_profile"
+		}
+	}
+}

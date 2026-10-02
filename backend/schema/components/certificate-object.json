@@ -60,6 +60,9 @@
 			"type": "object",
 			"additionalProperties": false,
 			"properties": {
+				"letsencrypt_profile": {
+					"$ref": "../common.json#/properties/letsencrypt_profile"
+				},
 				"certificate": {
 					"type": "boolean",
 					"description": "Whether this certificate file is available"

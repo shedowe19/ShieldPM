@@ -10,6 +10,7 @@ process.on("uncaughtException", (err) => {
 });
 
 import app from "./app.js";
+import internalAcmeTls from "./internal/acme-tls.js";
 import analyticsService from "./internal/analytics.js";
 import internalCertificate from "./internal/certificate.js";
 import internalChat from "./internal/chat.js";
@@ -19,6 +20,7 @@ import internalDocker from "./internal/docker.js";
 import internalGitDeploy from "./internal/git-deploy.js";
 import internalGitOps from "./internal/gitops.js";
 import internalIpRanges from "./internal/ip_ranges.js";
+import internalIpRangesOptions from "./internal/ip-ranges-options.js";
 import internalMaintenance from "./internal/maintenance.js";
 import internalNginx from "./internal/nginx.js";
 import internalOAuth2Proxy from "./internal/oauth2-proxy.js";
@@ -33,28 +35,19 @@ import { migrateUp } from "./migrate.js";
 import { getCompiledSchema } from "./schema/index.js";
 import setup from "./setup.js";
 
-const IP_RANGES_FETCH_ENABLED = process.env.SKIP_IP_RANGES === "false";
-
 async function appStart() {
 	try {
 		await migrateFromSqliteToNewDb();
 		await migrateUp();
+		await internalAcmeTls.initialize();
 		await analyticsService.init();
 		internalUploadRelay.init();
 		await setup();
 		await getCompiledSchema();
 
-		if (!IP_RANGES_FETCH_ENABLED) {
-			logger.info("IP Ranges fetch is disabled by environment variable");
-		} else {
-			logger.info("IP Ranges fetch is enabled");
-			internalIpRanges.initTimer();
-			try {
-				await internalIpRanges.fetch();
-			} catch (err) {
-				logger.error("IP Ranges fetch failed, continuing anyway:", err.message);
-			}
-		}
+		const ipRangePolicy = await internalIpRangesOptions.getPolicy();
+		logger.info(`IP Ranges fetch is ${ipRangePolicy.enabled ? "enabled" : "disabled"}`);
+		await internalIpRanges.configure(ipRangePolicy, { startup: true });
 
 		await internalCertificate.initTimer();
 		internalMaintenance.initTimer();
@@ -84,6 +77,7 @@ async function appStart() {
 			process.on("SIGTERM", () => {
 				logger.info(`PID ${process.pid} received SIGTERM`);
 				internalProxyHostMonitor.stop();
+				internalIpRanges.stop();
 				server.close(async () => {
 					await analyticsService.stop();
 					await internalUploadRelay.stop();

@@ -322,10 +322,53 @@ Backend gespeicherte Limits entfernt. Zahlenfelder werden numerisch serialisiert
 nicht endliche Werte werden ausgelassen. `ProxyHostModalSubmission.test.ts` sichert diese Payload-Grenzen unabhängig
 vom Dialog ab.
 
+`Form/CertificateProfileField.tsx` bietet in den HTTP-/DNS-Zertifikatsdialogen und über `SSLOptionsFields` bei
+`certificateId: "new"` die Auswahl Standard oder Short-lived an. Das Formik-Feld heißt
+`meta.letsencryptProfile`; der API-Client überführt es zu `meta.letsencrypt_profile`. Die über
+`/api/nginx/certificates/acme-profile` geladene globale Vorgabe initialisiert nur ein noch nicht gewähltes Profil;
+eine individuelle Wahl wird nicht durch eine spätere Antwort überschrieben. Ein vorhandenes Zertifikat bietet keinen Profilwechsel an; die Zertifikatsliste zeigt das
+explizit gespeicherte Profil für Let's-Encrypt-Zertifikate als Badge. Alte Datensätze ohne Profilfeld bekommen
+keinen Badge; ihre Erneuerung verwendet die aktuelle globale Vorgabe. Details zur Laufzeit und Erneuerung stehen unter
+[Zertifikate](../module/zertifikate.md).
+
+`Settings/Certificates.tsx` bietet unter Einstellungen → Zertifikate / ACME Administratoren die persistente globale Auswahl Standard/Short-lived.
+Die Datenbankvorgabe beginnt mit Standard. Die dedizierte API prüft die Voraussetzungen vor dem Speichern;
+der neue Wert gilt für nachfolgende Aufträge ohne Neustart. Die UI ermöglicht das Speichern einer geänderten
+Auswahl. Neue Formulare verwenden die Vorgabe, vorhandene explizite Zertifikatsprofile bleiben unverändert.
+Altzertifikate ohne Profilfeld folgen ihr bei der nächsten Erneuerung. Details stehen unter [Einstellungen](../verwaltung/einstellungen.md).
+
+`CertificateOptionsCard.tsx` ergänzt den Zertifikats-Tab um ECDSA/RSA und das Prüfintervall von 1 bis 12 Stunden.
+
+`AcmeOptionsCard.tsx` ergänzt denselben Tab um Let's-Encrypt-Production-/Staging-, ZeroSSL- und benutzerdefinierte CA-Verzeichnisse, E-Mail, optionale Account-ID, EAB, Bedingungen, TLS-Prüfung, Must-Staple, beide OCSP-Optionen und das Standardzertifikat (`0` für Dummy). Das HMAC-Feld bleibt leer und verwendet ausschließlich einen Vorhandenseinsmarker. Ein ausgelassenes Schreibfeld erhält den gespeicherten Schlüssel; Ersetzen verwendet einen neuen Wert, die ausdrückliche Löschaktion entfernt Kennung und Schlüssel. Ein CA-/EAB-Identitätswechsel verlangt ein passendes neues Paar oder Löschen. Die UI aktiviert OCSP beim Einschalten von Must-Staple mit und erklärt dessen fehlende Let's-Encrypt-Unterstützung. Accountregistrierung und E-Mail-Pflege gelten erst beim nächsten passenden Backend-Auftrag.
+
+`useAcmeOptions.ts` verwendet den Query-Schlüssel `["acme-options"]`, bricht ältere GETs vor dem Speichern ab und übernimmt die bereinigte Antwort direkt in den Cache. Ohne erste gültige Antwort zeigt die Karte keine geratenen Einstellungswerte; lokale Entwürfe und Secret-Ersetzungen bleiben bei Fehlern erhalten. Erfolgreiches Speichern leert das HMAC-Eingabefeld. Der API-Client sendet die gewöhnlichen Felder vollständig, lässt den reinen Antwortmarker aus und wandelt camelCase in snake_case um. Details stehen unter [ACME-Einstellungen](../verwaltung/einstellungen.md#acme-konto-und-tls-optionen).
+
+`Settings/Network.tsx` bietet den Cloudflare-IP-Abruf und ein Intervall von 6 bis 594 Stunden in Sechs-Stunden-Schritten.
+`OptionsCard.tsx` verwaltet die lokalen Entwürfe und zeigt Lade-/Fehlerzustände an; ohne geladene Daten wird kein
+Formular mit Ersatzwerten angeboten. Ungespeicherte Eingaben bleiben bei Hintergrundabfragen erhalten.
+`useRuntimeOptions.ts` verwendet die Cache-Schlüssel `["certificate-options"]` und `["ip-ranges-options"]`,
+bricht vor dem Speichern ältere GETs ab und übernimmt erfolgreiche Antworten unmittelbar in den Cache. Dasselbe Muster gilt für die neuen Schlüssel `["analytics-options"]` und `["nginx-options"]`.
+Die API-Clients übertragen komplette Optionsobjekte und wandeln ihre camelCase-Feldnamen zu snake_case um.
+Details zu Datenbankwerten und Live-Anwendung stehen unter [Einstellungen](../verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen).
+
+`Settings/Analytics.tsx` und `Settings/Nginx.tsx` werden erst beim Öffnen ihrer Tabs geladen und verwenden jeweils eine eigene `OptionsCard`. Der Tab „Analysen“ bietet Detailstunden und Aggregattage als positive sichere Ganzzahlen ohne zusätzliche Produktobergrenze oder feldübergreifende Bedingung. Ein Wert von `Number.MAX_SAFE_INTEGER` zeigt einen Hinweis zur Überprüfung der Aufbewahrung an. Der Nginx-Tab enthält die Formatierungswahl. Speichern beginnt weder sofortige Datenbereinigung noch Nginx-Regenerierung/Reload; die nächsten Verbraucheraufrufe lesen die neue Wahl. Ladefehler, ausstehende Mutationen und ungespeicherte Entwürfe folgen dem bestehenden OptionsCard-Verhalten.
+
+`useAcmeProfile.ts` verwendet den React-Query-Schlüssel `["acme-profile"]`. Vor dem Speichern werden ältere GETs
+abgebrochen; nach Erfolg wird die Antwort direkt in den Cache übernommen, damit eine verspätete Abfrage die neue
+Vorgabe nicht zurücksetzt. Der lokale Einstellungsentwurf bleibt bei Hintergrundabfragen und Fehlern erhalten.
+Fehlt beim ersten Laden jede gültige Antwort, bietet der Tab kein Formular mit erfundenen Ersatzwerten an.
+Die Profilfelder neuer Zertifikate lassen bei ausstehender oder fehlgeschlagener Abfrage den Metadatenwert
+ausgelassen und zeigen den Zustand an; das Backend löst dann die globale Vorgabe auf. Eine individuelle Auswahl
+bleibt dabei möglich und wird auch durch eine spätere erfolgreiche Abfrage nicht überschrieben.
+
 `SSLCertificateField` entfernt beim Wechsel von einer neuen zu einer vorhandenen oder keiner Zertifikatsauswahl die
-DNS-Challenge-Daten aus `meta`, einschließlich Zugangsdaten und einer Wartezeit von null Sekunden. Andere Metadaten
-bleiben erhalten. Streams bieten ausschließlich ihre unterstützten TLS-Optionen an; neue Zertifikate benötigen
-Domainnamen und DNS-Verifikation. Siehe [Streams](../module/stream.md).
+Profilwahl und DNS-Challenge-Daten aus `meta`, einschließlich Zugangsdaten und einer Wartezeit von null Sekunden.
+Beim Wechsel von einem vorhandenen oder keinem Zertifikat zu einer neuen Ausstellung wird ein eventuell im Host
+gespeichertes altes Profil ebenfalls verworfen, damit die aktuelle globale Vorgabe geladen wird. Eine wiederholte
+Auswahl von „neu“ behält dagegen eine bereits getroffene individuelle Wahl. `SSLCertificateField.test.tsx`
+prüft diese Übergänge einschließlich der erhaltenen übrigen Metadaten.
+Andere Metadaten bleiben erhalten. Streams bieten ausschließlich ihre unterstützten TLS-Optionen an; neue
+Zertifikate benötigen Domainnamen und DNS-Verifikation. Siehe [Streams](../module/stream.md).
 
 `AccessListDetailsTab.tsx` kapselt den Details-Tab des `AccessListModal` als Formik-Kind. Name sowie die Optionen
 `satisfyAny` und `passAuth` bleiben an denselben Formularzustand gebunden; `AccessListDetailsTab.test.tsx` sichert die
@@ -403,3 +446,4 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Komponenten](./komponenten.md)
 - [Screens & Pages](./screens.md)
 - [Theme & Styling](./theme.md)
+- [Zertifikate](../module/zertifikate.md)

@@ -81,6 +81,10 @@ Auch statische Custom-Locations blockieren `.git` und sperren bei verwalteten We
 
 Die Lua-Logphase vermindert den Verbindungszähler nur für Anfragen, denen die Access-Phase tatsächlich Bandbreite zugeteilt hat. Frühe Redirects oder Ablehnungen ohne Zuteilung verändern laufende Übertragungen nicht mehr. Dies gilt im Standardserver sowie im öffentlichen Anubis-Server. Die Gegenprüfung mit Lua 5.4 reproduzierte das Fehlverhalten beider bisherigen Logblöcke und bestätigte anschließend sowohl den unveränderten Zähler ohne Zuteilung als auch die korrekte Freigabe einer zugeteilten Übertragung.
 
+## ACME-TLS-Kontext
+
+`_common.conf` und `stream.conf` verwenden `acme_options.ocsp_stapling` beziehungsweise `acme_options.custom_ocsp_stapling` aus der Datenbank statt der früheren Umgebungsflags. Der ACME-spezifische Template-Kontext enthält nur diese beiden Schalter und keine gespeicherten EAB-Geheimnisse. Die Default-Site verwendet das vom Backend verwaltete `default_tls_include`, das auch Verwaltungsoberfläche und GoAccess mit dem ausgewählten Zertifikat versorgt. Änderungen an diesen Einstellungen regenerieren die betroffenen Dateien mit Prüfung und Wiederherstellung bei Fehlern; siehe [Nginx-Engine](./nginx-engine.md#tls-optionen-aus-der-datenbank).
+
 ## Verwandte Seiten
 
 - [Nginx-Engine](../module/nginx-engine.md)

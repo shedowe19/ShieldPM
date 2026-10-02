@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const query = vi.hoisted(() => vi.fn());
+vi.mock("../../internal/analytics-options.js", () => ({
+	default: { getPolicy: async () => ({ detailed_retention_hours: 24, aggregation_retention_days: 35 }) },
+}));
+
 vi.mock("../../models/proxy_host.js", () => ({ default: { query } }));
 vi.mock("../../models/analytic_count.js", () => ({ default: {} }));
 vi.mock("../../models/analytics_logs.js", () => ({ default: {} }));

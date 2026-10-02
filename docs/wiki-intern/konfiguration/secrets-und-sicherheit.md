@@ -13,7 +13,6 @@ Dokumentation geheimer Werte und Sicherheitsmechanismen.
 | `CSRF_SECRET`            | Stabiler CSRF-Token-Secret (mindestens 32 zufällige Zeichen empfohlen); ohne Wert je Prozessstart neu generiert |
 | `DB_MYSQL_PASSWORD`      | MySQL-Passwort                                                                                                  |
 | `DB_POSTGRES_PASSWORD`   | PostgreSQL-Passwort                                                                                             |
-| `ACME_EAB_HMAC_KEY`      | ACME HMAC-Key                                                                                                   |
 | `INITIAL_ADMIN_PASSWORD` | Initiales Admin-Passwort                                                                                        |
 
 ## Interne Secrets
@@ -24,6 +23,8 @@ Dokumentation geheimer Werte und Sicherheitsmechanismen.
 | `/data/tls/*`              | SSL-Zertifikate und private Schlüssel                                                          |
 
 Die Schlüsseldatei wird mit Modus `0600` geladen und über vollständig geschriebene temporäre Dateien aktualisiert. Fehlgeschlagene Schreibvorgänge beim Ergänzen des Verschlüsselungsschlüssels erhalten die bisherigen Signaturschlüssel. Konkurrierende erstmalige Ersteller übernehmen die bereits veröffentlichte Datei, statt sie zu überschreiben. Details: [Instanzkonfiguration](./config-dateien.md#persistente-instanzkonfiguration).
+
+EAB-HMAC für ACME liegt verschlüsselt in `acme-options.meta.encrypted_eab_hmac_key`. Die Migration übernimmt den alten Umgebungswert nur einmalig. Öffentliche Settings-Antworten, Audit und GitOps-Export geben weder Klartext noch Ciphertext zurück; die UI erhält ausschließlich `eab_hmac_key_set` als Vorhandenseinsmarker. Ein Update lässt das Schreibfeld aus, um das Secret zu erhalten, ersetzt es mit einem nichtleeren Wert oder entfernt es ausdrücklich mit `null`. Beim Wechsel der CA-/EAB-Identität muss das passende Paar ersetzt oder gelöscht werden. Details stehen unter [ACME-Einstellungen](../verwaltung/einstellungen.md#acme-konto-und-tls-optionen).
 
 ## Sicherheitsmechanismen
 

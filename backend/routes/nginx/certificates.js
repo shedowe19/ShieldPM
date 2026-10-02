@@ -3,6 +3,7 @@ import express from "express";
 import fileUpload from "express-fileupload";
 import rateLimit from "express-rate-limit";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
+import internalAcmeProfile from "../../internal/acme-profile.js";
 import internalCertificate from "../../internal/certificate.js";
 import internalPki from "../../internal/pki.js";
 import errs from "../../lib/error.js";
@@ -74,6 +75,18 @@ router.get("/root-ca", async (_req, res) => {
 		.header("Content-Disposition", 'attachment; filename="root_ca.crt"')
 		.send(certContent);
 });
+
+router
+	.route("/acme-profile")
+	.options((_, res) => res.sendStatus(204))
+	.all(jwtdecode())
+	.get(async (_req, res) => {
+		res.status(200).send(await internalAcmeProfile.get(res.locals.access));
+	})
+	.put(async (req, res) => {
+		const payload = await apiValidator(getValidationSchema("/nginx/certificates/acme-profile", "put"), req.body);
+		res.status(200).send(await internalAcmeProfile.update(res.locals.access, payload));
+	});
 
 router
 	.route("/")

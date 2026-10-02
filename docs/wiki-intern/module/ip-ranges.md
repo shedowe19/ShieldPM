@@ -2,7 +2,7 @@
 
 ## Zweck
 
-Lädt bei Aktivierung regelmäßig die offiziellen [Cloudflare-IP-Ranges](https://www.cloudflare.com/ips/) und stellt sie Nginx als `set_real_ip_from`-Liste zur Verfügung. **Standardmäßig ist der Abruf deaktiviert** (`SKIP_IP_RANGES=true`); für den automatischen Abruf `SKIP_IP_RANGES=false` setzen.
+Lädt bei Aktivierung regelmäßig die offiziellen [Cloudflare-IP-Ranges](https://www.cloudflare.com/ips/) und stellt sie Nginx als `set_real_ip_from`-Liste zur Verfügung. **Standardmäßig ist der Abruf deaktiviert**. Administratoren aktivieren ihn unter Einstellungen → Netzwerk; die Vorgabe wird in der Datenbank gespeichert und ohne Neustart angewendet.
 
 ## Kontext
 
@@ -10,7 +10,8 @@ Wenn ShieldPM hinter Cloudflare betrieben wird (Proxy-Modus), kommen Anfragen au
 
 ## Wichtige Dateien
 
-- `backend/internal/ip_ranges.js` (~116 Zeilen) — Lädt und cached Cloudflare-IP-Listen
+- `backend/internal/ip_ranges.js` — Lädt und cached Cloudflare-IP-Listen
+- `backend/internal/ip-ranges-options.js` — Validierte Datenbankoptionen und Live-Anwendung
 - `backend/templates/ip_ranges.conf` — Generiertes Nginx-Snippet mit `set_real_ip_from`-Direktiven
 - Aufruf: typischerweise im Backend-Boot-Prozess oder per Maintenance-Task
 
@@ -18,12 +19,13 @@ Wenn ShieldPM hinter Cloudflare betrieben wird (Proxy-Modus), kommen Anfragen au
 
 1. Holt die aktuellen IPv4-Liste (`https://www.cloudflare.com/ips-v4`) und IPv6-Liste (`https://www.cloudflare.com/ips-v6`) per HTTPS, optional über `proxy-agent`.
 2. Prüft die IPv4-/IPv6-CIDRs vollständig mit `ipaddr.js` und rendert sie via Liquid in `backend/templates/ip_ranges.conf`.
-3. Schreibt das Ergebnis nach `/data/nginx/ip_ranges.conf` und triggert einen Nginx-Reload.
+3. Schreibt das Ergebnis nach `/data/nginx/ip_ranges.conf`. Bei einem Abruf im laufenden Betrieb folgt ein Nginx-Reload; beim Start übernimmt ihn der anschließende gemeinsame Initialisierungsablauf.
 
 ## Konfiguration
 
-- **Update-Intervall**: `interval_timeout = 6h × IPRT` (Umgebungsvariable `IPRT`, ganze Zahl). Ist `IPRT` z. B. `4`, läuft die Aktualisierung alle 24 Stunden.
-- **Aktivierung**: `backend/index.js` startet Timer und ersten Abruf nur bei `SKIP_IP_RANGES=false`; die Standardvorgabe in `backend/validate-env.cjs` ist `true`.
+- **Update-Intervall**: `ip-ranges-options.meta.refresh_interval_hours`, ganze Stunden von **6 bis 594** in Sechs-Stunden-Schritten; Standard **6 Stunden**. Eine reine Intervalländerung ersetzt den Timer.
+- **Aktivierung**: `ip-ranges-options.meta.enabled` ist standardmäßig `false`. Aktivieren startet einen Hintergrundabruf und den regelmäßigen Timer; die API wartet beim Speichern nicht auf die externe Antwort. Deaktivieren stoppt den Timer und verhindert die Veröffentlichung noch laufender Abrufe. Bereits bekannte Ranges bleiben erhalten. Beim Backend-Start wird ein aktivierter erster Abruf vor dem anschließenden gemeinsamen Nginx-Reload abgewartet.
+- **Upgrade**: Die Migration übernimmt `SKIP_IP_RANGES=false` als aktiviert und einen gültigen `IPRT` von 1 bis 99 als Sechs-Stunden-Multiplikator einmalig für fehlende Datensätze. Danach beeinflussen diese Variablen die Laufzeit nicht mehr.
 - **Manueller Trigger**: AI-Tool `renew_ip_ranges` (siehe `backend/internal/ai/tools.js`) ruft `internalIpRanges.fetch()` direkt auf.
 
 ## Abhängigkeiten
@@ -48,6 +50,6 @@ Die neue Liste wird vollständig in einer eindeutigen temporären Datei im selbe
 
 - [Nginx-Engine](./nginx-engine.md)
 - [Cloudflare Tunnels](./cloudflared.md)
-- [Modulübersicht](./README.md)
+- [Einstellungen](../verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen)
 
-`IPRT` muss eine ganze Zahl von 1 bis 99 sein. Andere Werte verwenden den Sechs-Stunden-Standard. Dadurch führen negative, zu große oder nichtnumerische Werte nicht zu überlaufenden Node-Timern mit Wiederholung im Millisekundentakt.
+- [Modulübersicht](./README.md)

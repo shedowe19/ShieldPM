@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
 	query: vi.fn(),
 	runCertbot: vi.fn(),
+	acme: vi.fn(),
 	configurationLock: vi.fn(),
 	backupConfig: vi.fn(),
 	restoreConfig: vi.fn(),
@@ -22,7 +23,13 @@ const mocks = vi.hoisted(() => ({
 	deleteConfig: vi.fn(),
 	createLeadCert: vi.fn(),
 	gitops: vi.fn(),
+	policy: vi.fn().mockResolvedValue("standard"),
+	options: vi.fn().mockResolvedValue({ key_type: "ecdsa", renewal_interval_hours: 12 }),
 }));
+vi.mock("../../internal/acme-profile.js", () => ({ default: { getPolicy: mocks.policy } }));
+vi.mock("../../internal/acme-options.js", () => ({ default: { getRuntimePolicy: mocks.acme } }));
+vi.mock("../../internal/acme-tls.js", () => ({ default: { assertCertificateDeletable: vi.fn().mockResolvedValue() } }));
+vi.mock("../../internal/certificate-options.js", () => ({ default: { getPolicy: mocks.options } }));
 vi.mock("../../models/certificate.js", () => ({ default: { query: mocks.query } }));
 vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.proxyQuery } }));
 vi.mock("../../models/dead_host.js", () => ({ default: { query: mocks.deadQuery } }));
@@ -41,8 +48,9 @@ vi.mock("../../internal/nginx.js", () => ({
 	},
 }));
 vi.mock("../../internal/certbot.js", () => ({
-	renewCertbot: vi.fn().mockResolvedValue("renewed"),
+	renewCertbot: mocks.runCertbot,
 	runCertbot: mocks.runCertbot,
+	getLiveCertPath: (id) => `/data/tls/certbot/live/npm-${id}`,
 }));
 vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: mocks.gitops } }));
 vi.mock("../../internal/pki.js", () => ({ default: { createLeadCert: mocks.createLeadCert } }));
@@ -68,6 +76,9 @@ describe("certificate lifecycle regressions", () => {
 	const temporaryDirs = [];
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mocks.policy.mockResolvedValue("standard");
+		mocks.acme.mockResolvedValue({ server: "https://new-ca.example.test/directory", must_staple: false });
+		mocks.options.mockResolvedValue({ key_type: "ecdsa", renewal_interval_hours: 12 });
 		mocks.configurationLock.mockImplementation(async (operation) => operation());
 	});
 	afterEach(async () => {
@@ -99,6 +110,122 @@ describe("certificate lifecycle regressions", () => {
 		await expect(internalCertificate.create(access(), { provider: "internal" })).rejects.toThrow(
 			"At least one domain",
 		);
+		expect(mocks.query).not.toHaveBeenCalled();
+	});
+	it.each([undefined, "standard", "shortlived"])(
+		"persists the certificate profile on creation (%s)",
+		async (profile) => {
+			const data = {
+				provider: "letsencrypt",
+				domain_names: ["test.example"],
+				meta: { letsencrypt_profile: profile },
+			};
+			const query = {
+				insertAndFetch: vi.fn(async (row) => ({ ...row, id: 2 })),
+				patchAndFetchById: vi.fn(async (_id, patch) => ({ ...data, id: 2, ...patch })),
+				deleteById: vi.fn(),
+			};
+			mocks.query.mockReturnValue(query);
+			vi.spyOn(internalCertificate, "requestCertbot").mockResolvedValue("issued");
+			vi.spyOn(internalCertificate, "getLiveCertPath").mockReturnValue("/mock/cert");
+			vi.spyOn(internalCertificate, "getCertificateInfoFromFile").mockResolvedValue({
+				dates: { to: 1800000000 },
+			});
+			const result = await internalCertificate.create(access(), data);
+			expect(query.insertAndFetch.mock.calls[0][0].meta.letsencrypt_profile).toBe(profile ?? "standard");
+			expect(result.meta.letsencrypt_profile).toBe(profile ?? "standard");
+		},
+	);
+	it("rejects unknown profiles and oversized shortlived certificates before database writes", async () => {
+		await expect(
+			internalCertificate.create(access(), {
+				provider: "letsencrypt",
+				domain_names: ["test.example"],
+				meta: { letsencrypt_profile: "unknown" },
+			}),
+		).rejects.toThrow("Certificate profile must be");
+		await expect(
+			internalCertificate.create(access(), {
+				provider: "letsencrypt",
+				domain_names: Array.from({ length: 26 }, (_, i) => `domain${i}.example`),
+				meta: { letsencrypt_profile: "shortlived" },
+			}),
+		).rejects.toThrow("at most 25 domain names");
+		expect(mocks.query).not.toHaveBeenCalled();
+	});
+	it.each(["acme_server", "acme_account"])(
+		"rejects client-owned issuer field %s before creation writes",
+		async (field) => {
+			await expect(
+				internalCertificate.create(access(), {
+					provider: "letsencrypt",
+					domain_names: ["test.example"],
+					meta: { [field]: "injected" },
+				}),
+			).rejects.toThrow("managed by ShieldPM");
+			expect(mocks.query).not.toHaveBeenCalled();
+		},
+	);
+	it("hides issuer/account bindings and DNS credentials from public certificate metadata", () => {
+		expect(
+			internalCertificate.cleanMeta({
+				acme_server: "https://ca.example.test/directory",
+				acme_account: "account",
+				dns_provider_credentials: "synthetic",
+				letsencrypt_profile: "standard",
+			}),
+		).toEqual({ letsencrypt_profile: "standard" });
+	});
+	it("preserves existing issuer bindings through ordinary metadata updates and rejects injected replacements", async () => {
+		const row = {
+			id: 7,
+			provider: "letsencrypt",
+			meta: { acme_server: "https://old-ca.example.test/directory", acme_account: "original" },
+		};
+		vi.spyOn(internalCertificate, "get").mockResolvedValue(row);
+		let persisted;
+		const patch = vi.fn(async (_id, data) => {
+			persisted = structuredClone(data);
+			return { ...row, ...data };
+		});
+		mocks.query.mockReturnValue({ patchAndFetchById: patch });
+		await expect(
+			internalCertificate.update(access(), {
+				id: 7,
+				meta: { acme_server: "https://new-ca.example.test/directory" },
+			}),
+		).rejects.toThrow("managed by ShieldPM");
+		expect(patch).not.toHaveBeenCalled();
+		const result = await internalCertificate.update(access(), { id: 7, meta: { letsencrypt_profile: "standard" } });
+		expect(persisted.meta).toMatchObject({ acme_server: row.meta.acme_server, acme_account: "original" });
+		expect(result.meta).toEqual({ letsencrypt_profile: "standard" });
+		expect(mocks.audit.mock.calls[0][1].meta.meta).toEqual({ letsencrypt_profile: "standard" });
+	});
+	it("resolves an omitted profile from the saved default before any certificate write", async () => {
+		mocks.policy.mockResolvedValue("shortlived");
+		const data = { provider: "letsencrypt", domain_names: ["test.example"], meta: {} };
+		const query = {
+			insertAndFetch: vi.fn(async (row) => ({ ...row, id: 2 })),
+			patchAndFetchById: vi.fn(async (_id, patch) => ({ ...data, id: 2, ...patch })),
+			deleteById: vi.fn(),
+		};
+		mocks.query.mockReturnValue(query);
+		vi.spyOn(internalCertificate, "requestCertbot").mockResolvedValue("issued");
+		vi.spyOn(internalCertificate, "getLiveCertPath").mockReturnValue("/mock/cert");
+		vi.spyOn(internalCertificate, "getCertificateInfoFromFile").mockResolvedValue({ dates: { to: 1800000000 } });
+		const result = await internalCertificate.create(access(), data);
+		expect(result.meta.letsencrypt_profile).toBe("shortlived");
+		expect(query.insertAndFetch.mock.calls[0][0].meta.letsencrypt_profile).toBe("shortlived");
+		expect(data.meta).toEqual({});
+	});
+	it("rejects an oversized default Short-lived request before certificate persistence", async () => {
+		mocks.policy.mockResolvedValue("shortlived");
+		await expect(
+			internalCertificate.create(access(), {
+				provider: "letsencrypt",
+				domain_names: Array.from({ length: 26 }, (_, i) => `host${i}.example`),
+			}),
+		).rejects.toThrow("at most 25 domain names");
 		expect(mocks.query).not.toHaveBeenCalled();
 	});
 	it("prevents provider changes from redirecting existing certificate paths", async () => {
@@ -365,21 +492,37 @@ describe("certificate lifecycle regressions", () => {
 		expect(mocks.audit.mock.calls[0][1].meta.meta.dns_provider_credentials).toBeUndefined();
 	});
 
-	it.each(["0", "-1", "1000000", "12hours", ""])(
-		"uses safe renewal interval for CRT=%s and replaces existing timers",
-		async (value) => {
-			vi.useFakeTimers();
-			vi.stubEnv("CRT", value);
-			vi.spyOn(internalCertificate, "processExpiringHosts").mockResolvedValue();
-			vi.spyOn(internalCertificate, "cleanUpMissingCertificates").mockResolvedValue();
-			const interval = vi.spyOn(globalThis, "setInterval");
-			await internalCertificate.initTimer();
-			await internalCertificate.initTimer();
-			expect(interval).toHaveBeenLastCalledWith(internalCertificate.processExpiringHosts, 72 * 3600000);
-			expect(vi.getTimerCount()).toBe(1);
-			clearInterval(internalCertificate.interval);
-		},
-	);
+	it.each([1, 6, 12])("uses the saved %s-hour renewal interval and replaces existing timers", async (hours) => {
+		vi.useFakeTimers();
+		vi.stubEnv("CRT", "23");
+		mocks.options.mockResolvedValue({ key_type: "rsa", renewal_interval_hours: hours });
+		vi.spyOn(internalCertificate, "processExpiringHosts").mockResolvedValue();
+		vi.spyOn(internalCertificate, "cleanUpMissingCertificates").mockResolvedValue();
+		const interval = vi.spyOn(globalThis, "setInterval");
+		await internalCertificate.initTimer();
+		await internalCertificate.initTimer();
+		expect(interval).toHaveBeenLastCalledWith(internalCertificate.processExpiringHosts, hours * 3600000);
+		expect(vi.getTimerCount()).toBe(1);
+		clearInterval(internalCertificate.interval);
+	});
+	it("changes the active interval without starting another renewal or cleanup", async () => {
+		vi.useFakeTimers();
+		const renew = vi.spyOn(internalCertificate, "processExpiringHosts").mockResolvedValue();
+		const cleanup = vi.spyOn(internalCertificate, "cleanUpMissingCertificates").mockResolvedValue();
+		internalCertificate.rescheduleTimer(12);
+		internalCertificate.rescheduleTimer(2);
+		expect(vi.getTimerCount()).toBe(1);
+		expect(renew).not.toHaveBeenCalled();
+		expect(cleanup).not.toHaveBeenCalled();
+		await vi.advanceTimersByTimeAsync(2 * 3600000);
+		expect(renew).toHaveBeenCalledOnce();
+		clearInterval(internalCertificate.interval);
+	});
+	it.each([0, 13, 1.5, Number.NaN])("rejects invalid live timer interval %s before replacing it", (hours) => {
+		const timer = vi.spyOn(globalThis, "setInterval");
+		expect(() => internalCertificate.rescheduleTimer(hours)).toThrow("from 1 to 12 hours");
+		expect(timer).not.toHaveBeenCalled();
+	});
 
 	it("validates private keys in memory and rejects encrypted keys immediately", async () => {
 		const { privateKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
@@ -528,5 +671,70 @@ describe("certificate lifecycle regressions", () => {
 		await renewal;
 		expect(mocks.reload).toHaveBeenCalledOnce();
 		expect(internalCertificate.intervalProcessing).toBe(false);
+	});
+	it("renews mixed profiles individually and continues after a failure without forcing issuance", async () => {
+		mocks.options.mockResolvedValueOnce({ key_type: "rsa", renewal_interval_hours: 3 });
+		const certificates = [
+			{ id: 1, meta: { letsencrypt_profile: "standard" } },
+			{ id: 2, meta: { letsencrypt_profile: "shortlived" } },
+			{ id: 3, meta: {} },
+		];
+		mocks.query.mockReturnValue(queryFor(certificates));
+		vi.spyOn(internalCertificate, "getCertificateInfoFromFile").mockRejectedValue(new Error("mock file absent"));
+		mocks.runCertbot.mockRejectedValueOnce(new Error("first renewal failed")).mockResolvedValue("");
+		await internalCertificate.processExpiringHosts();
+		expect(mocks.runCertbot).toHaveBeenCalledTimes(3);
+		const calls = mocks.runCertbot.mock.calls;
+		for (const [i, [certificate, options]] of calls.entries()) {
+			expect(certificate).toBe(certificates[i]);
+			expect(options.force).toBe(false);
+			expect(options.snapshot.key_type).toBe("rsa");
+			expect(options.snapshot.profile).toBe("standard");
+			expect(options.snapshot).toBe(calls[0][1].snapshot);
+		}
+		expect(mocks.acme).toHaveBeenCalledOnce();
+		expect(mocks.options).toHaveBeenCalledOnce();
+		expect(mocks.reload).toHaveBeenCalledOnce();
+		expect(internalCertificate.intervalProcessing).toBe(false);
+		expect(internalCertificate.processing).toBe(false);
+	});
+	it.each(["standard", "shortlived"])(
+		"applies saved global %s only to legacy rows during scheduled renewal",
+		async (policy) => {
+			mocks.policy.mockResolvedValue(policy);
+			mocks.query.mockReturnValue(
+				queryFor([
+					{ id: 1, meta: { letsencrypt_profile: "standard" } },
+					{ id: 2, meta: { letsencrypt_profile: "shortlived" } },
+					{ id: 3, meta: {} },
+				]),
+			);
+			vi.spyOn(internalCertificate, "getCertificateInfoFromFile").mockRejectedValue(
+				new Error("mock file absent"),
+			);
+			mocks.runCertbot.mockResolvedValue("");
+			await internalCertificate.processExpiringHosts();
+			expect(mocks.policy).toHaveBeenCalledOnce();
+			expect(mocks.runCertbot.mock.calls).toHaveLength(3);
+			for (const [certificate, options] of mocks.runCertbot.mock.calls) {
+				expect(options.snapshot.profile).toBe(policy);
+				expect(options.force).toBe(false);
+				expect(certificate.meta.letsencrypt_profile).toBe(
+					certificate.id === 1 ? "standard" : certificate.id === 2 ? "shortlived" : undefined,
+				);
+			}
+			expect(internalCertificate.intervalProcessing).toBe(false);
+		},
+	);
+	it("accepts a shortlived leaf with SANs and validity dates but no Common Name", async () => {
+		vi.spyOn(utils, "execFile")
+			.mockResolvedValueOnce("subject=\n")
+			.mockResolvedValueOnce("issuer=CN = Test CA\n")
+			.mockResolvedValueOnce("X509v3 Subject Alternative Name:\n    DNS:test.example\n")
+			.mockResolvedValueOnce("notBefore=Sep 29 00:00:00 2026 GMT\nnotAfter=Oct 5 16:00:00 2026 GMT\n");
+		const info = await internalCertificate.getCertificateInfoFromFile("/mock/fullchain.pem");
+		expect(info.cn).toBeUndefined();
+		expect(info.sans).toEqual(["test.example"]);
+		expect(info.dates.to - info.dates.from).toBe(160 * 3600);
 	});
 });

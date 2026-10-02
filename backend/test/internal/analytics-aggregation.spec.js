@@ -8,6 +8,10 @@ const mocks = vi.hoisted(() => ({
 	transaction: vi.fn(),
 }));
 
+vi.mock("../../internal/analytics-options.js", () => ({
+	default: { getPolicy: async () => ({ detailed_retention_hours: 24, aggregation_retention_days: 35 }) },
+}));
+
 vi.mock("../../models/analytic_count.js", () => ({
 	default: {
 		knex: vi.fn(() => ({ raw: vi.fn((sql, bindings) => ({ bindings, sql })) })),

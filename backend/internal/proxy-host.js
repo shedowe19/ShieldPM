@@ -107,7 +107,7 @@ const internalProxyHost = {
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {
-		let thisData = data;
+		let thisData = _.cloneDeep(data);
 		const createCertificate = thisData.certificate_id === "new";
 
 		if (createCertificate) {
@@ -133,6 +133,10 @@ const internalProxyHost = {
 			}
 			return true;
 		});
+
+		if (createCertificate) {
+			thisData = await internalCertificate.prepareQuickCertificate(access, thisData);
+		}
 
 		// At this point the domains should have been checked
 		thisData.owner_user_id = access.token.getUserId(1);
@@ -254,7 +258,7 @@ const internalProxyHost = {
 	 * @return {Promise}
 	 */
 	update: async (access, data, options = {}) => {
-		let thisData = data;
+		let thisData = _.cloneDeep(data);
 		const create_certificate = thisData.certificate_id === "new";
 
 		if (create_certificate) {
@@ -304,10 +308,12 @@ const internalProxyHost = {
 		]);
 
 		if (create_certificate) {
-			const cert = await internalCertificate.createQuickCertificate(access, {
+			thisData = await internalCertificate.prepareQuickCertificate(access, {
+				...thisData,
 				domain_names: thisData.domain_names || row.domain_names,
-				meta: _.assign({}, row.meta, thisData.meta),
+				meta: _.assign({}, _.omit(row.meta, ["letsencrypt_profile"]), thisData.meta),
 			});
+			const cert = await internalCertificate.createQuickCertificate(access, thisData);
 			// update host with cert id
 			thisData.certificate_id = cert.id;
 		}
@@ -318,7 +324,7 @@ const internalProxyHost = {
 			{
 				domain_names: row.domain_names,
 			},
-			data,
+			thisData,
 		);
 
 		thisData = internalHost.cleanSslHstsData(create_certificate, thisData, row);
@@ -468,7 +474,7 @@ const internalProxyHost = {
 				await proxyHostModel.transaction(async (trx) => {
 					await proxyHostModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
 					await internalNginx.deleteConfig("proxy_host", row);
-					await internalNginx.reload();
+					await internalNginx.reload({ trx });
 				});
 			} catch (error) {
 				// The database transaction has rolled back. Restore the listener
@@ -586,7 +592,7 @@ const internalProxyHost = {
 				await proxyHostModel.transaction(async (trx) => {
 					await proxyHostModel.query(trx).where("id", row.id).patch({ enabled: 0 });
 					await internalNginx.deleteConfig("proxy_host", row);
-					await internalNginx.reload();
+					await internalNginx.reload({ trx });
 				});
 			} catch (error) {
 				// The database transaction has rolled back. Restore the listener

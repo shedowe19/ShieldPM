@@ -11,9 +11,12 @@ Die Anwendung benötigt globale Konfigurationswerte, die in der Datenbank gespei
 ## Wichtige Dateien
 
 - `backend/internal/setting.js` — Business-Logik für Einstellungen
+- `backend/internal/acme-profile.js` — Geprüfte ACME-Profilvorgabe und dedizierte API
+- `backend/internal/certificate-options.js`, `backend/internal/ip-ranges-options.js` — Validierte Anwendungsoptionen mit Live-Anwendung
+- `backend/internal/analytics-options.js`, `backend/internal/nginx-options.js` — Aufbewahrung und Formatierungswahl aus der Datenbank
 - `backend/models/setting.js` — Einstellungs-Modell
 - `backend/routes/settings.js` — REST-API unter `/api/settings`
-- `frontend/src/pages/Settings/` — UI mit Tabs (DefaultSite, Ai, GitOps, Layout)
+- `frontend/src/pages/Settings/` — UI mit Tabs (DefaultSite, ACME/Zertifikate, Netzwerk, Analytics, Nginx, Ai, GitOps, Layout)
 
 ## Verhalten
 
@@ -25,6 +28,89 @@ Die Anwendung benötigt globale Konfigurationswerte, die in der Datenbank gespei
 - Ein fehlgeschlagenes Nachladen der Default-Site-Einstellung zeigt bei bereits vorhandenen Daten einen Fehler im weiterhin geöffneten Formular. Ungespeichertes HTML bleibt auch bei anschließender Wiederherstellung der Verbindung erhalten. Scheitert das erste Laden ohne Daten, wird kein Formular mit Ersatzwerten angeboten.
 - AI-Modelllisten gelten nur für die Verbindung, mit der sie angefordert wurden. Änderungen an Provider, Base-URL oder API-Key verwerfen geladene Optionen und ausstehende Antworten einschließlich deren Fehlern. Auch ein Wechsel zurück zum vorherigen Wert reaktiviert keine ältere Anfrage. Regression: `frontend/src/pages/Settings/Ai.test.tsx`.
 - GitOps-Einstellungen werden erst nach erfolgreichem Laden bearbeitbar. Ungespeicherte Änderungen sperren Aktionen gegen die bisher gespeicherte Repository-Konfiguration; siehe [GitOps](../module/gitops.md).
+
+## ACME-Konto und TLS-Optionen
+
+Einstellungen → Zertifikate / ACME verwaltet CA-Verzeichnis, E-Mail, Account-ID, EAB, Zustimmung zu den Bedingungen, Must-Staple, ACME-/Custom-OCSP, CA-TLS-Prüfung und Standardzertifikat im Datensatz `acme-options` (`value: "configured"`, Optionen in `meta`). `GET` und `PUT /api/settings/acme-options` verlangen `settings:get` beziehungsweise `settings:update` für diese ID. Generische Updates dürfen die dedizierte Validierung nicht umgehen. Die bisherige Profilwahl sowie Schlüsseltyp und Prüfintervall bleiben eigene Einstellungen.
+
+| Feld                                                   | Bedeutung und Vorgabe                                                                                  |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `server`                                               | ACME-Verzeichnis; zunächst Let's Encrypt Production                                                    |
+| `email`                                                | Registrierungskontakt, zunächst leer; bei EAB und automatischer ZeroSSL-Registrierung erforderlich     |
+| `account_id`                                           | Optionale Certbot-Account-ID, zunächst leer; Auswahl bei mehreren Accounts desselben CA-Verzeichnisses |
+| `eab_kid`                                              | EAB-Schlüsselkennung, zunächst leer                                                                    |
+| `agree_tos`                                            | Zustimmung zur ACME-Vereinbarung; Migration erhält die bisherige Zustimmung (`true`)                   |
+| `must_staple`, `ocsp_stapling`, `custom_ocsp_stapling` | Jeweils Boolean, zunächst `false`; Must-Staple aktiviert ACME-OCSP mit                                 |
+| `server_tls_verify`                                    | Boolean, zunächst `true`                                                                               |
+| `default_certificate_id`                               | Sichere Ganzzahl ab `0`; `0` verwendet das Dummy-Zertifikat                                            |
+| `eab_hmac_key_set`                                     | Nur in Antworten: Boolean-Marker für ein vorhandenes verschlüsseltes Secret                            |
+| `eab_hmac_key`                                         | Nur im PUT: ausgelassen erhält das Secret, nichtleerer Wert ersetzt es, `null` löscht es               |
+
+PUT verwendet die vollständigen gewöhnlichen Felder ohne `meta`-Wrapper; der Vorhandenseinsmarker ist kein Schreibfeld. EAB-Kennung und HMAC müssen als Paar zu einem E-Mail-Kontakt gehören. Eine geänderte CA-/EAB-Identität darf das bisherige Secret nicht stillschweigend übernehmen: Das Paar muss passend ersetzt oder ausdrücklich gelöscht werden. Klartext und Ciphertext erscheinen weder in GET, Audit noch GitOps-Export. Ungültige neue Werte werden abgewiesen; der GET-Vertrag lässt alte ungültige Server-/Kontaktwerte zur Reparatur sichtbar.
+
+Die UI bietet Let's Encrypt Production/Staging, ZeroSSL und ein benutzerdefiniertes Verzeichnis. Die CA-Wahl gilt für neue Ausstellungen; bestehende Zertifikate behalten bei Erneuerung und Widerruf ihre ursprüngliche CA und Accountzuordnung aus der eigenen Certbot-Lineage. Vorhandene interne Ausstellermetadaten müssen dazu passen. Eine leere Account-ID verwendet den eindeutig ermittelten vorhandenen Account oder registriert bei einer neuen Ausstellung einen neuen, wenn keiner vorhanden ist. Mehrere Accounts ohne Auswahl oder eine ungültige ID ergeben einen nachvollziehbaren Fehler, ohne den UI-Start zu blockieren. E-Mail-Änderungen werden beim nächsten Accountauftrag tatsächlich an Certbot weitergereicht. ZeroSSL kann fehlende EAB-Daten aus dem Registrierungskontakt beziehen.
+
+Accountregistrierung erfolgt bei Bedarf im Backend unter der gemeinsamen Certbot-Sperre. Registrierungsfehler lassen die UI verfügbar; Speichern allein startet keine Ausstellung oder erzwungene Erneuerung. Für die Registrierung wird eine private INI-Datei mit Modus `0600` verwendet, sodass HMAC nicht als Prozessargument erscheint. Bei EAB liegen auch Certbot-Logs in einem privaten temporären Verzeichnis (`0700`), das im `finally`-Pfad entfernt wird; externe Fehlermeldungen werden von Geheimnissen bereinigt.
+
+Änderungen von OCSP und Standardzertifikat regenerieren und prüfen die betroffenen Nginx-Konfigurationen unter der Konfigurationssperre, bevor der Reload erfolgreich aktiviert wird. Bei Fehlern werden Einstellung und Konfiguration wiederhergestellt. Die übrigen Account-/Ausstellungsfelder gelten beim nächsten Auftrag ohne Dienstneustart; Speichern allein verändert keinen Accountkontakt. TLS-Prüfung und Must-Staple gelten global auch für vorhandene Lineages, während deren ursprüngliche CA und Accountzuordnung erhalten bleiben. Eine wieder aktivierte TLS-Prüfung kann deshalb die Erneuerung an einer nicht vertrauenswürdigen privaten CA ablehnen. Zertifikat und Schlüssel des Standardzertifikats werden als Paar geprüft; die Auswahl unterstützt Let's Encrypt, Custom und interne Zertifikate.
+
+Das Abschalten der Must-Staple-Anforderung entfernt die Erweiterung nicht aus einem ausgestellten Leaf. Vor einem TLS-Update prüft `acme-tls.js` deshalb die tatsächlichen TLS-Feature-Erweiterungen des gewählten Default-Zertifikats und aktiver TLS-Hosts/Streams für Let's-Encrypt-/Custom-Zertifikate. `status_request` oder `status_request_v2` bei künftig deaktiviertem zugehörigem OCSP wird vor Schreibvorgängen abgewiesen. OCSP bleibt aktiviert, bis die betroffenen Zertifikate ohne Must-Staple erneuert oder ersetzt wurden. Interne/Dummy-Zertifikate und die Bootstrap-Initialisierung verwenden diesen UI-Speicherguard nicht.
+
+Let's Encrypt [akzeptiert seit 2025 kein Must-Staple mehr](https://letsencrypt.org/2024/12/05/ending-ocsp/) und [hat OCSP am 6. August 2025 abgeschaltet](https://letsencrypt.org/2025/08/06/ocsp-service-has-reached-end-of-life/). Ein Must-Staple-Update mit dessen Produktions-/Staging-Verzeichnis wird abgewiesen. Bei anderen CAs muss deren Unterstützung gegeben sein.
+
+`20260930000400_add_acme_options.js` übernimmt die neun bisherigen ACME-/Standardzertifikat-Umgebungswerte einmalig bei einem fehlenden Datensatz. EAB wird vor der Datenbankanlage verschlüsselt; vorhandene Optionen werden erhalten. Ungültige alte Server-, E-Mail- oder EAB-Kombinationen bleiben zur UI-Korrektur erhalten und werden ohne Rohwertausgabe gemeldet. Danach gibt es keine Umgebungsrückfallebene. Feste RSA-4096-/P-384-, Schlüsselrotations-, Ausführungs- und Pfadvorgaben bleiben technische Certbot-Standards ohne eigene UI-Felder.
+
+Regressionen liegen unter `backend/test/internal/acme-options.spec.js`, `acme-runtime.spec.js`, `acme-tls.spec.js`, `backend/test/routes/acme-options.spec.js`, `backend/test/schema/acme-options-contract.spec.js` und `backend/test/migrations/acme-options.spec.js`. Sie prüfen Secret-Erhalt/-Ersetzung/-Löschung, Antwort-/Audit-/Exportbereinigung, Account-/Lineage-Zuordnung, Registrierung/Kontaktpflege und TLS-Rollback mit lokalen Dateien und ersetzten externen Aufrufen. Es werden keine echten ACME-Zertifikate ausgestellt. `Settings/AcmeOptionsCard.test.tsx` prüft die Formularzustände und Schreibfelder.
+
+## Globale ACME-Profilvorgabe
+
+Einstellungen → Zertifikate / ACME (`frontend/src/pages/Settings/Certificates.tsx`) bietet Administratoren die globale Auswahl Standard oder Short-lived. Die Datenbank speichert sie im Datensatz `setting.id: "acme-profile"`; die Migration `20260930000000_add_acme_profile_setting.js` ergänzt `value: "standard"` und überschreibt einen bereits vorhandenen Datensatz nicht. `20260930000100_normalize_acme_profile_setting.js` ersetzt den früheren internen Wert `inherit` durch `standard`, erhält explizit gespeicherte Profilwahlen und liest keine Umgebungswerte.
+
+`GET /api/nginx/certificates/acme-profile` ist mit `certificates:list` zugänglich und liefert ausschließlich `{ "profile": "standard" | "shortlived" }`. `PUT` verlangt `settings:update` und denselben Body; seine Antwort enthält ebenfalls nur das gespeicherte Profil. Der generische Settings-PUT für `acme-profile` wird abgewiesen, damit er die vorgesehene Prüfung nicht umgeht.
+
+Vor dem Speichern prüft der Service die Unterstützung der Certbot-Profiloptionen; für Short-lived zusätzlich das angebotene `shortlived`-Profil des konfigurierten ACME-Verzeichnisses. Scheitert eine Prüfung, bleibt der gespeicherte Wert unverändert. Eine erfolgreiche Änderung wirkt auf nachfolgende Zertifikatsaufträge ohne Dienstneustart und ohne Änderung von Umgebungsdateien oder Certbot-INI. Sie erzeugt allein noch kein neues Zertifikat.
+
+Eine globale Short-lived-Vorgabe wird außerdem abgewiesen, wenn ein aktives älteres Let's-Encrypt-Zertifikat ohne gespeichertes Profil mehr als 25 Domainnamen enthält. Dadurch wird dessen spätere Erneuerung nicht auf ein unzulässiges Profil umgestellt. Standard bleibt verwendbar; alternativ können die betroffenen Zertifikate durch explizite Standard-Zertifikate ersetzt oder auf Short-lived-Zertifikate mit höchstens 25 Namen aufgeteilt werden. Nach der Host-Neuzuordnung müssen die ersetzten Altzertifikate entfernt werden, da die Prüfung alle nicht gelöschten Let's-Encrypt-Zertifikate berücksichtigt. Zertifikate mit explizit gespeichertem Standard-Profil verhindern die Änderung nicht.
+
+Neue Zertifikatsanfragen ohne individuelle Wahl verwenden die globale Vorgabe und speichern das aufgelöste Profil im Zertifikat. Neue HTTP-/DNS- und Inline-Host-Formulare übernehmen die Vorgabe nur, solange keine individuelle Wahl vorliegt. Bereits explizit gespeicherte Zertifikatsprofile behalten Vorrang. Bei älteren Zertifikaten ohne Profilfeld wird die aktuelle globale Wahl während der nächsten Erneuerung angewendet.
+
+Die globale Vorgabe stammt ausschließlich aus der Datenbank und beginnt mit Standard. Bei jedem Standard-Auftrag werden erforderliche und bevorzugte Certbot-Profile geleert, damit alte INI- oder Lineage-Optionen nicht weiterwirken. Beide Auswahlen benötigen Certbot ab Version 4.0. Details zur Argumentauflösung und Erneuerung stehen unter [Certbot](../module/certbot.md).
+
+Regressionen: `backend/test/internal/acme-profile.spec.js` prüft Auflösung, Berechtigungen, Client-/CA-Prüfung und Fehlererhalt; `backend/test/schema/acme-profile-settings-contract.spec.js` den API-Vertrag und `backend/test/migrations/acme-profile-setting.spec.js` die Standard-Vorgabe und Normalisierung bei erhaltenen individuellen Einstellungen. Die Client- und ACME-Aufrufe sind gemockt; es werden keine echten Zertifikate ausgestellt. `Settings/Certificates.test.tsx`, `Settings/Layout.test.tsx`, `useAcmeProfile.test.tsx` und `CertificateProfiles.test.tsx` prüfen UI-Zustände, sofortige Cacheübernahme sowie den Schutz individueller Profilwahlen vor verspäteten Antworten.
+
+## Zertifikats- und Netzwerkoptionen
+
+Einstellungen → Zertifikate / ACME ergänzt die Profilwahl um Schlüsseltyp und Prüfintervall. Einstellungen → Netzwerk bietet den automatischen Cloudflare-IP-Abruf und sein Aktualisierungsintervall an. Die Werte liegen in `setting.meta` der Datensätze `certificate-options` und `ip-ranges-options`; `value` ist jeweils `configured`.
+
+| Datensatz             | Metadaten                                                                          | Vorgabe                |
+| --------------------- | ---------------------------------------------------------------------------------- | ---------------------- |
+| `certificate-options` | `key_type`: `ecdsa` oder `rsa`, `renewal_interval_hours`: ganze Zahl 1–12          | ECDSA, 12 Stunden      |
+| `ip-ranges-options`   | `enabled`: Boolean, `refresh_interval_hours`: ganze Zahl 6–594 und durch 6 teilbar | deaktiviert, 6 Stunden |
+
+`GET` und `PUT /api/settings/certificate-options` beziehungsweise `/api/settings/ip-ranges-options` verwenden direkt das jeweilige Optionsobjekt als Antwort und vollständigen PUT-Body, ohne `value`-/`meta`-Hülle. GET verlangt `settings:get`, PUT `settings:update` für die jeweilige ID. Die generische Settings-Aktualisierung dieser Datensätze wird abgewiesen; die dedizierten Services validieren und wenden die Werte an.
+
+Zertifikatsänderungen benötigen keinen Neustart: Das Prüfintervall ersetzt den bestehenden Timer ohne zusätzliche Sofortprüfung, der Schlüsseltyp gilt für die nächste Ausstellung oder Erneuerung einschließlich bestehender Lineages. Ein Timerwechsel erzwingt keine Erneuerung. Eine schon laufende automatische Prüfserie verwendet weiterhin ihren anfangs geladenen Schlüsseltyp; die Änderung gilt ab der nächsten Serie. Bei IP-Ranges startet Aktivieren einen Hintergrundabruf und den Timer; reine Intervalländerungen ersetzen nur den Timer. Deaktivieren stoppt zukünftige Abrufe und macht laufende Antworten für die Veröffentlichung ungültig. Die zuletzt gespeicherte Range-Liste bleibt erhalten.
+
+GitOps-Restore leitet diese beiden Optionsdatensätze ebenfalls durch dieselben Schema- und Serviceprüfungen samt Live-Anwendung. Importierte Werte müssen `value: "configured"` und vollständige gültige Metadaten verwenden. Ungültige Daten werden als Importfehler gemeldet und ersetzen die vorhandenen Optionen nicht. Regressionen prüfen Migration, API-Vertrag, Berechtigungen und Timer-Anwendung unter `backend/test/migrations/application-options.spec.js`, `backend/test/schema/application-options-contract.spec.js`, `backend/test/routes/application-options.spec.js` und den beiden `internal/*-options.spec.js`-Dateien; die UI-Zustände unter `Settings/RuntimeOptions.test.tsx`.
+
+Die Migration `20260930000200_add_application_options.js` importiert die bisherigen `ACME_KEY_TYPE`-, `CRT`-, `SKIP_IP_RANGES`- und `IPRT`-Werte nur bei der ersten Anlage fehlender Datensätze. Vorhandene Datenbankwerte bleiben erhalten. Danach gibt es keine Umgebungsrückfallebene für diese Optionen. Die verbleibenden Konfigurationsgruppen und die geplante Reihenfolge ihrer Verlagerung stehen unter [Konfigurationsstrategie](../konfiguration/config-dateien.md#schrittweise-verlagerung-von-anwendungsoptionen).
+
+## Analytics- und Nginx-Optionen
+
+Einstellungen → Analysen verwaltet Detail-Aufbewahrung in Stunden und Aggregat-Aufbewahrung in Tagen. Einstellungen → Nginx bietet die automatische Konfigurationsformatierung an. Die Datensätze `analytics-options` und `nginx-options` verwenden `value: "configured"` und speichern ihre Optionsobjekte in `meta`.
+
+| Datensatz           | Metadaten                                                                                             | Vorgabe             |
+| ------------------- | ----------------------------------------------------------------------------------------------------- | ------------------- |
+| `analytics-options` | `detailed_retention_hours`, `aggregation_retention_days`: jeweils sichere Ganzzahl 1–9007199254740991 | 24 Stunden, 35 Tage |
+| `nginx-options`     | `beautifier_enabled`: Boolean                                                                         | `true`              |
+
+Es gibt keine zusätzliche Produktobergrenze und keine feldübergreifende Bedingung für die beiden Aufbewahrungswerte. `GET` und `PUT /api/settings/analytics-options` beziehungsweise `/api/settings/nginx-options` verwenden vollständige flache Optionsobjekte als Antwort und PUT-Body. GET verlangt `settings:get`, PUT `settings:update` für die betreffende ID. Zusätzliche Felder oder ungültige Typen werden abgewiesen; generische Settings-Updates und GitOps-Restore verwenden ebenfalls die dafür vorgesehenen Guards beziehungsweise validierten Services. Erfolgreiche Updates werden im Audit protokolliert.
+
+Die Aufbewahrungswahl gilt ohne Neustart für die nächste Start-/Stundenbereinigung. Speichern startet keine sofortige Löschung. Jede Bereinigung liest einen Options- und Uhrzeit-Snapshot, validiert beide Cutoffs einschließlich eines positiven Jahres vor jeder DELETE-Abfrage und überspringt bei unbrauchbaren Werten oder Lesefehlern beide Tabellen. Laufende Bereinigungen überlappen nicht und geben ihre Sperre erst nach beiden Löschungsantworten frei. Erfolgreiche Löschungen leeren den Summary-Cache auch bei einem Fehler der anderen Tabelle. Fehlende Datensätze führen zu einem Konfigurationsfehler; Standardwerte werden ausschließlich durch die Migration angelegt. Die Formatierungswahl gilt für die nächste Konfigurationsgenerierung; Speichern allein schreibt keine Konfiguration neu und lädt Nginx nicht neu.
+
+`20260930000300_add_analytics_nginx_options.js` legt fehlende Datensätze einmalig aus den bisherigen Umgebungswerten an und überschreibt gespeicherte Einstellungen nicht. Positive sichere Retention-Ergebnisse der bisherigen Integer-Auswertung bleiben erhalten; fehlende/leere Werte ergeben 24/35. Ungültige nichtleere Werte werden ohne Rohwertausgabe gewarnt und als maximale sichere Ganzzahl gespeichert, sodass die Bereinigung bis zur UI-Korrektur keine Daten verkürzt. `DISABLE_NGINX_BEAUTIFIER=true` wird zu `beautifier_enabled: false`, alle anderen Werte zu `true`. Danach gelten ausschließlich die Datenbankoptionen.
+
+Regressionen für die neuen Gruppen liegen unter `backend/test/migrations/analytics-nginx-options.spec.js`, `backend/test/schema/analytics-nginx-options-contract.spec.js` und `backend/test/internal/analytics-nginx-options.spec.js`; die Routen und GitOps-Guards werden gemeinsam mit den bisherigen Anwendungsoptionen geprüft. `Settings/RuntimeOptions.test.tsx` und `useRuntimeOptions.test.tsx` sichern Formular- und Cachezustände ab.
 
 ## Standardseite und Fehlerbehandlung
 
@@ -50,3 +136,4 @@ Dashboard-Notizen sind ein eigenständiges Feature und werden auf einer separate
 - [Dashboard-Notizen](../module/dashboard-notes.md)
 - [Audit-Log](./audit-log.md)
 - [Modulübersicht](../module/README.md)
+- [Zertifikate](../module/zertifikate.md)

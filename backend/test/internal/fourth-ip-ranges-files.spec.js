@@ -49,4 +49,15 @@ describe("atomic Cloudflare trust-list replacement", () => {
 		expect(config).toContain("set_real_ip_from 2001:db8::/32;");
 		expect(await fs.promises.readdir(directory)).toEqual(["ip_ranges.conf"]);
 	});
+	it("retains known ranges when refresh is disabled while a new file is being staged", async () => {
+		let current = true;
+		const write = fs.promises.writeFile.getMockImplementation();
+		fs.promises.writeFile.mockImplementationOnce(async (...args) => {
+			await write(...args);
+			current = false;
+		});
+		expect(await ranges.generateConfig(["203.0.113.0/24"], () => current)).toBe(false);
+		expect(await fs.promises.readFile(filename, "utf8")).toBe("set_real_ip_from 192.0.2.0/24;\n");
+		expect(await fs.promises.readdir(directory)).toEqual(["ip_ranges.conf"]);
+	});
 });

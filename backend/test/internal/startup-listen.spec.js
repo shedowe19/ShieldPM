@@ -3,6 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
 	analyticsStop: vi.fn(async () => {}),
+	acmeInitialize: vi.fn(async () => {}),
+	migrate: vi.fn(async () => {}),
+	setup: vi.fn(async () => {}),
 	port: 0,
 	servers: [],
 	completed: false,
@@ -11,6 +14,9 @@ const state = vi.hoisted(() => ({
 	terminal: vi.fn(),
 	monitorStart: vi.fn(),
 	monitorStop: vi.fn(),
+	ipPolicy: vi.fn(),
+	ipConfigure: vi.fn(),
+	ipStop: vi.fn(),
 }));
 vi.mock("../../app.js", async () => {
 	const { default: express } = await import("express");
@@ -30,6 +36,7 @@ vi.mock("../../app.js", async () => {
 		},
 	};
 });
+vi.mock("../../internal/acme-tls.js", () => ({ default: { initialize: state.acmeInitialize } }));
 vi.mock("../../internal/analytics.js", () => ({ default: { init: async () => {}, stop: state.analyticsStop } }));
 vi.mock("../../internal/certificate.js", () => ({ default: { initTimer: async () => {} } }));
 vi.mock("../../internal/chat.js", () => ({ default: { init: async () => {} } }));
@@ -38,7 +45,8 @@ vi.mock("../../internal/ddns.js", () => ({ default: { initTimer: () => {} } }));
 vi.mock("../../internal/docker.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/git-deploy.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/gitops.js", () => ({ default: { init: async () => {} } }));
-vi.mock("../../internal/ip_ranges.js", () => ({ default: {} }));
+vi.mock("../../internal/ip-ranges-options.js", () => ({ default: { getPolicy: state.ipPolicy } }));
+vi.mock("../../internal/ip_ranges.js", () => ({ default: { configure: state.ipConfigure, stop: state.ipStop } }));
 vi.mock("../../internal/maintenance.js", () => ({ default: { initTimer: () => {} } }));
 vi.mock("../../internal/nginx.js", () => ({ default: { reload: async () => {} } }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: { init: async () => {} } }));
@@ -51,16 +59,16 @@ vi.mock("../../internal/wireguard.js", () => ({ default: { init: async () => {} 
 vi.mock("../../lib/db-migrate.js", () => ({ default: async () => {} }));
 vi.mock("../../lib/utils.js", () => ({ default: { execFile: vi.fn() } }));
 vi.mock("../../logger.js", () => ({ global: { info: state.info, error: state.error } }));
-vi.mock("../../migrate.js", () => ({ migrateUp: async () => {} }));
+vi.mock("../../migrate.js", () => ({ migrateUp: state.migrate }));
 vi.mock("../../schema/index.js", () => ({ getCompiledSchema: async () => {} }));
-vi.mock("../../setup.js", () => ({ default: async () => {} }));
+vi.mock("../../setup.js", () => ({ default: state.setup }));
 
 describe("backend listener lifecycle", () => {
 	let listeners;
 	beforeEach(() => {
 		vi.resetModules();
 		vi.clearAllMocks();
-		vi.stubEnv("SKIP_IP_RANGES", "true");
+		state.ipPolicy.mockResolvedValue({ enabled: false, refresh_interval_hours: 6 });
 		for (const key of ["DATA_PATH", "INITIAL_ADMIN_EMAIL", "INITIAL_ADMIN_PASSWORD", "INITIAL_DEFAULT_PAGE"])
 			vi.stubEnv(key, "");
 		vi.spyOn(process, "exit").mockImplementation(() => undefined);
@@ -123,7 +131,30 @@ describe("backend listener lifecycle", () => {
 		await vi.waitFor(() => expect(process.exit).toHaveBeenCalledExactlyOnceWith(0));
 		expect(state.analyticsStop).toHaveBeenCalledOnce();
 		expect(state.monitorStop).toHaveBeenCalledOnce();
+		expect(state.ipStop).toHaveBeenCalledOnce();
 		expect(server.listening).toBe(false);
+	});
+
+	it("initializes saved TLS settings after migration and before startup configuration", async () => {
+		await import("../../index.js");
+		await vi.waitFor(() => expect(state.completed).toBe(true));
+		expect(state.acmeInitialize).toHaveBeenCalledOnce();
+		expect(state.migrate.mock.invocationCallOrder[0]).toBeLessThan(
+			state.acmeInitialize.mock.invocationCallOrder[0],
+		);
+		expect(state.acmeInitialize.mock.invocationCallOrder[0]).toBeLessThan(state.setup.mock.invocationCallOrder[0]);
+	});
+
+	it("applies the database IP range policy at startup regardless of removed environment controls", async () => {
+		vi.stubEnv("SKIP_IP_RANGES", "true");
+		vi.stubEnv("IPRT", "99");
+		state.ipPolicy.mockResolvedValue({ enabled: true, refresh_interval_hours: 12 });
+		await import("../../index.js");
+		await vi.waitFor(() => expect(state.completed).toBe(true));
+		expect(state.ipConfigure).toHaveBeenCalledExactlyOnceWith(
+			{ enabled: true, refresh_interval_hours: 12 },
+			{ startup: true },
+		);
 	});
 	it.each(["SIGINT", "SIGTERM"])("runs development monitoring after listen and stops it on %s", async (signal) => {
 		await import("../../index-dev.js");

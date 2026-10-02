@@ -1,5 +1,21 @@
+vi.mock("../../internal/acme-options.js", () => ({
+	default: {
+		getPublicPolicy: async () => ({ ocsp_stapling: false, custom_ocsp_stapling: false, default_certificate_id: 0 }),
+	},
+}));
+vi.mock("../../internal/acme-tls.js", () => ({
+	default: {
+		getDefaultIncludePath: () => "/data/nginx/include/default-tls.conf",
+		refreshDefaultInclude: async () => {},
+	},
+}));
+
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../internal/nginx-options.js", () => ({
+	default: { getPolicy: async () => ({ beautifier_enabled: false }) },
+}));
 
 vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn().mockResolvedValue() } }));
 vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: vi.fn().mockReturnValue("host-token") }));
@@ -27,7 +43,6 @@ const renderProxyHost = async (overrides = {}) => {
 
 describe("Proxy Host Zstd compression", () => {
 	beforeEach(() => {
-		vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", "true");
 		vi.spyOn(fs.promises, "writeFile").mockResolvedValue();
 	});
 

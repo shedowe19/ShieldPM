@@ -1,0 +1,22 @@
+{
+	"type": "object",
+	"description": "Application options for automatic Cloudflare IP range updates",
+	"additionalProperties": false,
+	"required": [
+		"enabled",
+		"refresh_interval_hours"
+	],
+	"properties": {
+		"enabled": {
+			"type": "boolean",
+			"description": "Whether IP ranges are fetched automatically"
+		},
+		"refresh_interval_hours": {
+			"type": "integer",
+			"minimum": 6,
+			"maximum": 594,
+			"multipleOf": 6,
+			"description": "Hours between IP range refreshes, in six-hour steps"
+		}
+	}
+}

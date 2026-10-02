@@ -128,6 +128,14 @@
 				"$ref": "./paths/nginx/certificates/post.json"
 			}
 		},
+		"/nginx/certificates/acme-profile": {
+			"get": {
+				"$ref": "./paths/nginx/certificates/acme-profile/get.json"
+			},
+			"put": {
+				"$ref": "./paths/nginx/certificates/acme-profile/put.json"
+			}
+		},
 		"/nginx/certificates/dns-providers": {
 			"get": {
 				"$ref": "./paths/nginx/certificates/dns-providers/get.json"
@@ -427,6 +435,46 @@
 		"/settings": {
 			"get": {
 				"$ref": "./paths/settings/get.json"
+			}
+		},
+		"/settings/acme-options": {
+			"get": {
+				"$ref": "./paths/settings/acme-options/get.json"
+			},
+			"put": {
+				"$ref": "./paths/settings/acme-options/put.json"
+			}
+		},
+		"/settings/certificate-options": {
+			"get": {
+				"$ref": "./paths/settings/certificate-options/get.json"
+			},
+			"put": {
+				"$ref": "./paths/settings/certificate-options/put.json"
+			}
+		},
+		"/settings/ip-ranges-options": {
+			"get": {
+				"$ref": "./paths/settings/ip-ranges-options/get.json"
+			},
+			"put": {
+				"$ref": "./paths/settings/ip-ranges-options/put.json"
+			}
+		},
+		"/settings/analytics-options": {
+			"get": {
+				"$ref": "./paths/settings/analytics-options/get.json"
+			},
+			"put": {
+				"$ref": "./paths/settings/analytics-options/put.json"
+			}
+		},
+		"/settings/nginx-options": {
+			"get": {
+				"$ref": "./paths/settings/nginx-options/get.json"
+			},
+			"put": {
+				"$ref": "./paths/settings/nginx-options/put.json"
 			}
 		},
 		"/settings/{settingID}": {

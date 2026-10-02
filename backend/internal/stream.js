@@ -64,33 +64,44 @@ const internalStream = {
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {
-		const create_certificate = data.certificate_id === "new";
+		let thisData = _.cloneDeep(data);
+		const create_certificate = thisData.certificate_id === "new";
 
 		if (create_certificate) {
-			if (!Array.isArray(data.domain_names) || data.domain_names.length === 0) {
+			if (!Array.isArray(thisData.domain_names) || thisData.domain_names.length === 0) {
 				throw new errs.ValidationError("Domain names are required when requesting a new certificate");
 			}
-			delete data.certificate_id;
+			delete thisData.certificate_id;
 		}
 
-		await access.can("streams:create", data);
-		await internalHost.validateReferences(access, data);
+		await access.can("streams:create", thisData);
+		await internalHost.validateReferences(access, thisData);
 
 		// Check for port collision
-		const collision = await findPortCollision(data.incoming_port, data.tcp_forwarding, data.udp_forwarding);
+		const collision = await findPortCollision(
+			thisData.incoming_port,
+			thisData.tcp_forwarding,
+			thisData.udp_forwarding,
+		);
 
 		if (collision) {
-			throw new errs.ValidationError(`Incoming port ${data.incoming_port} is already in use by another stream.`);
+			throw new errs.ValidationError(
+				`Incoming port ${thisData.incoming_port} is already in use by another stream.`,
+			);
 		}
 
-		data.owner_user_id = access.token.getUserId(1);
+		if (create_certificate) {
+			thisData = await internalCertificate.prepareQuickCertificate(access, thisData);
+		}
 
-		if (typeof data.meta === "undefined") {
-			data.meta = {};
+		thisData.owner_user_id = access.token.getUserId(1);
+
+		if (typeof thisData.meta === "undefined") {
+			thisData.meta = {};
 		}
 
 		// streams aren't routed by domain name so don't store domain names in the DB
-		const data_no_domains = structuredClone(data);
+		const data_no_domains = structuredClone(thisData);
 		delete data_no_domains.domain_names;
 		data_no_domains.meta = sanitizeHostMeta(data_no_domains.meta);
 
@@ -98,7 +109,7 @@ const internalStream = {
 		row = utils.omitRow(omissions())(row);
 
 		if (create_certificate) {
-			const cert = await internalCertificate.createQuickCertificate(access, /** @type {any} */ (data));
+			const cert = await internalCertificate.createQuickCertificate(access, /** @type {any} */ (thisData));
 			// update host with cert id, skip nginx configure as we do it below
 			await internalStream.update(
 				access,
@@ -124,7 +135,7 @@ const internalStream = {
 			action: "created",
 			object_type: "stream",
 			object_id: row.id,
-			meta: { ...data, meta: sanitizeHostMeta(data.meta) },
+			meta: { ...thisData, meta: sanitizeHostMeta(thisData.meta) },
 		});
 
 		// Trigger GitOps auto-push
@@ -148,7 +159,7 @@ const internalStream = {
 	 * @return {Promise}
 	 */
 	update: async (access, data, options = {}) => {
-		let thisData = data;
+		let thisData = _.cloneDeep(data);
 		const create_certificate = thisData.certificate_id === "new";
 
 		if (create_certificate) {
@@ -180,10 +191,12 @@ const internalStream = {
 		}
 
 		if (create_certificate) {
-			const cert = await internalCertificate.createQuickCertificate(access, {
+			thisData = await internalCertificate.prepareQuickCertificate(access, {
+				...thisData,
 				domain_names: thisData.domain_names || row.domain_names,
-				meta: _.assign({}, row.meta, thisData.meta),
+				meta: _.assign({}, _.omit(row.meta, ["letsencrypt_profile"]), thisData.meta),
 			});
+			const cert = await internalCertificate.createQuickCertificate(access, thisData);
 			// update host with cert id
 			thisData.certificate_id = cert.id;
 		}
@@ -194,7 +207,7 @@ const internalStream = {
 			{
 				domain_names: row.domain_names,
 			},
-			data,
+			thisData,
 		);
 
 		// Domain names are only used for certificate requests, never stored on streams.
@@ -289,7 +302,7 @@ const internalStream = {
 				await streamModel.transaction(async (trx) => {
 					await streamModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
 					await internalNginx.deleteConfig("stream", row);
-					await internalNginx.reload();
+					await internalNginx.reload({ trx });
 				});
 			} catch (error) {
 				// The database transaction has rolled back. Restore the listener
@@ -388,7 +401,7 @@ const internalStream = {
 				await streamModel.transaction(async (trx) => {
 					await streamModel.query(trx).where("id", row.id).patch({ enabled: 0 });
 					await internalNginx.deleteConfig("stream", row);
-					await internalNginx.reload();
+					await internalNginx.reload({ trx });
 				});
 			} catch (error) {
 				// The database transaction has rolled back. Restore the listener

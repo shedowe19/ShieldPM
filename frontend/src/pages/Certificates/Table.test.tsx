@@ -36,6 +36,21 @@ afterEach(() => {
 	mocks.canManage = true;
 });
 describe("certificate renewal availability", () => {
+	it("labels managed certificates as ACME without assuming their issuer is Let's Encrypt", () => {
+		render(
+			<Table
+				data={[
+					{
+						...certificate,
+						provider: "letsencrypt",
+						meta: { acmeServer: "https://ca.example.test/directory" },
+					},
+				]}
+			/>,
+		);
+		expect(screen.getByText("certificates.acme")).toBeInTheDocument();
+		expect(screen.queryByText("lets-encrypt")).not.toBeInTheDocument();
+	});
 	it.each(["other", "internal"])("does not offer ACME renewal for %s certificates", (provider) => {
 		render(<Table data={[{ ...certificate, provider }]} />);
 		expect(screen.queryByText("action.renew")).not.toBeInTheDocument();
@@ -48,5 +63,18 @@ describe("certificate renewal availability", () => {
 	it("offers renewal for a managed Lets Encrypt certificate", () => {
 		render(<Table data={[{ ...certificate, provider: "letsencrypt" }]} />);
 		expect(screen.getByText("action.renew")).toBeInTheDocument();
+	});
+	it.each(["standard", "shortlived"] as const)("shows the saved certificate profile %s", (profile) => {
+		render(<Table data={[{ ...certificate, provider: "letsencrypt", meta: { letsencryptProfile: profile } }]} />);
+		expect(
+			screen.getByText(
+				profile === "shortlived" ? "certificates.profile.shortlived" : "certificates.profile.standard",
+			),
+		).toBeInTheDocument();
+	});
+	it("does not infer an old certificate's issuance profile when no profile was stored", () => {
+		render(<Table data={[{ ...certificate, provider: "letsencrypt" }]} />);
+		expect(screen.queryByText("certificates.profile.standard")).not.toBeInTheDocument();
+		expect(screen.queryByText("certificates.profile.shortlived")).not.toBeInTheDocument();
 	});
 });

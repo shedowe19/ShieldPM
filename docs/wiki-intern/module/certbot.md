@@ -12,15 +12,34 @@ ShieldPM abstrahiert Let's Encrypt via Certbot. Dieses Modul kümmert sich um di
 
 - `backend/internal/certbot.js` (10 KB) — Certbot-Ausführung und Management
 - `backend/lib/certbot.js` — Installation registrierter DNS-Plugins in den beschreibbaren Datenpfad
+- `backend/lib/certificate-profile.js` — Profilvalidierung und Zertifikatsargumente einschließlich globaler Profilvorgaben
+- `backend/internal/acme-options.js`, `acme-options-public.js` — Gespeicherte Konto-/TLS-Optionen und Geheimnisbereinigung
+- `backend/internal/acme-runtime.js` — CA-/Accountauflösung, Registrierung und private Certbot-Auftragskonfiguration
+- `backend/internal/acme-settings-lock.js` — Serialisierte ACME-/Profiländerungen
+- `backend/internal/acme-tls.js` — Standard-TLS und OCSP-Aktivierung mit Nginx-Prüfung
 - `backend/internal/certificate.js` — Nutzt `certbot.js` für Zertifikate
 - `backend/certbot/` — Certbot-Hilfsdateien (z. B. DNS-Plugins)
 
 ## Verhalten
 
-- Nutzt die beim Start registrierten ACME-Accounts; die Registrierung erfolgt im Startskript `rootfs/usr/local/bin/launch.sh`.
+- Registriert ACME-Accounts bei Bedarf im Backend unter der gemeinsamen Certbot-Sperre. Der Launcher registriert keine Accounts mehr; ein Fehler des Providers blockiert die Verwaltungsoberfläche nicht.
+- `acme-options` liefert Server, E-Mail, optionale Account-ID, EAB, Bedingungen, Must-Staple und TLS-Prüfung aus der Datenbank. Alte Umgebungswerte werden ausschließlich von der Anlage-Migration übernommen. Speichern startet keinen Zertifikatsauftrag.
+- Die Accountsuche berücksichtigt den vollständigen Certbot-Verzeichnispfad einschließlich Host, Port und Directory-Pfad. Eine explizite Account-ID muss dazu passen; ohne Auswahl wird genau ein vorhandener Account verwendet oder bei einer neuen Ausstellung ein Account registriert. Mehrere Accounts ohne Auswahl ergeben einen Fehler. Fehlende ursprüngliche Accounts bestehender Zertifikate werden nicht durch neue ersetzt.
+- Registrierung verlangt Zustimmung zu den Bedingungen. EAB verlangt das Paar aus Kennung und HMAC sowie einen E-Mail-Kontakt; ZeroSSL kann das Paar bei Bedarf aus der E-Mail-Adresse beziehen. Ein geänderter Kontakt wird mit `update_account` an den tatsächlich verwendeten Account übermittelt.
+- Neue Ausstellungen verwenden die aktuelle CA und speichern `meta.acme_server` sowie `meta.acme_account`. Erneuerung und Widerruf lesen ausschließlich `server` und `account` aus `[renewalparams]` der eigenen Lineage. Vorhandene interne Ausstellermetadaten müssen dazu passen; ein Widerspruch wird abgewiesen. Eine fehlende oder ungültige ursprüngliche CA wird nicht durch die aktuelle globale Vorgabe ersetzt.
+- Jeder Auftrag erzeugt eine private Certbot-INI (`0600`) in einem eigenen Verzeichnis (`0700`) unter `/data/certbot-work`. Sie übernimmt keine alten globalen INI-Optionen. EAB-HMAC steht nur in dieser Datei, nicht in Prozessargumenten; Auftragslogs bleiben im privaten Verzeichnis. Ergebnis- und Fehlermeldungen werden von EAB-/DNS-Geheimnissen bereinigt. Das Verzeichnis wird im `finally`-Pfad gelöscht.
+- RSA-4096, ECDSA-Kurve P-384, neue Schlüssel ohne Wiederverwendung, nichtinteraktive Ausführung, Webroot und Datenpfade bleiben feste technische Defaults. Sie sind keine zusätzlichen UI-Felder.
+- Must-Staple und TLS-Prüfung werden bei jedem nachfolgenden Auftrag aus den globalen Optionen angewendet, auch bei vorhandenen Lineages. Sie ändern deren ursprüngliche CA-/Accountwahl nicht. Must-Staple ist bei Let's Encrypt ausgeschlossen; eine aktivierte TLS-Prüfung kann nicht vertrauenswürdige private CAs ablehnen.
 - Beantragt Zertifikate via HTTP-01 oder DNS-01 Challenge.
+- `meta.letsencrypt_profile` wählt `standard` oder `shortlived`. Neue Erstellungsanfragen ohne Profil verwenden die wirksame globale Vorgabe und speichern diese Wahl auf dem ausgestellten Zertifikat. HTTP- und DNS-Ausstellung sowie Erneuerungen ergänzen bei `shortlived` strikt `--required-profile shortlived`. Nicht unterstützte Profile oder zu alte Certbot-Versionen führen zu einem Fehler statt zu einem stillen Standard-Zertifikat. Beide Profilwahlen benötigen Certbot ab Version 4.0.
+- `standard` setzt bei jeder Ausstellung und Erneuerung die Argumente `--required-profile "" --preferred-profile ""`. Die leeren Werte übersteuern frühere Profilvorgaben aus `/etc/certbot.ini` oder der Lineage für diesen Aufruf; die ACME-Order enthält dadurch kein Profil und die CA wählt ihren Standard. Beide Optionen werden geleert, damit auch ein zuvor bevorzugtes Profil nicht eingreift.
+- Alte Zertifikatsdatensätze ohne `meta.letsencrypt_profile` verwenden bei der Erneuerung die globale Datenbankvorgabe, zunächst Standard. Explizite Zertifikatsprofile haben Vorrang vor dieser Vorgabe. Die Profilwahl stammt ausschließlich aus der Datenbank; es gibt keine Umgebungsrückfallebene.
+- Das Speichern der globalen Vorgabe prüft die Unterstützung der Certbot-Profiloptionen und verlangt für Short-lived das gleichnamige Profil im ACME-Verzeichnis. Diese Änderung benötigt keinen Neustart und schreibt weder Umgebungsdateien noch `/etc/certbot.ini` um; die Argumente werden bei jeder nachfolgenden Zertifikatsoperation neu bestimmt. Details stehen unter [Einstellungen](../verwaltung/einstellungen.md).
+- `certificate-options.meta.key_type` bestimmt den Schlüsseltyp (`ecdsa` oder `rsa`, Standard `ecdsa`). HTTP-/DNS-Ausstellung und manuelle/automatische Erneuerung übergeben ihn explizit per `--key-type`, auch bei bestehenden Lineages. Die Auswahl gilt beim nächsten Zertifikatsauftrag; eine Änderung der Einstellung allein erzwingt keine Erneuerung. Automatische Prüfserien lesen den Schlüsseltyp einmal zu Beginn und behalten ihn für die gesamte Serie.
+
+- Certbot speichert Ausstellungsoptionen je Lineage unter `/data/tls/certbot/renewal/npm-<id>.conf`. Die automatische Erneuerung arbeitet trotzdem pro verwaltetem Zertifikat mit `--cert-name` und wendet dessen explizite Profilwahl oder die globale Vorgabe erneut an, weil ein globales Profil aus der INI-Datei gespeicherte Lineage-Optionen überschreiben kann. Sie verwendet kein `--force-renewal`; die Fälligkeit entscheidet Certbot selbst. Fehler werden je Zertifikat protokolliert und verhindern die weiteren Erneuerungsprüfungen nicht. Das Let's-Encrypt-Profil `shortlived` hat eine Laufzeit von 160 Stunden (6 Tage und 16 Stunden).
 - Erneuert ablaufende Zertifikate asynchron.
-- Beantragung, manuelle Erneuerung, Timer-Erneuerung und Widerruf teilen sich `runCertbot()` und dieselbe Prozesssperre. Gleichzeitige Aufrufe erhalten einen nachvollziehbaren Validierungsfehler; die Sperre wird bei Erfolg und Fehler freigegeben.
+- Beantragung, Accountregistrierung/-pflege, manuelle Erneuerung, Timer-Erneuerung und Widerruf teilen sich `withCertbotLock()` und dieselbe Prozesssperre. Zertifikatsaufträge laufen über `runCertificateCommand()`, technische Aufrufe können `runCertbot()` nutzen. Gleichzeitige Aufrufe erhalten einen nachvollziehbaren Validierungsfehler; die Sperre wird bei Erfolg und Fehler freigegeben.
 - Beim Widerruf kann `revokeCertbot()` unter dieser Sperre die Host-Abkopplung vorbereiten. Die Zertifikatslöschung verwendet diesen Ablauf, damit ein belegter Certbot-Prozess keine bereits gelöschte Datenbankzeile mit weiterhin aktiver Certbot-Lineage hinterlässt. Vorbereitungsfehler verhindern den Widerruf und geben die Sperre frei.
 - DNS-Zugangsdaten werden mit Dateimodus `0600` gespeichert. Numerische Propagationszeiten werden für CLI-Argumente in Strings umgewandelt.
 - Die gemeinsame Prozesssperre umfasst bei DNS-Ausstellungen auch die Plugin-Installation und das Schreiben der Zugangsdaten; diese Schritte können keine laufende Erneuerung mehr verändern. Auch ein Vorbereitungsfehler gibt die Sperre frei.
@@ -29,7 +48,7 @@ ShieldPM abstrahiert Let's Encrypt via Certbot. Dieses Modul kümmert sich um di
 - DNS-Plugins werden mit `pip install --upgrade --target /data/certbot-plugins` einschließlich ihrer Abhängigkeiten installiert. Die Python-Virtualenv des Basisimages unter `/usr/local` bleibt unverändert. `start.sh` bereitet das Zielverzeichnis mit dem Datenbesitz vor; `launch.sh` stellt es über `PYTHONPATH` vor bereits vorhandene Suchpfade. Damit sind sowohl die Plugins des Basisimages als auch zusätzliche DNS-Plugin-Entry-Points auffindbar, während Pakete und Abhängigkeiten aus dem Zielverzeichnis Vorrang haben.
 - Jeder HTTP-Challenge-Test verwendet einen eindeutigen Testdateinamen, damit gleichzeitige Tests sich nicht gegenseitig löschen. Die Datei wird im `finally`-Block entfernt.
 - Der externe HTTP-Test hat einen Socket-Timeout von 15 Sekunden und behandelt Fehler oder abgebrochene Antworten. Die Ziel-URL wird korrekt als Formularfeld kodiert.
-- Regressionen: `backend/test/internal/certbot-processing.spec.js` (alle externen Aufrufe gemockt).
+- Regressionen: `backend/test/internal/certbot-processing.spec.js` prüft auch HTTP-/DNS-Profilargumente, manuelle Erneuerung, Altzertifikate und das Leeren globaler Standard-Profilvorgaben (alle externen Aufrufe gemockt).
 - `backend/test/lib/certbot-plugins.spec.js` prüft Installationsziel und Fehlerweitergabe sowie mit einer echten lokalen Python-Virtualenv die Auflistung und das Laden von Plugin-Entry-Points aus Basis- und Zielverzeichnis. Diese Prüfung verwendet synthetische Pakete ohne Downloads und benötigt `python3` mit dem Modul `venv`.
 
 ## Abhängigkeiten
@@ -42,6 +61,8 @@ ShieldPM abstrahiert Let's Encrypt via Certbot. Dieses Modul kümmert sich um di
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 Die CLI-Zuordnung wird durch das lokale Plugin-Register und gemockte Regressionstests geprüft. Nicht jedes externe DNS-Plugin wurde gegen einen echten Provider installiert oder ausgeführt.
+
+Die Profilauswahl wird mit gemockten Certbot-Aufrufen geprüft. Eine echte ACME-Ausstellung oder Erneuerung ist kein Bestandteil dieser Tests. Laufzeit und CLI-Vertrag folgen der [Let's-Encrypt-Profilreferenz](https://letsencrypt.org/docs/profiles/) und dem [Certbot-Benutzerhandbuch](https://eff-certbot.readthedocs.io/en/stable/using.html).
 
 ## Verwandte Seiten
 

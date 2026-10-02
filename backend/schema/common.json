@@ -116,6 +116,15 @@
 			"pattern": "^(letsencrypt|other|internal)$",
 			"example": "letsencrypt"
 		},
+		"letsencrypt_profile": {
+			"description": "Let's Encrypt certificate profile; omitted request values use the configured global default",
+			"type": "string",
+			"enum": [
+				"standard",
+				"shortlived"
+			],
+			"example": "shortlived"
+		},
 		"http2_support": {
 			"description": "HTTP2 Protocol Support",
 			"type": "boolean",

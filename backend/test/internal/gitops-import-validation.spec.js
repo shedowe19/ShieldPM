@@ -1,5 +1,10 @@
 import * as yaml from "js-yaml";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import acmeOptionsSchema from "../../schema/components/acme-options-request.json" with { type: "json" };
+import analyticsOptionsSchema from "../../schema/components/analytics-options-object.json" with { type: "json" };
+import certificateOptionsSchema from "../../schema/components/certificate-options-object.json" with { type: "json" };
+import ipRangesOptionsSchema from "../../schema/components/ip-ranges-options-object.json" with { type: "json" };
+import nginxOptionsSchema from "../../schema/components/nginx-options-object.json" with { type: "json" };
 
 const mocks = vi.hoisted(() => {
 	const files = new Map();
@@ -7,6 +12,7 @@ const mocks = vi.hoisted(() => {
 	const prunes = [];
 	const rows = {};
 	const pruneError = { value: null };
+	const settingLookup = { insensitive: false };
 	const makeModel = (name) => ({
 		name,
 		query: () => {
@@ -27,7 +33,11 @@ const mocks = vi.hoisted(() => {
 					return Promise.resolve([]);
 				},
 				findById: (id) => {
-					const row = (rows[name] || []).find((entry) => entry.id === id);
+					const row = (rows[name] || []).find((entry) =>
+						name === "Setting" && settingLookup.insensitive
+							? entry.id.localeCompare(id, "en", { sensitivity: "base" }) === 0
+							: entry.id === id,
+					);
 					const result = Promise.resolve(row);
 					result.withGraphFetched = () => result;
 					result.patch = async (data) => {
@@ -59,7 +69,7 @@ const mocks = vi.hoisted(() => {
 			return query;
 		},
 	});
-	return { files, writes, prunes, rows, makeModel, pruneError };
+	return { files, writes, prunes, rows, makeModel, pruneError, settingLookup };
 });
 vi.mock("node:fs", () => ({
 	default: {
@@ -100,6 +110,7 @@ vi.mock("../../internal/nginx.js", () => ({
 		bulkGenerateConfigGroups: vi.fn(),
 		bulkGenerateConfigs: vi.fn(),
 		reload: vi.fn(),
+		withConfigurationLock: vi.fn((operation) => operation()),
 		deleteConfig: vi.fn(),
 	},
 }));
@@ -107,8 +118,30 @@ vi.mock("../../internal/proxy-host-monitor.js", () => ({
 	assertMonitorConfig: vi.fn((data) => data),
 	default: { update: vi.fn(), removeHost: vi.fn(), resetHost: vi.fn() },
 }));
+vi.mock("../../internal/acme-profile.js", () => ({ default: { update: vi.fn() } }));
+vi.mock("../../internal/acme-options.js", () => ({ default: { update: vi.fn() } }));
+vi.mock("../../internal/certificate-options.js", () => ({ default: { update: vi.fn() } }));
+vi.mock("../../internal/ip-ranges-options.js", () => ({ default: { update: vi.fn() } }));
+vi.mock("../../internal/analytics-options.js", () => ({ default: { update: vi.fn() } }));
+vi.mock("../../internal/nginx-options.js", () => ({ default: { update: vi.fn() } }));
+vi.mock("../../schema/index.js", () => ({
+	getValidationSchema: (path) =>
+		({
+			"/settings/acme-options": acmeOptionsSchema,
+			"/settings/certificate-options": certificateOptionsSchema,
+			"/settings/ip-ranges-options": ipRangesOptionsSchema,
+			"/settings/analytics-options": analyticsOptionsSchema,
+			"/settings/nginx-options": nginxOptionsSchema,
+		})[path],
+}));
 
+import acmeOptions from "../../internal/acme-options.js";
+import acmeProfile from "../../internal/acme-profile.js";
+import analyticsOptions from "../../internal/analytics-options.js";
+import certificateOptions from "../../internal/certificate-options.js";
 import gitops from "../../internal/gitops.js";
+import ipRangesOptions from "../../internal/ip-ranges-options.js";
+import nginxOptions from "../../internal/nginx-options.js";
 import monitor from "../../internal/proxy-host-monitor.js";
 import { assertNoSymlinkPath, writeConfigFile } from "../../lib/gitops-files.js";
 
@@ -123,7 +156,85 @@ describe("GitOps import sanitization and safe restore", () => {
 		mocks.writes.length = 0;
 		mocks.prunes.length = 0;
 		mocks.pruneError.value = null;
+		mocks.settingLookup.insensitive = false;
 		for (const key of Object.keys(mocks.rows)) delete mocks.rows[key];
+	});
+	it.each([
+		"ANALYTICS-OPTIONS",
+		"analytics-optiöns",
+		"NGINX-OPTIONS",
+		"CERTIFICATE-OPTIONS",
+		"IP-RANGES-OPTIONS",
+		"ACME-OPTIONS",
+		"acme-optiöns",
+	])("rejects a collation alias %s before a generic setting write", async (id) => {
+		mocks.settingLookup.insensitive = true;
+		mocks.rows.Setting = [
+			{ id: "acme-profile" },
+			{ id: "acme-options" },
+			{ id: "analytics-options" },
+			{ id: "nginx-options" },
+			{ id: "certificate-options" },
+			{ id: "ip-ranges-options" },
+		];
+		file("settings", { id, value: "configured", meta: { injected: true } });
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result).toMatchObject({ success: false, imported: 0 });
+		expect(result.errors).toEqual(["settings/1.yaml: Imported setting IDs must match the stored IDs exactly"]);
+		expect(mocks.writes).toEqual([]);
+		expect(analyticsOptions.update).not.toHaveBeenCalled();
+		expect(nginxOptions.update).not.toHaveBeenCalled();
+		expect(certificateOptions.update).not.toHaveBeenCalled();
+		expect(ipRangesOptions.update).not.toHaveBeenCalled();
+	});
+	it.each([
+		["certificate-options", certificateOptions, { key_type: "rsa", renewal_interval_hours: 4 }],
+		["ip-ranges-options", ipRangesOptions, { enabled: true, refresh_interval_hours: 24 }],
+		["analytics-options", analyticsOptions, { detailed_retention_hours: 87600, aggregation_retention_days: 7 }],
+		["nginx-options", nginxOptions, { beautifier_enabled: false }],
+	])("restores %s through its validated live application service", async (id, service, policy) => {
+		file("settings", { id, value: "configured", meta: policy });
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result).toMatchObject({ success: true, imported: 1 });
+		expect(service.update).toHaveBeenCalledExactlyOnceWith(access, policy);
+		expect(mocks.writes).toEqual([]);
+	});
+	it.each([
+		{ id: "certificate-options", value: "configured", meta: { key_type: "rsa", renewal_interval_hours: 99 } },
+		{
+			id: "certificate-options",
+			value: "configured",
+			meta: { key_type: "rsa", renewal_interval_hours: 4, injected: true },
+		},
+		{ id: "ip-ranges-options", value: "configured", meta: { enabled: true, refresh_interval_hours: 7 } },
+		{ id: "ip-ranges-options", value: "ignored", meta: { enabled: true, refresh_interval_hours: 6 } },
+		{
+			id: "analytics-options",
+			value: "configured",
+			meta: { detailed_retention_hours: 0, aggregation_retention_days: 35 },
+		},
+		{
+			id: "analytics-options",
+			value: "configured",
+			meta: { detailed_retention_hours: 24, aggregation_retention_days: 35, injected: true },
+		},
+		{
+			id: "analytics-options",
+			value: "inherit",
+			meta: { detailed_retention_hours: 24, aggregation_retention_days: 35 },
+		},
+		{ id: "nginx-options", value: "configured", meta: { beautifier_enabled: false, injected: true } },
+		{ id: "nginx-options", value: "inherit", meta: { beautifier_enabled: true } },
+	])("retains the current application options for invalid GitOps imports %j", async (data) => {
+		file("settings", data);
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(result.errors).toHaveLength(1);
+		expect(certificateOptions.update).not.toHaveBeenCalled();
+		expect(ipRangesOptions.update).not.toHaveBeenCalled();
+		expect(analyticsOptions.update).not.toHaveBeenCalled();
+		expect(nginxOptions.update).not.toHaveBeenCalled();
+		expect(mocks.writes).toEqual([]);
 	});
 	it("removes unknown top-level and nested fields from the actual database payload", async () => {
 		file("users", {
@@ -345,6 +456,94 @@ describe("GitOps import sanitization and safe restore", () => {
 			{ skipAutoPush: true },
 		);
 	});
+
+	it.each(["standard", "shortlived"])(
+		"restores ACME profile %s through CA capability validation",
+		async (profile) => {
+			file("settings", { id: "acme-profile", value: profile, meta: {} });
+			expect(await gitops.importConfig(access, { overwrite: true })).toMatchObject({
+				success: true,
+				imported: 1,
+			});
+			expect(acmeProfile.update).toHaveBeenCalledExactlyOnceWith(access, { profile });
+			expect(mocks.writes).toEqual([]);
+		},
+	);
+	it("rejects an unsupported imported profile and leaves it unchanged on capability failure", async () => {
+		file("settings", { id: "acme-profile", value: "shortlived", meta: {} });
+		vi.mocked(acmeProfile.update).mockRejectedValueOnce(new Error("Short-lived unavailable"));
+		expect(await gitops.importConfig(access, { overwrite: true })).toMatchObject({ success: false, imported: 0 });
+		expect(mocks.writes).toEqual([]);
+	});
+
+	it("restores public ACME options without importing an EAB key or its marker", async () => {
+		const policy = {
+			server: "https://ca.example.org/directory",
+			email: "admin@example.org",
+			account_id: "",
+			eab_kid: "synthetic-kid",
+			agree_tos: true,
+			must_staple: false,
+			ocsp_stapling: false,
+			server_tls_verify: true,
+			custom_ocsp_stapling: false,
+			default_certificate_id: 0,
+		};
+		file("settings", { id: "acme-options", value: "configured", meta: { ...policy, eab_hmac_key_set: true } });
+		expect(await gitops.importConfig(access, { overwrite: true })).toMatchObject({ success: true, imported: 1 });
+		expect(acmeOptions.update).toHaveBeenCalledExactlyOnceWith(access, policy);
+		expect(mocks.writes).toEqual([]);
+	});
+	it.each(["eab_hmac_key", "encrypted_eab_hmac_key"])(
+		"rejects ACME credential %s in GitOps restores without leaking it",
+		async (field) => {
+			file("settings", { id: "acme-options", value: "configured", meta: { [field]: "synthetic-private-value" } });
+			const result = await gitops.importConfig(access, { overwrite: true });
+			expect(result).toMatchObject({ success: false, imported: 0 });
+			expect(JSON.stringify(result)).not.toContain("synthetic-private-value");
+			expect(acmeOptions.update).not.toHaveBeenCalled();
+			expect(mocks.writes).toEqual([]);
+		},
+	);
+	it("exports only public ACME fields, keeping EAB ciphertext and private metadata out of Git", async () => {
+		mocks.rows.Setting = [
+			{
+				id: "acme-options",
+				value: "configured",
+				meta: {
+					server: "https://ca.example.org/directory",
+					email: "admin@example.org",
+					account_id: "",
+					eab_kid: "synthetic-kid",
+					agree_tos: true,
+					must_staple: false,
+					ocsp_stapling: false,
+					server_tls_verify: true,
+					custom_ocsp_stapling: false,
+					default_certificate_id: 0,
+					encrypted_eab_hmac_key: "synthetic-ciphertext",
+					eab_hmac_key: "synthetic-plaintext",
+					private_key: "synthetic-private",
+				},
+			},
+		];
+		const initialize = vi.spyOn(gitops, "initRepo").mockResolvedValue();
+		const certificates = vi.spyOn(gitops, "exportCertificateFiles").mockResolvedValue();
+		try {
+			await gitops.exportConfig();
+			const output = vi
+				.mocked(writeConfigFile)
+				.mock.calls.find(([, filename]) => filename.endsWith("/settings/acme-options.yaml"));
+			const exported = yaml.load(output[2]);
+			expect(exported.meta).toMatchObject({ eab_hmac_key_set: true, eab_kid: "synthetic-kid" });
+			expect(output[2]).not.toMatch(/synthetic-(ciphertext|plaintext|private)/);
+			expect(exported.meta).not.toHaveProperty("encrypted_eab_hmac_key");
+		} finally {
+			initialize.mockRestore();
+			certificates.mockRestore();
+		}
+	});
+
 	it("exports optional HTTPS trust settings alongside a proxy host monitor", async () => {
 		mocks.rows.ProxyHost = [{ id: 1, domain_names: ["example.test"] }];
 		mocks.rows.ProxyHostMonitor = [

@@ -322,7 +322,7 @@ const internalTor = {
 								.withGraphFetched("[host_domains, certificate, access_list.[clients,items]]");
 							await internalNginx.backupConfig("proxy_host", host);
 							backups.push(host);
-							await internalNginx.generateConfig("proxy_host", host);
+							await internalNginx.generateConfig("proxy_host", host, { trx });
 							await host.$query(trx).patch({
 								meta: { ...host.meta, nginx_online: Boolean(host.enabled), nginx_err: null },
 							});
@@ -330,7 +330,7 @@ const internalTor = {
 						}
 					}
 					const record = await current.$query(trx).patchAndFetch(payload);
-					if (changedHosts.length) await internalNginx.reload();
+					if (changedHosts.length) await internalNginx.reload({ trx });
 					return record;
 				});
 			} catch (err) {

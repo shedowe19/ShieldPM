@@ -51,11 +51,9 @@ Route (Express) → Schema-Validierung (AJV)
 
 ## Zertifikats-Erneuerung
 
-```
-1. Ein vom Backend gestarteter Timer (`CRT` Stunden, im Startskript standardmäßig 23) prüft auslaufende Zertifikate
-2. internal/certificate.js führt bei Bedarf die Erneuerung über Certbot aus
+1. Das Backend prüft beim Start und anschließend per Timer auslaufende Zertifikate. `certificate-options.meta.renewal_interval_hours` konfiguriert das Intervall zwischen 1 und 12 Stunden (Standard 12). Änderungen in der UI ersetzen den laufenden Timer ohne Neustart.
+2. `internal/certificate.js` prüft jedes verwaltete Let's-Encrypt-Zertifikat separat über Certbot und reicht seine explizite Profilwahl erneut weiter. Certbot entscheidet die Fälligkeit; Fehler bleiben je Zertifikat isoliert.
 3. Nach erfolgreicher Erneuerung wird die Nginx-Konfiguration validiert und ein Reload signalisiert
-```
 
 ## Wichtige Hinweise
 

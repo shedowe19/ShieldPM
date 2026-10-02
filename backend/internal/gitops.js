@@ -9,6 +9,8 @@ import { isDemoMode } from "../lib/config.js";
 import { decrypt, encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import { assertNoSymlinkPath, assertSafeConfigTree, writeConfigFile } from "../lib/gitops-files.js";
+import validateAcmeOptions from "../lib/validator/acme-options.js";
+import apiValidator from "../lib/validator/api.js";
 import { global as logger } from "../logger.js";
 import AccessList from "../models/access_list.js";
 import Certificate from "../models/certificate.js";
@@ -21,7 +23,14 @@ import RedirectionHost from "../models/redirection_host.js";
 import settingModel from "../models/setting.js";
 import Stream from "../models/stream.js";
 import User from "../models/user.js";
+import { getValidationSchema } from "../schema/index.js";
+import internalAcmeOptions from "./acme-options.js";
+import { redactAcmeSetting } from "./acme-options-public.js";
+import internalAnalyticsOptions from "./analytics-options.js";
+import internalCertificateOptions from "./certificate-options.js";
+import internalIpRangesOptions from "./ip-ranges-options.js";
 import internalNginx from "./nginx.js";
+import internalNginxOptions from "./nginx-options.js";
 import internalProxyHostMonitor, { assertMonitorConfig } from "./proxy-host-monitor.js";
 import { relayConfigForHost, validateRelayConfigForHost } from "./upload-relay.js";
 
@@ -641,7 +650,7 @@ const internalGitOps = {
 		for (const setting of settings) {
 			const filename = `${encodeURIComponent(setting.id)}.yaml`;
 			const filePath = path.join(configDir, "settings", filename);
-			const exportData = { ...setting };
+			const exportData = redactAcmeSetting({ ...setting });
 			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -1342,8 +1351,66 @@ const internalGitOps = {
 								}
 
 								if (settingData.id === "gitops-config") return;
+								if (settingData.id === "acme-profile") {
+									if (!["standard", "shortlived"].includes(settingData.value)) {
+										throw new errs.ValidationError("Invalid imported ACME certificate profile");
+									}
+									const { default: profile } = await import("./acme-profile.js");
+									await profile.update(access, { profile: settingData.value });
+									imported++;
+									return;
+								}
+								if (settingData.id === "acme-options") {
+									if (settingData.value !== "configured")
+										throw new errs.ValidationError("ACME options must use the configured value");
+									const meta = { ...settingData.meta };
+									// The exported marker is informational; credentials remain local and are never restored from Git.
+									delete meta.eab_hmac_key_set;
+									if (
+										Object.hasOwn(meta, "encrypted_eab_hmac_key") ||
+										Object.hasOwn(meta, "eab_hmac_key")
+									) {
+										throw new errs.ValidationError(
+											"Configure EAB credentials through the ACME settings UI",
+										);
+									}
+									await access.can("settings:update", "acme-options");
+									const policy = await validateAcmeOptions(
+										getValidationSchema("/settings/acme-options", "put"),
+										meta,
+									);
+									await internalAcmeOptions.update(access, policy);
+									imported++;
+									return;
+								}
+								const optionServices = {
+									"certificate-options": internalCertificateOptions,
+									"ip-ranges-options": internalIpRangesOptions,
+									"analytics-options": internalAnalyticsOptions,
+									"nginx-options": internalNginxOptions,
+								};
+								if (Object.hasOwn(optionServices, settingData.id)) {
+									if (settingData.value !== "configured") {
+										throw new errs.ValidationError(
+											"Application options must use the configured value",
+										);
+									}
+									const policy = await apiValidator(
+										getValidationSchema(`/settings/${settingData.id}`, "put"),
+										settingData.meta,
+									);
+									const service = optionServices[settingData.id];
+									await service.update(access, policy);
+									imported++;
+									return;
+								}
 
 								const existing = await settingModel.query().findById(settingData.id);
+								if (existing && existing.id !== settingData.id) {
+									throw new errs.ValidationError(
+										"Imported setting IDs must match the stored IDs exactly",
+									);
+								}
 								if (existing) {
 									await settingModel.query().patchAndFetchById(settingData.id, settingData);
 								} else {
@@ -1538,7 +1605,7 @@ const internalGitOps = {
 				{ model: Stream, hostType: "stream", hosts: await Stream.query().where("is_deleted", 0) },
 			]);
 
-			await internalNginx.reload();
+			await internalNginx.withConfigurationLock(() => internalNginx.reload());
 
 			logger.info(
 				`GitOps import: ${imported} imported, ${skipped} skipped, ${deleted} deleted, ${errors.length} errors`,

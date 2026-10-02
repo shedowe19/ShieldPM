@@ -89,48 +89,10 @@ vi.mock("node:fs", async (importOriginal) => {
 // Import the module under test
 import internalCertificate from "../../internal/certificate.js";
 
-describe("Fix #58: initTimer interval uses safe default when CRT env var is unset", () => {
+describe("certificate renewal timer configuration", () => {
 	it("intervalTimeout property no longer exists on the static object (no NaN at module load)", () => {
 		// The static object must NOT have intervalTimeout – it was moved into initTimer()
 		expect(internalCertificate.intervalTimeout).toBeUndefined();
-	});
-
-	it("uses 72-hour default when CRT is not set", () => {
-		const originalCRT = process.env.CRT;
-		delete process.env.CRT;
-
-		const crtHours = Number.parseInt(process.env.CRT, 10);
-		const intervalTimeout = 1000 * 60 * 60 * (Number.isFinite(crtHours) ? crtHours : 72);
-
-		expect(Number.isNaN(intervalTimeout)).toBe(false);
-		expect(intervalTimeout).toBe(1000 * 60 * 60 * 72);
-
-		if (originalCRT !== undefined) process.env.CRT = originalCRT;
-	});
-
-	it("uses configured value when CRT is a valid integer", () => {
-		const originalCRT = process.env.CRT;
-		process.env.CRT = "24";
-
-		const crtHours = Number.parseInt(process.env.CRT, 10);
-		const intervalTimeout = 1000 * 60 * 60 * (Number.isFinite(crtHours) ? crtHours : 72);
-
-		expect(intervalTimeout).toBe(1000 * 60 * 60 * 24);
-
-		process.env.CRT = originalCRT;
-	});
-
-	it("falls back to 72h default when CRT is set to a non-numeric value", () => {
-		const originalCRT = process.env.CRT;
-		process.env.CRT = "invalid";
-
-		const crtHours = Number.parseInt(process.env.CRT, 10);
-		const intervalTimeout = 1000 * 60 * 60 * (Number.isFinite(crtHours) ? crtHours : 72);
-
-		expect(Number.isNaN(intervalTimeout)).toBe(false);
-		expect(intervalTimeout).toBe(1000 * 60 * 60 * 72);
-
-		process.env.CRT = originalCRT;
 	});
 });
 

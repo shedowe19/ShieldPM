@@ -1,0 +1,23 @@
+{
+	"type": "object",
+	"description": "Application retention options for detailed access logs and aggregated traffic statistics",
+	"additionalProperties": false,
+	"required": [
+		"detailed_retention_hours",
+		"aggregation_retention_days"
+	],
+	"properties": {
+		"detailed_retention_hours": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 9007199254740991,
+			"description": "Hours to retain detailed access logs"
+		},
+		"aggregation_retention_days": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 9007199254740991,
+			"description": "Days to retain aggregated traffic statistics"
+		}
+	}
+}

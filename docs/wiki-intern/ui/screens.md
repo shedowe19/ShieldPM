@@ -44,12 +44,16 @@ unbekannte oder beschädigte Einträge werden ignoriert. Die Einstellung gilt f�
 
 ## Detail: Settings-Tabs
 
-| Datei                      | Zweck                      |
-| -------------------------- | -------------------------- |
-| `Settings/DefaultSite.tsx` | Default-Site-Konfiguration |
-| `Settings/Ai.tsx`          | AI-Agent Konfiguration     |
-| `Settings/GitOps.tsx`      | GitOps-Einstellungen       |
-| `Settings/Layout.tsx`      | Settings-Layout            |
+| Datei                       | Zweck                                                                           |
+| --------------------------- | ------------------------------------------------------------------------------- |
+| `Settings/DefaultSite.tsx`  | Default-Site-Konfiguration                                                      |
+| `Settings/Certificates.tsx` | ACME-Konto/CA/TLS/Standardzertifikat, Profilvorgabe, Schlüsseltyp und Prüftimer |
+| `Settings/Network.tsx`      | Cloudflare-IP-Abruf und Aktualisierungsintervall                                |
+| `Settings/Analytics.tsx`    | Detail-/Aggregat-Aufbewahrung (Tab „Analysen“)                                  |
+| `Settings/Nginx.tsx`        | Formatierung später erzeugter Nginx-Konfigurationen                             |
+| `Settings/Ai.tsx`           | AI-Agent Konfiguration                                                          |
+| `Settings/GitOps.tsx`       | GitOps-Einstellungen                                                            |
+| `Settings/Layout.tsx`       | Settings-Layout                                                                 |
 
 ## Detail: Dashboard-Widgets
 

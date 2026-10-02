@@ -21,6 +21,28 @@ Die Schlüsseldatei `shieldpm/keys.json` wird vollständig in eine private tempo
 
 `backend/lib/environment-hash.js` berechnet gemeinsam für `envs.sh` und `utils.writeHash()` den Fingerabdruck der Nginx-Vorlagen, ihrer benannten Umgebungswerte und der Template-Version. Die strukturierte Kodierung unterscheidet beispielsweise die Portpaare `443/80` und `44/380`. Änderungen der Vorlagendateien selbst führen auch ohne Versionsänderung zu `REGENERATE_ALL=true`. Nach abgeschlossener Neuerzeugung liegt der Fingerabdruck unter `${DATA_PATH:-/data}/shieldpm/env.sha512sum`.
 
+## Schrittweise Verlagerung von Anwendungsoptionen
+
+Bereits umgesetzt sind die globale ACME-Profilwahl (`acme-profile`), Schlüsseltyp und Prüfintervall (`certificate-options`), alle bisherigen ACME-Konto-/TLS-Optionen einschließlich Standardzertifikat (`acme-options`), Cloudflare-IP-Abruf und Aktualisierungsintervall (`ip-ranges-options`), Analytics-Aufbewahrung (`analytics-options`) sowie Nginx-Formatierung (`nginx-options`). Diese Optionen liegen in der Datenbank und werden über validierte APIs in der UI verwaltet; Änderungen benötigen keinen Dienstneustart. Ihre Anlage-Migrationen übernehmen die jeweiligen alten Umgebungswerte einmalig; bestehende gespeicherte Werte haben Vorrang.
+
+Die ACME-Registrierung erfolgt bei Bedarf im Backend und blockiert bei einem CA-Fehler nicht mehr den UI-Start. Neue Zertifikate verwenden die aktuelle CA-Vorgabe; bestehende behalten ihre CA-/Accountzuordnung. EAB bleibt verschlüsselt und wird aus Antworten, Audit und GitOps-Export entfernt. OCSP-/Standardzertifikat-Änderungen regenerieren und testen die Nginx-Konfiguration unter Sperre mit Wiederherstellung bei Fehlern. Feste Certbot-Vorgaben wie RSA-4096, P-384, Schlüsselrotation, nichtinteraktive Ausführung und interne Datenpfade bleiben technische Vorgaben ohne eigene UI-Schalter. Siehe [ACME-Einstellungen](../verwaltung/einstellungen.md#acme-konto-und-tls-optionen).
+
+Stufe 1 ist umgesetzt. Die Stufen 2 bis 5 sind eine **Roadmap und noch nicht umgesetzt**; sie beschreiben die empfohlene Reihenfolge für weitere Änderungen:
+
+| Stufe         | Kandidaten                                                                                                   | Voraussetzung                                                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 (umgesetzt) | Nginx-Formatierung, Analytics-Aufbewahrung                                                                   | Datenbankoptionen gelten für nächste Generierung/Bereinigung; kein sofortiger Rewrite oder Purge, ungültige Retention erhält Daten                          |
+| 2             | Weitere globale Nginx-Header, Buffering und Logging                                                          | Konfiguration unter Sperre prüfen, anwenden und bei Fehlern zurücksetzen                                                                                    |
+| 3             | Docker-Discovery-Ziele                                                                                       | Laufende Docker-Clients sicher ersetzen                                                                                                                     |
+| 4             | Passkey-RP/Origin und Yubico-Validator                                                                       | Bestehende Anmeldedaten, Origins, Geheimnisse und Fehlerverhalten schützen                                                                                  |
+| 5             | Anwendungsnahe Startoptionen wie Listener/Ports/Bindings, Zeitzone, PHP-/Modulladung und Dienstkonfiguration | Dauerhafte Startkonfiguration vor Datenbank/UI bereitstellen; kontrollierte Neustarts, Validierung und Wiederherstellung des Verwaltungszugangs ermöglichen |
+
+Anwendungsnahe Startoptionen sind durch ihre bisherige Nutzung im Launcher nicht dauerhaft von der UI-Verlagerung ausgeschlossen. Weitere Dienst-, Proxy-/Sitzungs-, Einrichtungs- und Integrationsoptionen müssen bei ihrer jeweiligen Stufe auf Neustartbedarf, Schutz von Zugangsdaten und Wiederherstellung geprüft werden. Sie bleiben bis zur tatsächlichen Migration in ihrer bisherigen Konfiguration; diese Roadmap ersetzt keinen Startpfad.
+
+Docker-Image, Container-Netzwerkmodus, Volumes, Geräte und Capabilities bleiben Bereitstellungsentscheidungen. Auch die Datenbank-Bootstrap-Verbindung muss unabhängig von der noch nicht verfügbaren Anwendungsdatenbank bereitgestellt werden. Die bereits umgesetzten Anwendungsoptionen verändern diese Ressourcen nicht.
+
+Bei jeder weiteren Gruppe muss die tatsächliche Anwendung zusätzlich zur Datenbankpersistenz umgesetzt werden. Ein Settings-Patch startet bisher keinen generischen Neustart; Vorlagenfingerabdruck, Timer, Nginx-Regenerierung und externe Dienstverbindungen müssen je nach Gruppe gezielt behandelt werden.
+
 ## Frontend
 
 | Datei                         | Zweck                              |

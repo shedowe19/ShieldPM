@@ -34,7 +34,7 @@ Enable **Block Exploits** where appropriate and test the upstream application. T
 | **Host** (repository samples) | Host network namespace     | Good        | Direct host listeners and integrations needing host networking |
 
 > [!TIP]
-> Cloudflare IP-range fetching is **off by default** (`SKIP_IP_RANGES=true`). Enable it only when needed and configure trusted upstreams carefully. The setting is independent of Docker's network mode; it does not automatically preserve client IPs behind every CDN.
+> Cloudflare IP-range fetching is **off by default**. Enable it under **Settings → Network** when needed and configure trusted upstreams carefully. The setting is independent of Docker's network mode; it does not automatically preserve client IPs behind every CDN.
 
 ### Admin UI Access
 

@@ -74,18 +74,6 @@ services:
       # - "DB_POSTGRES_NAME=npm"
 
       # ── SSL & ACME ────────────────────────────────────────────────────────
-      # - "ACME_EMAIL=your-email"                  # Recommended (required for ZeroSSL/Google)
-      # - "ACME_SERVER=https://acme-v02.api.letsencrypt.org/directory"
-      # - "ACME_EAB_KID=123456789abcdef"           # External Account Binding key
-      # - "ACME_EAB_HMAC_KEY=123456789abcdef"      # External Account Binding HMAC
-      # - "ACME_MUST_STAPLE=true"                  # Enable must-staple extension
-      # - "ACME_OCSP_STAPLING=true"                # Enable OCSP stapling
-      # - "ACME_PROFILE=shortlived"                # ACME profile, default: none
-      # - "ACME_KEY_TYPE=rsa"                      # Key type: ecdsa (default) or rsa
-      # - "ACME_SERVER_TLS_VERIFY=false"           # Verify ACME server TLS cert
-      # - "DEFAULT_CERT_ID=1"                      # Use cert ID instead of dummy certs
-      # - "CUSTOM_OCSP_STAPLING=true"              # OCSP stapling for custom certs
-      # - "CRT=72"                                 # Hours between cert renewal checks, default: 23
 
       # ── Logging & Analytics ────────────────────────────────────────────────
       # - "LOGROTATE=true"                         # Enable access logs + daily rotation
@@ -110,10 +98,7 @@ services:
       # - "X_FRAME_OPTIONS=deny"                   # deny | sameorigin | none
       # - "NGINX_WORKER_PROCESSES=8"               # default: auto
       # - "NGINX_WORKER_CONNECTIONS=1024"           # default: 512
-      # - "DISABLE_NGINX_BEAUTIFIER=true"          # Skip config beautification
       # - "FULLCLEAN=true"                         # Remove unused config folders
-      # - "SKIP_IP_RANGES=false"                   # Skip Cloudflare IP range fetch, default: true
-      # - "IPRT=3"                                 # Hours between IP range updates, default: 1
 
       # ── Nginx Modules ─────────────────────────────────────────────────────
       # - "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true"       # OpenAppSec WAF (requires ipc: host + shm-volume)

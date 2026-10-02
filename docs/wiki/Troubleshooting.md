@@ -90,12 +90,12 @@ Rate limiting is rejecting your requests. Lower the limits or increase the burst
 
 ### Let's Encrypt Errors
 
-| Error                           | Fix                                                                   |
-| :------------------------------ | :-------------------------------------------------------------------- |
-| "Connection refused on port 80" | Check firewall/router, port 80 must be open                           |
-| "DNS problem: NXDOMAIN"         | Domain doesn't point to your server                                   |
-| "Too many requests"             | Check the issuing CA's rate-limit response before retrying            |
-| "ACME email not set"            | Set `ACME_EMAIL` for ZeroSSL or an ACME server requiring an email/EAB |
+| Error                           | Fix                                                                                                           |
+| :------------------------------ | :------------------------------------------------------------------------------------------------------------ |
+| "Connection refused on port 80" | Check firewall/router, port 80 must be open                                                                   |
+| "DNS problem: NXDOMAIN"         | Domain doesn't point to your server                                                                           |
+| "Too many requests"             | Check the issuing CA's rate-limit response before retrying                                                    |
+| "ACME email not set"            | Set the registration email under Settings → Certificates / ACME for ZeroSSL or a provider requiring email/EAB |
 
 ### Self-Signed Certificate Warning
 

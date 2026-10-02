@@ -8,6 +8,9 @@ const mocks = vi.hoisted(() => ({
 	show: vi.fn(),
 	setStream: vi.fn(),
 }));
+vi.mock("src/hooks/useAcmeProfile", () => ({
+	useAcmeProfile: () => ({ data: { profile: "standard" }, isPending: false, isFetching: false, error: null }),
+}));
 
 vi.mock("ez-modal-react", () => ({
 	default: { create: <T,>(Component: T) => Component, show: mocks.show },

@@ -1,0 +1,25 @@
+{
+	"type": "object",
+	"description": "Application options for certificate issuance and automatic renewal checks",
+	"additionalProperties": false,
+	"required": [
+		"key_type",
+		"renewal_interval_hours"
+	],
+	"properties": {
+		"key_type": {
+			"type": "string",
+			"enum": [
+				"ecdsa",
+				"rsa"
+			],
+			"description": "The key type used for Let's Encrypt certificates"
+		},
+		"renewal_interval_hours": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 12,
+			"description": "Hours between checks for certificates requiring renewal"
+		}
+	}
+}

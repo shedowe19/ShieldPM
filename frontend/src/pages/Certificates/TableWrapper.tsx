@@ -136,10 +136,10 @@ export default function TableWrapper() {
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end">
 									<DropdownMenuItem onClick={() => showHTTPCertificateModal()}>
-										<T id="lets-encrypt-via-http" />
+										<T id="certificates.acme-via-http" />
 									</DropdownMenuItem>
 									<DropdownMenuItem onClick={() => showDNSCertificateModal()}>
-										<T id="lets-encrypt-via-dns" />
+										<T id="certificates.acme-via-dns" />
 									</DropdownMenuItem>
 									<DropdownMenuSeparator />
 									<DropdownMenuItem onClick={() => showCustomCertificateModal()}>

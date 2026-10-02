@@ -10,6 +10,7 @@ import { DomainsFormatter } from "src/components/Table/Formatter/DomainsFormatte
 import { UserAvatar } from "src/components/Table/Formatter/UserAvatar";
 import { TableLayout } from "src/components/Table/TableLayout";
 import { shieldTableFeatures } from "src/components/Table/tableFeatures";
+import { Badge } from "src/components/ui/badge";
 import { Button } from "src/components/ui/button";
 import {
 	DropdownMenu,
@@ -80,14 +81,23 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 					cell: (info) => {
 						const r = info.getValue();
 						if (r.provider === CERTIFICATE_PROVIDER.LETSENCRYPT) {
-							if (r.meta?.dnsChallenge && r.meta?.dnsProvider) {
-								return (
-									<>
-										<T id="lets-encrypt" /> &ndash; {r.meta?.dnsProvider}
-									</>
-								);
-							}
-							return <T id="lets-encrypt" />;
+							return (
+								<div className="space-y-1">
+									<div>
+										<T id="certificates.acme" />
+										{r.meta?.dnsChallenge && r.meta?.dnsProvider ? ` – ${r.meta.dnsProvider}` : ""}
+									</div>
+									{r.meta?.letsencryptProfile && (
+										<Badge variant="outline">
+											{r.meta.letsencryptProfile === "shortlived" ? (
+												<T id="certificates.profile.shortlived" />
+											) : (
+												<T id="certificates.profile.standard" />
+											)}
+										</Badge>
+									)}
+								</div>
+							);
 						}
 						if (r.provider === "other") {
 							return <T id="certificates.custom" />;
@@ -190,10 +200,10 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 			</DropdownMenuTrigger>
 			<DropdownMenuContent>
 				<DropdownMenuItem onClick={() => showHTTPCertificateModal()}>
-					<T id="lets-encrypt-via-http" />
+					<T id="certificates.acme-via-http" />
 				</DropdownMenuItem>
 				<DropdownMenuItem onClick={() => showDNSCertificateModal()}>
-					<T id="lets-encrypt-via-dns" />
+					<T id="certificates.acme-via-dns" />
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem onClick={() => showCustomCertificateModal()}>

@@ -10,6 +10,10 @@ const mocks = vi.hoisted(() => ({
 	tailOn: vi.fn(),
 }));
 
+vi.mock("../../internal/analytics-options.js", () => ({
+	default: { getPolicy: async () => ({ detailed_retention_hours: 24, aggregation_retention_days: 35 }) },
+}));
+
 vi.mock("node:fs", () => ({
 	default: {
 		closeSync: mocks.closeSync,
@@ -113,5 +117,16 @@ describe("AnalyticsService initialization", () => {
 		expect(mocks.tailOn).toHaveBeenCalledTimes(2);
 		expect(mocks.proxyHostQuery).toHaveBeenCalledTimes(1);
 		expect(setIntervalSpy).toHaveBeenCalledTimes(3);
+	});
+
+	it("runs retention at startup and preserves the hourly cleanup schedule", async () => {
+		const service = new AnalyticsService("/tmp/shieldpm-analytics-init.log");
+		const cleanup = vi.spyOn(service, "runRetention").mockResolvedValue();
+		await service.init();
+		expect(cleanup).toHaveBeenCalledOnce();
+		const hourlyCleanup = setIntervalSpy.mock.calls.find((call) => call[1] === 60 * 60 * 1000);
+		expect(hourlyCleanup).toBeDefined();
+		await hourlyCleanup[0]();
+		expect(cleanup).toHaveBeenCalledTimes(2);
 	});
 });

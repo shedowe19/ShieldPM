@@ -57,6 +57,11 @@
 		},
 		"meta": {
 			"type": "object",
+			"properties": {
+				"letsencrypt_profile": {
+					"$ref": "../common.json#/properties/letsencrypt_profile"
+				}
+			},
 			"example": {}
 		},
 		"note": {

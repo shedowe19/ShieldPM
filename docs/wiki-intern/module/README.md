@@ -28,18 +28,24 @@ Die Module unter `backend/internal/` bündeln Geschäftslogik. Viele CRUD-Module
 
 ### Sicherheit
 
-| Modul                                | Datei                     | Beschreibung                  |
-| ------------------------------------ | ------------------------- | ----------------------------- |
-| [Access-List](./access-lists.md)     | `access-list.js`          | Basic Auth, IP-Filter, mTLS   |
-| [Zertifikate](./zertifikate.md)      | `certificate.js`          | SSL/TLS-Zertifikatsverwaltung |
-| [Certbot](./certbot.md)              | `certbot.js`              | Let's Encrypt Automatisierung |
-| [Token](./token.md)                  | `token.js`                | JWT-Token-Verwaltung          |
-| [Anubis](./anubis.md)                | `anubis.js`               | PoW-Gate gegen Bots           |
-| [OAuth2-Proxy](./oauth2-proxy.md)    | `oauth2-proxy.js`         | SSO-Integration               |
-| [2FA-Service](./2fa-service.md)      | `2fa-service.js`          | TOTP, WebAuthn, Duo Security  |
-| Auth-Session (siehe Benutzer & Auth) | `auth-session-service.js` | Session-Verwaltung            |
-| [IP-Ranges](./ip-ranges.md)          | `ip_ranges.js`            | Cloudflare-IP-Ranges          |
-| [PKI (interne CA)](./pki.md)         | `pki.js`                  | Interne CA / ML-KEM           |
+| Modul                                                                                     | Datei                                       | Beschreibung                                          |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------- |
+| [Access-List](./access-lists.md)                                                          | `access-list.js`                            | Basic Auth, IP-Filter, mTLS                           |
+| [Zertifikate](./zertifikate.md)                                                           | `certificate.js`                            | SSL/TLS-Zertifikatsverwaltung                         |
+| [Certbot](./certbot.md)                                                                   | `certbot.js`                                | Let's Encrypt Automatisierung                         |
+| [Globale ACME-Vorgabe](../verwaltung/einstellungen.md#globale-acme-profilvorgabe)         | `acme-profile.js`                           | Geprüfte Profilvorgabe aus UI und Datenbank           |
+| [ACME-Konto und TLS-Optionen](../verwaltung/einstellungen.md#acme-konto-und-tls-optionen) | `acme-options.js`, `acme-options-public.js` | Konto-/TLS-Optionen und Geheimnisbereinigung          |
+| [ACME-Aufträge](./certbot.md)                                                             | `acme-runtime.js`, `acme-settings-lock.js`  | Account-/Ausstellerkontinuität und private Ausführung |
+| [ACME-TLS-Aktivierung](./nginx-engine.md#tls-optionen-aus-der-datenbank)                  | `acme-tls.js`                               | Standardzertifikat, OCSP und Rollback                 |
+| [Zertifikatsoptionen](../verwaltung/einstellungen.md#zertifikats--und-netzwerkoptionen)   | `certificate-options.js`                    | Schlüsseltyp und laufender Prüftimer                  |
+| [IP-Range-Optionen](./ip-ranges.md#konfiguration)                                         | `ip-ranges-options.js`                      | Abrufsteuerung und laufender Aktualisierungstimer     |
+| [Token](./token.md)                                                                       | `token.js`                                  | JWT-Token-Verwaltung                                  |
+| [Anubis](./anubis.md)                                                                     | `anubis.js`                                 | PoW-Gate gegen Bots                                   |
+| [OAuth2-Proxy](./oauth2-proxy.md)                                                         | `oauth2-proxy.js`                           | SSO-Integration                                       |
+| [2FA-Service](./2fa-service.md)                                                           | `2fa-service.js`                            | TOTP, WebAuthn, Duo Security                          |
+| Auth-Session (siehe Benutzer & Auth)                                                      | `auth-session-service.js`                   | Session-Verwaltung                                    |
+| [IP-Ranges](./ip-ranges.md)                                                               | `ip_ranges.js`                              | Cloudflare-IP-Ranges                                  |
+| [PKI (interne CA)](./pki.md)                                                              | `pki.js`                                    | Interne CA / ML-KEM                                   |
 
 ### Tunnel & Netzwerk
 
@@ -66,15 +72,17 @@ Die Module unter `backend/internal/` bündeln Geschäftslogik. Viele CRUD-Module
 
 ### Verwaltung
 
-| Modul                                           | Datei               | Beschreibung        |
-| ----------------------------------------------- | ------------------- | ------------------- |
-| [Benutzer & Auth](./benutzer-auth.md)           | `user.js`           | Benutzerverwaltung  |
-| [Einstellungen](../verwaltung/einstellungen.md) | `setting.js`        | Systemeinstellungen |
-| [Dashboard-Notizen](./dashboard-notes.md)       | `dashboard_note.js` | Dashboard-Notizen   |
-| [Audit-Log](../verwaltung/audit-log.md)         | `audit-log.js`      | Protokollierung     |
-| [Maintenance](./maintenance.md)                 | `maintenance.js`    | Wartungsfenster     |
-| [Report](../verwaltung/report.md)               | `report.js`         | System-Reports      |
-| Remote-Version                                  | `remote-version.js` | Versionsprüfung     |
+| Modul                                                                                     | Datei                                      | Beschreibung                                       |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------ | -------------------------------------------------- |
+| [Benutzer & Auth](./benutzer-auth.md)                                                     | `user.js`                                  | Benutzerverwaltung                                 |
+| [Einstellungen](../verwaltung/einstellungen.md)                                           | `setting.js`                               | Systemeinstellungen                                |
+| [Dashboard-Notizen](./dashboard-notes.md)                                                 | `dashboard_note.js`                        | Dashboard-Notizen                                  |
+| [Audit-Log](../verwaltung/audit-log.md)                                                   | `audit-log.js`                             | Protokollierung                                    |
+| [Analytics-/Nginx-Optionen](../verwaltung/einstellungen.md#analytics--und-nginx-optionen) | `analytics-options.js`, `nginx-options.js` | Aufbewahrung und Formatierungswahl                 |
+| Gemeinsame Options-Services                                                               | `application-options.js`                   | Validiertes Lesen, serialisierte Updates und Audit |
+| [Maintenance](./maintenance.md)                                                           | `maintenance.js`                           | Wartungsfenster                                    |
+| [Report](../verwaltung/report.md)                                                         | `report.js`                                | System-Reports                                     |
+| Remote-Version                                                                            | `remote-version.js`                        | Versionsprüfung                                    |
 
 ## Verwandte Seiten
 

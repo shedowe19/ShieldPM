@@ -73,20 +73,19 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 
 ## SSL & ACME
 
-| Variable                 | Standard      | Beschreibung                                                                                                                                  |
-| ------------------------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ACME_EMAIL`             | —             | E-Mail für Zertifikate                                                                                                                        |
-| `ACME_SERVER`            | Let's Encrypt | ACME-Server-URL                                                                                                                               |
-| `ACME_EAB_KID`           | —             | External Account Binding Key                                                                                                                  |
-| `ACME_EAB_HMAC_KEY`      | —             | External Account Binding HMAC. Wert nicht dokumentieren.                                                                                      |
-| `ACME_MUST_STAPLE`       | `false`       | Must-Staple Extension                                                                                                                         |
-| `ACME_OCSP_STAPLING`     | `false`       | OCSP Stapling                                                                                                                                 |
-| `ACME_KEY_TYPE`          | `ecdsa`       | Schlüsseltyp                                                                                                                                  |
-| `ACME_PROFILE`           | `none`        | Optionales Profil des gewählten ACME-Servers; `none` deaktiviert die Profilauswahl. Andere Profile werden gegen das ACME-Verzeichnis geprüft. |
-| `ACME_SERVER_TLS_VERIFY` | `true`        | TLS-Zertifikat des ACME-Servers verifizieren                                                                                                  |
-| `CUSTOM_OCSP_STAPLING`   | `false`       | Eigenes OCSP-Stapling aktivieren                                                                                                              |
-| `CRT`                    | `23`          | Stunden zwischen Renewal-Checks                                                                                                               |
-| `DEFAULT_CERT_ID`        | `0`           | Standard-Zertifikat-ID für neue Hosts                                                                                                         |
+ACME-Server, Registrierungskontakt, EAB, Bedingungen, TLS-Prüfung, Must-Staple, ACME-/Custom-OCSP und Standardzertifikat werden unter Einstellungen → Zertifikate / ACME im Datensatz `acme-options` verwaltet. Diese Einstellungen haben keine Umgebungsrückfallebene. Neue Zertifikate verwenden die aktuelle CA-Vorgabe; Erneuerung und Widerruf vorhandener Zertifikate behalten deren ursprüngliche CA und Accountzuordnung. Details stehen unter [ACME-Einstellungen](../verwaltung/einstellungen.md#acme-konto-und-tls-optionen).
+
+`20260930000400_add_acme_options.js` übernimmt `ACME_SERVER`, `ACME_EMAIL`, `ACME_EAB_KID`, `ACME_EAB_HMAC_KEY`, `ACME_MUST_STAPLE`, `ACME_OCSP_STAPLING`, `ACME_SERVER_TLS_VERIFY`, `CUSTOM_OCSP_STAPLING` und `DEFAULT_CERT_ID` nur bei der Anlage eines fehlenden Datensatzes. EAB-HMAC wird vor dem Speichern verschlüsselt. Ungültige alte Server-/E-Mail-/EAB-Kombinationen werden ohne Rohwertausgabe gemeldet und bleiben zur Korrektur in der UI erhalten. Boolesche Standardwerte sind deaktiviertes Must-Staple/OCSP und aktivierte TLS-Prüfung; Must-Staple aktiviert ACME-OCSP mit. Ungültige Standardzertifikat-IDs werden zu `0` (Dummy-Zertifikat). Bereits gespeicherte Optionen werden nicht überschrieben. Die alten Variablen können nach Kontrolle der Migration entfernt werden.
+
+Die Profilwahl eines einzelnen Zertifikats steht in `meta.letsencrypt_profile` und hat Vorrang vor der globalen Datenbankeinstellung `acme-profile`. Diese beginnt mit `standard` und wird unter Einstellungen → Zertifikate / ACME geändert; es gibt dafür keine Umgebungsvariable. `shortlived` verlangt das gleichnamige Profil, `standard` leert erforderliche und bevorzugte Profile für jeden Auftrag. Ausstellung sowie manuelle und automatische Erneuerung wenden diese Auswahl erneut an. Ältere gespeicherte Zertifikate ohne Profilfeld verwenden die globale Vorgabe bei ihrer nächsten Erneuerung; Details stehen unter [Certbot](../module/certbot.md).
+
+## In die UI übernommene Anwendungsoptionen
+
+Schlüsseltyp und Zertifikat-Prüfintervall werden unter Einstellungen → Zertifikate / ACME verwaltet (`certificate-options`). Automatische Cloudflare-IP-Aktualisierung und ihr Intervall stehen unter Einstellungen → Netzwerk (`ip-ranges-options`). Änderungen gelten ohne Neustart; die Werte stammen nach Anlage der Datensätze ausschließlich aus der Datenbank.
+
+`20260930000200_add_application_options.js` übernimmt `ACME_KEY_TYPE`, `CRT`, `SKIP_IP_RANGES` und `IPRT` einmalig für noch fehlende Datensätze. Ein gültiger alter `CRT` wird auf höchstens 12 Stunden begrenzt, ein gültiger `IPRT` von 1 bis 99 wird mit sechs Stunden multipliziert. Ungültige oder fehlende Werte ergeben ECDSA, 12 Stunden, deaktivierten Abruf und sechs Stunden. Vorhandene Einstellungen werden nicht überschrieben. Die alten Variablen werden danach nicht mehr als Rückfallebene verwendet. Siehe [Einstellungen](../verwaltung/einstellungen.md) und [Konfigurationsstrategie](./config-dateien.md#schrittweise-verlagerung-von-anwendungsoptionen).
+
+`analytics-options` verwaltet die Detail-/Aggregat-Aufbewahrung unter Einstellungen → Analysen; `nginx-options` verwaltet die Formatierungswahl unter Einstellungen → Nginx. `20260930000300_add_analytics_nginx_options.js` übernimmt die bisherigen `ANALYTICS_DETAILED_RETENTION_HOURS`, `ANALYTICS_AGGREGATION_RETENTION_DAYS` und `DISABLE_NGINX_BEAUTIFIER` nur bei der Anlage fehlender Datensätze. Fehlende/leere Retention-Werte ergeben 24/35; positive sichere Ergebnisse der bisherigen Integer-Auswertung bleiben erhalten. Ungültige nichtleere Werte ergeben eine maximale sichere Ganzzahl mit einer Warnung ohne Rohwertausgabe und bewahren so Daten bis zur UI-Korrektur. Danach haben diese Variablen keine Laufzeitwirkung. Siehe [Einstellungen](../verwaltung/einstellungen.md#analytics--und-nginx-optionen).
 
 ## Analytics & Logging
 
@@ -111,21 +110,18 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 
 ## Nginx (Erweitert)
 
-| Variable                        | Standard     | Beschreibung                                                                |
-| ------------------------------- | ------------ | --------------------------------------------------------------------------- |
-| `SKIP_IP_RANGES`                | `true`       | Cloudflare IP-Ranges nicht automatisch aktualisieren                        |
-| `FULLCLEAN`                     | `false`      | Volles Cleanup bei Nginx-Reload aktivieren                                  |
-| `IPRT`                          | `1`          | Multiplikator für IP-Ranges-Aktualisierungsintervall                        |
-| `NC_AIO`                        | —            | Nextcloud AIO-Modus aktivieren                                              |
-| `NC_DOMAIN`                     | —            | Nextcloud AIO Domain (erforderlich wenn NC_AIO=true)                        |
-| `NGINX_404_REDIRECT`            | `false`      | 404-Anfragen auf Standard-Site umleiten                                     |
-| `NGINX_HSTS_SUBDOMAINS`         | `true`       | HSTS-Header für Subdomains einschließen                                     |
-| `NGINX_LOG_NOT_FOUND`           | `false`      | 404-Fehler (Not Found) in Nginx-Logs protokollieren                         |
-| `NGINX_WORKER_PROCESSES`        | `auto`       | Anzahl der Nginx-Worker-Prozesse                                            |
-| `NGINX_WORKER_CONNECTIONS`      | `512`        | Anzahl der Verbindungen pro Worker                                          |
-| `X_FRAME_OPTIONS`               | `sameorigin` | Header-Wert: `none`, `sameorigin` oder `deny` (kleingeschrieben)            |
-| `DISABLE_NGINX_BEAUTIFIER`      | `false`      | Nginx Config Beautifier deaktivieren (Config wird unformatiert geschrieben) |
-| `NGINX_DISABLE_PROXY_BUFFERING` | `false`      | Proxy-Buffering global für alle Proxy-Verbindungen deaktivieren             |
+| Variable                        | Standard     | Beschreibung                                                     |
+| ------------------------------- | ------------ | ---------------------------------------------------------------- |
+| `FULLCLEAN`                     | `false`      | Volles Cleanup bei Nginx-Reload aktivieren                       |
+| `NC_AIO`                        | —            | Nextcloud AIO-Modus aktivieren                                   |
+| `NC_DOMAIN`                     | —            | Nextcloud AIO Domain (erforderlich wenn NC_AIO=true)             |
+| `NGINX_404_REDIRECT`            | `false`      | 404-Anfragen auf Standard-Site umleiten                          |
+| `NGINX_HSTS_SUBDOMAINS`         | `true`       | HSTS-Header für Subdomains einschließen                          |
+| `NGINX_LOG_NOT_FOUND`           | `false`      | 404-Fehler (Not Found) in Nginx-Logs protokollieren              |
+| `NGINX_WORKER_PROCESSES`        | `auto`       | Anzahl der Nginx-Worker-Prozesse                                 |
+| `NGINX_WORKER_CONNECTIONS`      | `512`        | Anzahl der Verbindungen pro Worker                               |
+| `X_FRAME_OPTIONS`               | `sameorigin` | Header-Wert: `none`, `sameorigin` oder `deny` (kleingeschrieben) |
+| `NGINX_DISABLE_PROXY_BUFFERING` | `false`      | Proxy-Buffering global für alle Proxy-Verbindungen deaktivieren  |
 
 ## Nginx-Module
 

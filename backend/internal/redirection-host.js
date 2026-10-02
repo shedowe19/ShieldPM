@@ -36,7 +36,7 @@ const internalRedirectionHost = {
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {
-		let thisData = /** @type {any} */ (data || {});
+		let thisData = /** @type {any} */ (_.cloneDeep(data || {}));
 		const createCertificate = thisData.certificate_id === "new";
 
 		if (createCertificate) {
@@ -62,6 +62,10 @@ const internalRedirectionHost = {
 			}
 			return true;
 		});
+
+		if (createCertificate) {
+			thisData = await internalCertificate.prepareQuickCertificate(access, thisData);
+		}
 
 		// At this point the domains should have been checked
 		thisData.owner_user_id = access.token.getUserId(1);
@@ -136,7 +140,7 @@ const internalRedirectionHost = {
 	 * @return {Promise}
 	 */
 	update: async (access, data, options = {}) => {
-		let thisData = /** @type {any} */ (data || {});
+		let thisData = /** @type {any} */ (_.cloneDeep(data || {}));
 		const createCertificate = thisData.certificate_id === "new";
 
 		if (createCertificate) {
@@ -173,10 +177,12 @@ const internalRedirectionHost = {
 		}
 
 		if (createCertificate) {
-			const cert = await internalCertificate.createQuickCertificate(access, {
+			thisData = await internalCertificate.prepareQuickCertificate(access, {
+				...thisData,
 				domain_names: thisData.domain_names || row.domain_names,
-				meta: _.assign({}, row.meta, thisData.meta),
+				meta: _.assign({}, _.omit(row.meta, ["letsencrypt_profile"]), thisData.meta),
 			});
+			const cert = await internalCertificate.createQuickCertificate(access, thisData);
 			// update host with cert id
 			thisData.certificate_id = cert.id;
 		}
@@ -288,7 +294,7 @@ const internalRedirectionHost = {
 				await redirectionHostModel.transaction(async (trx) => {
 					await redirectionHostModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
 					await internalNginx.deleteConfig("redirection_host", row);
-					await internalNginx.reload();
+					await internalNginx.reload({ trx });
 				});
 			} catch (error) {
 				// The database transaction has rolled back. Restore the listener
@@ -387,7 +393,7 @@ const internalRedirectionHost = {
 				await redirectionHostModel.transaction(async (trx) => {
 					await redirectionHostModel.query(trx).where("id", row.id).patch({ enabled: 0 });
 					await internalNginx.deleteConfig("redirection_host", row);
-					await internalNginx.reload();
+					await internalNginx.reload({ trx });
 				});
 			} catch (error) {
 				// The database transaction has rolled back. Restore the listener

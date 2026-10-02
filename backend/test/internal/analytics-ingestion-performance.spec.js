@@ -2,6 +2,10 @@ import { performance } from "node:perf_hooks";
 import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ hostQuery: vi.fn() }));
+vi.mock("../../internal/analytics-options.js", () => ({
+	default: { getPolicy: async () => ({ detailed_retention_hours: 24, aggregation_retention_days: 35 }) },
+}));
+
 vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.hostQuery } }));
 vi.mock("../../models/analytic_count.js", () => ({ default: {} }));
 vi.mock("../../models/analytics_logs.js", () => ({ default: {} }));

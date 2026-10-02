@@ -1,6 +1,12 @@
 import express from "express";
+import internalAcmeOptions from "../internal/acme-options.js";
+import internalAnalyticsOptions from "../internal/analytics-options.js";
+import internalCertificateOptions from "../internal/certificate-options.js";
+import internalIpRangesOptions from "../internal/ip-ranges-options.js";
+import internalNginxOptions from "../internal/nginx-options.js";
 import internalSetting from "../internal/setting.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
+import validateAcmeOptions from "../lib/validator/acme-options.js";
 import apiValidator from "../lib/validator/api.js";
 import validator from "../lib/validator/index.js";
 import { getValidationSchema } from "../schema/index.js";
@@ -30,6 +36,38 @@ router
 		const rows = await internalSetting.getAll(res.locals.access);
 		res.status(200).send(rows);
 	});
+
+// ACME secrets need strict, noncoercing validation and errors without payload details.
+router
+	.route("/acme-options")
+	.options((_, res) => res.sendStatus(204))
+	.all(jwtdecode())
+	.get(async (_req, res) => res.status(200).send(await internalAcmeOptions.get(res.locals.access)))
+	.put(async (req, res) => {
+		await res.locals.access.can("settings:update", "acme-options");
+		const payload = await validateAcmeOptions(getValidationSchema("/settings/acme-options", "put"), req.body);
+		res.status(200).send(await internalAcmeOptions.update(res.locals.access, payload));
+	});
+
+// Register typed application options before the generic setting ID route.
+for (const [id, service] of [
+	["certificate-options", internalCertificateOptions],
+	["ip-ranges-options", internalIpRangesOptions],
+	["analytics-options", internalAnalyticsOptions],
+	["nginx-options", internalNginxOptions],
+]) {
+	router
+		.route(`/${id}`)
+		.options((_, res) => res.sendStatus(204))
+		.all(jwtdecode())
+		.get(async (_req, res) => {
+			res.status(200).send(await service.get(res.locals.access));
+		})
+		.put(async (req, res) => {
+			const payload = await apiValidator(getValidationSchema(`/settings/${id}`, "put"), req.body);
+			res.status(200).send(await service.update(res.locals.access, payload));
+		});
+}
 
 /**
  * Specific setting

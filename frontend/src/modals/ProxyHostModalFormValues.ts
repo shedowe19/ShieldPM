@@ -41,6 +41,7 @@ export const createProxyHostInitialValues = (data: Partial<ProxyHost> = {}): Pro
 	locations: data.locations || [],
 	// SSL tab
 	certificateId: data.certificateId || 0,
+	meta: data.meta || {},
 	sslForced: data.sslForced || false,
 	http2Support: data.http2Support || false,
 	hstsEnabled: data.hstsEnabled || false,

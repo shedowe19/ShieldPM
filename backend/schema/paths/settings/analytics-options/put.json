@@ -1,0 +1,45 @@
+{
+	"operationId": "updateAnalyticsOptions",
+	"summary": "Set analytics retention options",
+	"tags": [
+		"settings"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"requestBody": {
+		"description": "Application analytics retention options",
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"$ref": "../../../components/analytics-options-object.json"
+				},
+				"example": {
+					"detailed_retention_hours": 24,
+					"aggregation_retention_days": 35
+				}
+			}
+		}
+	},
+	"responses": {
+		"200": {
+			"description": "The configured analytics retention options",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/analytics-options-object.json"
+					},
+					"example": {
+						"detailed_retention_hours": 24,
+						"aggregation_retention_days": 35
+					}
+				}
+			}
+		}
+	}
+}

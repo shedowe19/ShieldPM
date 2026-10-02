@@ -96,6 +96,10 @@ export const SETTINGS_TAB = {
 	DEFAULT_SITE: "default-site",
 	AI: "ai",
 	GITOPS: "gitops",
+	CERTIFICATES: "certificates",
+	NETWORK: "network",
+	ANALYTICS: "analytics",
+	NGINX: "nginx",
 } as const;
 export type SettingsTab = (typeof SETTINGS_TAB)[keyof typeof SETTINGS_TAB];
 
