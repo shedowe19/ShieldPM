@@ -68,7 +68,7 @@ Mount your webroot and enable the PHP version. Place `extra_hosts` at the **serv
 ```yaml
 services:
   shieldpm:
-    image: ghcr.io/shedowe19/shieldpm:latest
+    image: ghcr.io/shedowe19/shieldpm:develop
     container_name: shieldpm
     ports:
       - "80:80"

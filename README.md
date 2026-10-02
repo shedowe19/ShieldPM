@@ -10,7 +10,7 @@ A modern, security-focused reverse proxy manager built on top of Nginx — with 
 
 > [!CAUTION]
 > **Migration from NPMplus required.**
-> - Update your `compose.yaml` to use `ghcr.io/shedowe19/shieldpm:latest`
+> - Update your `compose.yaml` to use `ghcr.io/shedowe19/shieldpm:develop`
 > - Data now lives at `/data/shieldpm` (auto-migrated from `/data/npmplus` on first start)
 > - Switched from Alpine to **Debian Trixie** — use Debian package names (e.g. `php8.2-curl` instead of `php82-curl`)
 > - Downgrading is not possible — **back up your data before upgrading**
@@ -27,11 +27,9 @@ curl -o compose.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/refs/h
 docker compose up -d
 ```
 
-Open the admin UI at `https://<your-ip>:81`
+Open the admin UI at `https://<your-ip>:81` (self-signed certificate — accept the browser warning on first visit).
 
-**Default credentials:**
-- **Email:** `admin@example.org`
-- **Password:** Check the container logs → `docker logs shieldpm`
+**First login:** There are no default credentials — the **Setup Wizard** creates your admin account on first visit. Automated deployments can set `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` instead.
 
 ---
 
@@ -78,7 +76,7 @@ Open the admin UI at `https://<your-ip>:81`
 - **Analytics** — Built-in GoAccess dashboard on port `:91`
 - **Auth Requests** — SSO support via Authentik and similar providers
 - **Multi-DB** — SQLite (default), MySQL/MariaDB, or PostgreSQL
-- **i18n** — UI available in English, German, Spanish, French, and more
+- **i18n** — UI available in English, German, Spanish, Italian, and more
 
 ---
 

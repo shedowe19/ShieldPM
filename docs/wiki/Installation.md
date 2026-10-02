@@ -20,8 +20,8 @@ Requires Docker Engine and Docker Compose.
 
    ```yaml
    services:
-     app:
-       image: "ghcr.io/shedowe19/shieldpm:latest"
+     shieldpm:
+       image: "ghcr.io/shedowe19/shieldpm:develop"
        restart: unless-stopped
        ports:
          - "80:80"
@@ -41,7 +41,7 @@ Requires Docker Engine and Docker Compose.
    ```
 
 3. **Access the Admin Panel:**
-   Open `http://<your-ip>:81` in your browser.
+   Open `https://<your-ip>:81` in your browser (self-signed certificate — accept the browser warning).
    The **Setup Wizard** will guide you through creating your admin account.
 
 > [!TIP]
@@ -89,7 +89,7 @@ This method installs ShieldPM directly onto a fresh Debian 13 system. It include
    ```
 
 3. **Access:**
-   Open `http://<your-ip>:81`. The Setup Wizard will guide you through creating your admin account.
+   Open `https://<your-ip>:81`. The Setup Wizard will guide you through creating your admin account.
 
 ### Updating (Native)
 
@@ -118,7 +118,7 @@ For Proxmox users, we provide a pre-built LXC template based on Debian 13.
 ### Installation
 
 1. **Download Template:**
-   Get `shieldpm-<release-tag>-lxc_<arch>.tar.gz` (for example, `shieldpm-v4.4.1-lxc_amd64.tar.gz`) from [GitHub Releases](https://github.com/shedowe19/ShieldPM/releases).
+   Get `shieldpm-develop-lxc_<arch>.tar.gz` (for example, `shieldpm-develop-lxc_amd64.tar.gz`) from [GitHub Releases](https://github.com/shedowe19/ShieldPM/releases).
 2. **Upload to Proxmox:**
    Go to `local (pve) > CT Templates > Upload`.
 3. **Create CT:**
@@ -126,7 +126,7 @@ For Proxmox users, we provide a pre-built LXC template based on Debian 13.
 4. **Important Setting:**
    In the container **Options**, enable **Nesting**.
 5. **Start:**
-   Boot the container. Access `http://<IP>:81` — the Setup Wizard will create your admin account.
+   Boot the container. Access `https://<IP>:81` — the Setup Wizard will create your admin account.
 
 ### Updating (LXC)
 

@@ -2,7 +2,7 @@
 
 Stuck? Here are solutions to the most common problems, organized by category.
 
-Docker commands below use the Compose service name `shieldpm`; use `app` with the [Installation Quick Start](Installation).
+Docker commands below use the Compose service name `shieldpm`; adjust the name if your service is configured differently.
 
 ---
 
@@ -47,7 +47,7 @@ The most common error — Nginx cannot reach the upstream service.
 | Container not on same network | For bridge networking, attach both services to a common Compose network; host networking does not join bridge networks |
 
 > [!TIP]
-> Quick test: `docker compose exec shieldpm curl -s http://<forward_host>:<forward_port>` (use `app` for the Installation Quick Start) — if this fails, check the upstream address, port and networking.
+> Quick test: `docker compose exec shieldpm curl -s http://<forward_host>:<forward_port>` — if this fails, check the upstream address, port and networking.
 
 ### 504 Gateway Timeout
 

@@ -144,36 +144,37 @@ Details und Dateipfade stehen in der [Modulübersicht](./module/README.md) und d
 
 ### API-Routen (Überblick)
 
-| Route-Datei                  | API-Pfad                         | Modul / Thema                           |
-| ---------------------------- | -------------------------------- | --------------------------------------- |
-| `main.js`                    | `/api/`                          | Hauptendpunkte (health, backup, detect) |
-| `users.js`                   | `/api/users`                     | Benutzerverwaltung                      |
-| `tokens.js`                  | `/api/tokens`                    | Login, Refresh, Logout                  |
-| `2fa.js`                     | `/api/users/:user_id/2fa`        | TOTP, Passkey, Duo, Backup-Codes        |
-| `settings.js`                | `/api/settings`                  | Globale Einstellungen                   |
-| `services.js`                | `/api/services`                  | Service-Management                      |
-| `schema.js`                  | `/api/schema`                    | Validierungs-Schemata                   |
-| `version.js`                 | `/api/version`                   | Versionsabfrage                         |
-| `dashboard.js`               | `/api/dashboard`                 | Dashboard-Stats                         |
-| `analytics.js`               | `/api/analytics`                 | Frontend-Analytics                      |
-| `reports.js`                 | `/api/reports`                   | System-Reports                          |
-| `audit-log.js`               | `/api/audit-log`                 | Audit-Log                               |
-| `oidc.js`                    | `/api/oidc`                      | OpenID Connect                          |
-| `chat.js`                    | `/api/chat`                      | ChatOps / Telegram                      |
-| `gitops.js`                  | `/api/gitops`                    | GitOps Pull/Push                        |
-| `ai.js`                      | `/api/ai`                        | AI-Agent                                |
-| `password-reset.js`          | CLI, kein API-Endpunkt           | SQLite-Passwort-Reset                   |
-| `nginx/proxy_hosts.js`       | `/api/nginx/proxy-hosts`         | proxy-host                              |
-| `nginx/redirection_hosts.js` | `/api/nginx/redirection-hosts`   | redirection-host                        |
-| `nginx/dead_hosts.js`        | `/api/nginx/dead-hosts`          | dead-host                               |
-| `nginx/streams.js`           | `/api/nginx/streams`             | stream (TCP/UDP)                        |
-| `nginx/certificates.js`      | `/api/nginx/certificates`        | Zertifikate                             |
-| `nginx/access_lists.js`      | `/api/nginx/access-lists`        | access-lists                            |
-| `nginx/cloudflared.js`       | `/api/nginx/cloudflared-tunnels` | cloudflared                             |
-| `nginx/tor_onion.js`         | `/api/nginx/tor-onion`           | tor                                     |
-| `nginx/wireguard.js`         | `/api/nginx/wireguard`           | wireguard                               |
-| `nginx/ddns_providers.js`    | `/api/nginx/ddns-providers`      | ddns-provider                           |
-| `nginx/analytics.js`         | `/api/nginx/analytics`           | Nginx-Analytics                         |
+| Route-Datei                  | API-Pfad                                      | Modul / Thema                           |
+| ---------------------------- | --------------------------------------------- | --------------------------------------- |
+| `main.js`                    | `/api/`                                       | Hauptendpunkte (health, backup, detect) |
+| `users.js`                   | `/api/users`                                  | Benutzerverwaltung                      |
+| `tokens.js`                  | `/api/tokens`                                 | Login, Refresh, Logout                  |
+| `2fa.js`                     | `/api/users/:user_id/2fa`                     | TOTP, Passkey, Duo, Backup-Codes        |
+| `settings.js`                | `/api/settings`                               | Globale Einstellungen                   |
+| `services.js`                | `/api/services`                               | Service-Management                      |
+| `schema.js`                  | `/api/schema`                                 | Validierungs-Schemata                   |
+| `version.js`                 | `/api/version`                                | Versionsabfrage                         |
+| `dashboard.js`               | `/api/dashboard`                              | Dashboard-Stats                         |
+| `analytics.js`               | `/api/analytics`                              | Frontend-Analytics                      |
+| `reports.js`                 | `/api/reports`                                | System-Reports                          |
+| `audit-log.js`               | `/api/audit-log`                              | Audit-Log                               |
+| `oidc.js`                    | `/api/oidc`                                   | OpenID Connect                          |
+| `chat.js`                    | `/api/chat`                                   | ChatOps / Telegram                      |
+| `gitops.js`                  | `/api/gitops`                                 | GitOps Pull/Push                        |
+| `ai.js`                      | `/api/ai`                                     | AI-Agent                                |
+| `password-reset.js`          | CLI, kein API-Endpunkt                        | SQLite-Passwort-Reset                   |
+| `nginx/proxy_hosts.js`       | `/api/nginx/proxy-hosts`                      | proxy-host                              |
+| `nginx/redirection_hosts.js` | `/api/nginx/redirection-hosts`                | redirection-host                        |
+| `nginx/dead_hosts.js`        | `/api/nginx/dead-hosts`                       | dead-host                               |
+| `nginx/streams.js`           | `/api/nginx/streams`                          | stream (TCP/UDP)                        |
+| `nginx/certificates.js`      | `/api/nginx/certificates`                     | Zertifikate                             |
+| `nginx/access_lists.js`      | `/api/nginx/access-lists`                     | access-lists                            |
+| `nginx/cloudflared.js`       | `/api/nginx/cloudflared-tunnels`              | cloudflared                             |
+| `nginx/tor_onion.js`         | `/api/nginx/tor-onion`                        | tor                                     |
+| `nginx/wireguard.js`         | `/api/nginx/wireguard`                        | wireguard                               |
+| `nginx/ddns_providers.js`    | `/api/nginx/ddns-providers`                   | ddns-provider                           |
+| `nginx/analytics.js`         | `/api/nginx/analytics`                        | Nginx-Analytics                         |
+| `nginx/upload-relay.js`      | `/api/nginx/proxy-hosts/:hostId/upload-relay` | upload-relay                            |
 
 ### Meta
 
@@ -184,7 +185,7 @@ Details und Dateipfade stehen in der [Modulübersicht](./module/README.md) und d
 
 ---
 
-_Zuletzt aktualisiert: 2026-09-29._
+_Zuletzt aktualisiert: 2026-10-02._
 
 ## Verwandte Seiten
 
