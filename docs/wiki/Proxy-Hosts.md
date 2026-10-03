@@ -66,6 +66,10 @@ In the **Add Proxy Host** or **Edit Proxy Host** form, click **Preview Nginx con
 
 The preview hides known sensitive values. It does not save the host, issue a certificate, or test Nginx syntax. The normal **Save** action performs the configuration test and applies the changes. A new host receives its final ID on saving, so ID-dependent directives may change. A newly requested certificate is issued on saving, so its TLS block is not yet shown.
 
+Generated IP Firewall address tables appear as counts and fingerprints in the draft and active comparison.
+All rules remain enforced on saving. See [IP Firewall](./IP-Firewall.md) for per-host lists, countries,
+exceptions, public blocking reasons, and preview permissions; configure it in the host's **Security** tab.
+
 ---
 
 ## ⚙️ Options

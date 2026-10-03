@@ -72,6 +72,8 @@ Country filtering reuses the existing [Analytics GeoIP setup](./Analytics.md#ena
 
 The editor checks GeoIP readiness and explains whether the module, database, or country configuration is missing. While that check is loading, fails, or reports unavailable, you can remove saved country rules but cannot add new ones or enable unknown-country blocking. Use **Check again** after correcting the existing GeoIP setup. A disabled firewall with saved country rules cannot be re-enabled until GeoIP is ready or those rules are removed. Manual IP and list blocking remain available without GeoIP.
 
+The check follows included Nginx configuration files and rejects conflicting country-variable definitions or directives that overwrite the country result. The country lookup must use the same trusted visitor IP as the address rules. Use an absolute MMDB path in the shared configuration; relative database paths are reported as unavailable.
+
 A disabled Proxy Host with active country rules also requires GeoIP readiness before it can be enabled again. A failed check leaves that host disabled.
 
 When country rules are active, the blocking page, JSON response, and firewall log also show the detected country code, even when a manual or list rule supplied the blocking reason. A dedicated firewall analytics screen is not provided.
@@ -93,7 +95,9 @@ Source: [X4BNet/lists_vpn](https://github.com/X4BNet/lists_vpn), MIT. ShieldPM p
 
 URL subscriptions require publicly reachable HTTPS sources and use an update interval of **6 to 168 hours**; the default is 24 hours. Use **Refresh** to fetch a source immediately. Local or private-network download targets are rejected. A source must return complete, uncompressed UTF-8 text within 15 seconds. Automatic updates apply only to enabled lists; failed attempts are retried after at least 15 minutes.
 
-A failed download or invalid response keeps the previous valid list active. Inspect the last-update time and error in the list manager. Nginx configuration changes are validated before activation, and a failed activation restores the previous configuration.
+A failed download or invalid response keeps the previous valid list active. Inspect the last-update time and error in the list manager; a failed manual refresh also reloads that status. Nginx configuration changes are validated before activation. If activation fails, ShieldPM attempts to restore the previous list and host configurations. An incomplete recovery is reported with the affected parts instead of claiming that the previous list was retained.
+
+Unsaved list edits survive background cache updates and load errors. If fresh server data changes the TXT content of an untouched form, validate that text again before saving. Saved host assignments can be removed even when their lists cannot be loaded; unavailable assignments show their IDs without another owner's list name.
 
 Disabling a central list stops its rules on assigned hosts while preserving the assignment. To delete a list, first remove every host assignment, including assignments on hosts where the firewall is currently disabled.
 

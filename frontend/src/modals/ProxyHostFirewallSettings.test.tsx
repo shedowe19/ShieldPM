@@ -154,6 +154,28 @@ describe("ProxyHostFirewallSettings", () => {
 		);
 	});
 
+	it("lets a host owner explicitly remove a saved list when list access fails", async () => {
+		mocks.useFirewallLists.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+		const meta = {
+			ipFirewall: createProxyHostFirewallPolicy({
+				enabled: true,
+				listIds: [4],
+				denylist: [{ address: "203.0.113.0/24", reason: "Keep this manual rule" }],
+			}),
+		};
+		renderSettings({ meta });
+		const assignment = screen.getByLabelText("firewall.host.listUnavailable");
+		expect(assignment).toBeChecked();
+		fireEvent.click(assignment);
+		await waitFor(() =>
+			expect(state().meta?.ipFirewall).toMatchObject({
+				enabled: true,
+				listIds: [],
+				denylist: [{ address: "203.0.113.0/24", reason: "Keep this manual rule" }],
+			}),
+		);
+	});
+
 	it("previews the actual block page in a sandbox and updates its public message while keeping notes private", async () => {
 		const meta = enabledMeta();
 		if (meta.ipFirewall) {

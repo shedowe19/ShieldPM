@@ -56,7 +56,7 @@ export function useDeleteFirewallList() {
 
 export function useRefreshFirewallList() {
 	const invalidate = useInvalidateFirewall();
-	return useMutation({ mutationFn: refreshFirewallList, onSuccess: invalidate });
+	return useMutation({ mutationFn: refreshFirewallList, onSettled: invalidate });
 }
 
 export function usePreviewFirewallList() {

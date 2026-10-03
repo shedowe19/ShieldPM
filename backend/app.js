@@ -4,6 +4,7 @@ import { doubleCsrf } from "csrf-csrf";
 import express from "express";
 import helmet from "helmet";
 import swaggerUi from "swagger-ui-express";
+import jsonBody from "./lib/express/json-body.js";
 import jwt from "./lib/express/jwt.js";
 import { debug, express as logger } from "./logger.js";
 import mainRoutes from "./routes/main.js";
@@ -260,13 +261,7 @@ app.use((req, res, next) => {
 	next();
 });
 
-// TXT imports are bounded separately; other API payloads retain the default JSON limit.
-const firewallJson = express.json({ limit: "16mb" });
-const defaultJson = express.json();
-app.use((req, res, next) => {
-	const parser = /^\/(?:api\/)?nginx\/firewall-lists(?:\/|$)/.test(req.path) ? firewallJson : defaultJson;
-	return parser(req, res, next);
-});
+app.use(jsonBody);
 app.use(express.urlencoded({ extended: true }));
 
 /**

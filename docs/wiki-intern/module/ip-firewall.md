@@ -18,9 +18,11 @@ Listen verwenden die vorhandene Berechtigung `access_lists` und deren Eigentüme
 - `backend/models/firewall_list.js` — Objection-Modell, Zeitstempel und Boolean-Konvertierung.
 - `backend/lib/firewall-addresses.js` — TXT-Parser und IP-/CIDR-Normalisierung.
 - `backend/lib/firewall-download.js` — begrenzter, SSRF-geschützter HTTPS-Abruf.
+- `backend/lib/express/json-body.js` — begrenzte JSON-Parser für Listenimporte und Proxy-Host-Regeln.
 - `backend/lib/firewall-list-validation.js` — gemeinsame Validierung für API und Backup-Import ohne Download.
 - `backend/lib/firewall-policy.js` — Prüfung der Host-Regeln.
 - `backend/lib/firewall-geoip.js` — Readiness der vorhandenen HTTP-GeoIP2-Konfiguration und ihrer MMDB-Datei.
+- `backend/lib/firewall-geoip-config.js` — stromendes Lesen der Nginx-Konfiguration mit kontexttreuen Includes, Globs und Größenlimits.
 - `backend/schema/components/firewall-country-code.json` — gemeinsame ISO-Alpha-2-Ländercodes einschließlich `XK`.
 - `backend/internal/firewall-policy.js` — Autorisierung zugewiesener Listen.
 - `backend/internal/firewall-list.js` — Listenverwaltung und Aktualisierungen.
@@ -34,6 +36,7 @@ Listen verwenden die vorhandene Berechtigung `access_lists` und deren Eigentüme
 - `frontend/src/modals/ProxyHostFirewallSettings.tsx`, `ProxyHostSecurityTab.tsx` — Einstellungen im Sicherheitstab.
 - `frontend/src/modals/ProxyHostFirewallCountrySettings.tsx`, `frontend/src/lib/firewallCountries.ts` — suchbare Länderauswahl und lokalisierte Namen.
 - `frontend/src/api/backend/firewallGeoip.ts`, `frontend/src/hooks/useFirewallGeoip.ts` — GeoIP-Status für die Host-Oberfläche.
+- `scripts/third-party-notices-extra.txt` — statische X4BNet-/MaxMind-Attribution für den NPM-Notice-Generator.
 
 ## Datenmodell
 
@@ -86,6 +89,11 @@ Die Vorschau liefert normalisierte `entries`, `entry_count`, die Zahl `duplicate
 
 Die Grenzen gelten für den gesamten Text: **8 MiB UTF-8-Daten und 200000 Zeilen**, einschließlich Kommentar- und Leerzeilen. Die Oberfläche liest TXT-Dateien als Text und sendet denselben Inhalt wie beim direkten Einfügen. Der Dialog verlangt vor einer manuellen Speicherung eine aktuelle, fehlerfreie Vorschau mit mindestens einem Eintrag; die Backend-API akzeptiert auch bewusst leere manuelle Listen.
 
+Ein unverändertes Listenformular übernimmt frische Serverdaten; bearbeitete Entwürfe bleiben bei Cache-Updates
+und fehlgeschlagenen Hintergrundabfragen erhalten. Geänderte TXT-Einträge benötigen erneut eine aktuelle
+Importprüfung. Fehlt die zentrale Listenabfrage beim Host-Editor, bleiben gespeicherte IDs ohne fremde
+Listennamen sichtbar und können ausdrücklich entfernt werden; andere Host-Regeln bleiben erhalten.
+
 ## API
 
 Alle Pfade beziehen sich auf `/api/nginx/firewall-lists` und verwenden die bestehende Authentifizierung und API-Fehlerbehandlung.
@@ -103,13 +111,22 @@ Alle Pfade beziehen sich auf `/api/nginx/firewall-lists` und verwenden die beste
 
 Die Backend-Payloads verwenden Snake Case. Beispiele für Listenfelder sind `source_type`, `source_url` und `update_interval_hours`; der Frontend-API-Client konvertiert diese zu `sourceType`, `sourceUrl` und `updateIntervalHours`. `entries` wird nur bei einer manuellen Quelle geschrieben; URL-Quellen lesen es ausschließlich aus dem Download. Die Host-Firewall wird über die vorhandene Proxy-Host-API in `meta` gespeichert und benötigt keinen eigenen Host-Endpunkt.
 
+JSON-Request-Bodies im gesamten Proxy-Host-Namensraum sind auf **8 MiB** begrenzt, einschließlich Erstellen,
+Ändern und beider Konfigurationsvorschauen. Listen-Endpunkte verwenden **16 MiB** für den JSON-Body; die
+separate TXT-Grenze von 8 MiB bleibt bestehen. JSON-Escaping zählt zum Bodyumfang. Andere API-Anfragen
+behalten das Express-Standardlimit von **100 KiB**; eine ähnlich benannte URL erhält kein größeres Limit.
+
 ## Länderfilter und gemeinsame Analytics-GeoIP-Quelle
 
 Der Länderfilter verwendet die bereits von Nginx-Analytics verwendete globale Variable `$geoip2_country_code` und deren MaxMind-DB-Datei. Er führt keinen eigenen Geodaten-Download und keinen externen Geolocation-API-Aufruf aus. Gemeint ist die bestehende **MMDB-GeoIP-Datenbank**, nicht die SQL-Datenbank mit Analytics-Zählern. Die Einrichtung steht in der [Analytics-Anleitung](../../wiki/Analytics.md#enabling-geoip-country-statistics).
 
-Die Readiness-Prüfung liest die aktive Masterkonfiguration `/usr/local/nginx/conf/nginx.conf`, die auch die unterstützten Docker- und nativen Startskripte verwenden. Es gibt keinen Fallback auf eine möglicherweise veraltete Distributionskonfiguration unter `/etc/nginx/nginx.conf`. Geprüft werden die HTTP-GeoIP2-Ländervariable mit `country iso_code`, dieselbe vertrauenswürdig korrigierte Besucher-IP `source=$remote_addr` sowie eine vorhandene, nicht leere referenzierte MMDB-Datei. Eine unabhängige Headerquelle oder eine Konfiguration, die unbekannte IPs einem tatsächlichen Land zuordnet, ist keine gültige Grundlage. Der Status gibt keine lokalen Dateipfade oder Konfigurationstexte zurück.
+Die Readiness-Prüfung liest die aktive Masterkonfiguration `/usr/local/nginx/conf/nginx.conf`, die auch die unterstützten Docker- und nativen Startskripte verwenden, samt verschachtelten und per Glob ausgewählten Includes. Relative Include-Pfade werden wie bei Nginx gegen das Verzeichnis der Masterkonfiguration aufgelöst; die eingebundenen Direktiven behalten ihren ursprünglichen HTTP-, Server- oder Location-Kontext. Es gibt keinen Fallback auf eine möglicherweise veraltete Distributionskonfiguration unter `/etc/nginx/nginx.conf`. Geprüft werden die HTTP-GeoIP2-Ländervariable mit `country iso_code`, dieselbe vertrauenswürdig korrigierte Besucher-IP `source=$remote_addr` sowie eine vorhandene, nicht leere referenzierte MMDB-Datei. Eine unabhängige Headerquelle oder eine Konfiguration, die unbekannte IPs einem tatsächlichen Land zuordnet, ist keine gültige Grundlage. Der Status gibt keine lokalen Dateipfade oder Konfigurationstexte zurück.
 
-Es muss genau eine Definition dieser Ländervariable im HTTP-GeoIP2-Kontext geben. Mehrfachdefinitionen werden zurückgewiesen, auch wenn eine frühere Definition eine sichere Quelle verwendet. Eine ungültige Konfigurationsstruktur gilt als nicht verfügbar; scheinbare Direktiven innerhalb von Kommentaren, Strings oder einem Stream-Kontext erfüllen die Readiness-Voraussetzung nicht.
+Es muss genau eine Definition dieser Ländervariable im HTTP-GeoIP2-Kontext geben, auch über Dateigrenzen hinweg. Wiederholte Includes zählen mehrfach. Weitere deklarierte Schreiber derselben Variable, etwa `map`, `geo`, `split_clients`, `set`, `auth_request_set` oder `set_by_lua*`, werden auch in Server-/Location-Includes zurückgewiesen. Variablennamen werden dabei ohne Beachtung der Groß-/Kleinschreibung verglichen. Scheinbare Direktiven in Kommentaren, Strings oder einem Stream-Kontext erfüllen die Readiness-Voraussetzung nicht. Die Prüfung untersucht Konfigurationsdirektiven; beliebige benutzerdefinierte Lua-Programme werden nicht semantisch analysiert.
+
+Der referenzierte MMDB-Pfad muss absolut sein und auf eine reguläre, nicht leere Datei zeigen. Ein relativer MMDB-Pfad liefert `database_missing`; er wird nicht gegen das Arbeitsverzeichnis des Backends oder einen angenommenen Nginx-Laufzeitprefix aufgelöst.
+
+Fehlende ausdrücklich benannte Include-Dateien, Include-Zyklen, ungültige Strukturen oder überschrittene Inspektionsgrenzen liefern `configuration_unavailable`. Ein Glob ohne Treffer bleibt zulässig. Include-Globs unterstützen `*`, `?` und `[]` samt POSIX-Zeichenklassen für C/ASCII; führende Punkte müssen ausdrücklich passen. `**` ist kein rekursiver Glob, und Shell-Brace-/Extglob-Ausdrücke werden nicht erweitert. Die Verarbeitung ist auf 512 MiB pro Datei, 8192 gelesene Dateien einschließlich Wiederholungen, 32 Include-Ebenen, 100000 gelesene Glob-Verzeichniseinträge, 1 MiB pro Token, 2 MiB pro Direktive und 32 MiB relevante Direktiventexte begrenzt. Große Geo-/Map-Tabellen werden stromend übersprungen, ohne ihre CIDR-Zeilen als Direktiven aufzubauen; dadurch bleiben auch generierte Listen mit 200000 Einträgen prüfbar.
 
 `GET /api/nginx/firewall-lists/geoip` liefert `available`, `module_enabled`, `database_present` und `reason`. Bei Erfolg ist `reason: null`; Fehlergründe sind `module_disabled`, `database_missing`, `country_variable_missing` oder `configuration_unavailable`. Der Frontend-Client konvertiert die Felder zu CamelCase.
 
@@ -127,7 +144,15 @@ Der Abruf verwendet direktes natives HTTPS mit Zertifikatsprüfung und ohne Umge
 
 Das Aktualisierungsintervall beträgt **6 bis 168 Stunden**, standardmäßig 24 Stunden. Der Hintergrunddienst prüft sofort beim Start und danach jede Minute auf fällige aktivierte URL-Listen. Nach einem fehlgeschlagenen Versuch wartet er mindestens 15 Minuten bis zum nächsten automatischen Versuch. Deaktivierte Quellen werden nicht automatisch aktualisiert.
 
-Ein Download wird vollständig eingelesen und geprüft, bevor die vorherige Liste ersetzt wird. HTTP-Fehler, Zeitüberschreitungen, leere Antworten und ungültige Listeneinträge erhalten den bisherigen gültigen Inhalt und `last_updated_on`; `last_error` zeigt die Ursache. Die Änderung betroffener aktiver Hosts erfolgt unter der Nginx-Konfigurationssperre: Datenbankänderung, gestagte Host-Dateien, `test()` und Reload. Bei Render-, Test- oder Reloadfehlern werden die vorherigen Listendaten und gestagten Host-Dateien wiederhergestellt und erneut geladen; Fehler beim Rollback werden separat protokolliert. Erfolgreiche Aktivierung löscht `last_error`.
+Ein Download wird vollständig eingelesen und geprüft, bevor die vorherige Liste ersetzt wird. HTTP-Fehler, Zeitüberschreitungen, leere Antworten und ungültige Listeneinträge erhalten den bisherigen gültigen Inhalt und `last_updated_on`; `last_error` zeigt die Ursache, sofern die Statusaktualisierung in der Datenbank gelingt. Auch nach einem fehlgeschlagenen manuellen Refresh lädt die Oberfläche den Listen-/Detailstatus erneut. Die Änderung betroffener aktiver Hosts erfolgt unter der Nginx-Konfigurationssperre: Datenbankänderung, gestagte Host-Dateien, `test()` und Reload. Erfolgreiche Aktivierung löscht `last_error`.
+
+Bei Render-, Test- oder Reloadfehlern versucht der Dienst zuerst die Listendaten und anschließend sämtliche
+gestagten Host-Dateien wiederherzustellen und erneut zu laden. Ein Datenbankfehler verhindert weder weitere
+Host-Rollbacks noch den Restore-Reload. Nur bei fehlerfreier Wiederherstellung meldet die API
+`previous list retained`; andernfalls nennt `recovery incomplete` die betroffenen Kategorien
+`list data`, `host configuration/status` beziehungsweise `Nginx reload`. Technische Rollbackfehler werden
+einzeln privat protokolliert. Eine ebenfalls fehlgeschlagene `last_error`-Speicherung verdeckt nicht die
+ursprüngliche Recovery-Fehlermeldung.
 
 ### X4BNet-Vorgaben
 
@@ -204,14 +229,15 @@ Die Funktion betrifft HTTP/HTTPS-Proxy-Hosts. Sie ist keine TCP-/UDP-Stream-Fire
 
 ## Offene Fragen und Validierung
 
-- Unklar: Die Kompilierungsflags des tatsächlich eingesetzten Docker-/LXC-Nginx-Binary wurden durch die Dokumentationsprüfung nicht nachgewiesen.
+- Ein vollständiger nativer/LXC-Installationslauf und ein Produktionsstart wurden nicht ausgeführt. Die Modulanforderungen der Docker-Images wurden dagegen durch echte CI-Smokes auf AMD64 und ARM64 geprüft.
 
 Zugehörige Regressionstests:
 
 - `backend/test/lib/firewall-addresses.spec.js` — Parser und Adressnormalisierung.
 - `backend/test/lib/firewall-policy.spec.js` — Typen, Grenzen, Ausnahmen und öffentliche beziehungsweise interne Texte.
-- `backend/test/lib/firewall-geoip.spec.js` und `firewall-geoip-inspection.spec.js` — verfügbare HTTP-Länderquelle, sichere Besucher-IP, fehlende Dateien und private Statusantworten.
+- `backend/test/lib/firewall-geoip.spec.js`, `firewall-geoip-inspection.spec.js` und `firewall-geoip-includes.spec.js` — verfügbare HTTP-Länderquelle, sichere Besucher-IP, Includes/Globs, überschreibende Variablen-Direktiven, große CIDR-Tabellen und private Statusantworten.
 - `backend/test/lib/firewall-download.spec.js` — DNS-/Redirect-Prüfung, IP-Pinning und Downloadgrenzen.
+- `backend/test/lib/express-json-body.spec.js` — tatsächliche HTTP-Middleware, große gültige Host-Regeln und getrennte Größenlimits der API-Namensräume.
 - `backend/test/internal/firewall-list.spec.js` — Rechte, Quellen, Auswahl und Rollback.
 - `backend/test/internal/firewall-policy.spec.js` — Autorisierung neuer Zuordnungen und Schutz der endgültigen Referenzen unter der Konfigurationssperre.
 - `backend/test/lib/firewall-preview.spec.js` und `backend/test/internal/proxy-host-preview.spec.js` — Zusammenfassungen großer Regelwerke, Änderungsprüfsummen und Leserechte für bestehende, entfernte oder deaktivierte Zuordnungen.
@@ -221,14 +247,14 @@ Zugehörige Regressionstests:
 - `backend/test/internal/nginx-bulk-validation.spec.js` — strenger GitOps-Sammellauf und vorheriger Rückgabestatus nach demselben Dateisystem-Rollback.
 - `backend/test/internal/proxy-host-enable-firewall.spec.js` — GeoIP-Readiness vor der Reaktivierung eines Hosts und unveränderter Deaktivierungsstatus bei fehlender Quelle.
 - `scripts/tests/test_runtime_config.py` — Loghistorie bei Neustarts, Verzeichnisvorbereitung vor einem echten Nginx-Test und Symlink-Abweisung.
-- `frontend/src/api/backend/firewallLists.test.ts`, `frontend/src/modals/FirewallListModal.test.tsx` und `ProxyHostFirewallSettings.test.tsx` — API-Payloads, TXT-Dialog und Host-Einstellungen.
+- `frontend/src/api/backend/firewallLists.test.ts`, `frontend/src/hooks/useFirewallLists.test.tsx`, `frontend/src/modals/FirewallListModal.test.tsx` und `ProxyHostFirewallSettings.test.tsx` — API-Payloads, aktualisierte Fehlerzustände, Schutz bearbeiteter TXT-Entwürfe und entfernbare Host-Zuordnungen bei Ladefehlern.
 - `frontend/src/lib/firewallCountries.test.ts`, `frontend/src/api/backend/firewallGeoip.test.ts` und `ProxyHostFirewallPreview.test.ts` — erlaubte Ländercodes, Readiness-Antworten und Vorschau der tatsächlichen Länderbegründung.
 
-`scripts/ci/ip-firewall-smoke.mjs` prüft die erzeugten Firewall-Partials zusätzlich mit einem isolierten echten Nginx, unter anderem Sperren, Ausnahmen, Real-IP, Custom-/Upload-Routen, Anubis-Eingang, ACME, fremde Statusantworten und Trefferlogs. Der lokale vollständige Modullauf einschließlich ModSecurity und GeoIP2 wurde mit 43 Prüfungen erfolgreich ausgeführt, davon 19 Länderprüfungen; zusätzlich wurde der portable Lua-/Geo-Lauf geprüft. Die kleine offizielle MaxMind-Testdatenbank unter `scripts/ci/fixtures/` dient nur diesem isolierten Test und ersetzt keine Produktions-GeoIP-Datenbank.
+`scripts/ci/ip-firewall-smoke.mjs` prüft die erzeugten Firewall-Partials zusätzlich mit einem isolierten echten Nginx, unter anderem Sperren, Ausnahmen, Real-IP, IPv6-Regeln, Custom-/Upload-Routen, Anubis-Eingang, ACME, fremde Statusantworten, WAF-/Lua-Access-Priorität und Trefferlogs. Der lokale vollständige Modullauf einschließlich ModSecurity und GeoIP2 wurde mit 56 Prüfungen erfolgreich ausgeführt. Sechs Varianten prüfen sichere GeoIP-Quellen sowie Überschreibungen aus HTTP- und Server-Includes, `map`, `set` und Include-Pfaden mit Escape-Zeichen. Zusätzlich waren 53 Prüfungen mit GeoIP2 ohne ModSecurity und 30 reine IP-Prüfungen ohne GeoIP2 erfolgreich. Die kleine offizielle MaxMind-Testdatenbank unter `scripts/ci/fixtures/` dient nur diesem isolierten Test und ersetzt keine Produktions-GeoIP-Datenbank.
 
-`scripts/ci/docker-smoke.sh` kopiert diese Fixture in den Testcontainer und aktiviert über `NGINX_GEOIP_DATABASE` ebenfalls den 43-Prüfungen-Lauf. Mit `NGINX_SMOKE_DISCOVER_MODULES=true` ermittelt `nginx-smoke-modules.mjs` tatsächliche Modulpfade aus `nginx -V`, den `load_module`-Pfaden von `nginx -T` und Standardverzeichnissen. Vorhandene dynamische NDK-, Lua-, ModSecurity- und GeoIP2-Module werden in Abhängigkeitsreihenfolge geladen; statisch eingebaute Module benötigen keine `.so`-Datei. `NGINX_REQUIRE_MODSECURITY=true` hält die Prüfung der tatsächlichen ModSecurity-Direktive verpflichtend, statt einen statischen Build vorauszusetzen. Der lokale echte Nginx-Lauf mit automatischer Modulermittlung war erfolgreich.
+`scripts/ci/docker-smoke.sh` kopiert diese Fixture in den Testcontainer und aktiviert über `NGINX_GEOIP_DATABASE` denselben vollständigen Testlauf. Mit `NGINX_SMOKE_DISCOVER_MODULES=true` ermittelt `nginx-smoke-modules.mjs` tatsächliche Modulpfade aus `nginx -V`, den `load_module`-Pfaden von `nginx -T` und Standardverzeichnissen. Vorhandene dynamische NDK-, Lua-, ModSecurity- und GeoIP2-Module werden in Abhängigkeitsreihenfolge geladen; statisch eingebaute Module benötigen keine `.so`-Datei. `NGINX_REQUIRE_MODSECURITY=true` hält die Prüfung der tatsächlichen ModSecurity-Direktive verpflichtend, statt einen statischen Build vorauszusetzen. Der lokale echte Nginx-Lauf mit automatischer Modulermittlung war erfolgreich.
 
-Der Docker-Smoke prüft außerdem erhaltene Logs, Verzeichnismodus und Schreibrechte unter UID 0 und anschließend unter UID 1000 mit übernommener UID-0-Loghistorie. Dieser Docker-/Image-Lauf und ein Produktionsstart wurden lokal nicht ausgeführt. Die isolierte lokale Logverzeichnis-Regression mit echtem `nginx -tq` war erfolgreich; der lokale UID-1000-Eigentümerwechsel wurde wegen fehlender Laufzeitunterstützung ausdrücklich übersprungen.
+Der Docker-Smoke prüft außerdem erhaltene Logs, Verzeichnismodus und Schreibrechte unter UID 0 und anschließend unter UID 1000 mit übernommener UID-0-Loghistorie. Die Docker-CI für Commit `73178f2` war auf AMD64 und ARM64 erfolgreich: je Architektur liefen zweimal die 43 vollständigen Modulprüfungen unter diesen UIDs. Das prüft die tatsächlichen Image-Module und Startskripte, verwendet aber eine isolierte GeoIP-Testkonfiguration. Die nachträglich ergänzten Prüfungen wurden bisher nur lokal ausgeführt. Dieser Docker-/Image-Lauf und ein Produktionsstart wurden lokal nicht ausgeführt. Die isolierte lokale Logverzeichnis-Regression mit echtem `nginx -tq` war erfolgreich; der lokale UID-1000-Eigentümerwechsel wurde wegen fehlender Laufzeitunterstützung ausdrücklich übersprungen.
 
 ## Verwandte Seiten
 

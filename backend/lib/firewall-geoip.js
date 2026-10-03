@@ -1,5 +1,7 @@
 import fs from "node:fs/promises";
+import path from "node:path";
 import errs from "./error.js";
+import { ConfigurationLexer, readConfigurationDirectives } from "./firewall-geoip-config.js";
 import { FIREWALL_COUNTRY_CODES } from "./firewall-policy.js";
 
 const MASTER_CONFIG = "/usr/local/nginx/conf/nginx.conf";
@@ -10,117 +12,106 @@ const DATABASE_PATHS = [
 	"/data/goaccess/geoip/GeoLite2-City.mmdb",
 ];
 
-// Keep quoted values and comments opaque so text in maps cannot advertise a nonexistent country variable.
-const configurationTokens = (configuration) => {
-	const tokens = [];
-	let word = "";
-	let quote = "";
-	const flush = () => {
-		if (word) tokens.push({ value: word, boundary: false });
-		word = "";
-	};
-	for (let index = 0; index < configuration.length; index++) {
-		const char = configuration[index];
-		if (char === "\\" && index + 1 < configuration.length) {
-			word += configuration[++index];
-			continue;
-		}
-		if (quote) {
-			if (char === quote) quote = "";
-			else word += char;
-			continue;
-		}
-		if (char === '"' || char === "'") {
-			quote = char;
-			continue;
-		}
-		if (char === "#") {
-			flush();
-			while (index < configuration.length && configuration[index] !== "\n") index++;
-			continue;
-		}
-		if (/\s/.test(char)) {
-			flush();
-			continue;
-		}
-		if (char === "{" && word.endsWith("$")) {
-			const end = configuration.indexOf("}", index + 1);
-			if (end < 0) throw new errs.ValidationError("Invalid Nginx configuration");
-			word += configuration.slice(index, end + 1);
-			index = end;
-			continue;
-		}
-		if ("{};".includes(char)) {
-			flush();
-			tokens.push({ value: char, boundary: true });
-			continue;
-		}
-		word += char;
-	}
-	if (quote) throw new errs.ValidationError("Invalid Nginx configuration");
-	flush();
-	return tokens;
+const isCountryVariable = (value) => value?.toLowerCase() === "$geoip2_country_code";
+const opaqueTables = new Set(["map", "geo", "split_clients", "types", "upstream"]);
+const writerArgument = {
+	map: 2,
+	geo: -1,
+	split_clients: 2,
+	set: 1,
+	auth_request_set: 1,
+	set_by_lua: 1,
+	set_by_lua_block: 1,
+	set_by_lua_file: 1,
+	perl_set: 1,
+	js_set: 1,
+	js_var: 1,
 };
 
-/** Inspect the existing Analytics country variable in HTTP scope, without exposing configuration content. */
-export const inspectGeoipConfiguration = (configuration) => {
+const createInspection = () => {
 	let moduleEnabled = false;
 	let databasePath = null;
 	let countryDefinitions = 0;
+	let otherWriters = 0;
+	let relevantBytes = 0;
 	const contexts = [];
-	let directive = [];
-	for (const token of configurationTokens(configuration)) {
-		if (!token.boundary) {
-			directive.push(token.value);
-			continue;
-		}
-		if (token.value === "{") {
-			if (contexts.length === 1 && contexts[0][0] === "http" && directive[0] === "geoip2") moduleEnabled = true;
-			contexts.push(directive);
-			directive = [];
-			continue;
-		}
-		if (token.value === "}") {
-			if (!contexts.length || directive.length) throw new errs.ValidationError("Invalid Nginx configuration");
-			contexts.pop();
-			directive = [];
-			continue;
-		}
-		if (
-			!contexts.length &&
-			directive[0] === "load_module" &&
-			directive[1]?.split("/").at(-1) === "ngx_http_geoip2_module.so"
-		)
-			moduleEnabled = true;
-		if (
-			contexts.length === 2 &&
-			contexts[0][0] === "http" &&
-			contexts[1][0] === "geoip2" &&
-			directive[0] === "$geoip2_country_code"
-		) {
-			countryDefinitions++;
-			const sources = directive.filter((value) => value.startsWith("source="));
-			const defaults = directive.filter((value) => value.startsWith("default="));
-			const safeDefault =
-				defaults.length <= 1 && !FIREWALL_COUNTRY_CODES.includes(defaults[0]?.slice(8).toUpperCase());
+	return {
+		consume: ({ words: directive, boundary, lexer }) => {
+			if (contexts.length <= 2) {
+				relevantBytes += directive.reduce((size, value) => size + Buffer.byteLength(value, "utf8"), 0);
+				if (relevantBytes > 32 * 1024 * 1024)
+					throw new errs.ValidationError("Nginx configuration inspection limit exceeded");
+			}
+			const http = contexts[0]?.[0] === "http";
+			const command = directive[0];
 			if (
-				sources.length === 1 &&
-				sources[0] === "source=$remote_addr" &&
-				safeDefault &&
-				directive.slice(-2).join(" ") === "country iso_code"
-			)
-				databasePath = contexts[1][1] || null;
-		}
-		directive = [];
-	}
-	if (contexts.length || directive.length) throw new errs.ValidationError("Invalid Nginx configuration");
-	// GeoIP2 allows redefining its variables, so an earlier safe definition is insufficient.
-	return { moduleEnabled, databasePath: countryDefinitions === 1 ? databasePath : null };
+				http &&
+				Object.hasOwn(writerArgument, command) &&
+				isCountryVariable(directive.at(writerArgument[command]))
+			) {
+				otherWriters++;
+			}
+			if (boundary === "{") {
+				if (opaqueTables.has(command) || command?.endsWith("_by_lua_block")) {
+					lexer.skipBlock(command.endsWith("_by_lua_block"));
+					return;
+				}
+				if (contexts.length === 1 && http && command === "geoip2") moduleEnabled = true;
+				contexts.push(directive);
+				return;
+			}
+			if (boundary === "}") {
+				if (!contexts.length || directive.length) throw new errs.ValidationError("Invalid Nginx configuration");
+				contexts.pop();
+				return;
+			}
+			if (
+				!contexts.length &&
+				command === "load_module" &&
+				directive[1]?.split("/").at(-1) === "ngx_http_geoip2_module.so"
+			) {
+				moduleEnabled = true;
+			}
+			if (contexts.length === 2 && http && contexts[1][0] === "geoip2" && isCountryVariable(command)) {
+				countryDefinitions++;
+				const sources = directive.filter((value) => value.startsWith("source="));
+				const defaults = directive.filter((value) => value.startsWith("default="));
+				const safeDefault =
+					defaults.length <= 1 && !FIREWALL_COUNTRY_CODES.includes(defaults[0]?.slice(8).toUpperCase());
+				if (
+					sources.length === 1 &&
+					sources[0].toLowerCase() === "source=$remote_addr" &&
+					safeDefault &&
+					directive.slice(-2).join(" ") === "country iso_code"
+				) {
+					databasePath = contexts[1][1] || null;
+				}
+			}
+		},
+		finish: () => {
+			if (contexts.length) throw new errs.ValidationError("Invalid Nginx configuration");
+			return {
+				moduleEnabled,
+				databasePath: countryDefinitions === 1 && otherWriters === 0 ? databasePath : null,
+			};
+		},
+	};
 };
 
-const databaseExists = async (path, fileSystem) => {
+/** Inspect inline configuration; status checks additionally expand files in their actual include contexts. */
+export const inspectGeoipConfiguration = (configuration) => {
+	const inspection = createInspection();
+	const lexer = new ConfigurationLexer();
+	for (const directive of lexer.feed(configuration)) inspection.consume(directive);
+	lexer.finish();
+	return inspection.finish();
+};
+
+const databaseExists = async (filename, fileSystem) => {
+	// GeoIP2 resolves relative MMDB paths against Nginx's runtime prefix, never the backend CWD.
+	if (!path.isAbsolute(filename)) return false;
 	try {
-		const stat = await fileSystem.stat(path);
+		const stat = await fileSystem.stat(filename);
 		return stat.isFile() && stat.size > 0;
 	} catch {
 		return false;
@@ -133,7 +124,10 @@ const databaseExists = async (path, fileSystem) => {
 export const getFirewallGeoipStatus = async ({ fileSystem = fs, masterConfig = MASTER_CONFIG } = {}) => {
 	let inspected;
 	try {
-		inspected = inspectGeoipConfiguration(await fileSystem.readFile(masterConfig, "utf8"));
+		const inspection = createInspection();
+		for await (const directive of readConfigurationDirectives(fileSystem, masterConfig))
+			inspection.consume(directive);
+		inspected = inspection.finish();
 	} catch {
 		return {
 			available: false,

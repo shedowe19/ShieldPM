@@ -1,6 +1,6 @@
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { AlertCircle, CheckCircle2, FileUp, Loader2, ShieldBan } from "lucide-react";
-import { type ChangeEvent, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { FirewallList, FirewallListInput, FirewallListPreview } from "src/api/backend/firewallLists";
 import { Loading } from "src/components/Loading";
@@ -41,6 +41,17 @@ export function showFirewallListModal(id?: number, preset?: FirewallPreset) {
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 
+const defaultValues = (data?: FirewallList, preset?: FirewallPreset): FirewallListInput => ({
+	name: data?.name ?? (preset ? `X4BNet ${preset === "vpn" ? "VPN" : "VPN + Datacenter"}` : ""),
+	reason: data?.reason ?? (preset ? intl.formatMessage({ id: `firewall.preset.${preset}.reason` }) : ""),
+	description: data?.description ?? "",
+	sourceType: data?.sourceType ?? (preset ? "url" : "manual"),
+	sourceUrl: data?.sourceUrl ?? (preset ? FIREWALL_PRESETS[preset] : ""),
+	updateIntervalHours: data?.updateIntervalHours ?? 24,
+	enabled: data?.enabled ?? true,
+	entries: data?.entries ?? "",
+});
+
 function FirewallListForm({
 	data,
 	preset,
@@ -53,17 +64,16 @@ function FirewallListForm({
 	onBusyChange: (busy: boolean) => void;
 }) {
 	const form = useForm<FirewallListInput>({
-		defaultValues: {
-			name: data?.name ?? (preset ? `X4BNet ${preset === "vpn" ? "VPN" : "VPN + Datacenter"}` : ""),
-			reason: data?.reason ?? (preset ? intl.formatMessage({ id: `firewall.preset.${preset}.reason` }) : ""),
-			description: data?.description ?? "",
-			sourceType: data?.sourceType ?? (preset ? "url" : "manual"),
-			sourceUrl: data?.sourceUrl ?? (preset ? FIREWALL_PRESETS[preset] : ""),
-			updateIntervalHours: data?.updateIntervalHours ?? 24,
-			enabled: data?.enabled ?? true,
-			entries: data?.entries ?? "",
-		},
+		defaultValues: defaultValues(data, preset),
 	});
+	const {
+		reset,
+		formState: { isDirty },
+	} = form;
+	useEffect(() => {
+		// Opening a cached list may refetch newer values. Preserve any edits made before that response arrives.
+		if (data && !isDirty) reset(defaultValues(data, preset));
+	}, [data, isDirty, preset, reset]);
 	const save = useSaveFirewallList();
 	const preview = usePreviewFirewallList();
 	const [checked, setChecked] = useState<{ input: string; result: FirewallListPreview } | null>(null);
@@ -426,12 +436,19 @@ const FirewallListModal = EasyModal.create(({ listId, preset, visible, remove }:
 				</DialogHeader>
 				{typeof listId === "number" && query.isPending ? (
 					<Loading noLogo />
-				) : query.error ? (
+				) : query.error && !query.data ? (
 					<Alert variant="destructive">
 						<AlertDescription>{query.error.message}</AlertDescription>
 					</Alert>
 				) : (
-					<FirewallListForm data={query.data} preset={preset} onClose={remove} onBusyChange={setBusy} />
+					<>
+						{query.error && (
+							<Alert variant="destructive">
+								<AlertDescription>{query.error.message}</AlertDescription>
+							</Alert>
+						)}
+						<FirewallListForm data={query.data} preset={preset} onClose={remove} onBusyChange={setBusy} />
+					</>
 				)}
 			</DialogContent>
 		</Dialog>

@@ -159,25 +159,38 @@ const applyList = async (previous, patch) => {
 				await nginx.reload();
 			}
 		} catch (error) {
-			// Restore DB before files: any subsequent render sees the last working list.
-			await firewallListModel
-				.query()
-				.where("id", previous.id)
-				.patch(_.pick(previous, [...editFields, "entry_count", "last_updated_on", "last_error"]));
+			// Attempt data recovery first, but always restore files even when the database is unavailable.
+			const recoveryFailures = [];
+			try {
+				await firewallListModel
+					.query()
+					.where("id", previous.id)
+					.patch(_.pick(previous, [...editFields, "entry_count", "last_updated_on", "last_error"]));
+			} catch (restoreError) {
+				recoveryFailures.push("list data");
+				logger.error(`Firewall list data rollback failed: ${errorMessage(restoreError)}`);
+			}
 			const rollbacks = await Promise.allSettled(stages.map((stage) => nginx.rollbackStagedConfig(stage, error)));
 			for (const rollback of rollbacks) {
-				if (rollback.status === "rejected")
+				if (rollback.status === "rejected") {
+					recoveryFailures.push("host configuration/status");
 					logger.error(`Firewall configuration rollback failed: ${errorMessage(rollback.reason)}`);
+				}
 			}
 			if (stages.length) {
 				try {
 					await nginx.reload();
 				} catch (restoreError) {
+					recoveryFailures.push("Nginx reload");
 					logger.error(`Firewall previous configuration reload failed: ${errorMessage(restoreError)}`);
 				}
 			}
 			throw new errs.ConfigurationError(
-				`Firewall list update failed; previous list retained: ${errorMessage(error)}`,
+				`Firewall list update failed; ${
+					recoveryFailures.length
+						? `recovery incomplete (${[...new Set(recoveryFailures)].join(", ")})`
+						: "previous list retained"
+				}: ${errorMessage(error)}`,
 			);
 		}
 		// Activation succeeded. Status/backup cleanup must not turn it into a failed data update.
@@ -207,7 +220,11 @@ const refreshList = async (previous) => {
 		const patch = checkedEntries(await fetchIpList(previous.source_url), true);
 		return await applyList(previous, patch);
 	} catch (error) {
-		await recordError(previous.id, error);
+		try {
+			await recordError(previous.id, error);
+		} catch (statusError) {
+			logger.error(`Firewall refresh error status update failed: ${errorMessage(statusError)}`);
+		}
 		throw error;
 	}
 };

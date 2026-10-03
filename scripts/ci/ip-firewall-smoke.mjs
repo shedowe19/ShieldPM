@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
+import { getFirewallGeoipStatus } from "../../backend/lib/firewall-geoip.js";
 import { buildFirewallRender } from "../../backend/lib/firewall-render.js";
 import utils from "../../backend/lib/utils.js";
 import { resolveNginxSmokeModules } from "./nginx-smoke-modules.mjs";
@@ -58,6 +59,163 @@ const request = (
 		req.end();
 	});
 
+// Nginx permits later writers to replace a GeoIP variable. Readiness must reject
+// these otherwise-valid configurations before a country policy can be activated.
+async function checkGeoipVariableWriters({
+	nginx,
+	modules,
+	directory,
+	database,
+	luaPackagePath,
+	luaPackageCpath,
+}) {
+	const reservation = net.createServer();
+	const port = await listen(reservation);
+	await close(reservation);
+	const secondDatabase = path.join(directory, "second-country.mmdb");
+	await fs.copyFile(database, secondDatabase);
+	const included = path.join(directory, "country-override.conf");
+	await fs.writeFile(
+		included,
+		`geoip2 ${quote(secondDatabase)} { $geoip2_country_code default=US source=$http_x_test_country country iso_code; }`,
+	);
+	const serverIncluded = path.join(directory, "server-country-override.conf");
+	await fs.writeFile(
+		serverIncluded,
+		"set $geoip2_country_code $http_x_country;",
+	);
+	const parts = path.join(directory, "parts");
+	await fs.mkdir(parts);
+	await fs.copyFile(included, path.join(parts, "[a].conf"));
+	await fs.writeFile(
+		path.join(parts, "a.conf"),
+		"# Harmless glob lookalike.\n",
+	);
+	const variants = [
+		{ name: "safe", http: "", server: "", country: "GB", available: true },
+		{
+			name: "included-geoip",
+			http: `include ${quote(included)};`,
+			server: "",
+			country: "SE",
+			available: false,
+		},
+		{
+			name: "map-writer",
+			http: "map $http_x_country $geoip2_country_code { default US; SE SE; }",
+			server: "",
+			country: "SE",
+			available: false,
+		},
+		{
+			name: "server-set-writer",
+			http: "",
+			server: "set $GEOIP2_COUNTRY_CODE $http_x_country;",
+			country: "SE",
+			available: false,
+		},
+		{
+			name: "included-server-set-writer",
+			http: "",
+			server: `include ${quote(serverIncluded)};`,
+			country: "SE",
+			available: false,
+		},
+		{
+			name: "escaped-bracket-include",
+			// Nginx preserves the unknown escape, and libc glob opens literal [a].conf.
+			http: 'include "parts/\\[a].conf";',
+			server: "",
+			country: "SE",
+			available: false,
+		},
+	];
+	for (const variant of variants) {
+		const config = `${modules.map((module) => `load_module ${quote(module)};`).join("\n")}
+master_process off;
+user ${os.userInfo().username};
+pid ${quote(path.join(directory, "country-writer.pid"))};
+error_log stderr notice;
+events { worker_connections 32; }
+http {
+    access_log off;
+    ${luaPackagePath ? `lua_package_path ${quote(luaPackagePath)};` : ""}
+    ${luaPackageCpath ? `lua_package_cpath ${quote(luaPackageCpath)};` : ""}
+    ${["client_body", "proxy", "fastcgi", "uwsgi", "scgi"].map((name) => `${name}_temp_path ${quote(path.join(directory, name))};`).join("\n")}
+    geoip2 ${quote(database)} { $geoip2_country_code default=XX source=$remote_addr country iso_code; }
+    ${variant.http}
+    server {
+        listen 127.0.0.1:${port};
+        set_real_ip_from 127.0.0.1; real_ip_header X-Real-IP;
+        ${variant.server}
+        location / { return 200 "$remote_addr:$geoip2_country_code"; }
+    }
+}`;
+		const configFile = path.join(directory, "country-writer.conf");
+		await fs.writeFile(configFile, config);
+		await utils.execFile(nginx, [
+			"-p",
+			`${directory}/`,
+			"-c",
+			configFile,
+			"-t",
+		]);
+		let output = "";
+		const child = spawn(
+			nginx,
+			["-p", `${directory}/`, "-c", configFile, "-g", "daemon off;"],
+			{
+				stdio: ["ignore", "pipe", "pipe"],
+			},
+		);
+		child.stdout.on("data", (chunk) => {
+			output += chunk;
+		});
+		child.stderr.on("data", (chunk) => {
+			output += chunk;
+		});
+		child.on("error", (error) => {
+			output += error.message;
+		});
+		try {
+			let response;
+			for (let attempt = 0; attempt < 100; attempt++) {
+				try {
+					response = await request(port, {
+						headers: {
+							"X-Real-IP": "81.2.69.160",
+							"X-Test-Country": "89.160.20.128",
+							"X-Country": "SE",
+						},
+					});
+					break;
+				} catch {
+					assert.equal(child.exitCode, null, output);
+					await delay(50);
+				}
+			}
+			assert.equal(response?.status, 200, `${variant.name}: ${output}`);
+			assert.equal(
+				response.body,
+				`81.2.69.160:${variant.country}`,
+				variant.name,
+			);
+			const status = await getFirewallGeoipStatus({ masterConfig: configFile });
+			assert.equal(
+				status.available,
+				variant.available,
+				`${variant.name} country readiness`,
+			);
+		} finally {
+			if (child.exitCode === null) {
+				child.kill("SIGTERM");
+				await new Promise((resolve) => child.once("exit", resolve));
+			}
+		}
+	}
+	return variants.length;
+}
+
 /**
  * Run the actual firewall partials in an isolated Nginx instance, using real loopback client IPs.
  * A portable Nginx lacking ModSecurity can validate the filter/Lua behavior; the image smoke
@@ -92,12 +250,13 @@ export async function runIpFirewallSmoke({
 		const policy = {
 			enabled: true,
 			list_ids: [9, 10],
-			allowlist: ["127.0.0.1", "::ffff:127.0.0.3"],
+			allowlist: ["127.0.0.1", "::ffff:127.0.0.3", "2001:db8:abcd:1::/64"],
 			denylist: [
 				{
 					address: "::ffff:127.0.0.2",
 					reason: "Operator <script>alert(1)</script>",
 				},
+				{ address: "2001:db8:abcd::/48", reason: "Manual IPv6 network" },
 			],
 			public_message: "The site operator restricts this network.",
 			support_url: "https://support.test/?a=1&b=2",
@@ -108,13 +267,13 @@ export async function runIpFirewallSmoke({
 				id: 9,
 				name: "VPN <b>list</b>",
 				reason: "VPN list membership",
-				entries: ["127.0.0.0/24"],
+				entries: ["127.0.0.0/24", "2001:db8::/32"],
 			},
 			{
 				id: 10,
 				name: "Specific network",
 				reason: "Specific list policy",
-				entries: ["::ffff:127.0.0.4/128"],
+				entries: ["::ffff:127.0.0.4/128", "2001:db8:abcd:2::/64"],
 			},
 		];
 		const engine = utils.getRenderEngine();
@@ -232,6 +391,15 @@ http {
         listen 127.0.0.1:${port}; server_name trusted.test;
         set_real_ip_from 127.0.0.1; real_ip_header X-Real-IP;
         ${trusted.filter}
+        access_by_lua_block { if ngx.var.http_x_sso_probe == "deny" then return ngx.redirect("/sign-in", 302) end }
+        ${
+					modsecurity
+						? `modsecurity on;
+        modsecurity_rules 'SecRuleEngine On
+            SecRule ARGS:firewall_probe "@streq bad" "id:990001,phase:1,deny,status:406"
+            SecRule RESPONSE_STATUS "@streq 403" "id:990002,phase:3,deny,status:409"';`
+						: ""
+				}
         location / { proxy_pass http://127.0.0.1:${upstreamPort}; }
     }
     server {
@@ -401,6 +569,45 @@ http {
 		assert.equal(teapot.body, "upstream:/teapot");
 		assert(!teapot.body.includes("ip_blocked"));
 		assert(!teapot.body.includes("Access restricted"));
+		const trustedRequest = (ip, options = {}) =>
+			request(port, {
+				host: "trusted.test",
+				...options,
+				headers: { "X-Real-IP": ip, ...options.headers },
+			});
+		// An address exception bypasses the firewall, while inherited access-phase
+		// authentication and an active WAF remain effective on its upstream route.
+		assert.equal(
+			(
+				await trustedRequest("127.0.0.3", {
+					headers: { "X-SSO-Probe": "deny" },
+				})
+			).status,
+			302,
+		);
+		const beforeAccess = await trustedRequest("127.0.0.2", {
+			uri: "/?firewall_probe=bad",
+			headers: { "X-SSO-Probe": "deny" },
+		});
+		assert.equal(beforeAccess.status, 403);
+		assert(!beforeAccess.headers.location);
+		if (modsecurity)
+			assert.equal(
+				(await trustedRequest("127.0.0.3", { uri: "/?firewall_probe=bad" }))
+					.status,
+				406,
+			);
+		// RealIP supplies IPv6 to Nginx's actual geo radix lookup; these checks do
+		// not require an IPv6 socket on the runner.
+		const manualV6 = await trustedRequest("2001:db8:abcd:2::2");
+		assert.equal(manualV6.status, 403);
+		assert(manualV6.body.includes("Manual IPv6 network"));
+		assert.equal((await trustedRequest("2001:db8:abcd:1::2")).status, 200);
+		const listV6 = await trustedRequest("2001:db8:beef::2");
+		assert.equal(listV6.status, 403);
+		assert(listV6.body.includes("VPN list membership"));
+		assert.equal((await trustedRequest("2001:db9::2")).status, 200);
+		const phaseChecks = modsecurity ? 7 : 6;
 		const log = await fs.readFile(
 			path.join(temporary, "logs/ip_firewall_17.log"),
 			"utf8",
@@ -539,8 +746,18 @@ http {
 			assert(!hits.some((hit) => "country_code" in hit));
 			countryChecks = modsecurity ? 19 : 17;
 		}
+		const writerChecks = geoipDatabase
+			? await checkGeoipVariableWriters({
+					nginx,
+					modules,
+					directory: temporary,
+					database: geoipDatabase,
+					luaPackagePath,
+					luaPackageCpath,
+				})
+			: 0;
 		return {
-			checks: 24 + countryChecks,
+			checks: 24 + countryChecks + phaseChecks + writerChecks,
 			mode: modsecurity ? "full modules" : "portable Lua/geo",
 			hits: hits.length,
 		};

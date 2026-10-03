@@ -4,6 +4,8 @@ const state = vi.hoisted(() => ({
 	rows: [],
 	hosts: [],
 	events: [],
+	rollbackError: null,
+	errorStatusError: null,
 	audit: vi.fn(),
 	fetch: vi.fn(),
 	nginx: {
@@ -59,6 +61,14 @@ const query = (kind) => {
 			return structuredClone(row);
 		},
 		patch: async (data) => {
+			if (state.rollbackError && Object.hasOwn(data, "entries")) {
+				state.events.push("DB rollback failed");
+				throw state.rollbackError;
+			}
+			if (state.errorStatusError && Object.hasOwn(data, "last_error") && !Object.hasOwn(data, "entries")) {
+				state.events.push("Error status update failed");
+				throw state.errorStatusError;
+			}
 			for (const row of rows()) Object.assign(row, structuredClone(data));
 			state.events.push(`patch:${data.entries ?? "metadata"}`);
 			return rows().length;
@@ -113,6 +123,8 @@ describe("firewall list service", () => {
 		state.rows = [originalList()];
 		state.hosts = [];
 		state.events = [];
+		state.rollbackError = null;
+		state.errorStatusError = null;
 		access.can.mockResolvedValue({ permission_visibility: "all" });
 		state.fetch.mockResolvedValue("203.0.113.5\n");
 		state.nginx.configureHost.mockImplementation(async (model, host_type, host) => {
@@ -203,6 +215,72 @@ describe("firewall list service", () => {
 		expect(state.nginx.rollbackStagedConfig).toHaveBeenCalledTimes(1);
 		expect(state.nginx.commitStagedConfig).not.toHaveBeenCalled();
 	});
+	it.each([false, true])(
+		"restores files despite a database rollback failure, status write fails=%s",
+		async (statusFails) => {
+			state.hosts = [10, 11].map((id) => ({
+				id,
+				enabled: true,
+				is_deleted: false,
+				meta: { ip_firewall: { enabled: true, list_ids: [1] } },
+			}));
+			state.rollbackError = new Error("Database connection lost while restoring list");
+			if (statusFails) state.errorStatusError = state.rollbackError;
+			state.nginx.test.mockRejectedValueOnce(new Error("invalid new config"));
+			state.nginx.rollbackStagedConfig.mockImplementation(async (stage) => {
+				state.events.push(`restore:${stage.host.id}`);
+			});
+			state.nginx.reload.mockImplementation(async () => {
+				state.events.push("restored config reload");
+			});
+
+			await expect(service.refresh(access, { id: 1 })).rejects.toThrow(
+				"recovery incomplete (list data): invalid new config",
+			);
+
+			expect(state.events).toEqual([
+				"patch:203.0.113.5",
+				"render:10:203.0.113.5",
+				"render:11:203.0.113.5",
+				"DB rollback failed",
+				"restore:10",
+				"restore:11",
+				"restored config reload",
+				statusFails ? "Error status update failed" : "patch:metadata",
+			]);
+			expect(state.rows[0].entries).toBe("203.0.113.5");
+			if (statusFails) expect(state.rows[0].last_error).toBe(null);
+			else expect(state.rows[0].last_error).toMatch(/recovery incomplete \(list data\)/);
+			expect(state.nginx.rollbackStagedConfig).toHaveBeenCalledTimes(2);
+			expect(state.nginx.reload).toHaveBeenCalledOnce();
+			expect(state.nginx.commitStagedConfig).not.toHaveBeenCalled();
+			expect(state.audit).not.toHaveBeenCalled();
+		},
+	);
+	it.each(["host configuration/status", "Nginx reload"])(
+		"reports incomplete %s recovery instead of claiming the previous configuration was retained",
+		async (failure) => {
+			state.hosts = [10, 11].map((id) => ({
+				id,
+				enabled: true,
+				is_deleted: false,
+				meta: { ip_firewall: { enabled: true, list_ids: [1] } },
+			}));
+			state.nginx.test.mockRejectedValueOnce(new Error("invalid new config"));
+			if (failure === "host configuration/status") {
+				state.nginx.rollbackStagedConfig.mockRejectedValueOnce(new Error("First host restore failed"));
+			} else {
+				state.nginx.reload.mockRejectedValueOnce(new Error("Previous configuration reload failed"));
+			}
+
+			await expect(service.refresh(access, { id: 1 })).rejects.toThrow(`recovery incomplete (${failure})`);
+
+			expect(state.rows[0].entries).toBe("192.0.2.0/24");
+			expect(state.nginx.rollbackStagedConfig).toHaveBeenCalledTimes(2);
+			expect(state.nginx.reload).toHaveBeenCalledOnce();
+			expect(state.nginx.commitStagedConfig).not.toHaveBeenCalled();
+		},
+	);
 
 	it.each(["bad-address\n", "# Empty downloaded file\n"])(
 		"retains working entries for invalid or empty downloaded content",

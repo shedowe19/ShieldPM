@@ -33,8 +33,7 @@ const ProxyHostFirewallSettings = () => {
 		geoip.data.moduleEnabled &&
 		geoip.data.databasePresent &&
 		geoip.data.reason === null;
-	const unavailableIds =
-		isError || isLoading ? [] : policy.listIds.filter((id) => !lists.some((list) => list.id === id));
+	const unavailableIds = isLoading ? [] : policy.listIds.filter((id) => !lists.some((list) => list.id === id));
 
 	const update = <K extends keyof FirewallPolicy>(field: K, value: FirewallPolicy[K]) =>
 		setFieldValue(`meta.ipFirewall.${field}`, value);

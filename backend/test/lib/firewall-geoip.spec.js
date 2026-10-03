@@ -71,6 +71,16 @@ describe("IP firewall reuse of existing Analytics GeoIP support", () => {
 		const fs = fileSystem(configuration(undefined, "$http_x_forwarded_for"), ["/data/nginx/GeoLite2-Country.mmdb"]);
 		expect((await getFirewallGeoipStatus({ fileSystem: fs })).reason).toBe("country_variable_missing");
 	});
+	it("does not mistake a relative MMDB in the backend CWD for Nginx's runtime-prefix database", async () => {
+		const fs = fileSystem(configuration("country.mmdb"), ["country.mmdb"]);
+		expect(await getFirewallGeoipStatus({ fileSystem: fs })).toEqual({
+			available: false,
+			module_enabled: true,
+			database_present: false,
+			reason: "database_missing",
+		});
+		expect(fs.stat).not.toHaveBeenCalled();
+	});
 	it("reports an empty or absent configured database without accepting another database", async () => {
 		const fs = fileSystem(configuration(), ["/data/nginx/GeoLite2-City.mmdb"]);
 		expect((await getFirewallGeoipStatus({ fileSystem: fs })).reason).toBe("database_missing");
