@@ -9,6 +9,7 @@ import { Switch } from "src/components/ui/switch";
 import { TabsContent } from "src/components/ui/tabs";
 import { intl, T } from "src/locale";
 import { PROXY_HOST_TAB, TIME_UNIT } from "src/types/enums";
+import ProxyHostFirewallSettings from "./ProxyHostFirewallSettings";
 import type { ProxyHostFormValues } from "./ProxyHostModalFormValues";
 
 const DEFAULT_ANUBIS_RULES = [
@@ -29,6 +30,8 @@ const DEFAULT_ANUBIS_RULES = [
 
 const ProxyHostSecurityTab = () => (
 	<TabsContent value={PROXY_HOST_TAB.SECURITY} className="mt-0 space-y-4">
+		<ProxyHostFirewallSettings />
+
 		<Alert variant="default" className="bg-muted/50">
 			<IconShieldLock className="h-4 w-4" />
 			<AlertTitle>

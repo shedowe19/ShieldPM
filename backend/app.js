@@ -260,7 +260,13 @@ app.use((req, res, next) => {
 	next();
 });
 
-app.use(express.json());
+// TXT imports are bounded separately; other API payloads retain the default JSON limit.
+const firewallJson = express.json({ limit: "16mb" });
+const defaultJson = express.json();
+app.use((req, res, next) => {
+	const parser = /^\/(?:api\/)?nginx\/firewall-lists(?:\/|$)/.test(req.path) ? firewallJson : defaultJson;
+	return parser(req, res, next);
+});
 app.use(express.urlencoded({ extended: true }));
 
 /**

@@ -22,6 +22,7 @@ const Analytics = lazy(() => import("src/pages/Analytics"));
 const Settings = lazy(() => import("src/pages/Settings"));
 const Certificates = lazy(() => import("src/pages/Certificates"));
 const Access = lazy(() => import("src/pages/Access"));
+const Firewall = lazy(() => import("src/pages/Firewall"));
 const AuditLog = lazy(() => import("src/pages/AuditLog"));
 const Users = lazy(() => import("src/pages/Users"));
 const ProxyHosts = lazy(() => import("src/pages/Nginx/ProxyHosts"));
@@ -62,6 +63,14 @@ function Content() {
 					element={
 						<AnimatedPage>
 							<Access />
+						</AnimatedPage>
+					}
+				/>
+				<Route
+					path="/firewall"
+					element={
+						<AnimatedPage>
+							<Firewall />
 						</AnimatedPage>
 					}
 				/>

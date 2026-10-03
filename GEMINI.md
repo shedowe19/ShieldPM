@@ -26,6 +26,7 @@
 - **Configuration Preview**: Read-only Nginx draft and active-config diff while creating or editing a proxy host. Saving performs the Nginx syntax check and reload.
 
 * **Security**: WAF (ModSecurity/OpenAppSec), IPS (CrowdSec), Access Lists (Basic Auth/mTLS), SSL (Let's Encrypt/Custom).
+* **IP Firewall per Proxy Host**: Reusable TXT/HTTPS IP and CIDR lists, host-specific blocks and exceptions, and a reasoned blocking page. Disabled by default on existing hosts; configured in `proxy_host.meta.ip_firewall` and managed through `/api/nginx/firewall-lists` using the existing `access_lists` permission. See [IP firewall internals](./docs/wiki-intern/module/ip-firewall.md).
 * **Advanced Networking**: Cloudflare Tunnels (no open ports), Tor Onion Services, Dynamic DNS (DDNS).
 * **Maintenance**: Scheduled Windows & Failure pages.
 * **Tools**: Web-based Terminal (SSH), GitOps (Backup/Sync), ChatOps (Telegram).
@@ -180,6 +181,13 @@ yarn dev # Nodemon
 
 - **Active checks**: `backend/internal/proxy-host-monitor.js` schedules bounded HTTP(S)/TCP checks per host, stores status and limited history, and optionally sends status changes through the owner's configured Telegram integration. See [monitoring internals](./docs/wiki-intern/module/proxy-host-monitor.md).
 - **On-demand diagnostics**: `backend/internal/proxy-host-diagnostics.js` checks a stored host's DNS, local TLS and route, upstream connectivity, and applicable authentication or WebSocket behavior. Results are not stored. See [diagnostics internals](./docs/wiki-intern/features/proxy-host-diagnostics.md).
+
+### 6.1b Proxy Host IP Firewall
+
+- **Sources and ownership**: `firewall_list` stores normalized IP/CIDR text, source metadata, update state, and ownership. The `/api/nginx/firewall-lists` CRUD, preview, and refresh endpoints reuse `access_lists` permissions. HTTPS source updates preserve the last valid list on failure.
+- **Per-host policy**: `meta.ip_firewall` contains `enabled`, `list_ids`, `allowlist`, `denylist`, `public_message`, `support_url`, and `internal_note`. Each host independently selects central lists; exceptions bypass only the IP firewall. Internal notes never appear on the public page.
+- **Nginx behavior**: Generated `geo` lookups and a server-level filter protect the public Proxy Host entrance, including custom routes and Anubis. Firewall matches return a dedicated non-cacheable 403 response without changing the handling of OAuth2 or other authorization failures. Manual rules take precedence over list matches. Existing open connections are not terminated.
+- **Scope**: HTTP/HTTPS Proxy Hosts only; TCP/UDP Streams and TLS passthrough are not covered. Feed membership expresses the configured network policy, not proof of an attack. Details: [IP firewall internals](./docs/wiki-intern/module/ip-firewall.md) and [user guide](./docs/wiki/IP-Firewall.md).
 
 ### 6.2 AI Core (`backend/internal/ai/`)
 

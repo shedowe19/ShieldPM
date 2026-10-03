@@ -142,6 +142,16 @@ export interface ProxyLocation {
 	forwardQuery?: string;
 }
 
+export interface FirewallPolicy {
+	enabled: boolean;
+	listIds: number[];
+	allowlist: string[];
+	denylist: { address: string; reason: string }[];
+	publicMessage: string;
+	supportUrl: string;
+	internalNote: string;
+}
+
 export interface ProxyHost {
 	id: number;
 	createdOn: string;
@@ -172,7 +182,7 @@ export interface ProxyHost {
 	uploadRelayMaxFileSize?: number;
 	uploadRelayMaxPendingBytes?: number;
 	uploadRelayCleanupHours?: number;
-	meta: Record<string, unknown>;
+	meta: Record<string, unknown> & { ipFirewall?: FirewallPolicy; nginxOnline?: boolean; nginxErr?: string };
 	maintenanceOnFailure: boolean;
 	advLimitReqRate?: number;
 	advLimitReqUnit?: TimeUnit;

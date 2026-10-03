@@ -1,4 +1,4 @@
-/data/nginx/*.log {
+/data/nginx/*.log /data/logs/ip_firewall_*.log {
         daily
         rotate 3
         missingok

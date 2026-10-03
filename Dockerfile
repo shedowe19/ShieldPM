@@ -17,6 +17,8 @@ WORKDIR /app
 COPY frontend/package.json frontend/yarn.lock ./
 RUN yarn install --frozen-lockfile --production=false
 COPY frontend /app
+# The host editor previews the same block-page template used by the backend.
+COPY backend/templates/ip-blocked.html /backend/templates/ip-blocked.html
 RUN yarn tsc && \
     yarn vite build
 

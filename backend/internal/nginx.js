@@ -5,6 +5,7 @@ import dayjs from "dayjs";
 import _ from "lodash";
 import punycode from "punycode.js";
 import errs from "../lib/error.js";
+import { buildFirewallRender } from "../lib/firewall-render.js";
 import { sanitizeHostMeta } from "../lib/host-response.js";
 import { getTerminalAccessToken } from "../lib/terminal-access.js";
 import utils from "../lib/utils.js";
@@ -266,6 +267,15 @@ const internalNginx = {
 		const host = JSON.parse(JSON.stringify(host_row));
 		if (host.is_deleted) host.enabled = false;
 		const nice_host_type = internalNginx.getFileFriendlyHostType(host_type);
+		if (nice_host_type === "proxy_host" && host.enabled && host.meta?.ip_firewall?.enabled === true) {
+			let lists = [];
+			if (host.meta.ip_firewall.list_ids?.length) {
+				// Lazy import avoids the list service/configuration engine cycle for ordinary/manual-only hosts.
+				const { default: firewallLists } = await import("./firewall-list.js");
+				lists = await firewallLists.getForHost(host.meta.ip_firewall.list_ids);
+			}
+			host.firewall = await buildFirewallRender(host, lists);
+		}
 
 		const renderEngine = utils.getRenderEngine();
 		const templatePath = `${__dirname}/../templates/${nice_host_type}.conf`;

@@ -186,6 +186,9 @@ http {
 }
 GRPC_SMOKE
 
+# Use the image's implementation and templates for the IP firewall runtime checks.
+sed 's|../../backend/|/app/|g' "$(dirname "$0")/ip-firewall-smoke.mjs" > "$fixture/ip-firewall-smoke.mjs"
+
 for service_uid in 0 1000; do
     container="shieldpm-smoke-${fixture##*/}-$service_uid"
     volume="$container-data"
@@ -241,6 +244,7 @@ for service_uid in 0 1000; do
         nginx -s reload
         healthcheck.sh
         node /data/grpc-smoke.mjs
+        NGINX_MODSECURITY_STATIC=true node /data/ip-firewall-smoke.mjs
     ' smoke "$service_uid"
     echo "Docker runtime smoke passed (UID $service_uid, $image_arch)"
 done

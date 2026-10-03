@@ -1,0 +1,38 @@
+{
+	"operationId": "deleteFirewallList",
+	"summary": "Delete an unassigned firewall list; assigned lists are rejected",
+	"tags": [
+		"firewall-lists"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"access_lists.manage"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "boolean"
+					}
+				}
+			}
+		}
+	},
+	"parameters": [
+		{
+			"in": "path",
+			"name": "listID",
+			"required": true,
+			"schema": {
+				"type": "integer",
+				"minimum": 1
+			},
+			"description": "Firewall list ID"
+		}
+	]
+}

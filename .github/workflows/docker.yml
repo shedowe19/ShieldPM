@@ -11,6 +11,7 @@ on:
       - scripts/install.sh
       - scripts/setup-node-apt.sh
       - scripts/ci/docker-smoke.sh
+      - scripts/ci/ip-firewall-smoke.mjs
       - global/certbot-dns-plugins.json
       - frontend/**
       - backend/**
@@ -29,6 +30,7 @@ on:
       - scripts/install.sh
       - scripts/setup-node-apt.sh
       - scripts/ci/docker-smoke.sh
+      - scripts/ci/ip-firewall-smoke.mjs
       - global/certbot-dns-plugins.json
       - frontend/**
       - backend/**

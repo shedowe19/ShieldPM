@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ certificate: vi.fn(), list: vi.fn(), query: vi.fn() }));
+const mocks = vi.hoisted(() => ({ certificate: vi.fn(), list: vi.fn(), firewallList: vi.fn(), query: vi.fn() }));
 vi.mock("../../internal/certificate.js", () => ({ default: { get: mocks.certificate } }));
 vi.mock("../../internal/access-list.js", () => ({ default: { get: mocks.list } }));
+vi.mock("../../internal/firewall-list.js", () => ({ default: { get: mocks.firewallList } }));
 vi.mock("../../internal/audit-log.js", () => ({ default: {} }));
 vi.mock("../../internal/nginx.js", () => ({ default: {} }));
 vi.mock("../../internal/git-deploy.js", () => ({ default: {} }));
@@ -30,6 +31,7 @@ describe("host references use the referenced resource's authorization", () => {
 		vi.clearAllMocks();
 		mocks.certificate.mockRejectedValue(new Error("Certificate not visible"));
 		mocks.list.mockRejectedValue(new Error("Access list not visible"));
+		mocks.firewallList.mockRejectedValue(new Error("Firewall list not visible"));
 	});
 	afterEach(() => vi.restoreAllMocks());
 	it.each(services)("rejects inaccessible TLS references before creating a host", async (service) => {
@@ -67,6 +69,34 @@ describe("host references use the referenced resource's authorization", () => {
 		await host.validateReferences(access, { certificate_id: "new" });
 		expect(mocks.certificate).not.toHaveBeenCalled();
 		expect(mocks.list).not.toHaveBeenCalled();
+	});
+	it.each(["create", "update"])(
+		"rejects inaccessible firewall assignments before proxy %s writes",
+		async (operation) => {
+			vi.spyOn(proxy, "get").mockResolvedValue({
+				id: 1,
+				meta: { ip_firewall: { enabled: true, list_ids: [2] } },
+			});
+			await expect(
+				proxy[operation](access, {
+					id: 1,
+					domain_names: operation === "create" ? ["example.test"] : undefined,
+					meta: { ip_firewall: { enabled: true, list_ids: [99] } },
+				}),
+			).rejects.toThrow("Firewall list not visible");
+			expect(mocks.firewallList).toHaveBeenCalledExactlyOnceWith(access, { id: 99 });
+			expect(mocks.query).not.toHaveBeenCalled();
+		},
+	);
+	it("rejects inaccessible firewall references even when the new host policy is disabled", async () => {
+		await expect(
+			proxy.create(access, {
+				domain_names: ["example.test"],
+				meta: { ip_firewall: { enabled: false, list_ids: [99] } },
+			}),
+		).rejects.toThrow("Firewall list not visible");
+		expect(mocks.firewallList).toHaveBeenCalledExactlyOnceWith(access, { id: 99 });
+		expect(mocks.query).not.toHaveBeenCalled();
 	});
 	it("permits assignments after both referenced services authorize them", async () => {
 		mocks.certificate.mockResolvedValueOnce({ id: 2 });

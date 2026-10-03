@@ -3,6 +3,7 @@ import errs from "../lib/error.js";
 import { buildPreviewDiff, redactPreviewConfig } from "../lib/nginx-preview.js";
 import AccessList from "../models/access_list.js";
 import Certificate from "../models/certificate.js";
+import { validateHostFirewall } from "./firewall-policy.js";
 import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
 import internalProxyHost from "./proxy-host.js";
@@ -56,6 +57,7 @@ const internalProxyHostPreview = {
 
 		const data = { ...payload };
 		await internalHost.validateReferences(access, data, existing || {});
+		await validateHostFirewall(access, data, existing || {});
 		const domainNames = data.domain_names ?? existing?.domain_names;
 		internalHost.validateDomainNames(domainNames);
 		const taken = await Promise.all(
