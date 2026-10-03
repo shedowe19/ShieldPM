@@ -4,6 +4,7 @@ import { doubleCsrf } from "csrf-csrf";
 import express from "express";
 import helmet from "helmet";
 import swaggerUi from "swagger-ui-express";
+import jsonBody from "./lib/express/json-body.js";
 import jwt from "./lib/express/jwt.js";
 import { debug, express as logger } from "./logger.js";
 import mainRoutes from "./routes/main.js";
@@ -260,7 +261,7 @@ app.use((req, res, next) => {
 	next();
 });
 
-app.use(express.json());
+app.use(jsonBody);
 app.use(express.urlencoded({ extended: true }));
 
 /**

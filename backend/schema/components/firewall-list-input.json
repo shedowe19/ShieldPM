@@ -1,0 +1,50 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255
+		},
+		"reason": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 2000,
+			"description": "Public explanation shown on the blocked request page."
+		},
+		"description": {
+			"type": "string",
+			"maxLength": 4000,
+			"description": "Internal administrative note, never sent to visitors."
+		},
+		"source_type": {
+			"type": "string",
+			"enum": [
+				"manual",
+				"url"
+			],
+			"default": "manual"
+		},
+		"source_url": {
+			"type": "string",
+			"maxLength": 2048,
+			"description": "Public HTTPS TXT URL; credentials, private destinations, and insecure redirects are rejected."
+		},
+		"update_interval_hours": {
+			"type": "integer",
+			"minimum": 6,
+			"maximum": 168,
+			"default": 24
+		},
+		"enabled": {
+			"type": "boolean",
+			"default": true
+		},
+		"entries": {
+			"type": "string",
+			"maxLength": 8388608,
+			"description": "Manual list only: one IPv4, IPv6, or CIDR per line. 8 MiB UTF-8 / 200000 physical lines maximum."
+		}
+	}
+}

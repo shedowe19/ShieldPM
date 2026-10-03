@@ -5,7 +5,7 @@ export interface ProxyHostConfigPreview {
 	diff: string;
 	hasCurrent: boolean;
 	nginxValidated: false;
-	limitations: Array<"render-only" | "id-pending" | "certificate-pending">;
+	limitations: Array<"render-only" | "id-pending" | "certificate-pending" | "firewall-rule-summaries">;
 }
 
 /** Preview uses the same payload as a create/update, but never persists it. */

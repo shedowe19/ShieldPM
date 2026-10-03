@@ -1,0 +1,38 @@
+{
+	"operationId": "getFirewallList",
+	"summary": "Get a visible firewall list with normalized entry text",
+	"tags": [
+		"firewall-lists"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"access_lists.view"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../components/firewall-list-object.json"
+					}
+				}
+			}
+		}
+	},
+	"parameters": [
+		{
+			"in": "path",
+			"name": "listID",
+			"required": true,
+			"schema": {
+				"type": "integer",
+				"minimum": 1
+			},
+			"description": "Firewall list ID"
+		}
+	]
+}

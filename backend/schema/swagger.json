@@ -67,6 +67,10 @@
 		{
 			"name": "chat",
 			"description": "Endpoints for managing Chat Integrations"
+		},
+		{
+			"name": "firewall-lists",
+			"description": "IP/CIDR lists selected independently per proxy host"
 		}
 	],
 	"paths": {
@@ -566,6 +570,40 @@
 		"/nginx/certificates/retrieve": {
 			"post": {
 				"$ref": "./paths/nginx/certificates/retrieve/post.json"
+			}
+		},
+		"/nginx/firewall-lists": {
+			"get": {
+				"$ref": "./paths/nginx/firewall-lists/get.json"
+			},
+			"post": {
+				"$ref": "./paths/nginx/firewall-lists/post.json"
+			}
+		},
+		"/nginx/firewall-lists/{listID}": {
+			"get": {
+				"$ref": "./paths/nginx/firewall-lists/listID/get.json"
+			},
+			"put": {
+				"$ref": "./paths/nginx/firewall-lists/listID/put.json"
+			},
+			"delete": {
+				"$ref": "./paths/nginx/firewall-lists/listID/delete.json"
+			}
+		},
+		"/nginx/firewall-lists/preview": {
+			"post": {
+				"$ref": "./paths/nginx/firewall-lists/preview/post.json"
+			}
+		},
+		"/nginx/firewall-lists/geoip": {
+			"get": {
+				"$ref": "./paths/nginx/firewall-lists/geoip/get.json"
+			}
+		},
+		"/nginx/firewall-lists/{listID}/refresh": {
+			"post": {
+				"$ref": "./paths/nginx/firewall-lists/listID/refresh/post.json"
 			}
 		}
 	}

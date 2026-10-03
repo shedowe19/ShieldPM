@@ -49,6 +49,8 @@ trap 'exit 143' TERM
 mkdir -p "$fixture/tls/certbot/accounts/acme-v02.api.letsencrypt.org/directory/ci-offline"
 printf '%s\n' 'offline CI marker; no account credentials' > "$fixture/tls/certbot/accounts/acme-v02.api.letsencrypt.org/directory/ci-offline/marker"
 printf '%s\n' '# CI supplies its settings through the container environment.' > "$fixture/.env"
+mkdir -p "$fixture/logs"
+printf '%s\n' 'CI retained firewall log marker' > "$fixture/logs/ip_firewall_ci.log"
 
 # Render the image's actual forwarding templates and exercise their gRPC directives
 # against a local HTTP/2 echo service. The separate Nginx process cannot affect app listeners.
@@ -186,6 +188,11 @@ http {
 }
 GRPC_SMOKE
 
+# Use the image's implementation and templates for the IP/country firewall runtime checks.
+sed 's|../../backend/|/app/|g' "$(dirname "$0")/ip-firewall-smoke.mjs" > "$fixture/ip-firewall-smoke.mjs"
+cp "$(dirname "$0")/nginx-smoke-modules.mjs" "$fixture/nginx-smoke-modules.mjs"
+cp "$(dirname "$0")/fixtures/GeoIP2-Country-Test.mmdb" "$fixture/GeoIP2-Country-Test.mmdb"
+
 for service_uid in 0 1000; do
     container="shieldpm-smoke-${fixture##*/}-$service_uid"
     volume="$container-data"
@@ -234,6 +241,18 @@ for service_uid in 0 1000; do
         test -d /data/certbot-plugins
         : > /data/certbot-plugins/.ci-write-probe
         rm /data/certbot-plugins/.ci-write-probe
+        test -d /data/logs
+        test "$(stat -c %u /data/logs)" = "$1"
+        test "$(stat -c %g /data/logs)" = "$1"
+        test "$(stat -c %a /data/logs)" = 700
+        test "$(head -n 1 /data/logs/ip_firewall_ci.log)" = "CI retained firewall log marker"
+        if test "$1" = 1000; then
+            grep -Fxq "CI service UID 0 append probe" /data/logs/ip_firewall_ci.log
+        fi
+        printf "%s\n" "CI service UID $1 append probe" >> /data/logs/ip_firewall_ci.log
+        grep -Fxq "CI service UID $1 append probe" /data/logs/ip_firewall_ci.log
+        : > /data/logs/.ci-write-probe
+        rm /data/logs/.ci-write-probe
         for directory in /run /tmp /usr/local; do
             test "$(stat -c %u "$directory")" = 0
         done
@@ -241,6 +260,14 @@ for service_uid in 0 1000; do
         nginx -s reload
         healthcheck.sh
         node /data/grpc-smoke.mjs
+        # Reuse the image module paths and require the actual ModSecurity directive.
+        NGINX_SMOKE_DISCOVER_MODULES=true NGINX_REQUIRE_MODSECURITY=true \
+            NGINX_GEOIP_DATABASE=/data/GeoIP2-Country-Test.mmdb \
+            node /data/ip-firewall-smoke.mjs
     ' smoke "$service_uid"
+    if [[ "$service_uid" == 0 ]]; then
+        # The next service UID starts with the retained log written by UID0.
+        docker_cmd cp "$container:/data/logs/ip_firewall_ci.log" "$fixture/logs/ip_firewall_ci.log"
+    fi
     echo "Docker runtime smoke passed (UID $service_uid, $image_arch)"
 done

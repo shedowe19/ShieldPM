@@ -8,6 +8,8 @@ import _ from "lodash";
 import { isDemoMode } from "../lib/config.js";
 import { decrypt, encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
+import { normalizeListInput } from "../lib/firewall-list-validation.js";
+import { normalizeFirewallPolicy } from "../lib/firewall-policy.js";
 import { assertNoSymlinkPath, assertSafeConfigTree, writeConfigFile } from "../lib/gitops-files.js";
 import { global as logger } from "../logger.js";
 import AccessList from "../models/access_list.js";
@@ -21,6 +23,7 @@ import RedirectionHost from "../models/redirection_host.js";
 import settingModel from "../models/setting.js";
 import Stream from "../models/stream.js";
 import User from "../models/user.js";
+import { validateHostFirewall, withFirewallReferences } from "./firewall-policy.js";
 import internalNginx from "./nginx.js";
 import internalProxyHostMonitor, { assertMonitorConfig } from "./proxy-host-monitor.js";
 import { relayConfigForHost, validateRelayConfigForHost } from "./upload-relay.js";
@@ -61,6 +64,22 @@ const ALLOWED_IMPORT_FIELDS = {
 		"mtls_enabled",
 		"mtls_certificate",
 		"mtls_use_internal",
+	],
+	FirewallList: [
+		"id",
+		"owner_user_id",
+		"name",
+		"reason",
+		"description",
+		"source_type",
+		"source_url",
+		"update_interval_hours",
+		"enabled",
+		"entries",
+		"entry_count",
+		"last_updated_on",
+		"last_error",
+		"is_deleted",
 	],
 	ProxyHost: [
 		"id",
@@ -266,6 +285,16 @@ const sanitizeImportData = (modelName, data) => {
 				result[relation] = result[relation].map((item) => _.pick(item, fields));
 		}
 		validateImportedAccessList(result);
+	}
+	if (modelName === "FirewallList") {
+		const normalized = normalizeListInput(result);
+		if (normalized.source_type === "url" && normalized.entry_count === 0) {
+			throw new errs.ValidationError("Cached URL firewall list is empty; the previous list was retained");
+		}
+		Object.assign(result, normalized);
+	}
+	if (modelName === "ProxyHost" && result.meta && Object.hasOwn(result.meta, "ip_firewall")) {
+		result.meta = { ...result.meta, ip_firewall: normalizeFirewallPolicy(result.meta.ip_firewall) };
 	}
 	return result;
 };
@@ -520,6 +549,7 @@ const internalGitOps = {
 			"settings",
 			"ddns-providers",
 			"access-lists",
+			"firewall-lists",
 			"cloudflared-tunnels",
 		];
 		for (const dir of dirs) {
@@ -617,9 +647,11 @@ const internalGitOps = {
 		}
 
 		// Export Settings (excluding gitops-config to avoid overwriting credentials)
-		/** @typedef {[import("objection").ModelClass<AccessList | CloudflaredTunnel | DdnsProvider>, string, string | null]} ModelExport */
+		const { default: FirewallList } = await import("../models/firewall_list.js");
+		/** @typedef {[import("objection").ModelClass<AccessList | import("../models/firewall_list.js").default | CloudflaredTunnel | DdnsProvider>, string, string | null]} ModelExport */
 		for (const [model, directory, graph] of /** @type {ModelExport[]} */ ([
 			[AccessList, "access-lists", "[items,clients]"],
+			[FirewallList, "firewall-lists", null],
 			[CloudflaredTunnel, "cloudflared-tunnels", null],
 			[DdnsProvider, "ddns-providers", null],
 		])) {
@@ -1071,6 +1103,8 @@ const internalGitOps = {
 		let skipped = 0;
 		let deleted = 0;
 		const errors = [];
+		/** @type {Array<() => Promise<void>>} */
+		const deferredFirewallPrunes = [];
 
 		/**
 		 * Helper to import standard models and DELETE missing ones (Full Sync)
@@ -1148,46 +1182,54 @@ const internalGitOps = {
 								}
 
 								if (modelClass === ProxyHost) {
+									await validateHostFirewall(access, itemData, existing || {});
 									const relayCandidate = _.assign({}, existing || {}, itemData);
 									if (relayCandidate.upload_relay_enabled)
 										await validateRelayConfigForHost(relayCandidate);
 								}
 
-								if (options.overwrite && existingId) {
-									// Use upsertGraph for complex models
-									if (relationGraph) {
-										await modelClass.query().upsertGraph(itemData, {
-											insertMissing: true,
-											relate: true,
-											update: true,
-											noDelete: false, // Delete missing children (items/clients)
-										});
-									} else {
-										const existing = await modelClass.query().findById(existingId);
-										if (existing) {
-											await modelClass.query().patchAndFetchById(existingId, itemData);
+								const writeImported = async () => {
+									if (options.overwrite && existingId) {
+										// Use upsertGraph for complex models
+										if (relationGraph) {
+											await modelClass.query().upsertGraph(itemData, {
+												insertMissing: true,
+												relate: true,
+												update: true,
+												noDelete: false, // Delete missing children (items/clients)
+											});
 										} else {
-											await modelClass.query().insert(itemData);
+											const existing = await modelClass.query().findById(existingId);
+											if (existing) {
+												await modelClass.query().patchAndFetchById(existingId, itemData);
+											} else {
+												await modelClass.query().insert(itemData);
+											}
 										}
-									}
-									if (upstreamChanged)
-										await internalProxyHostMonitor.resetHost(existingId, {
-											disableUnsupported: true,
-										});
-								} else {
-									if (modelClass !== User && !itemData.owner_user_id)
-										itemData.owner_user_id = access.token.getUserId(1);
-
-									let newRow;
-									if (relationGraph) {
-										newRow = await modelClass.query().insertGraph(itemData);
+										if (upstreamChanged)
+											await internalProxyHostMonitor.resetHost(existingId, {
+												disableUnsupported: true,
+											});
 									} else {
-										newRow = await modelClass.query().insert(itemData);
-									}
+										if (modelClass !== User && !itemData.owner_user_id)
+											itemData.owner_user_id = access.token.getUserId(1);
 
-									if (itemData.id) importedIds.push(itemData.id);
-									else if (newRow?.id) importedIds.push(newRow.id);
-								}
+										let newRow;
+										if (relationGraph) {
+											newRow = await modelClass.query().insertGraph(itemData);
+										} else {
+											newRow = await modelClass.query().insert(itemData);
+										}
+
+										if (itemData.id) importedIds.push(itemData.id);
+										else if (newRow?.id) importedIds.push(newRow.id);
+									}
+								};
+								if (modelClass === ProxyHost)
+									await withFirewallReferences(itemData, existing || {}, writeImported);
+								else if (modelClass.name === "FirewallList")
+									await internalNginx.withConfigurationLock(writeImported);
+								else await writeImported();
 								imported++;
 							} else {
 								throw new errs.ValidationError("Expected a YAML object");
@@ -1200,27 +1242,44 @@ const internalGitOps = {
 				);
 			}
 
-			// FULL SYNC: Delete items not in importedIds
-			if (options.overwrite && errors.length === errorCountBeforeImport) {
+			// FULL SYNC: Delete items not in importedIds after this model imported without errors.
+			const pruneMissing = async () => {
 				const query = modelClass.query().whereNotIn("id", importedIds);
 
 				try {
 					const staleItems = await query;
 					const deletePromises = staleItems.map(async (item) => {
-						if (modelClass === User && item.id === access.token.getUserId(1)) return;
-						// Delete Nginx config if hostType is provided
-						if (hostType) {
-							await internalNginx.deleteConfig(hostType, item);
-						}
+						const deleteItem = async () => {
+							if (modelClass === User && item.id === access.token.getUserId(1)) return;
+							if (modelClass.name === "FirewallList") {
+								const hosts = await ProxyHost.query().where("is_deleted", 0);
+								if (
+									hosts.some((host) => {
+										const meta = typeof host.meta === "string" ? JSON.parse(host.meta) : host.meta;
+										return meta?.ip_firewall?.list_ids?.includes(item.id);
+									})
+								) {
+									throw new errs.ValidationError(
+										`Firewall list ${item.id} is still assigned to a proxy host`,
+									);
+								}
+							}
+							// Delete Nginx config if hostType is provided
+							if (hostType) {
+								await internalNginx.deleteConfig(hostType, item);
+							}
 
-						// Soft delete if supported, else hard delete
-						if (item.is_deleted !== undefined) {
-							await modelClass.query().patchAndFetchById(item.id, { is_deleted: 1 });
-						} else {
-							await modelClass.query().deleteById(item.id);
-						}
-						deleted++;
-						logger.info(`GitOps Full Sync: Deleted ${dirName} #${item.id}`);
+							// Soft delete if supported, else hard delete
+							if (item.is_deleted !== undefined) {
+								await modelClass.query().patchAndFetchById(item.id, { is_deleted: 1 });
+							} else {
+								await modelClass.query().deleteById(item.id);
+							}
+							deleted++;
+							logger.info(`GitOps Full Sync: Deleted ${dirName} #${item.id}`);
+						};
+						if (modelClass.name === "FirewallList") await internalNginx.withConfigurationLock(deleteItem);
+						else await deleteItem();
 					});
 
 					for (const result of await Promise.allSettled(deletePromises)) {
@@ -1230,6 +1289,11 @@ const internalGitOps = {
 					logger.warn(`GitOps Cleanup failed for ${dirName}:`, err);
 					errors.push(`${dirName}: ${err instanceof Error ? err.message : "Cleanup failed"}`);
 				}
+			};
+			if (options.overwrite && errors.length === errorCountBeforeImport) {
+				// Hosts still reference the previous lists until their restore completes.
+				if (modelClass.name === "FirewallList") deferredFirewallPrunes.push(pruneMissing);
+				else await pruneMissing();
 			}
 		};
 
@@ -1242,6 +1306,10 @@ const internalGitOps = {
 
 			// 3. Import Access Lists
 			await importModel(AccessList, "access-lists", null, "[items, clients]");
+			if (fs.existsSync(path.join(configDir, "firewall-lists"))) {
+				const { default: FirewallList } = await import("../models/firewall_list.js");
+				await importModel(FirewallList, "firewall-lists");
+			}
 
 			// 4. Import Hosts & Streams
 			const errorsBeforeHostImport = errors.length;
@@ -1523,22 +1591,30 @@ const internalGitOps = {
 			}
 
 			// 7. Regenerate all affected configurations as one validated batch.
-			await internalNginx.bulkGenerateConfigGroups([
-				{
-					model: ProxyHost,
-					hostType: "proxy_host",
-					hosts: await ProxyHost.query().where("is_deleted", 0).withGraphFetched("host_domains"),
-				},
-				{
-					model: RedirectionHost,
-					hostType: "redirection_host",
-					hosts: await RedirectionHost.query().where("is_deleted", 0),
-				},
-				{ model: DeadHost, hostType: "dead_host", hosts: await DeadHost.query().where("is_deleted", 0) },
-				{ model: Stream, hostType: "stream", hosts: await Stream.query().where("is_deleted", 0) },
-			]);
+			await internalNginx.bulkGenerateConfigGroups(
+				[
+					{
+						model: ProxyHost,
+						hostType: "proxy_host",
+						hosts: await ProxyHost.query().where("is_deleted", 0).withGraphFetched("host_domains"),
+					},
+					{
+						model: RedirectionHost,
+						hostType: "redirection_host",
+						hosts: await RedirectionHost.query().where("is_deleted", 0),
+					},
+					{ model: DeadHost, hostType: "dead_host", hosts: await DeadHost.query().where("is_deleted", 0) },
+					{ model: Stream, hostType: "stream", hosts: await Stream.query().where("is_deleted", 0) },
+				],
+				{ throwOnError: true },
+			);
 
 			await internalNginx.reload();
+
+			// Keep the last usable lists on any failed restore, including a failed Nginx activation.
+			if (!errors.length) {
+				for (const prune of deferredFirewallPrunes) await prune();
+			}
 
 			logger.info(
 				`GitOps import: ${imported} imported, ${skipped} skipped, ${deleted} deleted, ${errors.length} errors`,

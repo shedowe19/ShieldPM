@@ -46,18 +46,19 @@ ShieldPM provides a **layered security architecture** that protects your service
 
 ## 🛡️ Feature Comparison
 
-| Feature                                    | Type          | Protection Against                        | Configuration                             |
-| :----------------------------------------- | :------------ | :---------------------------------------- | :---------------------------------------- |
-| **[CrowdSec](CrowdSec)**                   | IPS           | Brute force, botnets, known malicious IPs | Sidecar / System service                  |
-| **[ModSecurity](ModSecurity)**             | WAF           | SQL injection, XSS, path traversal        | Per-host toggle                           |
-| **[OpenAppSec](OpenAppSec)**               | AI WAF        | Zero-day attacks, unknown patterns        | Module + Agent                            |
-| **[Anubis](Anubis)**                       | Bot challenge | AI crawlers, automated bots, scrapers     | Per-host rules; optional `ANUBIS_ENABLED` |
-| **[Access Lists](Access-Lists)**           | ACL           | Unauthorized access                       | Per-host assignment                       |
-| **[OAuth2-Proxy](OAuth2-Proxy)**           | SSO           | Unauthorized access via Identity Provider | Per-host assignment                       |
-| **[Rate Limiting](Request-Rate-Limiting)** | DDoS          | Abuse, scraping, brute force              | Per-host config                           |
-| **[mTLS](Internal-PKI)**                   | Zero Trust    | All unauthorized clients                  | Access List + Internal CA                 |
-| **Block Exploits**                         | Basic Rules   | Common attack patterns                    | Per-host toggle                           |
-| **HSTS**                                   | Header        | Protocol downgrade attacks                | Per-host / global                         |
+| Feature                                    | Type          | Protection Against                        | Configuration                                |
+| :----------------------------------------- | :------------ | :---------------------------------------- | :------------------------------------------- |
+| **[CrowdSec](CrowdSec)**                   | IPS           | Brute force, botnets, known malicious IPs | Sidecar / System service                     |
+| **[ModSecurity](ModSecurity)**             | WAF           | SQL injection, XSS, path traversal        | Per-host toggle                              |
+| **[OpenAppSec](OpenAppSec)**               | AI WAF        | Zero-day attacks, unknown patterns        | Module + Agent                               |
+| **[Anubis](Anubis)**                       | Bot challenge | AI crawlers, automated bots, scrapers     | Per-host rules; optional `ANUBIS_ENABLED`    |
+| **[Access Lists](Access-Lists)**           | ACL           | Unauthorized access                       | Per-host assignment                          |
+| **[IP Firewall](./IP-Firewall.md)**        | IP policy     | Operator-selected networks and countries  | Central lists; per-host rules and exceptions |
+| **[OAuth2-Proxy](OAuth2-Proxy)**           | SSO           | Unauthorized access via Identity Provider | Per-host assignment                          |
+| **[Rate Limiting](Request-Rate-Limiting)** | DDoS          | Abuse, scraping, brute force              | Per-host config                              |
+| **[mTLS](Internal-PKI)**                   | Zero Trust    | All unauthorized clients                  | Access List + Internal CA                    |
+| **Block Exploits**                         | Basic Rules   | Common attack patterns                    | Per-host toggle                              |
+| **HSTS**                                   | Header        | Protocol downgrade attacks                | Per-host / global                            |
 
 ---
 

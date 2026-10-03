@@ -1,4 +1,4 @@
-import type { ProxyHost } from "src/api/backend";
+import type { FirewallPolicy, ProxyHost } from "src/api/backend";
 import { formatMaintenanceDateTime } from "src/lib/maintenanceDateTime";
 import { FORWARD_SCHEME, ICON_TYPE, PHP_VERSION, TERMINAL_AUTH_TYPE, TIME_UNIT } from "src/types/enums";
 
@@ -11,7 +11,38 @@ export interface ProxyHostFormValues extends Omit<Partial<ProxyHost>, "advLimitR
 	gitCredentials?: string;
 }
 
+export const parseProxyHostMeta = (value: unknown): ProxyHost["meta"] => {
+	if (typeof value === "string") {
+		try {
+			return parseProxyHostMeta(JSON.parse(value));
+		} catch {
+			return {};
+		}
+	}
+	return value && typeof value === "object" && !Array.isArray(value) ? (value as ProxyHost["meta"]) : {};
+};
+
+export const createProxyHostFirewallPolicy = (policy?: Partial<FirewallPolicy>): FirewallPolicy => ({
+	...policy,
+	enabled: policy?.enabled === true,
+	listIds: Array.isArray(policy?.listIds) ? [...policy.listIds] : [],
+	allowlist: Array.isArray(policy?.allowlist) ? [...policy.allowlist] : [],
+	denylist: Array.isArray(policy?.denylist) ? policy.denylist.map((entry) => ({ ...entry })) : [],
+	countryDenylist: Array.isArray(policy?.countryDenylist) ? [...policy.countryDenylist] : [],
+	countryReason: policy?.countryReason ?? "",
+	blockUnknownCountry: policy?.blockUnknownCountry === true,
+	publicMessage: policy?.publicMessage ?? "",
+	supportUrl: policy?.supportUrl ?? "",
+	internalNote: policy?.internalNote ?? "",
+});
+
+const createProxyHostInitialMeta = (value: unknown): ProxyHost["meta"] => {
+	const meta = parseProxyHostMeta(value);
+	return { ...meta, ipFirewall: createProxyHostFirewallPolicy(meta.ipFirewall) };
+};
+
 export const createProxyHostInitialValues = (data: Partial<ProxyHost> = {}): ProxyHostFormValues => ({
+	meta: createProxyHostInitialMeta(data.meta),
 	// Details tab
 	domainNames: data.domainNames || [],
 	forwardScheme: data.forwardScheme || FORWARD_SCHEME.HTTP,

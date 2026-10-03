@@ -7,12 +7,37 @@ const mocks = vi.hoisted(() => {
 	const prunes = [];
 	const rows = {};
 	const pruneError = { value: null };
+	const recordWrite = (name, data) => {
+		writes.push({ name, data });
+		if (name === "FirewallList" || name === "ProxyHost") {
+			const existing = (rows[name] || []).find((entry) => entry.id === data.id);
+			if (existing) Object.assign(existing, data);
+			else {
+				rows[name] ??= [];
+				rows[name].push({ ...data });
+			}
+		}
+		return data;
+	};
 	const makeModel = (name) => ({
 		name,
 		query: () => {
+			const filters = [];
 			const query = {
-				where: () => query,
-				whereIn: () => query,
+				select: () => query,
+				where: (field, value) => {
+					if (name === "FirewallList" || name === "ProxyHost")
+						filters.push(
+							(row) =>
+								row[field] === value ||
+								Number(row[field] ?? (field === "is_deleted" ? 0 : undefined)) === value,
+						);
+					return query;
+				},
+				whereIn: (field, values) => {
+					if (name === "FirewallList") filters.push((row) => values.includes(row[field]));
+					return query;
+				},
 				whereNot: () => query,
 				findOne: (filter) =>
 					Promise.resolve(
@@ -21,9 +46,12 @@ const mocks = vi.hoisted(() => {
 						),
 					),
 				withGraphFetched: () => query,
-				whereNotIn: (_field, ids) => {
+				whereNotIn: (field, ids) => {
 					prunes.push({ name, ids });
 					if (pruneError.value) return Promise.reject(pruneError.value);
+					if (name === "FirewallList" || name === "ProxyHost") {
+						return Promise.resolve((rows[name] || []).filter((row) => !ids.includes(row[field])));
+					}
 					return Promise.resolve([]);
 				},
 				findById: (id) => {
@@ -38,29 +66,33 @@ const mocks = vi.hoisted(() => {
 					return result;
 				},
 				insert: async (data) => {
-					writes.push({ name, data });
-					return data;
+					return recordWrite(name, data);
 				},
 				insertGraph: async (data) => {
-					writes.push({ name, data });
-					return data;
+					return recordWrite(name, data);
 				},
 				upsertGraph: async (data) => {
-					writes.push({ name, data });
-					return data;
+					return recordWrite(name, data);
 				},
-				patchAndFetchById: async (_id, data) => {
+				patchAndFetchById: async (id, data) => {
+					const existing = (rows[name] || []).find((entry) => entry.id === id);
+					if (existing) Object.assign(existing, data);
 					writes.push({ name, data });
-					return data;
+					return existing || data;
 				},
 				// biome-ignore lint/suspicious/noThenProperty: Objection query builders are intentionally thenable.
-				then: (resolve, reject) => Promise.resolve(rows[name] || []).then(resolve, reject),
+				then: (resolve, reject) =>
+					Promise.resolve((rows[name] || []).filter((row) => filters.every((filter) => filter(row)))).then(
+						resolve,
+						reject,
+					),
 			};
 			return query;
 		},
 	});
-	return { files, writes, prunes, rows, makeModel, pruneError };
+	return { files, writes, prunes, rows, makeModel, pruneError, geoip: vi.fn() };
 });
+vi.mock("../../lib/firewall-geoip.js", () => ({ assertCountryFirewallAvailable: mocks.geoip }));
 vi.mock("node:fs", () => ({
 	default: {
 		existsSync: (path) =>
@@ -79,6 +111,7 @@ vi.mock("node:fs", () => ({
 vi.mock("../../models/user.js", () => ({ default: mocks.makeModel("User") }));
 vi.mock("../../models/certificate.js", () => ({ default: mocks.makeModel("Certificate") }));
 vi.mock("../../models/access_list.js", () => ({ default: mocks.makeModel("AccessList") }));
+vi.mock("../../models/firewall_list.js", () => ({ default: mocks.makeModel("FirewallList") }));
 vi.mock("../../models/proxy_host.js", () => ({ default: mocks.makeModel("ProxyHost") }));
 vi.mock("../../models/proxy_host_monitor.js", () => ({ default: mocks.makeModel("ProxyHostMonitor") }));
 vi.mock("../../models/redirection_host.js", () => ({ default: mocks.makeModel("RedirectionHost") }));
@@ -92,11 +125,36 @@ vi.mock("../../lib/gitops-files.js", () => ({
 	assertNoSymlinkPath: vi.fn(),
 	writeConfigFile: vi.fn(),
 }));
-vi.mock("../../lib/config.js", () => ({ isDemoMode: () => false }));
+vi.mock("../../lib/config.js", () => ({ isDemoMode: () => false, isPostgres: () => false }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: vi.fn(), decrypt: vi.fn() }));
-vi.mock("../../logger.js", () => ({ global: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+vi.mock("../../logger.js", () => ({
+	global: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+	access: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+	nginx: { error: vi.fn() },
+	debug: vi.fn(),
+}));
+vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn() } }));
+vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: () => "test-token" }));
+vi.mock("../../internal/audit-log.js", () => ({ default: { add: vi.fn() } }));
+vi.mock("../../internal/firewall-list.js", () => ({
+	default: {
+		get: vi.fn(async (_access, { id }) => {
+			const row = (mocks.rows.FirewallList || []).find((entry) => entry.id === id && !entry.is_deleted);
+			if (!row || row.hidden) throw new Error(`Firewall list ${id} not visible`);
+			return row;
+		}),
+		assertExistForHost: vi.fn(async (ids) => {
+			for (const id of ids) {
+				if (!(mocks.rows.FirewallList || []).some((entry) => entry.id === id && !entry.is_deleted)) {
+					throw new Error(`Firewall list ${id} no longer exists`);
+				}
+			}
+		}),
+	},
+}));
 vi.mock("../../internal/nginx.js", () => ({
 	default: {
+		withConfigurationLock: vi.fn((callback) => callback()),
 		bulkGenerateConfigGroups: vi.fn(),
 		bulkGenerateConfigs: vi.fn(),
 		reload: vi.fn(),
@@ -108,7 +166,9 @@ vi.mock("../../internal/proxy-host-monitor.js", () => ({
 	default: { update: vi.fn(), removeHost: vi.fn(), resetHost: vi.fn() },
 }));
 
+import firewallLists from "../../internal/firewall-list.js";
 import gitops from "../../internal/gitops.js";
+import nginx from "../../internal/nginx.js";
 import monitor from "../../internal/proxy-host-monitor.js";
 import { assertNoSymlinkPath, writeConfigFile } from "../../lib/gitops-files.js";
 
@@ -123,6 +183,7 @@ describe("GitOps import sanitization and safe restore", () => {
 		mocks.writes.length = 0;
 		mocks.prunes.length = 0;
 		mocks.pruneError.value = null;
+		mocks.geoip.mockResolvedValue(undefined);
 		for (const key of Object.keys(mocks.rows)) delete mocks.rows[key];
 	});
 	it("removes unknown top-level and nested fields from the actual database payload", async () => {
@@ -151,8 +212,305 @@ describe("GitOps import sanitization and safe restore", () => {
 		});
 	});
 	it("never deletes existing integration data when older backups omit its directory", async () => {
+		mocks.rows.FirewallList = [{ id: 91, name: "Local firewall", entries: "203.0.113.10", is_deleted: 0 }];
 		await gitops.importConfig(access, { overwrite: true });
 		expect(mocks.prunes).toEqual([]);
+		expect(mocks.rows.FirewallList).toEqual([
+			{ id: 91, name: "Local firewall", entries: "203.0.113.10", is_deleted: 0 },
+		]);
+		expect(mocks.writes).toEqual([]);
+	});
+	it("restores normalized subscription cache before hosts without downloading the source", async () => {
+		file("firewall-lists", {
+			id: 7,
+			name: "VPN networks",
+			reason: "Website access rule",
+			description: "Private note",
+			source_type: "url",
+			source_url: "https://example.test/vpn.txt",
+			update_interval_hours: 24,
+			enabled: true,
+			entries: "203.0.113.129/24\n203.0.113.0/24\n2001:0db8:0000::/32\n# cached",
+			entry_count: 999,
+			unknown: "remove",
+		});
+		file("proxy-hosts", {
+			id: 9,
+			domain_names: ["example.test"],
+			meta: { ip_firewall: { enabled: true, list_ids: [7] } },
+		});
+		const fetchSource = vi.spyOn(globalThis, "fetch");
+		try {
+			const result = await gitops.importConfig(access, { overwrite: true });
+			expect(result.success).toBe(true);
+			expect(mocks.writes.find(({ name }) => name === "FirewallList").data).toMatchObject({
+				id: 7,
+				entries: "203.0.113.0/24\n2001:db8::/32",
+				entry_count: 2,
+				source_type: "url",
+				source_url: "https://example.test/vpn.txt",
+				description: "Private note",
+				is_deleted: 0,
+			});
+			expect(mocks.writes.find(({ name }) => name === "FirewallList").data).not.toHaveProperty("unknown");
+			expect(mocks.writes.find(({ name }) => name === "ProxyHost").data.meta.ip_firewall).toMatchObject({
+				enabled: true,
+				list_ids: [7],
+				allowlist: [],
+				denylist: [],
+			});
+			expect(mocks.writes.map(({ name }) => name)).toEqual(["FirewallList", "ProxyHost"]);
+			expect(fetchSource).not.toHaveBeenCalled();
+		} finally {
+			fetchSource.mockRestore();
+		}
+	});
+	it("rejects invalid cached firewall addresses without writing or pruning firewall lists", async () => {
+		mocks.rows.FirewallList = [{ id: 7, name: "Working list", entries: "203.0.113.10", is_deleted: 0 }];
+		file("firewall-lists", {
+			id: 7,
+			name: "Broken replacement",
+			reason: "Website access rule",
+			source_type: "url",
+			source_url: "https://example.test/vpn.txt",
+			enabled: true,
+			entries: "203.0.113.10\n198.51.100.1/999",
+		});
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(result.errors).toContainEqual(
+			expect.stringMatching(/firewall-lists\/1.yaml:.*Invalid firewall list entries/),
+		);
+		expect(mocks.writes).toEqual([]);
+		expect(mocks.prunes).toEqual([]);
+		expect(mocks.rows.FirewallList[0].entries).toBe("203.0.113.10");
+	});
+	it.each([
+		{ enabled: true, entries: "" },
+		{ enabled: true, entries: "\uFEFF# cached list\r\n \t\r\n# no networks\r\n" },
+		{ enabled: true, entries: undefined },
+		{ enabled: false, entries: "" },
+		{ enabled: false, entries: "# no networks\n\n" },
+		{ enabled: false, entries: undefined },
+	])("rejects empty URL caches before writes or pruning: %j", async ({ enabled, entries }) => {
+		const working = {
+			id: 7,
+			name: "Working subscription",
+			source_type: "url",
+			source_url: "https://example.test/vpn.txt",
+			entries: "203.0.113.10",
+			enabled: true,
+			is_deleted: 0,
+		};
+		mocks.rows.FirewallList = [{ ...working }];
+		file("firewall-lists", {
+			id: 7,
+			name: "Empty replacement",
+			reason: "Website access rule",
+			source_type: "url",
+			source_url: "https://example.test/vpn.txt",
+			entry_count: 999,
+			enabled,
+			entries,
+		});
+
+		const result = await gitops.importConfig(access, { overwrite: true });
+
+		expect(result.success).toBe(false);
+		expect(result.errors).toContainEqual(
+			expect.stringMatching(/firewall-lists\/1.yaml:.*Cached URL firewall list is empty/),
+		);
+		expect(mocks.writes).toEqual([]);
+		expect(mocks.prunes).toEqual([]);
+		expect(mocks.rows.FirewallList).toEqual([working]);
+	});
+	it("restores a host from list A to list B and removes stale A in one full sync", async () => {
+		mocks.rows.FirewallList = [{ id: 1, name: "A", entries: "203.0.113.10", enabled: true, is_deleted: 0 }];
+		mocks.rows.ProxyHost = [{ id: 9, is_deleted: 0, meta: { ip_firewall: { enabled: true, list_ids: [1] } } }];
+		file("firewall-lists", { id: 2, name: "B", reason: "Replacement list", entries: "198.51.100.0/24" });
+		file("proxy-hosts", { id: 9, meta: { ip_firewall: { enabled: true, list_ids: [2] } } });
+
+		const result = await gitops.importConfig(access, { overwrite: true });
+
+		expect(result.success).toBe(true);
+		expect(result.deleted).toBe(1);
+		expect(mocks.rows.ProxyHost[0].meta.ip_firewall.list_ids).toEqual([2]);
+		expect(mocks.rows.FirewallList.find((row) => row.id === 1).is_deleted).toBe(1);
+		expect(mocks.rows.FirewallList.find((row) => row.id === 2).is_deleted).toBe(0);
+		expect(mocks.writes.map(({ name }) => name)).toEqual(["FirewallList", "ProxyHost", "FirewallList"]);
+	});
+	it("retains list A when the host restore fails after importing replacement B", async () => {
+		mocks.rows.FirewallList = [{ id: 1, name: "A", entries: "203.0.113.10", enabled: true, is_deleted: 0 }];
+		mocks.rows.ProxyHost = [{ id: 9, is_deleted: 0, meta: { ip_firewall: { enabled: true, list_ids: [1] } } }];
+		file("firewall-lists", { id: 2, name: "B", reason: "Replacement list", entries: "198.51.100.0/24" });
+		file("proxy-hosts", { id: 9, meta: { ip_firewall: { enabled: true, list_ids: ["2"] } } });
+
+		const result = await gitops.importConfig(access, { overwrite: true });
+
+		expect(result.success).toBe(false);
+		expect(result.errors).toContainEqual(expect.stringMatching(/Firewall list IDs must be positive integers/));
+		expect(mocks.rows.ProxyHost[0].meta.ip_firewall.list_ids).toEqual([1]);
+		expect(mocks.rows.FirewallList.find((row) => row.id === 1).is_deleted).toBe(0);
+		expect(mocks.prunes.some(({ name }) => name === "FirewallList")).toBe(false);
+	});
+	it("prunes stale firewall lists after the same full sync removes their host", async () => {
+		mocks.rows.FirewallList = [{ id: 1, name: "A", entries: "203.0.113.10", enabled: true, is_deleted: 0 }];
+		mocks.rows.ProxyHost = [
+			{ id: 9, is_deleted: 0, meta: JSON.stringify({ ip_firewall: { enabled: false, list_ids: [1] } }) },
+		];
+		mocks.files.set("/data/gitops/shieldpm-config/firewall-lists/.gitkeep", "");
+		mocks.files.set("/data/gitops/shieldpm-config/proxy-hosts/.gitkeep", "");
+
+		const result = await gitops.importConfig(access, { overwrite: true });
+
+		expect(result.success).toBe(true);
+		expect(result.deleted).toBe(2);
+		expect(mocks.rows.ProxyHost[0].is_deleted).toBe(1);
+		expect(mocks.rows.FirewallList[0].is_deleted).toBe(1);
+	});
+	it("retains stale firewall lists if activation of the restored host fails", async () => {
+		mocks.rows.FirewallList = [{ id: 1, name: "A", entries: "203.0.113.10", enabled: true, is_deleted: 0 }];
+		mocks.rows.ProxyHost = [{ id: 9, is_deleted: 0, meta: { ip_firewall: { enabled: true, list_ids: [1] } } }];
+		file("firewall-lists", { id: 2, name: "B", reason: "Replacement list", entries: "198.51.100.0/24" });
+		file("proxy-hosts", { id: 9, meta: { ip_firewall: { enabled: true, list_ids: [2] } } });
+		vi.mocked(nginx.reload).mockRejectedValueOnce(new Error("Nginx reload failed"));
+
+		const result = await gitops.importConfig(access, { overwrite: true });
+
+		expect(result.success).toBe(false);
+		expect(result.errors).toContain("Nginx reload failed");
+		expect(mocks.rows.FirewallList.find((row) => row.id === 1).is_deleted).toBe(0);
+		expect(mocks.prunes.some(({ name }) => name === "FirewallList")).toBe(false);
+	});
+	it("retains the active firewall list when the real Nginx batch rolls back failed validation", async () => {
+		mocks.rows.FirewallList = [{ id: 1, name: "A", entries: "203.0.113.10", enabled: true, is_deleted: 0 }];
+		mocks.rows.ProxyHost = [{ id: 9, is_deleted: 0, meta: { ip_firewall: { enabled: true, list_ids: [1] } } }];
+		file("firewall-lists", { id: 2, name: "B", reason: "Replacement list", entries: "198.51.100.0/24" });
+		file("proxy-hosts", { id: 9, meta: { ip_firewall: { enabled: true, list_ids: [2] } } });
+		const { default: realNginx } = await vi.importActual("../../internal/nginx.js");
+		const failure = new Error("Restored Nginx configuration is invalid");
+		const staged = [];
+		const configure = vi.spyOn(realNginx, "configureHost").mockImplementation(async (model, host_type, host) => {
+			const stage = { model, host_type, host };
+			staged.push(stage);
+			return stage;
+		});
+		const test = vi.spyOn(realNginx, "test").mockRejectedValueOnce(failure);
+		const rollback = vi.spyOn(realNginx, "rollbackStagedConfig").mockResolvedValue({ nginx_online: false });
+		const commit = vi.spyOn(realNginx, "commitStagedConfig");
+		vi.mocked(nginx.bulkGenerateConfigGroups).mockImplementationOnce(realNginx.bulkGenerateConfigGroups);
+		try {
+			const result = await gitops.importConfig(access, { overwrite: true });
+
+			expect(result.success).toBe(false);
+			expect(result.errors).toContain(failure.message);
+			expect(nginx.bulkGenerateConfigGroups).toHaveBeenCalledWith(expect.any(Array), { throwOnError: true });
+			expect(test).toHaveBeenCalledOnce();
+			expect(rollback).toHaveBeenCalledExactlyOnceWith(staged[0], failure);
+			expect(commit).not.toHaveBeenCalled();
+			expect(nginx.reload).not.toHaveBeenCalled();
+			expect(mocks.rows.FirewallList.find((row) => row.id === 1).is_deleted).toBe(0);
+			expect(mocks.prunes.some(({ name }) => name === "FirewallList")).toBe(false);
+		} finally {
+			configure.mockRestore();
+			test.mockRestore();
+			rollback.mockRestore();
+			commit.mockRestore();
+		}
+	});
+	it.each([true, false])(
+		"prevents a new host write with a dangling firewall reference even when enabled=%s",
+		async (enabled) => {
+			file("proxy-hosts", {
+				id: 9,
+				domain_names: ["example.test"],
+				meta: { ip_firewall: { enabled, list_ids: [7] } },
+			});
+			const result = await gitops.importConfig(access, { overwrite: true });
+			expect(result.success).toBe(false);
+			expect(result.errors).toContainEqual(expect.stringMatching(/Firewall list 7 not visible/));
+			expect(firewallLists.get).toHaveBeenCalledWith(access, { id: 7 });
+			expect(mocks.writes).toEqual([]);
+			expect(mocks.prunes).toEqual([]);
+		},
+	);
+	it.each(["object", "JSON string"])(
+		"checks retained firewall references from %s metadata before an overwrite",
+		async (storage) => {
+			const meta = { ip_firewall: { enabled: false, list_ids: [7] } };
+			mocks.rows.ProxyHost = [{ id: 9, meta: storage === "object" ? meta : JSON.stringify(meta) }];
+			mocks.rows.FirewallList = [
+				{ id: 7, name: "Deleted list", entries: "203.0.113.10", enabled: false, is_deleted: 1 },
+			];
+			file("proxy-hosts", { id: 9, domain_names: ["example.test"], forward_host: "new.test" });
+			const result = await gitops.importConfig(access, { overwrite: true });
+			expect(result.success).toBe(false);
+			expect(result.errors).toContainEqual(expect.stringMatching(/Firewall list 7 no longer exists/));
+			expect(firewallLists.assertExistForHost).toHaveBeenCalledWith([7]);
+			expect(mocks.writes).toEqual([]);
+			expect(mocks.prunes).toEqual([]);
+		},
+	);
+	it("rejects malformed host firewall settings before any host write or prune", async () => {
+		file("proxy-hosts", { id: 9, meta: { ip_firewall: { enabled: true, list_ids: ["7"] } } });
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(result.errors).toContainEqual(expect.stringMatching(/Firewall list IDs must be positive integers/));
+		expect(mocks.writes).toEqual([]);
+		expect(mocks.prunes).toEqual([]);
+	});
+	it("preserves normalized country filters when restoring a proxy host from GitOps", async () => {
+		file("proxy-hosts", {
+			id: 9,
+			meta: {
+				ip_firewall: {
+					enabled: true,
+					country_denylist: ["de", "XK", "DE"],
+					country_reason: "Regional access rule",
+					block_unknown_country: true,
+				},
+			},
+		});
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(true);
+		expect(mocks.writes.find(({ name }) => name === "ProxyHost").data.meta.ip_firewall).toMatchObject({
+			country_denylist: ["DE", "XK"],
+			country_reason: "Regional access rule",
+			block_unknown_country: true,
+		});
+	});
+	it("rejects invalid restored country codes before writes or host pruning", async () => {
+		file("proxy-hosts", { id: 9, meta: { ip_firewall: { country_denylist: ["ZZ"] } } });
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(result.errors).toContainEqual(expect.stringMatching(/valid ISO alpha-2 codes or XK/));
+		expect(mocks.writes).toEqual([]);
+		expect(mocks.prunes).toEqual([]);
+	});
+	it("rejects active country restoration before host writes or pruning without GeoIP support", async () => {
+		mocks.geoip.mockRejectedValueOnce(new Error("Country firewall requires supported GeoIP configuration"));
+		file("proxy-hosts", { id: 9, meta: { ip_firewall: { enabled: true, country_denylist: ["DE"] } } });
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(result.errors).toContainEqual(expect.stringMatching(/supported GeoIP/));
+		expect(mocks.writes).toEqual([]);
+		expect(mocks.prunes).toEqual([]);
+	});
+	it("restores disabled country rules while active GeoIP filtering is unavailable", async () => {
+		mocks.geoip.mockImplementationOnce(async (policy) => {
+			if (policy.enabled) throw new Error("Country firewall requires supported GeoIP configuration");
+		});
+		file("proxy-hosts", {
+			id: 9,
+			meta: { ip_firewall: { enabled: false, country_denylist: ["DE"], block_unknown_country: true } },
+		});
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(true);
+		expect(mocks.writes.find(({ name }) => name === "ProxyHost").data.meta.ip_firewall).toMatchObject({
+			enabled: false,
+			country_denylist: ["DE"],
+			block_unknown_country: true,
+		});
 	});
 	it("reports invalid imports and prevents pruning that model", async () => {
 		file("proxy-hosts", { id: "invalid", domain_names: ["example.com"] });

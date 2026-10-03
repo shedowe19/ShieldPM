@@ -45,6 +45,8 @@ function formatDeps(deps) {
 function main() {
 	const backendPath = path.resolve(__dirname, "../backend");
 	const frontendPath = path.resolve(__dirname, "../frontend");
+	// Non-NPM attributions must survive automated package-notice regeneration.
+	const extraNotices = fs.readFileSync(path.resolve(__dirname, "third-party-notices-extra.txt"), "utf8").trim();
 
 	process.stdout.write("Fetching Backend Production...\n");
 	const backProd = getLicenses(backendPath, true);
@@ -56,7 +58,7 @@ function main() {
 	process.stdout.write("Fetching Frontend Development...\n");
 	const frontDev = getLicenses(frontendPath, false);
 
-	let content = HEADER;
+	let content = `${HEADER}\n${extraNotices}\n`;
 
 	content += "\n## Backend Dependencies (from backend/package.json)\n\n";
 	content += "### Production Dependencies\n";

@@ -44,6 +44,7 @@
 - **[OpenAppSec WAF](OpenAppSec)**: Optional AI WAF agent and advanced model setup.
 - **[Two-Factor Authentication (2FA)](Two-Factor-Authentication)**: TOTP, YubiKey, Passkey (FIDO2), and Duo Security.
 - **[Access Lists](Access-Lists)**: Basic Auth, IP Ranges, and Authorization.
+- **[IP Firewall per Proxy Host](./IP-Firewall.md)**: TXT/HTTPS blocklists, countries using the existing GeoIP setup, host-specific exceptions, and a dedicated page explaining the matching rule.
 - **[OAuth2-Proxy Integration](OAuth2-Proxy)**: Setup Single Sign-On using Google, GitHub, Azure, OIDC, etc.
 - **[Anubis Proof-of-Work Gate](Anubis)**: Challenge automated clients before they reach a protected host.
 - **[Request Rate Limiting](Request-Rate-Limiting)**: Protect hosts from abuse and DDoS.

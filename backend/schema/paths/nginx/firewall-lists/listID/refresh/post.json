@@ -1,0 +1,49 @@
+{
+	"operationId": "refreshFirewallList",
+	"summary": "Refresh a HTTPS subscription, preserving working entries on failure",
+	"tags": [
+		"firewall-lists"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"access_lists.manage"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../../components/firewall-list-object.json"
+					}
+				}
+			}
+		}
+	},
+	"parameters": [
+		{
+			"in": "path",
+			"name": "listID",
+			"required": true,
+			"schema": {
+				"type": "integer",
+				"minimum": 1
+			},
+			"description": "Firewall list ID"
+		}
+	],
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"type": "object",
+					"additionalProperties": false
+				}
+			}
+		}
+	}
+}

@@ -98,4 +98,27 @@ describe("createProxyHostPayload", () => {
 
 		expect(payload).toHaveProperty("id", undefined);
 	});
+
+	it("preserves unrelated metadata, access lists and disabled firewall rules when saving another setting", () => {
+		const meta = {
+			customSetting: { retained: "value" },
+			ipFirewall: {
+				enabled: false,
+				listIds: [3, 9],
+				allowlist: ["198.51.100.42"],
+				denylist: [{ address: "203.0.113.0/24", reason: "Repeated abuse" }],
+				countryDenylist: ["DE", "XK"],
+				countryReason: "Country restriction",
+				blockUnknownCountry: false,
+				publicMessage: "Please contact support.",
+				supportUrl: "https://example.test/support",
+				internalNote: "Never show this note on the public page",
+			},
+		};
+		const values = createProxyHostInitialValues({ accessListId: 7, meta });
+		const payload = createProxyHostPayload({ id: 73, values: { ...values, note: "Unrelated edit" } });
+		expect(payload).toMatchObject({ accessListId: 7, meta, note: "Unrelated edit" });
+		expect(payload.meta).toStrictEqual(meta);
+		expect(payload).not.toHaveProperty("ipFirewall");
+	});
 });

@@ -21,6 +21,8 @@ docker compose up -d
 
 **Persistente Daten**: `/opt/shieldpm` → gemountet nach `/data` im Container. `compose.yaml` verwendet `network_mode: host`; Ports werden daher direkt am Docker-Host gebunden. `compose.easy.yaml` ist die reduzierte Variante.
 
+Die gemeinsamen Startskripte für Docker und native Installationen löschen `/data/logs` nicht beim Neustart. Vor der Nginx-Validierung wird dieses Verzeichnis mit Eigentümer `PUID:PGID` und Modus `0700` vorbereitet; ein Symlink als Verzeichnis wird zurückgewiesen. Der bestehende Eigentümerwechsel unter `/data` übernimmt erhaltene Logdateien für die gewählte Laufzeit-UID. Damit bleiben unter anderem die [Firewall-Trefferlogs](../module/ip-firewall.md#sperrseite-und-protokoll) erhalten, sofern `/data` dauerhaft gespeichert wird.
+
 ## Native / LXC (Proxmox)
 
 ```bash
@@ -115,6 +117,11 @@ Workflows unter `.github/workflows/`:
 | `.github/codeql/codeql-config.yml`        | CodeQL-Analyse-Konfiguration                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `.github/delete-merged-branch-config.yml` | GitHub Auto-Delete Merged Branch Konfiguration                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
+Nach erfolgreicher CodeQL-Analyse werden die SARIF-Dateien aus `codeql-results/` als Artefakt
+`codeql-results-<Sprache>` für sieben Tage gespeichert. Fehlende SARIF-Dateien lassen den Upload fehlschlagen.
+Ein erfolgreicher Analysejob allein bestätigt nicht, dass ein bestimmter Befund behoben ist; dafür werden die
+tatsächlichen SARIF-Ergebnisse geprüft. Die Artefaktsicherung verändert keine Regeln oder Unterdrückungen.
+
 Der frühere `dependency-updates.yml`-Workflow wurde entfernt: Er bearbeitete ausschließlich die nicht mehr vorhandenen Dockerfile-Argumente `CSNB_VER` und `CRS_VER`. Diese Bestandteile kommen aus dem separaten Nginx-Basisimage beziehungsweise dem nativen `nginx-binaries`-Release. Der Caddy-Build meldet sich ausschließlich bei seiner Zielregistry GHCR an und benötigt keine DockerHub-Zugangsdaten.
 
 ## Hilfs-Skripte
@@ -123,12 +130,18 @@ Docker-Publikationen derselben Git-Referenz laufen nacheinander; alle manuellen 
 
 Der Docker-Build-Workflow berücksichtigt auch `.dockerignore`, `scripts/install.sh` und `scripts/setup-node-apt.sh`. Pull Requests bauen lokale Images für die Prüfung. PRs aus demselben Repository melden sich bei GHCR an, damit das geschützte Nginx-Basisimage geladen werden kann; Fork-PRs erhalten keine Registry-Zugangsdaten. Push und Multiarch-Publikation laufen nur außerhalb von Pull Requests. Der manuelle Latest-Workflow übergibt und validiert den Release-Tag als Umgebungsvariable, statt Benutzereingaben direkt in Shell-Code einzusetzen.
 
+Der Docker-Smoke prüft die Laufzeit zunächst unter UID 0 und anschließend unter UID 1000 mit übernommener
+Firewall-Loghistorie. Verzeichniseigentümer, Modus und Schreibrechte werden vor Nginx-Test und Reload geprüft.
+Der isolierte [Firewall-Smoke](../module/ip-firewall.md#offene-fragen-und-validierung) ermittelt dynamische
+Modulpfade aus dem tatsächlichen Nginx-Build und der Konfiguration; ModSecurity-Direktiven bleiben verpflichtend,
+ohne einen statischen Modulbuild vorauszusetzen.
+
 Ein erfolgreicher, vom Pfadfilter in `docker.yml` erfasster `develop`-Push erstellt zusätzlich zum Image `ghcr.io/shedowe19/shieldpm:develop` ein GitHub-Release für `v<.version>`, sofern diese Version noch kein Release besitzt. Reine Wiki- oder Markdown-Änderungen starten diesen Docker-Workflow nicht. Dasselbe gilt für einen Push des exakt passenden Versionstags. Der Tag eines neuen Releases verweist auf den gebauten Commit; vorhandene Releases und ihre Artefakte bleiben bei späteren Builds derselben Version unverändert. Ein bereits belegter Versionstag auf einem anderen Commit blockiert die Veröffentlichung. Der Release-Job läuft weder bei Pull Requests noch bei `workflow_dispatch`. Für ein neues Release müssen `.version` sowie beide Paketversionen gemeinsam erhöht werden.
 
 Der Shellcheck-Workflow prüft auch Erweiterungslose Helfer wie `update-shieldpm` und führt `python3 -m unittest discover -s scripts/tests -v` aus. Diese Tests arbeiten mit temporären Verzeichnissen und simulierten externen Befehlen, ohne einen Installer oder laufende Dienste zu starten.
 
 - `scripts/install.sh` — Native/LXC-Installer (siehe oben).
-- `scripts/generate-notices.js` — generiert `THIRD-PARTY-NOTICES.md` aus Metadaten und Lizenzdateien der lokal installierten direkten NPM-Pakete; die Paketnamen sind sichtbar mit der passenden npm-Version verlinkt. Es verwendet das vom Workflow bereitgestellte `license-checker`-Binary und bricht bei einem fehlgeschlagenen Lizenzscan ab, bevor die bestehende Notice-Datei überschrieben werden kann.
+- `scripts/generate-notices.js` — generiert `THIRD-PARTY-NOTICES.md` aus Metadaten und Lizenzdateien der lokal installierten direkten NPM-Pakete; die Paketnamen sind sichtbar mit der passenden npm-Version verlinkt. Statische Nicht-NPM-Hinweise aus `scripts/third-party-notices-extra.txt` erhalten die X4BNet-Attribution und die MaxMind-Testdaten-Lizenz bei automatischer Regeneration. Der Generator verwendet das vom Workflow bereitgestellte `license-checker`-Binary und bricht bei fehlender statischer Quelle oder fehlgeschlagenem Lizenzscan ab, bevor die bestehende Notice-Datei überschrieben wird.
 - `scripts/wiki-graph.py` — erzeugt die interaktive Beziehungs-Visualisierung des internen Wikis (`docs/wiki-intern/wiki-graph.html`). Nutzt `scripts/lib/vis-network.min.js` als Abhängigkeit.
 
 Der Wiki-Generator ersetzt seine HTML-Platzhalter in einem einzigen Durchlauf. Seitennamen wie `__EDGES__.md` bleiben dadurch als Dateinamen erhalten und beschädigen weder die eingebetteten Graphdaten noch das JavaScript. Die Regression führt den vollständigen Generator mit solchen Seitennamen aus und prüft die ausgegebenen Knoten und Verknüpfungen.

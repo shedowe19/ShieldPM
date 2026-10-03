@@ -1,0 +1,48 @@
+{
+	"operationId": "updateFirewallList",
+	"summary": "Update a list and atomically activate affected proxy hosts",
+	"tags": [
+		"firewall-lists"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"access_lists.manage"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../components/firewall-list-object.json"
+					}
+				}
+			}
+		}
+	},
+	"parameters": [
+		{
+			"in": "path",
+			"name": "listID",
+			"required": true,
+			"schema": {
+				"type": "integer",
+				"minimum": 1
+			},
+			"description": "Firewall list ID"
+		}
+	],
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"$ref": "../../../../components/firewall-list-input.json"
+				}
+			}
+		}
+	}
+}

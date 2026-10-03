@@ -87,6 +87,12 @@ gzip-komprimierten JavaScript-Assets zusammen. Das Gesamtbudget wurde dafür von
 angepasst; der neue Grenzwert lässt rund 8,7 KB Spielraum über der gemessenen Baseline. Die Limits für den größten
 JavaScript-Chunk und die Stylesheets blieben unverändert.
 
+Für IP-Firewall und Länderfilter in PR #149 wurde der `develop`-Vergleichsstand mit 1.246.243 Byte und der
+erweiterte Build mit 1.273.317 Byte gemessen: 27.074 Byte beziehungsweise rund 2,2 % zusätzliche komprimierte
+JavaScript-Assets. Das Gesamtbudget wurde deshalb von 1.255.000 auf 1.285.000 Byte angepasst. Die Grenzwerte für
+den größten JavaScript-Chunk und die Stylesheets blieben unverändert; die gemessenen 284.537 beziehungsweise
+16.294 Byte liegen weiterhin innerhalb dieser Grenzen.
+
 ## Native / LXC Build
 
 Vor dem Export des LXC-Rootfs entfernt der Workflow SSH-Hostkeys und leert die Maschinen-ID. Ein aktivierter Systemd-Dienst erzeugt fehlende SSH-Hostkeys vor dem SSH-Start pro Instanz. Bereinigungs-Globs werden innerhalb des Builder-Containers ausgewertet, damit sie dessen Dateisystem erfassen.

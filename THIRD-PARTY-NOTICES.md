@@ -4,9 +4,18 @@ This project (ShieldPM) incorporates the following third-party components. The l
 
 For verification, each entry links to the NPM package page (e.g., https://www.npmjs.com/package/<package>/v/<version>), where the license can be confirmed in the package metadata. Note: Transitive dependencies (dependencies of dependencies) are not included, as this focuses on direct dependencies.
 
+## Optional IP Firewall Feed Presets
+
+ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintained by [X4BNet/lists_vpn](https://github.com/X4BNet/lists_vpn). The upstream README identifies the lists and scripts as MIT licensed, copyright 2024 X4B (Mathew Heard). The presets point to the separate `output/vpn/ipv4.txt` and `output/datacenter/ipv4.txt` feeds. No copy of either dataset is bundled with ShieldPM; content is fetched only when a user configures a subscription. Refer to the upstream repository for the license terms and current dataset information.
+
+## MaxMind GeoIP2 Test Fixture
+
+`scripts/ci/fixtures/GeoIP2-Country-Test.mmdb` is a synthetic test database from [MaxMind-DB](https://github.com/maxmind/MaxMind-DB/blob/276926d23b4109ca5452709bfb5931c338afb34c/test-data/GeoIP2-Country-Test.mmdb), copyright 2013–2026 MaxMind, Inc. The upstream specification and test databases are available under MIT or Apache 2.0; this fixture is redistributed under MIT. The complete copyright and permission notice is included in [MAXMIND-LICENSE.txt](./scripts/ci/fixtures/MAXMIND-LICENSE.txt), with source revision and checksum in the [fixture README](./scripts/ci/fixtures/README.md). It is used only for isolated country-filter tests and is not a production GeoIP database.
+
 ## Backend Dependencies (from backend/package.json)
 
 ### Production Dependencies
+
 - [@apidevtools/json-schema-ref-parser@16.0.3](https://www.npmjs.com/package/@apidevtools/json-schema-ref-parser/v/16.0.3) - MIT
 - [@balena/dockerignore@1.0.2](https://www.npmjs.com/package/@balena/dockerignore/v/1.0.2) - Apache-2.0
 - [@duosecurity/duo_universal@3.1.0](https://www.npmjs.com/package/@duosecurity/duo_universal/v/3.1.0) - MIT
@@ -381,6 +390,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [zip-stream@7.0.5](https://www.npmjs.com/package/zip-stream/v/7.0.5) - MIT
 
 ### Development Dependencies
+
 - [@apidevtools/openapi-schemas@2.1.0](https://www.npmjs.com/package/@apidevtools/openapi-schemas/v/2.1.0) - MIT
 - [@apidevtools/swagger-methods@3.0.2](https://www.npmjs.com/package/@apidevtools/swagger-methods/v/3.0.2) - MIT
 - [@apidevtools/swagger-parser@13.1.0](https://www.npmjs.com/package/@apidevtools/swagger-parser/v/13.1.0) - MIT
@@ -445,6 +455,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 ## Frontend Dependencies (from frontend/package.json)
 
 ### Production Dependencies
+
 - [@babel/code-frame@7.29.7](https://www.npmjs.com/package/@babel/code-frame/v/7.29.7) - MIT
 - [@babel/generator@7.29.7](https://www.npmjs.com/package/@babel/generator/v/7.29.7) - MIT
 - [@babel/helper-globals@7.29.7](https://www.npmjs.com/package/@babel/helper-globals/v/7.29.7) - MIT
@@ -814,6 +825,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [zwitch@2.0.4](https://www.npmjs.com/package/zwitch/v/2.0.4) - MIT
 
 ### Development Dependencies
+
 - [@adobe/css-tools@4.5.0](https://www.npmjs.com/package/@adobe/css-tools/v/4.5.0) - MIT
 - [@alloc/quick-lru@5.2.0](https://www.npmjs.com/package/@alloc/quick-lru/v/5.2.0) - MIT
 - [@biomejs/biome@2.5.14](https://www.npmjs.com/package/@biomejs/biome/v/2.5.14) - MIT OR Apache-2.0

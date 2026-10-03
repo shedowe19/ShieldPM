@@ -1,8 +1,10 @@
 import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, searchForWorkspaceRoot } from "vite";
 import checker from "vite-plugin-checker";
 import { configDefaults } from "vitest/config";
+
+const ipBlockedTemplate = resolve(process.cwd(), "../backend/templates/ip-blocked.html");
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -21,6 +23,10 @@ export default defineConfig({
 		tsconfigPaths: true,
 	},
 	server: {
+		fs: {
+			// Vite verifies raw imports both with and without the query suffix.
+			allow: [searchForWorkspaceRoot(process.cwd()), ipBlockedTemplate, `${ipBlockedTemplate}?raw`],
+		},
 		host: true,
 		port: 5173,
 		strictPort: true,

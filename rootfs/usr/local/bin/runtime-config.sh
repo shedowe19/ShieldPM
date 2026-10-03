@@ -21,6 +21,21 @@ prepare_runtime_directory() {
     chmod 700 "$runtime_root" "$runtime_root/home" || return 1
 }
 
+# Nginx opens configured access logs during validation, before the backend starts.
+# Keep existing firewall audit logs across both native and container restarts.
+prepare_nginx_log_directory() {
+    nginx_log_root=$1
+    nginx_log_uid=$2
+    nginx_log_gid=$3
+    if [ -L "$nginx_log_root" ]; then
+        echo "Refusing a symlink Nginx log directory: $nginx_log_root" >&2
+        return 1
+    fi
+    mkdir -p "$nginx_log_root" || return 1
+    chown -h "$nginx_log_uid:$nginx_log_gid" "$nginx_log_root" || return 1
+    chmod 700 "$nginx_log_root" || return 1
+}
+
 configure_nginx_runtime() {
     python3 - "$1" "$2" <<'PY'
 import os

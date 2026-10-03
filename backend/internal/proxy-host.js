@@ -2,12 +2,14 @@ import fs from "node:fs";
 import _ from "lodash";
 import { encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
+import { assertCountryFirewallAvailable } from "../lib/firewall-geoip.js";
 import { sanitizeHostMeta, sanitizeProxyHost } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import AccessList from "../models/access_list.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
+import { validateHostFirewall, withFirewallReferences } from "./firewall-policy.js";
 import internalGitDeploy from "./git-deploy.js";
 import internalGitOps from "./gitops.js";
 import internalHost from "./host.js";
@@ -116,6 +118,7 @@ const internalProxyHost = {
 
 		await access.can("proxy_hosts:create", thisData);
 		await internalHost.validateReferences(access, thisData);
+		await validateHostFirewall(access, thisData);
 		internalHost.validateDomainNames(thisData.domain_names);
 
 		// Get a list of the domain names and check each of them against existing records
@@ -164,10 +167,12 @@ const internalProxyHost = {
 		}
 
 		// Objection graph writes span multiple statements and do not start a transaction.
-		let row = await proxyHostModel.transaction(async (trx) =>
-			proxyHostModel
-				.query(trx)
-				.insertGraphAndFetch(/** @type {any} */ ({ ...thisData, meta: sanitizeHostMeta(thisData.meta) })),
+		let row = await withFirewallReferences(thisData, {}, () =>
+			proxyHostModel.transaction(async (trx) =>
+				proxyHostModel
+					.query(trx)
+					.insertGraphAndFetch(/** @type {any} */ ({ ...thisData, meta: sanitizeHostMeta(thisData.meta) })),
+			),
 		);
 		row = utils.omitRow(omissions())(row);
 
@@ -283,6 +288,7 @@ const internalProxyHost = {
 
 		let row = await internalProxyHost.get(access, { id: thisData.id }, { preserveManagedPath: true });
 		await internalHost.validateReferences(access, thisData, row);
+		await validateHostFirewall(access, thisData, row);
 		// The API masks managed paths; preserve the actual path when an edit sends that placeholder back.
 		if (thisData.forward_host === "(managed)" && row.forward_host?.startsWith("/data/websites/")) {
 			thisData.forward_host = row.forward_host;
@@ -352,8 +358,10 @@ const internalProxyHost = {
 		thisData.meta = sanitizeHostMeta(thisData.meta);
 
 		const new_saved_row = /** @type {any} */ (
-			await proxyHostModel.transaction(async (trx) =>
-				proxyHostModel.query(trx).upsertGraphAndFetch(/** @type {any} */ (thisData)),
+			await withFirewallReferences(thisData, row, () =>
+				proxyHostModel.transaction(async (trx) =>
+					proxyHostModel.query(trx).upsertGraphAndFetch(/** @type {any} */ (thisData)),
+				),
 			)
 		);
 		const _saved_row = utils.omitRow(omissions())(new_saved_row);
@@ -532,6 +540,7 @@ const internalProxyHost = {
 			throw new errs.ValidationError("Host is already enabled");
 		}
 		if (row.upload_relay_enabled) await validateRelayConfigForHost(row);
+		await assertCountryFirewallAvailable(row.meta?.ip_firewall);
 
 		row.enabled = 1;
 

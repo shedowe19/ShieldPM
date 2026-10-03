@@ -89,15 +89,18 @@ it("claims OIDC after callback cookie cleanup and the root redirect, then shows 
 	await act(async () => {
 		pendingHealth.resolve(Response.json(health));
 	});
-	await waitFor(() =>
-		expect(fetchMock).toHaveBeenCalledWith(
-			"/api/oidc/claim",
-			expect.objectContaining({
-				method: "POST",
-				credentials: "include",
-				headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": "oidc-bootstrap-csrf" },
-			}),
-		),
+	// The first Login render also compiles its lazy route during a cold test run.
+	await waitFor(
+		() =>
+			expect(fetchMock).toHaveBeenCalledWith(
+				"/api/oidc/claim",
+				expect.objectContaining({
+					method: "POST",
+					credentials: "include",
+					headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": "oidc-bootstrap-csrf" },
+				}),
+			),
+		{ timeout: 5000 },
 	);
 	await act(async () => {
 		pendingClaim.resolve(Response.json({ expires: Date.now() + 900_000, user: { id: 2 } }));

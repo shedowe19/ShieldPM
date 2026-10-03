@@ -1,0 +1,26 @@
+{
+	"operationId": "getFirewallGeoipStatus",
+	"summary": "Check existing Analytics GeoIP country filtering support",
+	"tags": ["firewall-lists"],
+	"security": [{"bearerAuth": ["proxy_hosts.view"]}],
+	"responses": {
+		"200": {
+			"description": "Country-filter capabilities without local database paths or configuration content",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["available", "module_enabled", "database_present", "reason"],
+						"properties": {
+							"available": {"type": "boolean"},
+							"module_enabled": {"type": "boolean"},
+							"database_present": {"type": "boolean"},
+							"reason": {"type": ["string", "null"], "enum": [null, "module_disabled", "database_missing", "country_variable_missing", "configuration_unavailable"]}
+						}
+					}
+				}
+			}
+		}
+	}
+}

@@ -11,6 +11,8 @@ const state = vi.hoisted(() => ({
 	terminal: vi.fn(),
 	monitorStart: vi.fn(),
 	monitorStop: vi.fn(),
+	firewallStart: vi.fn(),
+	firewallStop: vi.fn(async () => {}),
 }));
 vi.mock("../../app.js", async () => {
 	const { default: express } = await import("express");
@@ -36,6 +38,9 @@ vi.mock("../../internal/chat.js", () => ({ default: { init: async () => {} } }))
 vi.mock("../../internal/cloudflared.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/ddns.js", () => ({ default: { initTimer: () => {} } }));
 vi.mock("../../internal/docker.js", () => ({ default: { init: async () => {} } }));
+vi.mock("../../internal/firewall-list.js", () => ({
+	default: { initTimer: state.firewallStart, stopTimer: state.firewallStop },
+}));
 vi.mock("../../internal/git-deploy.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/gitops.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/ip_ranges.js", () => ({ default: {} }));
@@ -60,6 +65,7 @@ describe("backend listener lifecycle", () => {
 	beforeEach(() => {
 		vi.resetModules();
 		vi.clearAllMocks();
+		state.firewallStop.mockResolvedValue(undefined);
 		vi.stubEnv("SKIP_IP_RANGES", "true");
 		for (const key of ["DATA_PATH", "INITIAL_ADMIN_EMAIL", "INITIAL_ADMIN_PASSWORD", "INITIAL_DEFAULT_PAGE"])
 			vi.stubEnv(key, "");
@@ -103,6 +109,9 @@ describe("backend listener lifecycle", () => {
 		expect(state.terminal).not.toHaveBeenCalled();
 		expect(state.monitorStart).not.toHaveBeenCalled();
 		expect(state.monitorStop).not.toHaveBeenCalled();
+		if (mode === "production") expect(state.firewallStart).toHaveBeenCalledOnce();
+		else expect(state.firewallStart).not.toHaveBeenCalled();
+		expect(state.firewallStop).not.toHaveBeenCalled();
 		expect(process.listeners("SIGTERM")).toEqual(listeners.get("SIGTERM"));
 		expect(process.listeners("SIGINT")).toEqual(listeners.get("SIGINT"));
 	});
@@ -112,6 +121,7 @@ describe("backend listener lifecycle", () => {
 		const server = state.servers[0];
 		expect(state.terminal).toHaveBeenCalledExactlyOnceWith(server);
 		expect(state.monitorStart).toHaveBeenCalledOnce();
+		expect(state.firewallStart).toHaveBeenCalledOnce();
 		expect(process.exit).not.toHaveBeenCalled();
 		const response = await fetch(`http://127.0.0.1:${server.address().port}/`);
 		expect(await response.json()).toEqual({ status: "OK" });
@@ -119,7 +129,17 @@ describe("backend listener lifecycle", () => {
 			.listeners("SIGTERM")
 			.filter((listener) => !listeners.get("SIGTERM").includes(listener));
 		expect(handlers).toHaveLength(1);
+		let finishFirewall;
+		state.firewallStop.mockReturnValue(
+			new Promise((resolve) => {
+				finishFirewall = resolve;
+			}),
+		);
 		handlers[0]();
+		await vi.waitFor(() => expect(state.firewallStop).toHaveBeenCalledTimes(2));
+		expect(process.exit).not.toHaveBeenCalled();
+		expect(state.analyticsStop).not.toHaveBeenCalled();
+		finishFirewall();
 		await vi.waitFor(() => expect(process.exit).toHaveBeenCalledExactlyOnceWith(0));
 		expect(state.analyticsStop).toHaveBeenCalledOnce();
 		expect(state.monitorStop).toHaveBeenCalledOnce();

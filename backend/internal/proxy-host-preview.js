@@ -1,14 +1,18 @@
 import fs from "node:fs";
 import errs from "../lib/error.js";
+import {
+	MAX_PREVIEW_CONFIG_BYTES,
+	MAX_PREVIEW_RAW_CONFIG_BYTES,
+	readFirewallPreviewConfig,
+} from "../lib/firewall-preview.js";
 import { buildPreviewDiff, redactPreviewConfig } from "../lib/nginx-preview.js";
 import AccessList from "../models/access_list.js";
 import Certificate from "../models/certificate.js";
+import { validateFirewallPreviewReferences, validateHostFirewall } from "./firewall-policy.js";
 import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
 import internalProxyHost from "./proxy-host.js";
 import { validateRelayConfigForHost } from "./upload-relay.js";
-
-const MAX_CONFIG_BYTES = 2 * 1024 * 1024;
 
 /** Read only the authorized numeric host's active config, without following a substituted file symlink. */
 const readCurrentConfig = async (id) => {
@@ -17,10 +21,10 @@ const readCurrentConfig = async (id) => {
 	try {
 		handle = await fs.promises.open(filename, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
 		const info = await handle.stat();
-		if (!info.isFile() || info.size > MAX_CONFIG_BYTES) {
+		if (!info.isFile() || info.size > MAX_PREVIEW_RAW_CONFIG_BYTES) {
 			throw new errs.ValidationError("Active host configuration is too large for a preview");
 		}
-		return await handle.readFile("utf8");
+		return await readFirewallPreviewConfig(handle, id);
 	} catch (err) {
 		if (err.code === "ENOENT") return null;
 		if (err instanceof errs.ValidationError) throw err;
@@ -32,7 +36,7 @@ const readCurrentConfig = async (id) => {
 
 const internalProxyHostPreview = {
 	/**
-	 * Render the exact host template without persisting data or touching live Nginx.
+	 * Render the host template with credential redaction and bounded CIDR summaries, without touching live Nginx.
 	 * @param {import("../lib/types.js").Access} access
 	 * @param {object} payload A validated proxy-host create or update payload
 	 * @param {number|null} [id] Numeric existing host ID; null creates an unsaved preview
@@ -56,6 +60,8 @@ const internalProxyHostPreview = {
 
 		const data = { ...payload };
 		await internalHost.validateReferences(access, data, existing || {});
+		await validateHostFirewall(access, data, existing || {});
+		await validateFirewallPreviewReferences(access, data, existing || {});
 		const domainNames = data.domain_names ?? existing?.domain_names;
 		internalHost.validateDomainNames(domainNames);
 		const taken = await Promise.all(
@@ -110,18 +116,22 @@ const internalProxyHostPreview = {
 				// Template failures can contain user data or expanded secret values.
 				throw new errs.ConfigurationError("Unable to render the proposed proxy host configuration");
 			}
-			if (Buffer.byteLength(proposed, "utf8") > MAX_CONFIG_BYTES) {
+			if (Buffer.byteLength(proposed, "utf8") > MAX_PREVIEW_CONFIG_BYTES) {
 				throw new errs.ValidationError("Proposed host configuration is too large for a preview");
 			}
 			const current = id === null ? null : await readCurrentConfig(id);
 			const config = redactPreviewConfig(proposed);
+			const hasFirewallSummaries =
+				current?.summarized ||
+				(candidate.enabled && !candidate.is_deleted && candidate.meta?.ip_firewall?.enabled === true);
 			return {
 				config,
-				diff: buildPreviewDiff(current === null ? null : redactPreviewConfig(current), config),
+				diff: buildPreviewDiff(current === null ? null : redactPreviewConfig(current.config), config),
 				hasCurrent: current !== null,
 				nginxValidated: false,
 				limitations: [
 					"render-only",
+					...(hasFirewallSummaries ? ["firewall-rule-summaries"] : []),
 					...(id === null ? ["id-pending"] : []),
 					...(pendingCertificate ? ["certificate-pending"] : []),
 				],

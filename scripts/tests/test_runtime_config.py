@@ -1,9 +1,15 @@
 """Check repeated startup configuration without changing host services or files."""
 
+import errno
 import os
 from pathlib import Path
+import pwd
+import re
 import shlex
+import shutil
+import socket
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -24,6 +30,126 @@ class RuntimeConfigTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         return result.stdout
+
+    def startup_log_setup(self, uid=None, gid=None):
+        # Execute the real cleanup and log preparation with only /data redirected.
+        source = (REPO / "rootfs/usr/local/bin/start.sh").read_text()
+        program = "rm -vrf /data/letsencrypt-acme-challenge" + source.split(
+            "rm -vrf /data/letsencrypt-acme-challenge", 1)[1].split("\ntouch ", 1)[0]
+        data = self.root / "data"
+        program = program.replace("/data", str(data))
+        self.shell(program, PUID=str(os.getuid() if uid is None else uid),
+                   PGID=str(os.getgid() if gid is None else gid))
+        return data
+
+    def nginx_config(self, data, uid):
+        configuration = self.root / "nginx-log-test.conf"
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as reservation:
+            reservation.bind(("127.0.0.1", 0))
+            port = reservation.getsockname()[1]
+        temp_paths = "\n".join(f"{name}_temp_path {self.root}/{name};"
+                               for name in ("client_body", "proxy", "fastcgi", "uwsgi", "scgi"))
+        configuration.write_text(
+            f"user {pwd.getpwuid(uid).pw_name};\nmaster_process off;\n"
+            f"pid {self.root}/nginx.pid;\nerror_log stderr notice;\nevents {{ worker_connections 8; }}\n"
+            f"http {{ {temp_paths}\nlog_format firewall escape=json '{{\"status\":$status}}';\n"
+            f"server {{ listen 127.0.0.1:{port}; access_log {data}/logs/ip_firewall_test.log firewall; return 403; }} }}\n")
+        return configuration
+
+    def test_startup_retains_firewall_logs_and_recreates_missing_private_directory(self):
+        data = self.root / "data"
+        logs = data / "logs"
+        logs.mkdir(parents=True)
+        historical = logs / "ip_firewall_17.log"
+        historical.write_text('{"status":403}\n')
+        for directory in ("letsencrypt-acme-challenge", "nginx/default_host", "nginx/temp"):
+            obsolete = data / directory
+            obsolete.mkdir(parents=True)
+            (obsolete / "stale").touch()
+        for _ in range(2):
+            self.startup_log_setup()
+            self.assertEqual(historical.read_text(), '{"status":403}\n')
+            self.assertEqual(logs.stat().st_uid, os.getuid())
+            self.assertEqual(logs.stat().st_gid, os.getgid())
+            self.assertEqual(logs.stat().st_mode & 0o777, 0o700)
+            self.assertFalse((data / "nginx/temp").exists())
+        historical.unlink()
+        logs.rmdir()
+        self.startup_log_setup()
+        (logs / "ip_firewall_new.log").write_text("new denial\n")
+        self.assertEqual(logs.stat().st_mode & 0o777, 0o700)
+
+    def test_actual_nginx_validation_recovers_after_log_directory_was_deleted(self):
+        nginx = os.environ.get("NGINX_BIN") or shutil.which("nginx")
+        if not nginx:
+            self.skipTest("Nginx binary not available; CI Docker smoke validates the packaged build")
+        data = self.root / "data"
+        data.mkdir()
+        configuration = self.nginx_config(data, os.getuid())
+        command = [nginx, "-p", f"{self.root}/", "-c", str(configuration), "-tq"]
+        missing = subprocess.run(command, capture_output=True, text=True)
+        self.assertNotEqual(missing.returncode, 0)
+        self.assertIn("ip_firewall_test.log", missing.stderr)
+        self.startup_log_setup()
+        ready = subprocess.run(command, capture_output=True, text=True)
+        self.assertEqual(ready.returncode, 0, ready.stderr)
+        self.assertTrue((data / "logs/ip_firewall_test.log").is_file())
+
+    def test_selected_uid_1000_can_append_retained_log_and_create_new_log_before_validation(self):
+        if os.geteuid() != 0:
+            self.skipTest("Changing the startup service UID requires root; Docker smoke also covers UID1000")
+        ownership_probe = self.root / "ownership-probe"
+        ownership_probe.touch()
+        try:
+            os.chown(ownership_probe, 1000, 1000)
+            os.chown(ownership_probe, os.getuid(), os.getgid())
+        except OSError as error:
+            if error.errno in (errno.EPERM, errno.EACCES, errno.EINVAL) and not os.environ.get("CI"):
+                self.skipTest(f"local runtime prevents selected-UID ownership: {error}")
+            raise
+        self.root.chmod(0o755)
+        data = self.root / "data"
+        data.mkdir()
+        logs = data / "logs"
+        logs.mkdir()
+        historical = logs / "ip_firewall_17.log"
+        historical.write_text("retained denial\n")
+        self.startup_log_setup(1000, 1000)
+        source = (REPO / "rootfs/usr/local/bin/start.sh").read_text()
+        branch = source.split('if [ "$PUID" != "0" ]; then', 1)[1].split("    export HOME=", 1)[0]
+        ownership = re.search(r"(?ms)^    find /data .*?-exec chown[^\n]+\{\} \+", branch).group(0)
+        self.shell(ownership.replace("/data", str(data)), PUID="1000", PGID="1000")
+        code = '''
+import os, sys
+from pathlib import Path
+os.setgroups([])
+os.setgid(1000)
+os.setuid(1000)
+logs = Path(sys.argv[1])
+assert os.getuid() == 1000 and os.getgid() == 1000
+assert (logs.stat().st_mode & 0o777) == 0o700
+with (logs / "ip_firewall_17.log").open("a") as handle:
+    handle.write("service UID denial\\n")
+(logs / "ip_firewall_new.log").write_text("new denial\\n")
+assert (logs / "ip_firewall_new.log").stat().st_uid == 1000
+'''
+        result = subprocess.run([sys.executable, "-c", code, str(logs)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(historical.read_text(), "retained denial\nservice UID denial\n")
+
+    def test_log_directory_preparation_rejects_symlinks_without_changing_target(self):
+        target = self.root / "foreign"
+        target.mkdir(mode=0o755)
+        logs = self.root / "logs"
+        logs.symlink_to(target, target_is_directory=True)
+        result = subprocess.run(
+            ["sh", "-eu", "-c", '. "$1"; prepare_nginx_log_directory "$2" "$3" "$4"',
+             "test", str(HELPERS), str(logs), str(os.getuid()), str(os.getgid())],
+            capture_output=True, text=True,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Refusing a symlink", result.stderr)
+        self.assertEqual(target.stat().st_mode & 0o777, 0o755)
 
     def test_certbot_options_can_be_changed_back_after_restart(self):
         config = self.root / "certbot.ini"

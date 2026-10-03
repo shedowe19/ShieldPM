@@ -5,6 +5,9 @@ import dayjs from "dayjs";
 import _ from "lodash";
 import punycode from "punycode.js";
 import errs from "../lib/error.js";
+import { assertCountryFirewallAvailable } from "../lib/firewall-geoip.js";
+import { compactFirewallForPreview, summarizeFirewallPreviewConfig } from "../lib/firewall-preview.js";
+import { buildFirewallRender } from "../lib/firewall-render.js";
 import { sanitizeHostMeta } from "../lib/host-response.js";
 import { getTerminalAccessToken } from "../lib/terminal-access.js";
 import utils from "../lib/utils.js";
@@ -255,7 +258,7 @@ const internalNginx = {
 	},
 
 	/**
-	 * Render a host configuration without writing it. The same output is used by generateConfig().
+	 * Render a host configuration without writing it. Preview mode summarizes CIDR tables and hides terminal tokens.
 	 * @param   {String}  host_type
 	 * @param   {Object}  host_row
 	 * @param   {{preview?: boolean}} [options]
@@ -266,6 +269,22 @@ const internalNginx = {
 		const host = JSON.parse(JSON.stringify(host_row));
 		if (host.is_deleted) host.enabled = false;
 		const nice_host_type = internalNginx.getFileFriendlyHostType(host_type);
+		let firewallSummaries;
+		if (nice_host_type === "proxy_host" && host.enabled && host.meta?.ip_firewall?.enabled === true) {
+			await assertCountryFirewallAvailable(host.meta.ip_firewall);
+			let lists = [];
+			if (host.meta.ip_firewall.list_ids?.length) {
+				// Lazy import avoids the list service/configuration engine cycle for ordinary/manual-only hosts.
+				const { default: firewallLists } = await import("./firewall-list.js");
+				lists = await firewallLists.getForHost(host.meta.ip_firewall.list_ids);
+			}
+			host.firewall = await buildFirewallRender(host, lists);
+			if (options.preview && host.firewall) {
+				const compact = compactFirewallForPreview(host.firewall);
+				host.firewall = compact.firewall;
+				firewallSummaries = compact.summaries;
+			}
+		}
 
 		const renderEngine = utils.getRenderEngine();
 		const templatePath = `${__dirname}/../templates/${nice_host_type}.conf`;
@@ -347,7 +366,10 @@ const internalNginx = {
 			}
 		}
 
-		return await renderEngine.renderFile(templatePath, host);
+		const rendered = await renderEngine.renderFile(templatePath, host);
+		return firewallSummaries
+			? summarizeFirewallPreviewConfig(rendered, host.id, { summaries: firewallSummaries }).config
+			: rendered;
 	},
 
 	/**
@@ -503,9 +525,10 @@ const internalNginx = {
 	/**
 	 * Render multiple host types into one atomic validation batch.
 	 * @param {Array<{model: object, hostType: string, hosts: Array<object>}>} groups
+	 * @param {{throwOnError?: boolean}} [options]
 	 * @returns {Promise<Array<object>>}
 	 */
-	bulkGenerateConfigGroups: async (groups) =>
+	bulkGenerateConfigGroups: async (groups, options = {}) =>
 		internalNginx.withConfigurationLock(async () => {
 			/** @type {Array<{host: object, host_type: string, model: object}>} */
 			const stages = [];
@@ -527,7 +550,11 @@ const internalNginx = {
 				return statuses;
 			} catch (err) {
 				logger.error(`Nginx batch test failed: ${err.message}`);
-				return await Promise.all(stages.map((stage) => internalNginx.rollbackStagedConfig(stage, err)));
+				const statuses = await Promise.all(
+					stages.map((stage) => internalNginx.rollbackStagedConfig(stage, err)),
+				);
+				if (options.throwOnError) throw err;
+				return statuses;
 			}
 		}),
 

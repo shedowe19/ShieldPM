@@ -16,6 +16,7 @@ import internalChat from "./internal/chat.js";
 import internalCloudflared from "./internal/cloudflared.js";
 import internalDdns from "./internal/ddns.js";
 import internalDocker from "./internal/docker.js";
+import internalFirewallList from "./internal/firewall-list.js";
 import internalGitDeploy from "./internal/git-deploy.js";
 import internalGitOps from "./internal/gitops.js";
 import internalIpRanges from "./internal/ip_ranges.js";
@@ -59,6 +60,7 @@ async function appStart() {
 		await internalCertificate.initTimer();
 		internalMaintenance.initTimer();
 		await internalNginx.reload();
+		internalFirewallList.initTimer();
 		internalCloudflared.init();
 		internalTor.init();
 		internalWireguard.init();
@@ -84,7 +86,9 @@ async function appStart() {
 			process.on("SIGTERM", () => {
 				logger.info(`PID ${process.pid} received SIGTERM`);
 				internalProxyHostMonitor.stop();
+				internalFirewallList.stopTimer();
 				server.close(async () => {
+					await internalFirewallList.stopTimer();
 					await analyticsService.stop();
 					await internalUploadRelay.stop();
 					logger.info("Stopping.");
