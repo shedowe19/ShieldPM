@@ -2,6 +2,7 @@ import express from "express";
 import internalFirewallList from "../../internal/firewall-list.js";
 import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
+import { getFirewallGeoipStatus } from "../../lib/firewall-geoip.js";
 import apiValidator from "../../lib/validator/api.js";
 import { getValidationSchema } from "../../schema/index.js";
 
@@ -25,6 +26,15 @@ router
 	});
 
 // Register the named endpoint before the ID route.
+router
+	.route("/geoip")
+	.options((_, res) => res.sendStatus(204))
+	.all(jwtdecode())
+	.get(async (_, res) => {
+		await res.locals.access.can("proxy_hosts:list");
+		res.status(200).send(await getFirewallGeoipStatus());
+	});
+
 router
 	.route("/preview")
 	.options((_, res) => res.sendStatus(204))

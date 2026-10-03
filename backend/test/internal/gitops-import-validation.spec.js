@@ -90,8 +90,9 @@ const mocks = vi.hoisted(() => {
 			return query;
 		},
 	});
-	return { files, writes, prunes, rows, makeModel, pruneError };
+	return { files, writes, prunes, rows, makeModel, pruneError, geoip: vi.fn() };
 });
+vi.mock("../../lib/firewall-geoip.js", () => ({ assertCountryFirewallAvailable: mocks.geoip }));
 vi.mock("node:fs", () => ({
 	default: {
 		existsSync: (path) =>
@@ -178,6 +179,7 @@ describe("GitOps import sanitization and safe restore", () => {
 		mocks.writes.length = 0;
 		mocks.prunes.length = 0;
 		mocks.pruneError.value = null;
+		mocks.geoip.mockResolvedValue(undefined);
 		for (const key of Object.keys(mocks.rows)) delete mocks.rows[key];
 	});
 	it("removes unknown top-level and nested fields from the actual database payload", async () => {
@@ -377,6 +379,59 @@ describe("GitOps import sanitization and safe restore", () => {
 		expect(result.errors).toContainEqual(expect.stringMatching(/Firewall list IDs must be positive integers/));
 		expect(mocks.writes).toEqual([]);
 		expect(mocks.prunes).toEqual([]);
+	});
+	it("preserves normalized country filters when restoring a proxy host from GitOps", async () => {
+		file("proxy-hosts", {
+			id: 9,
+			meta: {
+				ip_firewall: {
+					enabled: true,
+					country_denylist: ["de", "XK", "DE"],
+					country_reason: "Regional access rule",
+					block_unknown_country: true,
+				},
+			},
+		});
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(true);
+		expect(mocks.writes.find(({ name }) => name === "ProxyHost").data.meta.ip_firewall).toMatchObject({
+			country_denylist: ["DE", "XK"],
+			country_reason: "Regional access rule",
+			block_unknown_country: true,
+		});
+	});
+	it("rejects invalid restored country codes before writes or host pruning", async () => {
+		file("proxy-hosts", { id: 9, meta: { ip_firewall: { country_denylist: ["ZZ"] } } });
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(result.errors).toContainEqual(expect.stringMatching(/valid ISO alpha-2 codes or XK/));
+		expect(mocks.writes).toEqual([]);
+		expect(mocks.prunes).toEqual([]);
+	});
+	it("rejects active country restoration before host writes or pruning without GeoIP support", async () => {
+		mocks.geoip.mockRejectedValueOnce(new Error("Country firewall requires supported GeoIP configuration"));
+		file("proxy-hosts", { id: 9, meta: { ip_firewall: { enabled: true, country_denylist: ["DE"] } } });
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(result.errors).toContainEqual(expect.stringMatching(/supported GeoIP/));
+		expect(mocks.writes).toEqual([]);
+		expect(mocks.prunes).toEqual([]);
+	});
+	it("restores disabled country rules while active GeoIP filtering is unavailable", async () => {
+		mocks.geoip.mockImplementationOnce(async (policy) => {
+			if (policy.enabled) throw new Error("Country firewall requires supported GeoIP configuration");
+		});
+		file("proxy-hosts", {
+			id: 9,
+			meta: { ip_firewall: { enabled: false, country_denylist: ["DE"], block_unknown_country: true } },
+		});
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(true);
+		expect(mocks.writes.find(({ name }) => name === "ProxyHost").data.meta.ip_firewall).toMatchObject({
+			enabled: false,
+			country_denylist: ["DE"],
+			block_unknown_country: true,
+		});
 	});
 	it("reports invalid imports and prevents pruning that model", async () => {
 		file("proxy-hosts", { id: "invalid", domain_names: ["example.com"] });

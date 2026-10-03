@@ -49,6 +49,9 @@ describe("createProxyHostInitialValues", () => {
 					listIds: [],
 					allowlist: [],
 					denylist: [],
+					countryDenylist: [],
+					countryReason: "",
+					blockUnknownCountry: false,
 					publicMessage: "",
 					supportUrl: "",
 					internalNote: "",
@@ -229,6 +232,9 @@ describe("createProxyHostInitialValues", () => {
 				listIds: [4, 12],
 				allowlist: ["198.51.100.42"],
 				denylist: [{ address: "203.0.113.0/24", reason: "Repeated abuse" }],
+				countryDenylist: ["DE", "XK"],
+				countryReason: "Country restriction",
+				blockUnknownCountry: true,
 				publicMessage: "Contact the service operator.",
 				supportUrl: "https://example.test/support",
 				internalNote: "Internal case number",
@@ -238,6 +244,7 @@ describe("createProxyHostInitialValues", () => {
 		expect(values.meta).toStrictEqual(meta);
 		expect(values.meta?.ipFirewall?.listIds).not.toBe(meta.ipFirewall.listIds);
 		expect(values.meta?.ipFirewall?.denylist[0]).not.toBe(meta.ipFirewall.denylist[0]);
+		expect(values.meta?.ipFirewall?.countryDenylist).not.toBe(meta.ipFirewall.countryDenylist);
 	});
 
 	it("reads legacy JSON metadata without dropping unrelated settings", () => {

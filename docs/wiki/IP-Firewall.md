@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The IP Firewall blocks IPv4 addresses, IPv6 addresses, and CIDR networks before requests reach a protected HTTP service. Maintain reusable lists centrally, then decide independently which lists each Proxy Host uses.
+The IP Firewall blocks IPv4 addresses, IPv6 addresses, CIDR networks, and selected GeoIP country assignments before requests reach a protected HTTP service. Maintain reusable lists centrally, then decide independently which lists and countries each Proxy Host uses.
 
 Blocked visitors receive a dedicated page with the matching rule or list, its public reason, their IP address, a request reference, and an optional support link. Membership in a VPN or datacenter list describes an address classification; it does **not** prove that a visitor attacked your service.
 
@@ -54,11 +54,23 @@ Select at most 32 central lists per host. Up to 1,000 manual blocks and 1,000 ex
 
 An exception overrides matching blocks from this IP Firewall. It does not bypass Access Lists, login, mTLS, CrowdSec, or WAF rules.
 
-When several blocks match, host-specific manual rules take precedence over subscribed lists. The public reason belongs to the matching manual rule or list. The additional host message can explain your service policy or how to request assistance.
+When several blocks match, host-specific manual rules take precedence over subscribed lists, which take precedence over country rules. The public reason belongs to the matching rule. The additional host message can explain your service policy or how to request assistance.
 
 The internal note is administrative and is never included in the public blocking page. List descriptions are also kept out of that page. Avoid putting private details in a public reason or public message.
 
 The blocking page uses German when the request's language preference starts with `de`; otherwise it uses English. API clients requesting `application/json` without `text/html` receive a structured `ip_blocked` response with the same public reason and request reference.
+
+## Block countries for a host
+
+In **Proxy Host → Security → IP Firewall**, use the searchable **Country filter** selection to choose countries by name or ISO code. An optional country reason can explain your policy; leaving it blank uses a factual default explanation. Country rules apply when the host's IP Firewall is enabled. Address exceptions also override country blocks.
+
+**Block unknown countries** is a separate option and is off by default. Empty or unsupported GeoIP results are treated as unknown (`XX`); `XX` is not a selectable country code. Unknown results remain allowed by the country filter unless you explicitly enable that option.
+
+Country filtering reuses the existing [Analytics GeoIP setup](./Analytics.md#enabling-geoip-country-statistics), including its MMDB database and Nginx country lookup. If that setup is already available, no additional database download, subscription, or external geolocation API is needed. The country refers to the database's classification of the visitor IP, rather than a verified physical location.
+
+The editor checks GeoIP readiness and explains whether the module, database, or country configuration is missing. While that check is loading, fails, or reports unavailable, you can remove saved country rules but cannot add new ones or enable unknown-country blocking. Use **Check again** after correcting the existing GeoIP setup. A disabled firewall with saved country rules cannot be re-enabled until GeoIP is ready or those rules are removed. Manual IP and list blocking remain available without GeoIP.
+
+When country rules are active, the blocking page, JSON response, and firewall log also show the detected country code, even when a manual or list rule supplied the blocking reason. A dedicated firewall analytics screen is not provided.
 
 ## Subscribe to X4BNet lists
 
@@ -109,5 +121,6 @@ Removing obsolete firewall lists during a full restore is deferred until every i
 - [Security](./Security.md)
 - [OAuth2 Proxy](./OAuth2-Proxy.md)
 - [Anubis](./Anubis.md)
+- [Analytics](./Analytics.md)
 - [GitOps](./GitOps.md)
 - [Troubleshooting](./Troubleshooting.md)

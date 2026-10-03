@@ -10,9 +10,12 @@ import {
 
 const mocks = vi.hoisted(() => ({
 	useFirewallLists: vi.fn(),
+	useFirewallGeoip: vi.fn(),
+	refetchGeoip: vi.fn(),
 }));
 
 vi.mock("src/hooks/useFirewallLists", () => ({ useFirewallLists: mocks.useFirewallLists }));
+vi.mock("src/hooks/useFirewallGeoip", () => ({ useFirewallGeoip: mocks.useFirewallGeoip }));
 vi.mock("src/locale", () => ({
 	intl: { formatMessage: ({ id }: { id: string }) => id },
 	T: ({ id }: { id: string }) => <>{id}</>,
@@ -39,7 +42,14 @@ const enabledMeta = (): NonNullable<ProxyHostFormValues["meta"]> => ({
 });
 
 describe("ProxyHostFirewallSettings", () => {
-	beforeEach(() =>
+	beforeEach(() => {
+		mocks.refetchGeoip.mockClear();
+		mocks.useFirewallGeoip.mockReturnValue({
+			data: { available: true, moduleEnabled: true, databasePresent: true, reason: null },
+			isLoading: false,
+			isError: false,
+			refetch: mocks.refetchGeoip,
+		});
 		mocks.useFirewallLists.mockReturnValue({
 			data: [
 				{ id: 4, name: "VPN networks", entryCount: 1234, enabled: true },
@@ -47,8 +57,8 @@ describe("ProxyHostFirewallSettings", () => {
 			],
 			isLoading: false,
 			isError: false,
-		}),
-	);
+		});
+	});
 	afterEach(cleanup);
 
 	it("starts disabled and retains configured rules when toggling protection", async () => {
@@ -161,5 +171,96 @@ describe("ProxyHostFirewallSettings", () => {
 			target: { value: "Changed public message" },
 		});
 		await waitFor(() => expect(preview.getAttribute("srcdoc")).toContain("Changed public message"));
+	});
+
+	it("selects countries per host, edits the public country reason and enables unknown countries explicitly", async () => {
+		renderSettings({ accessListId: 7, meta: enabledMeta() });
+		expect(screen.getByRole("switch", { name: "firewall.host.countries.blockUnknown" })).not.toBeChecked();
+		const input = screen.getByLabelText("firewall.host.countries.selection");
+		fireEvent.focus(input);
+		fireEvent.change(input, { target: { value: "Germany" } });
+		fireEvent.click(await screen.findByText("Germany · DE"));
+		fireEvent.change(screen.getByLabelText("firewall.host.countries.reason"), {
+			target: { value: "This country is restricted for this host." },
+		});
+		fireEvent.click(screen.getByRole("switch", { name: "firewall.host.countries.blockUnknown" }));
+		await waitFor(() =>
+			expect(state()).toMatchObject({
+				accessListId: 7,
+				meta: {
+					ipFirewall: {
+						countryDenylist: ["DE"],
+						countryReason: "This country is restricted for this host.",
+						blockUnknownCountry: true,
+					},
+				},
+			}),
+		);
+	});
+
+	it("prevents new country filters while GeoIP is loading and leaves IP protection editable", async () => {
+		mocks.useFirewallGeoip.mockReturnValue({
+			data: undefined,
+			isLoading: true,
+			isError: false,
+			refetch: mocks.refetchGeoip,
+		});
+		renderSettings({ meta: enabledMeta() });
+		expect(screen.getByText("firewall.host.geoip.loading")).toBeInTheDocument();
+		expect(screen.getByRole("switch", { name: "firewall.host.countries.blockUnknown" })).toBeDisabled();
+		const input = screen.getByLabelText("firewall.host.countries.selection");
+		fireEvent.focus(input);
+		fireEvent.change(input, { target: { value: "Germany" } });
+		fireEvent.click(await screen.findByText("Germany · DE"));
+		expect(state().meta?.ipFirewall?.countryDenylist).toEqual([]);
+		fireEvent.click(screen.getByRole("button", { name: "firewall.host.addEntry" }));
+		expect(await screen.findByLabelText("firewall.host.address")).toBeInTheDocument();
+	});
+
+	it("retains saved country rules on a disabled firewall while permitting explicit removal without GeoIP", async () => {
+		mocks.useFirewallGeoip.mockReturnValue({
+			data: { available: false, moduleEnabled: true, databasePresent: false, reason: "database_missing" },
+			isLoading: false,
+			isError: false,
+			refetch: mocks.refetchGeoip,
+		});
+		const meta = {
+			ipFirewall: createProxyHostFirewallPolicy({
+				enabled: false,
+				countryDenylist: ["DE"],
+				countryReason: "Saved reason",
+				blockUnknownCountry: true,
+			}),
+		};
+		renderSettings({ meta });
+		expect(screen.getByRole("switch", { name: "firewall.host.title" })).toBeDisabled();
+		expect(screen.getByText("firewall.host.geoip.databaseMissing")).toBeInTheDocument();
+		expect(state().meta?.ipFirewall?.countryDenylist).toEqual(["DE"]);
+		fireEvent.click(screen.getByRole("button", { name: "Remove Germany · DE" }));
+		fireEvent.click(screen.getByRole("switch", { name: "firewall.host.countries.blockUnknown" }));
+		await waitFor(() =>
+			expect(state().meta?.ipFirewall).toMatchObject({
+				countryDenylist: [],
+				countryReason: "Saved reason",
+				blockUnknownCountry: false,
+			}),
+		);
+		expect(screen.getByRole("switch", { name: "firewall.host.title" })).not.toBeDisabled();
+		fireEvent.click(screen.getByRole("switch", { name: "firewall.host.title" }));
+		await waitFor(() => expect(state().meta?.ipFirewall?.enabled).toBe(true));
+	});
+
+	it("displays readiness failures and lets administrators retry without assuming GeoIP is available", () => {
+		mocks.useFirewallGeoip.mockReturnValue({
+			data: { available: true, moduleEnabled: true, databasePresent: true, reason: null },
+			isLoading: false,
+			isError: true,
+			refetch: mocks.refetchGeoip,
+		});
+		renderSettings({ meta: enabledMeta() });
+		expect(screen.getByText("firewall.host.geoip.error")).toBeInTheDocument();
+		expect(screen.getByRole("switch", { name: "firewall.host.countries.blockUnknown" })).toBeDisabled();
+		fireEvent.click(screen.getByRole("button", { name: "firewall.host.geoip.retry" }));
+		expect(mocks.refetchGeoip).toHaveBeenCalledOnce();
 	});
 });

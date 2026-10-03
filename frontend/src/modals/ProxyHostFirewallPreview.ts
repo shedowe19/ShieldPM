@@ -45,6 +45,16 @@ export const renderProxyHostFirewallPreview = ({
 	const de = language.toLowerCase().startsWith("de");
 	const manual = policy.denylist.find((rule) => rule.address.trim());
 	const selected = policy.listIds.map((id) => lists.find((list) => list.id === id && list.enabled)).find(Boolean);
+	const country = policy.countryDenylist[0] || (policy.blockUnknownCountry ? "XX" : "");
+	const countryExample = !manual && !selected && country !== "";
+	const countryDefaultReason =
+		country === "XX"
+			? de
+				? "Das Land dieser IP-Adresse konnte nicht ermittelt werden. Dieser Betreiber sperrt Zugriffe mit unbekannter Länderzuordnung."
+				: "The country of this IP address could not be determined. This operator blocks requests with unknown country assignment."
+			: de
+				? `Die IP-Adresse wird dem gesperrten Land ${country} zugeordnet. Der Betreiber schränkt Zugriffe aus diesem Land ein.`
+				: `This IP address is assigned to the blocked country ${country}. The operator restricts access from this country.`;
 	const defaultReason = de
 		? "Die IP-Adresse ist durch eine Zugriffsregel dieser Website gesperrt."
 		: "This IP address is blocked by an access rule for this website.";
@@ -75,13 +85,27 @@ export const renderProxyHostFirewallPreview = ({
 				footer: "Please include the request ID when asking for assistance.",
 			};
 	Object.assign(labels, {
-		reason: (manual ? manual.reason : selected?.reason) || defaultReason,
+		reason:
+			(manual ? manual.reason : selected?.reason) ||
+			(countryExample ? policy.countryReason || countryDefaultReason : defaultReason),
 		message:
 			policy.publicMessage ||
 			(de
 				? "Der Betreiber schränkt den Zugriff für dieses Netzwerk ein. Ein Listentreffer allein bedeutet nicht, dass ein Angriff stattgefunden hat."
 				: "The website operator restricts access from this network. A list match alone does not mean an attack occurred."),
-		source: !manual && selected ? selected.name : de ? "Manuelle IP-Sperre" : "Manual IP block",
+		source:
+			!manual && selected
+				? selected.name
+				: countryExample
+					? de
+						? "GeoIP-Länderregel"
+						: "GeoIP country rule"
+					: de
+						? "Manuelle IP-Sperre"
+						: "Manual IP block",
+		country_label: de ? "Erkanntes Land (ISO)" : "Detected country (ISO)",
+		country: country === "XX" ? (de ? "Unbekannt (XX)" : "Unknown (XX)") : country,
+		country_hidden: country ? "" : "hidden",
 		ip: "203.0.113.42",
 		host: host || "example.com",
 		request: "PREVIEW-203011342",

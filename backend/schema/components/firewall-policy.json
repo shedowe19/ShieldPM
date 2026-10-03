@@ -55,6 +55,26 @@
 		"internal_note": {
 			"type": "string",
 			"maxLength": 2000
+		},
+		"country_denylist": {
+			"type": "array",
+			"maxItems": 250,
+			"uniqueItems": true,
+			"default": [],
+			"items": {
+				"$ref": "./firewall-country-code.json"
+			}
+		},
+		"country_reason": {
+			"type": "string",
+			"maxLength": 1000,
+			"default": "",
+			"description": "Optional public explanation for country-based blocks."
+		},
+		"block_unknown_country": {
+			"type": "boolean",
+			"default": false,
+			"description": "Block requests whose actual visitor country could not be determined."
 		}
 	}
 }

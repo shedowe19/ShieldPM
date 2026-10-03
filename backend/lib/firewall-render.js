@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import ipaddr from "ipaddr.js";
 import { normalizeAddress } from "./firewall-addresses.js";
+import { FIREWALL_COUNTRY_CODES } from "./firewall-policy.js";
 
 let pageTemplate;
 
@@ -54,6 +55,19 @@ export const buildFirewallRender = async (host, lists = []) => {
 		if (!list) continue;
 		for (const address of list.entries || []) addRule(subscribed, address, list.reason, list.name, "list", list.id);
 	}
+	const countryDenylist = policy.country_denylist || [];
+	const hasCountryRules = countryDenylist.length > 0 || policy.block_unknown_country === true;
+	const countryRules = [];
+	if (countryDenylist.length) {
+		const id = details.length + 1;
+		details.push({ id, reason: policy.country_reason || "", source: "", source_type: "country" });
+		for (const code of countryDenylist) countryRules.push({ code, value: id });
+	}
+	if (policy.block_unknown_country) {
+		const id = details.length + 1;
+		details.push({ id, reason: policy.country_reason || "", source: "", source_type: "country_unknown" });
+		countryRules.push({ code: "XX", value: id });
+	}
 	pageTemplate ||= fs.readFile(new URL("../templates/ip-blocked.html", import.meta.url), "utf8");
 	const rules = (entries) => [...entries].map(([address, value]) => ({ address, value }));
 	return {
@@ -61,6 +75,9 @@ export const buildFirewallRender = async (host, lists = []) => {
 		allow_rules: rules(allow),
 		manual_rules: rules(manual),
 		list_rules: rules(subscribed),
+		has_country_rules: hasCountryRules,
+		known_country_codes: hasCountryRules ? FIREWALL_COUNTRY_CODES : [],
+		country_rules: countryRules,
 		details,
 		public_message: policy.public_message || "",
 		support_url: policy.support_url || "",

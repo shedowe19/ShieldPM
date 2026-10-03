@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ certificate: vi.fn(), list: vi.fn(), firewallList: vi.fn(), query: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+	certificate: vi.fn(),
+	list: vi.fn(),
+	firewallList: vi.fn(),
+	query: vi.fn(),
+	geoip: vi.fn(),
+}));
+vi.mock("../../lib/firewall-geoip.js", () => ({ assertCountryFirewallAvailable: mocks.geoip }));
 vi.mock("../../internal/certificate.js", () => ({ default: { get: mocks.certificate } }));
 vi.mock("../../internal/access-list.js", () => ({ default: { get: mocks.list } }));
 vi.mock("../../internal/firewall-list.js", () => ({ default: { get: mocks.firewallList } }));
@@ -32,6 +39,7 @@ describe("host references use the referenced resource's authorization", () => {
 		mocks.certificate.mockRejectedValue(new Error("Certificate not visible"));
 		mocks.list.mockRejectedValue(new Error("Access list not visible"));
 		mocks.firewallList.mockRejectedValue(new Error("Firewall list not visible"));
+		mocks.geoip.mockResolvedValue(undefined);
 	});
 	afterEach(() => vi.restoreAllMocks());
 	it.each(services)("rejects inaccessible TLS references before creating a host", async (service) => {
@@ -98,6 +106,24 @@ describe("host references use the referenced resource's authorization", () => {
 		expect(mocks.firewallList).toHaveBeenCalledExactlyOnceWith(access, { id: 99 });
 		expect(mocks.query).not.toHaveBeenCalled();
 	});
+	it.each(["create", "update"])(
+		"rejects unsupported country filtering before proxy %s queries or writes",
+		async (operation) => {
+			vi.spyOn(proxy, "get").mockResolvedValue({ id: 1, meta: {} });
+			mocks.geoip.mockRejectedValueOnce(new Error("Country firewall requires supported GeoIP configuration"));
+			await expect(
+				proxy[operation](access, {
+					id: 1,
+					domain_names: operation === "create" ? ["example.test"] : undefined,
+					meta: { ip_firewall: { enabled: true, country_denylist: ["DE"] } },
+				}),
+			).rejects.toThrow(/supported GeoIP/);
+			expect(mocks.geoip).toHaveBeenCalledExactlyOnceWith(
+				expect.objectContaining({ enabled: true, country_denylist: ["DE"] }),
+			);
+			expect(mocks.query).not.toHaveBeenCalled();
+		},
+	);
 	it("permits assignments after both referenced services authorize them", async () => {
 		mocks.certificate.mockResolvedValueOnce({ id: 2 });
 		mocks.list.mockResolvedValueOnce({ id: 3 });

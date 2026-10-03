@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn() } }));
 vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: () => "test-token" }));
 vi.mock("../../internal/firewall-list.js", () => ({ default: { getForHost: vi.fn() } }));
+vi.mock("../../lib/firewall-geoip.js", () => ({ assertCountryFirewallAvailable: vi.fn() }));
 
 import lists from "../../internal/firewall-list.js";
 import nginx from "../../internal/nginx.js";
@@ -72,7 +73,41 @@ describe("mandatory host IP firewall config", () => {
 			host({ denylist: [{ address: "192.0.2.9", reason: "manual" }] }),
 		);
 		expect(config).toContain("192.0.2.9/32 1;");
+		expect(config).not.toContain("geoip2_country_code");
 		expect(lists.getForHost).not.toHaveBeenCalled();
+	});
+
+	it("reuses Analytics country lookup with known codes, optional unknown blocking and IP precedence", async () => {
+		lists.getForHost.mockResolvedValue([{ id: 9, name: "VPN", reason: "list", entries: ["198.51.100.0/24"] }]);
+		const policy = {
+			list_ids: [9],
+			denylist: [{ address: "198.51.100.2", reason: "manual" }],
+			country_denylist: ["DE", "XK"],
+			block_unknown_country: true,
+		};
+		const config = await nginx.renderConfig("proxy_host", host(policy));
+		expect(config).toContain("map $geoip2_country_code $spm_fw_17_country");
+		expect(config).toContain("XK XK;");
+		expect(config).toContain("default XX;");
+		expect(config).toContain("DE 3;");
+		expect(config).toContain("XX 4;");
+		expect(config).toContain("0 $spm_fw_17_country_rule;");
+		expect(config).toContain("0 $spm_fw_17_list_or_country;");
+		expect(config).toContain('"country_code":"$spm_fw_17_country"');
+		expect(config).not.toContain("geoip2 /");
+		const data = await buildFirewallRender(host(policy), [
+			{ id: 9, name: "VPN", reason: "list", entries: ["198.51.100.0/24"] },
+		]);
+		expect(data.known_country_codes).toHaveLength(250);
+		expect(data.details.map((rule) => rule.source_type)).toEqual(["manual", "list", "country", "country_unknown"]);
+	});
+
+	it("can use country rules alone and omits unknown blocking unless selected", async () => {
+		const data = await buildFirewallRender(host({ country_denylist: ["GB"], country_reason: "Country policy" }));
+		expect(data.country_rules).toEqual([{ code: "GB", value: 1 }]);
+		expect(data.details).toEqual([{ id: 1, reason: "Country policy", source: "", source_type: "country" }]);
+		expect(data.manual_rules).toEqual([]);
+		expect(data.list_rules).toEqual([]);
 	});
 
 	it.each([false, true])(

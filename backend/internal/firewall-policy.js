@@ -1,4 +1,5 @@
 import errs from "../lib/error.js";
+import { assertCountryFirewallAvailable } from "../lib/firewall-geoip.js";
 import { normalizeFirewallPolicy } from "../lib/firewall-policy.js";
 
 const readMeta = (value) => {
@@ -23,6 +24,7 @@ export const validateHostFirewall = async (access, data, existing = {}) => {
 	if (!Object.hasOwn(meta, "ip_firewall")) return;
 	const policy = normalizeFirewallPolicy(meta.ip_firewall);
 	if (!policy) return;
+	await assertCountryFirewallAvailable(policy);
 	const previous = readMeta(existing.meta)?.ip_firewall;
 	const previousIds = new Set(Array.isArray(previous?.list_ids) ? previous.list_ids : []);
 	const addedIds = policy.list_ids.filter((id) => !previousIds.has(id));

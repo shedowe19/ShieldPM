@@ -53,4 +53,30 @@ describe("renderProxyHostFirewallPreview", () => {
 		expect(page).not.toContain("List reason");
 		expect(page).not.toContain("secret");
 	});
+
+	it("shows a country-rule example with an escaped custom reason and the selected ISO code", () => {
+		const page = renderProxyHostFirewallPreview({
+			language: "de",
+			policy: createProxyHostFirewallPolicy({
+				countryDenylist: ["DE"],
+				countryReason: "Regionalzugriff <gesperrt>",
+			}),
+		});
+		expect(page).toContain("GeoIP-Länderregel");
+		expect(page).toContain("Regionalzugriff &lt;gesperrt&gt;");
+		expect(page).toContain("Erkanntes Land (ISO)");
+		expect(page).toContain("<dd>DE</dd>");
+		expect(page).not.toMatch(/%\{[a-z_]+\}/);
+	});
+
+	it("distinguishes explicit unknown-country blocks and hides the country row for IP-only hosts", () => {
+		const unknownPage = renderProxyHostFirewallPreview({
+			policy: createProxyHostFirewallPolicy({ blockUnknownCountry: true }),
+		});
+		expect(unknownPage).toContain("Unknown (XX)");
+		expect(unknownPage).toContain("unknown country assignment");
+		expect(unknownPage).toContain("GeoIP country rule");
+		const ipPage = renderProxyHostFirewallPreview({ policy: createProxyHostFirewallPolicy() });
+		expect(ipPage).toContain("<div hidden><dt>Detected country (ISO)</dt>");
+	});
 });

@@ -2,7 +2,7 @@
 
 ## Zweck
 
-Die IP-Firewall sperrt Besucher anhand ihrer IPv4-/IPv6-Adresse oder eines CIDR-Netzes auf HTTP-Ebene. Listen werden zentral gepflegt; jeder Proxy-Host aktiviert die Firewall und wählt seine Listen unabhängig. Eine eigene Sperrseite erklärt den tatsächlichen Regel- oder Listentreffer.
+Die IP-Firewall sperrt Besucher anhand ihrer IPv4-/IPv6-Adresse, eines CIDR-Netzes oder der bestehenden GeoIP-Länderzuordnung auf HTTP-Ebene. Listen werden zentral gepflegt; jeder Proxy-Host aktiviert die Firewall und wählt seine Listen und Länder unabhängig. Eine eigene Sperrseite erklärt den tatsächlichen Regel-, Listen- oder Ländertreffer.
 
 Ein Eintrag in einer VPN- oder Rechenzentrumsliste ist kein Nachweis eines Angriffs. Die Firewall setzt die vom Betreiber gewählte Zugriffsregel um; sie ergänzt Access-Lists und WAF-Integrationen.
 
@@ -20,6 +20,8 @@ Listen verwenden die vorhandene Berechtigung `access_lists` und deren Eigentüme
 - `backend/lib/firewall-download.js` — begrenzter, SSRF-geschützter HTTPS-Abruf.
 - `backend/lib/firewall-list-validation.js` — gemeinsame Validierung für API und Backup-Import ohne Download.
 - `backend/lib/firewall-policy.js` — Prüfung der Host-Regeln.
+- `backend/lib/firewall-geoip.js` — Readiness der vorhandenen HTTP-GeoIP2-Konfiguration und ihrer MMDB-Datei.
+- `backend/schema/components/firewall-country-code.json` — gemeinsame ISO-Alpha-2-Ländercodes einschließlich `XK`.
 - `backend/internal/firewall-policy.js` — Autorisierung zugewiesener Listen.
 - `backend/internal/firewall-list.js` — Listenverwaltung und Aktualisierungen.
 - `backend/routes/nginx/firewall_lists.js` — authentifizierte API.
@@ -29,6 +31,8 @@ Listen verwenden die vorhandene Berechtigung `access_lists` und deren Eigentüme
 - `frontend/src/api/backend/firewallLists.ts`, `frontend/src/hooks/useFirewallLists.ts` — API und React-Query-Hooks.
 - `frontend/src/pages/Firewall.tsx`, `frontend/src/modals/FirewallListModal.tsx` — Listenübersicht unter `/firewall`, TXT-Vorschau und X4BNet-URL-Vorgaben.
 - `frontend/src/modals/ProxyHostFirewallSettings.tsx`, `ProxyHostSecurityTab.tsx` — Einstellungen im Sicherheitstab.
+- `frontend/src/modals/ProxyHostFirewallCountrySettings.tsx`, `frontend/src/lib/firewallCountries.ts` — suchbare Länderauswahl und lokalisierte Namen.
+- `frontend/src/api/backend/firewallGeoip.ts`, `frontend/src/hooks/useFirewallGeoip.ts` — GeoIP-Status für die Host-Oberfläche.
 
 ## Datenmodell
 
@@ -45,17 +49,22 @@ Listen verwenden die vorhandene Berechtigung `access_lists` und deren Eigentüme
 
 ### Einstellungen pro Proxy-Host
 
-| Backend-Feld     | Standard | Bedeutung                                                                 |
-| ---------------- | -------- | ------------------------------------------------------------------------- |
-| `enabled`        | `false`  | Aktiviert die Firewall nur für diesen Host.                               |
-| `list_ids`       | `[]`     | IDs der ausgewählten zentralen Listen, maximal 32.                        |
-| `allowlist`      | `[]`     | IP-/CIDR-Ausnahmen, maximal 1000.                                         |
-| `denylist`       | `[]`     | Maximal 1000 Regeln mit `address` und öffentlichem `reason`.              |
-| `public_message` | `""`     | Zusätzlicher öffentlicher Erklärungstext, maximal 2000 Zeichen.           |
-| `support_url`    | `""`     | Optionaler HTTP(S)-Kontaktlink ohne eingebettete Zugangsdaten.            |
-| `internal_note`  | `""`     | Verwaltungsnotiz, maximal 2000 Zeichen; wird nicht öffentlich ausgegeben. |
+| Backend-Feld            | Standard | Bedeutung                                                                             |
+| ----------------------- | -------- | ------------------------------------------------------------------------------------- |
+| `enabled`               | `false`  | Aktiviert die Firewall nur für diesen Host.                                           |
+| `list_ids`              | `[]`     | IDs der ausgewählten zentralen Listen, maximal 32.                                    |
+| `allowlist`             | `[]`     | IP-/CIDR-Ausnahmen, maximal 1000.                                                     |
+| `denylist`              | `[]`     | Maximal 1000 Regeln mit `address` und öffentlichem `reason`.                          |
+| `country_denylist`      | `[]`     | Maximal 250 ISO-Alpha-2-Codes beziehungsweise `XK`; leer aktiviert keine Länderregel. |
+| `country_reason`        | `""`     | Optionale öffentliche Begründung einer Länderregel, maximal 1000 Zeichen.             |
+| `block_unknown_country` | `false`  | Sperrt zusätzlich unbekannte beziehungsweise nicht unterstützte Länderzuordnungen.    |
+| `public_message`        | `""`     | Zusätzlicher öffentlicher Erklärungstext, maximal 2000 Zeichen.                       |
+| `support_url`           | `""`     | Optionaler HTTP(S)-Kontaktlink ohne eingebettete Zugangsdaten.                        |
+| `internal_note`         | `""`     | Verwaltungsnotiz, maximal 2000 Zeichen; wird nicht öffentlich ausgegeben.             |
 
 Der Normalisierungshelfer dedupliziert `list_ids` und `allowlist`; das JSON-Schema fordert eindeutige `list_ids`. Doppelte manuelle Sperradressen sind ein Validierungsfehler. Ein manuelles `reason` darf höchstens 1000 Zeichen enthalten. Unbekannte Felder, ungültige Adressen, ungültige Typen und Nullbytes in Textfeldern werden zurückgewiesen.
+
+Ländercodes werden im Normalisierungshelfer getrimmt, großgeschrieben und dedupliziert; das API-Schema verwendet dieselbe feste Liste mit 250 zulässigen Codes. `XX` ist kein auswählbares Land und wird nicht in `country_denylist` akzeptiert. Unbekannte Zuordnungen werden ausschließlich über `block_unknown_country` aktiviert. Es gibt keinen zusätzlichen Schalter `country_enabled`: eine nicht leere Länderauswahl beziehungsweise die Unknown-Option wirkt, sobald die Host-Firewall aktiviert ist.
 
 ## TXT-Import
 
@@ -83,6 +92,7 @@ Alle Pfade beziehen sich auf `/api/nginx/firewall-lists` und verwenden die beste
 | Methode und Pfad    | Verhalten                                                                                               |
 | ------------------- | ------------------------------------------------------------------------------------------------------- |
 | `GET /`             | Sichtbare Listen und Aktualisierungsstatus ohne `entries` auflisten; HTTP 200.                          |
+| `GET /geoip`        | Bereitschaft der vorhandenen GeoIP-Länderquelle prüfen; HTTP 200, Berechtigung `proxy_hosts:list`.      |
 | `POST /`            | Liste erstellen und validieren; vollständige Liste mit HTTP 201.                                        |
 | `POST /preview`     | TXT-Inhalt prüfen; keine Datenbank- oder Nginx-Änderung.                                                |
 | `GET /:id`          | Autorisierte Liste einschließlich editierbarer Einträge lesen.                                          |
@@ -91,6 +101,22 @@ Alle Pfade beziehen sich auf `/api/nginx/firewall-lists` und verwenden die beste
 | `POST /:id/refresh` | URL-Quelle mit leerer Payload `{}` sofort erneut abrufen. Manuelle Listen sind nicht refreshbar.        |
 
 Die Backend-Payloads verwenden Snake Case. Beispiele für Listenfelder sind `source_type`, `source_url` und `update_interval_hours`; der Frontend-API-Client konvertiert diese zu `sourceType`, `sourceUrl` und `updateIntervalHours`. `entries` wird nur bei einer manuellen Quelle geschrieben; URL-Quellen lesen es ausschließlich aus dem Download. Die Host-Firewall wird über die vorhandene Proxy-Host-API in `meta` gespeichert und benötigt keinen eigenen Host-Endpunkt.
+
+## Länderfilter und gemeinsame Analytics-GeoIP-Quelle
+
+Der Länderfilter verwendet die bereits von Nginx-Analytics verwendete globale Variable `$geoip2_country_code` und deren MaxMind-DB-Datei. Er führt keinen eigenen Geodaten-Download und keinen externen Geolocation-API-Aufruf aus. Gemeint ist die bestehende **MMDB-GeoIP-Datenbank**, nicht die SQL-Datenbank mit Analytics-Zählern. Die Einrichtung steht in der [Analytics-Anleitung](../../wiki/Analytics.md#enabling-geoip-country-statistics).
+
+Die Readiness-Prüfung liest die vorhandene Masterkonfiguration `/etc/nginx/nginx.conf` und kontrolliert die HTTP-GeoIP2-Ländervariable mit `country iso_code`, derselben vertrauenswürdig korrigierten Besucher-IP `source=$remote_addr` sowie einer vorhandenen, nicht leeren referenzierten MMDB-Datei. Eine unabhängige Headerquelle oder eine Konfiguration, die unbekannte IPs einem tatsächlichen Land zuordnet, ist keine gültige Grundlage. Der Status gibt keine lokalen Dateipfade oder Konfigurationstexte zurück.
+
+Es muss genau eine Definition dieser Ländervariable im HTTP-GeoIP2-Kontext geben. Mehrfachdefinitionen werden zurückgewiesen, auch wenn eine frühere Definition eine sichere Quelle verwendet. Eine ungültige Konfigurationsstruktur gilt als nicht verfügbar; scheinbare Direktiven innerhalb von Kommentaren, Strings oder einem Stream-Kontext erfüllen die Readiness-Voraussetzung nicht.
+
+`GET /api/nginx/firewall-lists/geoip` liefert `available`, `module_enabled`, `database_present` und `reason`. Bei Erfolg ist `reason: null`; Fehlergründe sind `module_disabled`, `database_missing`, `country_variable_missing` oder `configuration_unavailable`. Der Frontend-Client konvertiert die Felder zu CamelCase.
+
+Die Host-Oberfläche bietet eine suchbare Mehrfachauswahl mit lokalisierten Ländernamen und Codes, eine optionale öffentliche Länderbegründung und den separaten Schalter für unbekannte Länder. Während Laden, Fehler oder fehlender GeoIP-Voraussetzungen sind neue Länder beziehungsweise die Unknown-Aktivierung gesperrt; der Status kann erneut geprüft werden. Gespeicherte Regeln bleiben erhalten und können entfernt werden, auch bei ausgeschalteter Firewall. Solange solche Regeln bestehen, kann die Firewall ohne verfügbare GeoIP-Quelle nicht wieder aktiviert werden. Das Backend prüft diese Voraussetzung ebenfalls vor Speicherung, Vorschau und Nginx-Generierung.
+
+Nginx normalisiert den GeoIP-Wert gegen dieselben 250 bekannten Codes; leere und andere unbekannte Werte werden zu `XX`. Nur die ausdrücklich aktivierte Unknown-Option sperrt solche Ergebnisse. Reine IP-/Listen-Regeln erzeugen keinen Verweis auf `$geoip2_country_code` und benötigen deshalb keine GeoIP-Datenbank. Die IP-Allowlist übersteuert auch Länder- und Unknown-Sperren.
+
+Die Zuordnung hängt von der vorhandenen GeoIP-Datenbank ab und beschreibt die IP-Adresse; sie ist kein Nachweis des tatsächlichen Aufenthaltsorts oder eines Angriffs. Es entsteht keine neue Firewall-Analytics-Oberfläche. Die Datenquelle wird geteilt, die Firewall-Trefferlogs bleiben separat.
 
 ## URL-Abonnements
 
@@ -130,7 +156,8 @@ Die Listen werden mit Nginx-`geo` ausgewertet. Ein verpflichtender Filter auf Se
 1. Eine passende `allowlist`-Ausnahme hebt ausschließlich diese IP-Firewall-Sperre auf.
 2. Ein manueller Sperrtreffer hat Vorrang vor einem zentralen Listentreffer.
 3. Danach werden die aktivierten, ausgewählten Listen geprüft.
-4. Ohne Sperrtreffer gelten die übrigen Host-Sicherheitsregeln unverändert.
+4. Ohne IP-/Listentreffer werden die ausgewählten Länder und optional unbekannte Länder geprüft.
+5. Ohne Sperrtreffer gelten die übrigen Host-Sicherheitsregeln unverändert.
 
 Innerhalb der manuellen Regeln beziehungsweise der Listennetze wählt `geo` das längste passende CIDR-Präfix. Gleiche Netze aus mehreren Listen verwenden die erste zugeordnete Liste in `list_ids`. Eine breitere manuelle Sperre hat trotzdem Vorrang vor einem spezifischeren Listentreffer.
 
@@ -144,9 +171,11 @@ Die auswertbare Adresse ist die von Nginx bestimmte Besucher-IP. Hinter Cloudfla
 
 Der Serverfilter verwendet intern den reservierten Status 470 für die eigene benannte Sperrlocation; die Antwort an den Besucher ist HTTP **403** mit `Cache-Control: no-store, no-cache, must-revalidate`. Andere Upstream-418-Antworten behalten auch bei aktivem `proxy_intercept_errors` ihren bestehenden Ablauf und Antwortinhalt. Die interne Sperrseite zeigt eine responsive Erklärung mit Besucher-IP, Host, Vorgangskennung, zutreffender Regel beziehungsweise Listenquelle, `public_message` und optionalem Kontaktlink. Bei einem mit `de` beginnenden `Accept-Language` wird Deutsch verwendet, sonst Englisch. `Accept: application/json` ohne gleichzeitiges `text/html` erhält eine JSON-Antwort mit `error: "ip_blocked"` und denselben öffentlichen Details. `X-Request-ID` enthält die Vorgangskennung.
 
-Eingetragene Texte und Links werden vor der HTML-Ausgabe escaped beziehungsweise validiert. Die Seite lädt keine externen Assets; eine Content-Security-Policy verhindert Scripts und Einbettung. `internal_note` und administrative Beschreibungen werden nicht ausgegeben. Geo-Regeln und Seitenvorlage sind in der generierten Konfiguration eingebettet; bei einem einzelnen Request findet kein Listen-Download und kein Datenbankzugriff statt.
+Eingetragene Texte und Links werden vor der HTML-Ausgabe escaped beziehungsweise validiert. Die Seite lädt keine externen Assets; eine Content-Security-Policy verhindert Scripts und Einbettung. `internal_note` und administrative Beschreibungen werden nicht ausgegeben. Geo-Regeln und Seitenvorlage sind in der generierten Konfiguration eingebettet; bei einem einzelnen Request findet kein Listen-Download und kein SQL-Datenbankzugriff statt. Länderregeln verwenden nur den bereits vorhandenen Nginx-GeoIP-Lookup.
 
-Treffer werden je Proxy-Host als JSON-Zeilen unter `/data/logs/ip_firewall_<id>.log` protokolliert. Das mit `escape=json` definierte Log enthält `time`, `host_id`, `host`, `ip`, `request_id`, `rule_id`, `reason`, `source` und `status`. `rule_id` ist eine Referenz im kompilierten Regelwerk, nicht die Datenbank-ID einer Liste. Diese Datei ist von den normalen Zugriffslogs getrennt. Eine eigene Firewall-Statistik- oder Analyseoberfläche gehört nicht zu dieser Umsetzung.
+Bei aktiven Länderregeln zeigen HTML und JSON zusätzlich das erkannte Land als ISO-Code beziehungsweise `XX` für unbekannt. Das gilt auch, wenn eine vorrangige manuelle oder Listenregel die Sperre begründet. Ohne eigene `country_reason` erklärt die lokalisierte Standardbegründung den Länder- beziehungsweise Unknown-Treffer. Die Quellenbezeichnung ist `GeoIP-Länderregel` beziehungsweise `GeoIP country rule`.
+
+Treffer werden je Proxy-Host als JSON-Zeilen unter `/data/logs/ip_firewall_<id>.log` protokolliert. Das mit `escape=json` definierte Log enthält `time`, `host_id`, `host`, `ip`, `request_id`, `rule_id`, `reason`, `source` und `status`; bei aktiven Länderregeln kommt `country_code` hinzu. `rule_id` ist eine Referenz im kompilierten Regelwerk, nicht die Datenbank-ID einer Liste. Diese Datei ist von den normalen Zugriffslogs getrennt. Eine eigene Firewall-Statistik- oder Analyseoberfläche gehört nicht zu dieser Umsetzung.
 
 `rootfs/etc/logrotate` erfasst auch `/data/logs/ip_firewall_*.log` mit `daily`, `missingok`, `notifempty` und `copytruncate`. Rotation ist an `LOGROTATE=true` gebunden und standardmäßig deaktiviert; `LOGROTATIONS` bestimmt die Aufbewahrung (Standard 3 Dateien). Die Startskripte übernehmen die bestehende Logrotate-Integration; ein abweichendes natives Deployment muss die Konfiguration ebenfalls verwenden.
 
@@ -156,6 +185,7 @@ Treffer werden je Proxy-Host als JSON-Zeilen unter `/data/logs/ip_firewall_<id>.
 - Objection/Knex speichern Listen und Host-Metadaten.
 - Die Nginx-Konfigurationsengine prüft und aktiviert generierte Dateien.
 - Das bestehende Rechtemodell `access_lists` begrenzt Listenverwaltung und Sichtbarkeit.
+- GeoIP2 und die bestehende Analytics-MMDB sind nur für aktive Länder-/Unknown-Regeln erforderlich.
 - Ausgehender HTTPS-Zugriff ist nur für URL-Abonnements erforderlich.
 - Der Nginx-HTTP-`geo`-Support und die für die Sperrseite verwendeten Runtime-Funktionen müssen im eingesetzten Binary vorhanden sein. Kompilierungsänderungen gehören in `shieldpm-nginx`.
 
@@ -169,14 +199,18 @@ Zugehörige Regressionstests:
 
 - `backend/test/lib/firewall-addresses.spec.js` — Parser und Adressnormalisierung.
 - `backend/test/lib/firewall-policy.spec.js` — Typen, Grenzen, Ausnahmen und öffentliche beziehungsweise interne Texte.
+- `backend/test/lib/firewall-geoip.spec.js` und `firewall-geoip-inspection.spec.js` — verfügbare HTTP-Länderquelle, sichere Besucher-IP, fehlende Dateien und private Statusantworten.
 - `backend/test/lib/firewall-download.spec.js` — DNS-/Redirect-Prüfung, IP-Pinning und Downloadgrenzen.
 - `backend/test/internal/firewall-list.spec.js` — Rechte, Quellen, Auswahl und Rollback.
 - `backend/test/internal/firewall-policy.spec.js` — Autorisierung neuer Zuordnungen und Schutz der endgültigen Referenzen unter der Konfigurationssperre.
 - `backend/test/internal/firewall-render.spec.js` — echte Liquid-Ausgabe, Priorität und Sperrseite.
 - `backend/test/internal/gitops-import-validation.spec.js` und `third-proxy-references.spec.js` — Restore ohne Download, ungültige Cache-/Hostdaten sowie Autorisierung und Referenzen vor Datenbankänderungen.
 - `frontend/src/api/backend/firewallLists.test.ts`, `frontend/src/modals/FirewallListModal.test.tsx` und `ProxyHostFirewallSettings.test.tsx` — API-Payloads, TXT-Dialog und Host-Einstellungen.
+- `frontend/src/lib/firewallCountries.test.ts`, `frontend/src/api/backend/firewallGeoip.test.ts` und `ProxyHostFirewallPreview.test.ts` — erlaubte Ländercodes, Readiness-Antworten und Vorschau der tatsächlichen Länderbegründung.
 
-Die Backend-Suiten, die neuen Frontend-Featuretests und der Frontend-Build wurden erfolgreich ausgeführt. `scripts/ci/ip-firewall-smoke.mjs` prüft die erzeugten Firewall-Partials zusätzlich mit einem isolierten echten Nginx, unter anderem Sperren, Ausnahmen, Real-IP, Custom-/Upload-Routen, Anubis-Eingang, ACME, fremde Statusantworten und Trefferlogs. Der vollständige Modullauf einschließlich ModSecurity wurde mit 24 Prüfungen erfolgreich ausgeführt; zusätzlich wurde der portable Lua-/Geo-Lauf geprüft. Diese Prüfungen ersetzen keinen Starttest einer bestimmten bereits installierten Produktionsinstanz.
+Die Backend-Suiten, die neuen Frontend-Featuretests und der Frontend-Build wurden erfolgreich ausgeführt. `scripts/ci/ip-firewall-smoke.mjs` prüft die erzeugten Firewall-Partials zusätzlich mit einem isolierten echten Nginx, unter anderem Sperren, Ausnahmen, Real-IP, Custom-/Upload-Routen, Anubis-Eingang, ACME, fremde Statusantworten und Trefferlogs. Der lokale vollständige Modullauf einschließlich ModSecurity und GeoIP2 wurde mit 43 Prüfungen erfolgreich ausgeführt, davon 19 Länderprüfungen; zusätzlich wurde der portable Lua-/Geo-Lauf geprüft. Die kleine offizielle MaxMind-Testdatenbank unter `scripts/ci/fixtures/` dient nur diesem isolierten Test und ersetzt keine Produktions-GeoIP-Datenbank.
+
+`scripts/ci/docker-smoke.sh` kopiert diese Fixture in den Testcontainer und aktiviert über `NGINX_GEOIP_DATABASE` ebenfalls den 43-Prüfungen-Lauf. Ein vorhandenes dynamisches GeoIP2-Modul wird in den Standardpfaden unter `/etc/nginx/modules`, `/usr/lib/nginx/modules` und `/usr/local/nginx/modules` gesucht und über `NGINX_GEOIP2_MODULE` geladen; ohne solchen Pfad wird die statische Moduleinbindung des Images verwendet. Dieser Docker-/Image-Lauf und ein Produktionsstart wurden in der lokalen Prüfung nicht ausgeführt. Der nachgewiesene echte Nginx-Lauf war die isolierte lokale Instanz.
 
 ## Verwandte Seiten
 
@@ -189,5 +223,6 @@ Die Backend-Suiten, die neuen Frontend-Featuretests und der Frontend-Build wurde
 - [Upload Relay](./upload-relay.md)
 - [IP-Ranges](./ip-ranges.md)
 - [GitOps](./gitops.md)
+- [Analytics](./analytics.md)
 - [Feature-Übersicht](../features/README.md)
 - [Benutzeranleitung](../../wiki/IP-Firewall.md)

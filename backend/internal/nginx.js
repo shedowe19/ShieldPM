@@ -5,6 +5,7 @@ import dayjs from "dayjs";
 import _ from "lodash";
 import punycode from "punycode.js";
 import errs from "../lib/error.js";
+import { assertCountryFirewallAvailable } from "../lib/firewall-geoip.js";
 import { buildFirewallRender } from "../lib/firewall-render.js";
 import { sanitizeHostMeta } from "../lib/host-response.js";
 import { getTerminalAccessToken } from "../lib/terminal-access.js";
@@ -268,6 +269,7 @@ const internalNginx = {
 		if (host.is_deleted) host.enabled = false;
 		const nice_host_type = internalNginx.getFileFriendlyHostType(host_type);
 		if (nice_host_type === "proxy_host" && host.enabled && host.meta?.ip_firewall?.enabled === true) {
+			await assertCountryFirewallAvailable(host.meta.ip_firewall);
 			let lists = [];
 			if (host.meta.ip_firewall.list_ids?.length) {
 				// Lazy import avoids the list service/configuration engine cycle for ordinary/manual-only hosts.

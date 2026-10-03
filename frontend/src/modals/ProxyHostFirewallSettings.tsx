@@ -9,17 +9,30 @@ import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
 import { Textarea } from "src/components/ui/textarea";
+import { useLocaleRevision } from "src/context/LocaleContext";
+import { useFirewallGeoip } from "src/hooks/useFirewallGeoip";
 import { useFirewallLists } from "src/hooks/useFirewallLists";
 import { intl, T } from "src/locale";
+import ProxyHostFirewallCountrySettings from "./ProxyHostFirewallCountrySettings";
 import { renderProxyHostFirewallPreview } from "./ProxyHostFirewallPreview";
 import { createProxyHostFirewallPolicy, type ProxyHostFormValues } from "./ProxyHostModalFormValues";
 
 const ProxyHostFirewallSettings = () => {
+	useLocaleRevision();
 	const { values, setFieldValue } = useFormikContext<ProxyHostFormValues>();
 	const policy = createProxyHostFirewallPolicy(values.meta?.ipFirewall);
 	const [allowlistText, setAllowlistText] = useState(() => policy.allowlist.join("\n"));
 	const [showPreview, setShowPreview] = useState(false);
 	const { data: lists = [], isLoading, isError } = useFirewallLists({ enabled: policy.enabled });
+	const hasCountryRules = policy.countryDenylist.length > 0 || policy.blockUnknownCountry;
+	const geoip = useFirewallGeoip({ enabled: policy.enabled || hasCountryRules });
+	const geoipReady =
+		!geoip.isLoading &&
+		!geoip.isError &&
+		geoip.data?.available === true &&
+		geoip.data.moduleEnabled &&
+		geoip.data.databasePresent &&
+		geoip.data.reason === null;
 	const unavailableIds =
 		isError || isLoading ? [] : policy.listIds.filter((id) => !lists.some((list) => list.id === id));
 
@@ -57,7 +70,10 @@ const ProxyHostFirewallSettings = () => {
 				<Switch
 					id="ip-firewall-enabled"
 					checked={policy.enabled}
-					onCheckedChange={(checked) => update("enabled", checked)}
+					disabled={!policy.enabled && hasCountryRules && !geoipReady}
+					onCheckedChange={(checked) => {
+						if (!checked || !hasCountryRules || geoipReady) update("enabled", checked);
+					}}
 				/>
 			</div>
 
@@ -65,6 +81,24 @@ const ProxyHostFirewallSettings = () => {
 				<p className="text-sm text-muted-foreground">
 					<T id="firewall.host.disabledHint" />
 				</p>
+			)}
+			{!policy.enabled && hasCountryRules && !geoipReady && (
+				<p className="text-sm text-amber-600 dark:text-amber-400">
+					<T id="firewall.host.geoip.enableBlocked" />
+				</p>
+			)}
+			{(policy.enabled || hasCountryRules) && (
+				<ProxyHostFirewallCountrySettings
+					policy={policy}
+					ready={geoipReady}
+					status={geoip.data}
+					loading={geoip.isLoading || (!geoip.data && !geoip.isError)}
+					error={geoip.isError}
+					onRetry={() => {
+						void geoip.refetch();
+					}}
+					onChange={update}
+				/>
 			)}
 			{policy.enabled && (
 				<div className="space-y-5">

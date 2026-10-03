@@ -186,8 +186,9 @@ http {
 }
 GRPC_SMOKE
 
-# Use the image's implementation and templates for the IP firewall runtime checks.
+# Use the image's implementation and templates for the IP/country firewall runtime checks.
 sed 's|../../backend/|/app/|g' "$(dirname "$0")/ip-firewall-smoke.mjs" > "$fixture/ip-firewall-smoke.mjs"
+cp "$(dirname "$0")/fixtures/GeoIP2-Country-Test.mmdb" "$fixture/GeoIP2-Country-Test.mmdb"
 
 for service_uid in 0 1000; do
     container="shieldpm-smoke-${fixture##*/}-$service_uid"
@@ -244,7 +245,19 @@ for service_uid in 0 1000; do
         nginx -s reload
         healthcheck.sh
         node /data/grpc-smoke.mjs
-        NGINX_MODSECURITY_STATIC=true node /data/ip-firewall-smoke.mjs
+        # Load a packaged dynamic GeoIP2 module; otherwise validate the static build.
+        NGINX_GEOIP2_MODULE=""
+        for module in /etc/nginx/modules/ngx_http_geoip2_module.so \
+            /usr/lib/nginx/modules/ngx_http_geoip2_module.so \
+            /usr/local/nginx/modules/ngx_http_geoip2_module.so; do
+            if test -s "$module"; then
+                NGINX_GEOIP2_MODULE="$module"
+                break
+            fi
+        done
+        export NGINX_GEOIP2_MODULE
+        NGINX_MODSECURITY_STATIC=true NGINX_GEOIP_DATABASE=/data/GeoIP2-Country-Test.mmdb \
+            node /data/ip-firewall-smoke.mjs
     ' smoke "$service_uid"
     echo "Docker runtime smoke passed (UID $service_uid, $image_arch)"
 done

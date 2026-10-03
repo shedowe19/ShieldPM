@@ -19,7 +19,7 @@ class DockerSmokeTests(unittest.TestCase):
         self.calls = self.root / "calls.jsonl"
         docker = self.root / "docker"
         docker.write_text("""#!/usr/bin/env python3
-import json, os, platform, sys
+import hashlib, json, os, platform, sys
 from pathlib import Path
 args = sys.argv[1:]
 with open(os.environ['DOCKER_CALLS'], 'a') as output:
@@ -38,6 +38,8 @@ elif args[0] == 'cp':
     assert marker.is_file() and (fixture / '.env').is_file()
     assert (fixture / 'grpc-smoke.mjs').is_file()
     assert (fixture / 'ip-firewall-smoke.mjs').is_file()
+    country_database = fixture / 'GeoIP2-Country-Test.mmdb'
+    assert hashlib.sha256(country_database.read_bytes()).hexdigest() == 'b37601903448683d241af52893c8cbf0fed461e0cdebe0bfaca01891fdeb6db9'
 elif args[0] == 'exec' and mode == 'write-failure':
     print('Permission denied: simulated runtime write', file=sys.stderr)
     sys.exit(42)
@@ -84,6 +86,9 @@ elif args[0] == 'logs':
                 self.assertIn(value, call)
         executions = [call for call in calls if call[0] == "exec"]
         self.assertEqual([call[call.index("--user") + 1] for call in executions], ["0:0", "1000:1000"])
+        for call in executions:
+            self.assertTrue(any("NGINX_GEOIP_DATABASE=/data/GeoIP2-Country-Test.mmdb" in arg for arg in call))
+            self.assertTrue(any("export NGINX_GEOIP2_MODULE" in arg for arg in call))
         self.assert_cleaned(calls, 2)
 
     def test_unhealthy_container_times_out_with_diagnostics_and_cleanup(self):

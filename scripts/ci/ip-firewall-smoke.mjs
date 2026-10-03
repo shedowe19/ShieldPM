@@ -69,6 +69,7 @@ export async function runIpFirewallSmoke({
 	luaPackageCpath,
 	modsecurity = false,
 	tcpInternal = false,
+	geoipDatabase,
 } = {}) {
 	const temporary = await fs.mkdtemp(
 		path.join(os.tmpdir(), "shieldpm-ip-firewall-"),
@@ -116,10 +117,10 @@ export async function runIpFirewallSmoke({
 			},
 		];
 		const engine = utils.getRenderEngine();
-		const render = async (id) => {
+		const render = async (id, hostPolicy = policy, hostLists = lists) => {
 			const firewall = await buildFirewallRender(
-				{ id, enabled: true, meta: { ip_firewall: policy } },
-				lists,
+				{ id, enabled: true, meta: { ip_firewall: hostPolicy } },
+				hostLists,
 			);
 			const geo = await engine.renderFile("_ip_firewall_geo.conf", {
 				firewall,
@@ -136,6 +137,40 @@ export async function runIpFirewallSmoke({
 		const primary = await render(17);
 		const anubis = await render(18);
 		const trusted = await render(19);
+		const countryPolicy = {
+			enabled: true,
+			country_denylist: ["GB"],
+			allowlist: ["81.2.69.163"],
+			denylist: [{ address: "81.2.69.161", reason: "Manual before country" }],
+			list_ids: [9],
+		};
+		const countryLists = [
+			{
+				id: 9,
+				name: "Country-overlapping list",
+				reason: "List before country",
+				entries: ["81.2.69.162"],
+			},
+		];
+		const countries = geoipDatabase
+			? await Promise.all([
+					render(20, countryPolicy, countryLists),
+					render(
+						21,
+						{ ...countryPolicy, block_unknown_country: true },
+						countryLists,
+					),
+					render(
+						22,
+						{
+							...countryPolicy,
+							country_reason: 'Country <script>"policy"</script>',
+						},
+						countryLists,
+					),
+					render(23, countryPolicy, countryLists),
+				])
+			: [];
 		const unixSocket = path.join(temporary, "anubis-upstream.sock");
 		let internalPort;
 		if (tcpInternal) {
@@ -162,9 +197,11 @@ http {
     ${luaPackagePath ? `lua_package_path ${quote(luaPackagePath)};` : ""}
     ${luaPackageCpath ? `lua_package_cpath ${quote(luaPackageCpath)};` : ""}
     access_log off;
+    ${geoipDatabase ? `geoip2 ${quote(geoipDatabase)} { $geoip2_country_code default=XX source=$remote_addr country iso_code; }` : ""}
     ${primary.geo}
     ${anubis.geo}
     ${trusted.geo}
+    ${countries.map((country) => country.geo).join("\n")}
     server {
         listen 127.0.0.1:${port}; server_name protected.test;
         ${primary.filter}
@@ -200,6 +237,21 @@ http {
         listen 127.0.0.1:${port}; server_name unfiltered.test;
         location / { proxy_pass http://127.0.0.1:${upstreamPort}; }
     }
+    ${countries
+			.map(
+				(country, index) => `server {
+        listen 127.0.0.1:${port}; server_name ${["country.test", "unknown.test", "countrycustom.test", "countryanubis.test"][index]};
+        set_real_ip_from 127.0.0.1; real_ip_header X-Real-IP;
+        ${country.filter}
+        satisfy any; allow all;
+        error_page 401 403 = @signin;
+        location @signin { return 302 /oauth2/signin; }
+        location /.well-known/acme-challenge/ { return 200 "challenge"; }
+        location /needs-auth { satisfy all; auth_basic "Private"; auth_basic_user_file ${quote(path.join(temporary, "users"))}; proxy_pass http://127.0.0.1:${upstreamPort}; }
+        location / { ${index === 3 ? `proxy_set_header Host anubis.test; proxy_set_header X-Real-IP $remote_addr; proxy_pass ${internalTarget};` : `proxy_pass http://127.0.0.1:${upstreamPort};`} }
+    }`,
+			)
+			.join("\n")}
 }`;
 		assert(!config.includes("SECRET INTERNAL NOTE"));
 		const configFile = path.join(temporary, "nginx.conf");
@@ -366,8 +418,128 @@ http {
 		assert(
 			hits.some((hit) => hit.reason === "Operator <script>alert(1)</script>"),
 		);
+		let countryChecks = 0;
+		if (geoipDatabase) {
+			const countryRequest = (ip, options = {}) =>
+				request(port, {
+					host: "country.test",
+					...options,
+					headers: { "X-Real-IP": ip, ...options.headers },
+				});
+			const countryBlock = await countryRequest("81.2.69.160", {
+				headers: { "Accept-Language": "de" },
+			});
+			assert.equal(countryBlock.status, 403);
+			assert(!countryBlock.headers.location);
+			assert(countryBlock.body.includes("gesperrten Land GB"));
+			assert(countryBlock.body.includes("GeoIP-Länderregel"));
+			assert(countryBlock.body.includes("Erkanntes Land (ISO)"));
+			assert(countryBlock.body.includes("81.2.69.160"));
+			assert.equal((await countryRequest("89.160.20.128")).status, 200);
+			assert.equal((await countryRequest("203.0.113.1")).status, 200);
+			const unknown = await countryRequest("203.0.113.1", {
+				host: "unknown.test",
+			});
+			assert.equal(unknown.status, 403);
+			assert(unknown.body.includes("could not be determined"));
+			assert(unknown.body.includes("Unknown (XX)"));
+			const custom = await countryRequest("81.2.69.160", {
+				host: "countrycustom.test",
+			});
+			assert.equal(custom.status, 403);
+			assert(
+				custom.body.includes(
+					"Country &lt;script&gt;&quot;policy&quot;&lt;/script&gt;",
+				),
+			);
+			assert(!custom.body.includes("<script>"));
+			assert.equal((await countryRequest("81.2.69.163")).status, 200);
+			assert.equal(
+				(await countryRequest("81.2.69.163", { uri: "/needs-auth" })).status,
+				302,
+			);
+			assert(
+				(await countryRequest("81.2.69.161")).body.includes(
+					"Manual before country",
+				),
+			);
+			assert(
+				(await countryRequest("81.2.69.162")).body.includes(
+					"List before country",
+				),
+			);
+			for (const uri of [
+				"/custom/path",
+				"/spm-upload/file",
+				"/.well-known/acme-challenge/folder/secret",
+			])
+				assert.equal(
+					(await countryRequest("81.2.69.160", { uri })).status,
+					403,
+				);
+			assert.equal(
+				(
+					await countryRequest("81.2.69.160", {
+						uri: "/.well-known/acme-challenge/TOKEN-abc",
+					})
+				).status,
+				200,
+			);
+			assert.equal(
+				(await countryRequest("81.2.69.160", { ip: "127.0.0.2" })).status,
+				200,
+			);
+			assert.equal(
+				(await countryRequest("81.2.69.160", { host: "unfiltered.test" }))
+					.status,
+				200,
+			);
+			assert.equal(
+				(await countryRequest("81.2.69.160", { host: "countryanubis.test" }))
+					.status,
+				403,
+			);
+			assert.equal(
+				(await countryRequest("89.160.20.128", { host: "countryanubis.test" }))
+					.status,
+				200,
+			);
+			if (modsecurity) {
+				const json = await countryRequest("81.2.69.160", {
+					headers: { Accept: "application/json" },
+				});
+				assert.equal(json.status, 403);
+				assert.equal(JSON.parse(json.body).country_code, "GB");
+				assert.equal(JSON.parse(json.body).source, "GeoIP country rule");
+				const unknownJson = await countryRequest("203.0.113.1", {
+					host: "unknown.test",
+					headers: { Accept: "application/json" },
+				});
+				assert.equal(JSON.parse(unknownJson.body).country_code, "XX");
+			}
+			const countryHits = (
+				await fs.readFile(
+					path.join(temporary, "logs/ip_firewall_20.log"),
+					"utf8",
+				)
+			)
+				.trim()
+				.split("\n")
+				.map((line) => JSON.parse(line));
+			assert(
+				countryHits.every(
+					(hit) =>
+						hit.status === 403 &&
+						hit.country_code === "GB" &&
+						hit.ip.startsWith("81.2.69."),
+				),
+			);
+			assert(countryHits.some((hit) => hit.source === "GeoIP country rule"));
+			assert(!hits.some((hit) => "country_code" in hit));
+			countryChecks = modsecurity ? 19 : 17;
+		}
 		return {
-			checks: 24,
+			checks: 24 + countryChecks,
 			mode: modsecurity ? "full modules" : "portable Lua/geo",
 			hits: hits.length,
 		};
@@ -393,6 +565,7 @@ if (
 			process.env.NGINX_NDK_MODULE,
 			process.env.NGINX_LUA_MODULE,
 			process.env.NGINX_MODSECURITY_MODULE,
+			process.env.NGINX_GEOIP2_MODULE,
 		].filter(Boolean),
 		luaPackagePath: process.env.LUA_PACKAGE_PATH,
 		luaPackageCpath: process.env.LUA_PACKAGE_CPATH,
@@ -400,6 +573,7 @@ if (
 			Boolean(process.env.NGINX_MODSECURITY_MODULE) ||
 			process.env.NGINX_MODSECURITY_STATIC === "true",
 		tcpInternal: process.env.NGINX_SMOKE_TCP_INTERNAL === "true",
+		geoipDatabase: process.env.NGINX_GEOIP_DATABASE,
 	});
 	console.log(
 		`IP firewall smoke passed: ${result.checks} checks (${result.mode}), ${result.hits} logged denials`,

@@ -147,6 +147,9 @@ export interface FirewallPolicy {
 	listIds: number[];
 	allowlist: string[];
 	denylist: { address: string; reason: string }[];
+	countryDenylist: string[];
+	countryReason: string;
+	blockUnknownCountry: boolean;
 	publicMessage: string;
 	supportUrl: string;
 	internalNote: string;

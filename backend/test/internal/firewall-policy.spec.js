@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ get: vi.fn(), assertExist: vi.fn(), lock: vi.fn() }));
+const mocks = vi.hoisted(() => ({ get: vi.fn(), assertExist: vi.fn(), lock: vi.fn(), geoip: vi.fn() }));
 vi.mock("../../internal/firewall-list.js", () => ({
 	default: { get: mocks.get, assertExistForHost: mocks.assertExist },
 }));
 vi.mock("../../internal/nginx.js", () => ({ default: { withConfigurationLock: mocks.lock } }));
+vi.mock("../../lib/firewall-geoip.js", () => ({ assertCountryFirewallAvailable: mocks.geoip }));
 
 import { validateHostFirewall, withFirewallReferences } from "../../internal/firewall-policy.js";
 
@@ -13,6 +14,7 @@ describe("host firewall authorization and final reference check", () => {
 		vi.clearAllMocks();
 		mocks.get.mockResolvedValue({ id: 2 });
 		mocks.assertExist.mockResolvedValue(undefined);
+		mocks.geoip.mockResolvedValue(undefined);
 		mocks.lock.mockImplementation((work) => work());
 	});
 	it("authorizes only newly assigned lists and preserves unrelated host metadata", async () => {
@@ -43,6 +45,59 @@ describe("host firewall authorization and final reference check", () => {
 			ip_firewall: { enabled: true, list_ids: [2] },
 		});
 		expect(mocks.get).not.toHaveBeenCalled();
+	});
+	it("preserves country blocking through unrelated partial edits without list authorization calls", async () => {
+		const data = { meta: { nginx_online: true } };
+		await validateHostFirewall({}, data, {
+			meta: JSON.stringify({
+				ip_firewall: {
+					enabled: true,
+					country_denylist: ["DE", "XK"],
+					country_reason: "Regional restriction",
+					block_unknown_country: true,
+				},
+			}),
+		});
+		expect(data.meta.ip_firewall).toMatchObject({
+			country_denylist: ["DE", "XK"],
+			country_reason: "Regional restriction",
+			block_unknown_country: true,
+		});
+		expect(mocks.get).not.toHaveBeenCalled();
+	});
+	it.each([{ country_denylist: ["DE"] }, { block_unknown_country: true }])(
+		"rejects country activation before any list checks or host write when GeoIP is unavailable: %j",
+		async (rule) => {
+			const data = { meta: { ip_firewall: { enabled: true, list_ids: [2], ...rule } } };
+			const write = vi.fn();
+			mocks.geoip.mockRejectedValueOnce(new Error("Country firewall requires supported GeoIP configuration"));
+			await expect(
+				(async () => {
+					await validateHostFirewall({}, data);
+					await withFirewallReferences(data, {}, write);
+				})(),
+			).rejects.toThrow(/supported GeoIP/);
+			expect(mocks.get).not.toHaveBeenCalled();
+			expect(mocks.lock).not.toHaveBeenCalled();
+			expect(write).not.toHaveBeenCalled();
+		},
+	);
+	it("keeps disabled country rules editable while GeoIP is unavailable", async () => {
+		mocks.geoip.mockImplementationOnce(async (policy) => {
+			if (policy.enabled) throw new Error("Country firewall requires supported GeoIP configuration");
+		});
+		const data = {
+			meta: { ip_firewall: { enabled: false, country_denylist: ["DE", "XK"], block_unknown_country: true } },
+		};
+		const write = vi.fn().mockResolvedValue("saved");
+		await validateHostFirewall({}, data);
+		await expect(withFirewallReferences(data, {}, write)).resolves.toBe("saved");
+		expect(data.meta.ip_firewall).toMatchObject({
+			enabled: false,
+			country_denylist: ["DE", "XK"],
+			block_unknown_country: true,
+		});
+		expect(write).toHaveBeenCalledOnce();
 	});
 	it("holds the configuration lock through the final database write, including existing disabled policies", async () => {
 		let locked = false;
