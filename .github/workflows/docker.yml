@@ -12,6 +12,7 @@ on:
       - scripts/setup-node-apt.sh
       - scripts/ci/docker-smoke.sh
       - scripts/ci/ip-firewall-smoke.mjs
+      - scripts/ci/nginx-smoke-modules.mjs
       - scripts/ci/fixtures/**
       - global/certbot-dns-plugins.json
       - frontend/**
@@ -32,6 +33,7 @@ on:
       - scripts/setup-node-apt.sh
       - scripts/ci/docker-smoke.sh
       - scripts/ci/ip-firewall-smoke.mjs
+      - scripts/ci/nginx-smoke-modules.mjs
       - scripts/ci/fixtures/**
       - global/certbot-dns-plugins.json
       - frontend/**

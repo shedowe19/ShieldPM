@@ -15,6 +15,27 @@ vi.mock("../../internal/host.js", () => ({
 }));
 vi.mock("../../internal/proxy-host.js", () => ({ default: { get: vi.fn() } }));
 vi.mock("../../internal/upload-relay.js", () => ({ validateRelayConfigForHost: vi.fn() }));
+// These fixtures have no certificate/access-list assignment; model imports must not initialize DB/JWT keys.
+vi.mock("../../models/access_list.js", () => ({
+	default: {
+		query: vi.fn(() => {
+			throw new Error("Unexpected access-list query in the firewall preview fixture");
+		}),
+	},
+}));
+vi.mock("../../models/certificate.js", () => ({
+	default: {
+		query: vi.fn(() => {
+			throw new Error("Unexpected certificate query in the firewall preview fixture");
+		}),
+	},
+}));
+vi.mock("../../db.js", () => {
+	throw new Error("Firewall preview fixtures must not import the database");
+});
+vi.mock("../../lib/config.js", () => {
+	throw new Error("Firewall preview fixtures must not initialize application configuration");
+});
 
 import lists from "../../internal/firewall-list.js";
 import nginx from "../../internal/nginx.js";

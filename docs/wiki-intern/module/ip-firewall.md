@@ -215,6 +215,7 @@ Zugehörige Regressionstests:
 - `backend/test/internal/firewall-list.spec.js` — Rechte, Quellen, Auswahl und Rollback.
 - `backend/test/internal/firewall-policy.spec.js` — Autorisierung neuer Zuordnungen und Schutz der endgültigen Referenzen unter der Konfigurationssperre.
 - `backend/test/lib/firewall-preview.spec.js` und `backend/test/internal/proxy-host-preview.spec.js` — Zusammenfassungen großer Regelwerke, Änderungsprüfsummen und Leserechte für bestehende, entfernte oder deaktivierte Zuordnungen.
+- `backend/test/internal/firewall-preview-render.spec.js` — echte große Liquid-Ausgabe und begrenzte Vorschau; Modelle sind isoliert und versehentliche Datenbank-/Konfigurationsimporte schlagen fehl, damit der Test keine JWT-Schlüssel erzeugt.
 - `backend/test/internal/firewall-render.spec.js` — echte Liquid-Ausgabe, Priorität und Sperrseite.
 - `backend/test/internal/gitops-import-validation.spec.js` und `third-proxy-references.spec.js` — Restore ohne Download, ungültige Cache-/Hostdaten sowie Autorisierung und Referenzen vor Datenbankänderungen.
 - `backend/test/internal/nginx-bulk-validation.spec.js` — strenger GitOps-Sammellauf und vorheriger Rückgabestatus nach demselben Dateisystem-Rollback.
