@@ -70,6 +70,8 @@ In **Proxy Host → Security → IP Firewall**, use the searchable **Country fil
 
 Country filtering reuses the existing [Analytics GeoIP setup](./Analytics.md#enabling-geoip-country-statistics), including its MMDB database and Nginx country lookup. If that setup is already available, no additional database download, subscription, or external geolocation API is needed. The country refers to the database's classification of the visitor IP, rather than a verified physical location.
 
+Use a Country or City database for this lookup. An ASN database identifies networks and does not supply country codes; missing country results follow the **Block unknown countries** setting. The readiness check verifies the Nginx configuration and file presence, rather than validating the database's contents, schema, or full integrity. Nginx configuration is tested before activation.
+
 The editor checks GeoIP readiness and explains whether the module, database, or country configuration is missing. While that check is loading, fails, or reports unavailable, you can remove saved country rules but cannot add new ones or enable unknown-country blocking. Use **Check again** after correcting the existing GeoIP setup. A disabled firewall with saved country rules cannot be re-enabled until GeoIP is ready or those rules are removed. Manual IP and list blocking remain available without GeoIP.
 
 The check follows included Nginx configuration files and rejects conflicting country-variable definitions or directives that overwrite the country result. The country lookup must use the same trusted visitor IP as the address rules. Use an absolute MMDB path in the shared configuration; relative database paths are reported as unavailable.
