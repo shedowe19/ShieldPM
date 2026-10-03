@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import errs from "./error.js";
 import { FIREWALL_COUNTRY_CODES } from "./firewall-policy.js";
 
-const MASTER_CONFIG = "/etc/nginx/nginx.conf";
+const MASTER_CONFIG = "/usr/local/nginx/conf/nginx.conf";
 const DATABASE_PATHS = [
 	"/data/nginx/GeoLite2-Country.mmdb",
 	"/data/nginx/GeoLite2-City.mmdb",

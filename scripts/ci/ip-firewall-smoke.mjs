@@ -9,6 +9,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { buildFirewallRender } from "../../backend/lib/firewall-render.js";
 import utils from "../../backend/lib/utils.js";
+import { resolveNginxSmokeModules } from "./nginx-smoke-modules.mjs";
 
 const listen = (server) =>
 	new Promise((resolve, reject) => {
@@ -559,19 +560,31 @@ if (
 	process.argv[1] &&
 	path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
+	const nginx = process.env.NGINX_BIN || "nginx";
+	const discovered =
+		process.env.NGINX_SMOKE_DISCOVER_MODULES === "true"
+			? await resolveNginxSmokeModules({
+					version: await utils.execFile(nginx, ["-V"]),
+					configuration: await utils.execFile(nginx, ["-T"], {
+						maxBuffer: 8 * 1024 * 1024,
+					}),
+				})
+			: {};
 	const result = await runIpFirewallSmoke({
-		nginx: process.env.NGINX_BIN || "nginx",
+		nginx,
 		modules: [
-			process.env.NGINX_NDK_MODULE,
-			process.env.NGINX_LUA_MODULE,
-			process.env.NGINX_MODSECURITY_MODULE,
-			process.env.NGINX_GEOIP2_MODULE,
+			process.env.NGINX_NDK_MODULE || discovered.ndk,
+			process.env.NGINX_LUA_MODULE || discovered.lua,
+			process.env.NGINX_MODSECURITY_MODULE || discovered.modsecurity,
+			process.env.NGINX_GEOIP2_MODULE || discovered.geoip2,
 		].filter(Boolean),
 		luaPackagePath: process.env.LUA_PACKAGE_PATH,
 		luaPackageCpath: process.env.LUA_PACKAGE_CPATH,
 		modsecurity:
 			Boolean(process.env.NGINX_MODSECURITY_MODULE) ||
-			process.env.NGINX_MODSECURITY_STATIC === "true",
+			Boolean(discovered.modsecurity) ||
+			process.env.NGINX_MODSECURITY_STATIC === "true" ||
+			process.env.NGINX_REQUIRE_MODSECURITY === "true",
 		tcpInternal: process.env.NGINX_SMOKE_TCP_INTERNAL === "true",
 		geoipDatabase: process.env.NGINX_GEOIP_DATABASE,
 	});

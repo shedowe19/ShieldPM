@@ -175,7 +175,7 @@ yarn dev # Nodemon
 
 * **Reload Strategy**: Serializes host configuration writes; bulk operations use `skip_reload` and a final validated reload.
 * **Validation**: `nginx -tq` validates generated configurations and reloads; failed host configurations restore their backup.
-* **Preview**: `backend/internal/proxy-host-preview.js` renders a redacted draft from form data and compares it with the authorized host's active config without writing files or running `nginx -tq`. See [Proxy-Host internals](./docs/wiki-intern/module/proxy-host.md#konfigurationsvorschau-vor-dem-speichern).
+* **Preview**: `backend/internal/proxy-host-preview.js` renders a redacted draft from form data and compares it with the authorized host's active config without writing files or running `nginx -tq`. Generated firewall CIDR tables use bounded count/SHA-256 summaries; preview authorization covers all list IDs in the saved host and draft. Runtime configuration keeps the complete rules. See [Proxy-Host internals](./docs/wiki-intern/module/proxy-host.md#konfigurationsvorschau-vor-dem-speichern).
 
 ### 6.1a Proxy Host Observability
 

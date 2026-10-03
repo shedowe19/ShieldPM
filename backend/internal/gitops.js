@@ -286,7 +286,13 @@ const sanitizeImportData = (modelName, data) => {
 		}
 		validateImportedAccessList(result);
 	}
-	if (modelName === "FirewallList") Object.assign(result, normalizeListInput(result));
+	if (modelName === "FirewallList") {
+		const normalized = normalizeListInput(result);
+		if (normalized.source_type === "url" && normalized.entry_count === 0) {
+			throw new errs.ValidationError("Cached URL firewall list is empty; the previous list was retained");
+		}
+		Object.assign(result, normalized);
+	}
 	if (modelName === "ProxyHost" && result.meta && Object.hasOwn(result.meta, "ip_firewall")) {
 		result.meta = { ...result.meta, ip_firewall: normalizeFirewallPolicy(result.meta.ip_firewall) };
 	}
@@ -1585,20 +1591,23 @@ const internalGitOps = {
 			}
 
 			// 7. Regenerate all affected configurations as one validated batch.
-			await internalNginx.bulkGenerateConfigGroups([
-				{
-					model: ProxyHost,
-					hostType: "proxy_host",
-					hosts: await ProxyHost.query().where("is_deleted", 0).withGraphFetched("host_domains"),
-				},
-				{
-					model: RedirectionHost,
-					hostType: "redirection_host",
-					hosts: await RedirectionHost.query().where("is_deleted", 0),
-				},
-				{ model: DeadHost, hostType: "dead_host", hosts: await DeadHost.query().where("is_deleted", 0) },
-				{ model: Stream, hostType: "stream", hosts: await Stream.query().where("is_deleted", 0) },
-			]);
+			await internalNginx.bulkGenerateConfigGroups(
+				[
+					{
+						model: ProxyHost,
+						hostType: "proxy_host",
+						hosts: await ProxyHost.query().where("is_deleted", 0).withGraphFetched("host_domains"),
+					},
+					{
+						model: RedirectionHost,
+						hostType: "redirection_host",
+						hosts: await RedirectionHost.query().where("is_deleted", 0),
+					},
+					{ model: DeadHost, hostType: "dead_host", hosts: await DeadHost.query().where("is_deleted", 0) },
+					{ model: Stream, hostType: "stream", hosts: await Stream.query().where("is_deleted", 0) },
+				],
+				{ throwOnError: true },
+			);
 
 			await internalNginx.reload();
 

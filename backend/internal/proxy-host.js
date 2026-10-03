@@ -2,6 +2,7 @@ import fs from "node:fs";
 import _ from "lodash";
 import { encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
+import { assertCountryFirewallAvailable } from "../lib/firewall-geoip.js";
 import { sanitizeHostMeta, sanitizeProxyHost } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import AccessList from "../models/access_list.js";
@@ -539,6 +540,7 @@ const internalProxyHost = {
 			throw new errs.ValidationError("Host is already enabled");
 		}
 		if (row.upload_relay_enabled) await validateRelayConfigForHost(row);
+		await assertCountryFirewallAvailable(row.meta?.ip_firewall);
 
 		row.enabled = 1;
 

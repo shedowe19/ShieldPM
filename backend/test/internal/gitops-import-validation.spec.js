@@ -130,7 +130,11 @@ vi.mock("../../lib/encryption.js", () => ({ encrypt: vi.fn(), decrypt: vi.fn() }
 vi.mock("../../logger.js", () => ({
 	global: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 	access: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+	nginx: { error: vi.fn() },
+	debug: vi.fn(),
 }));
+vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn() } }));
+vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: () => "test-token" }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: vi.fn() } }));
 vi.mock("../../internal/firewall-list.js", () => ({
 	default: {
@@ -281,6 +285,45 @@ describe("GitOps import sanitization and safe restore", () => {
 		expect(mocks.prunes).toEqual([]);
 		expect(mocks.rows.FirewallList[0].entries).toBe("203.0.113.10");
 	});
+	it.each([
+		{ enabled: true, entries: "" },
+		{ enabled: true, entries: "\uFEFF# cached list\r\n \t\r\n# no networks\r\n" },
+		{ enabled: true, entries: undefined },
+		{ enabled: false, entries: "" },
+		{ enabled: false, entries: "# no networks\n\n" },
+		{ enabled: false, entries: undefined },
+	])("rejects empty URL caches before writes or pruning: %j", async ({ enabled, entries }) => {
+		const working = {
+			id: 7,
+			name: "Working subscription",
+			source_type: "url",
+			source_url: "https://example.test/vpn.txt",
+			entries: "203.0.113.10",
+			enabled: true,
+			is_deleted: 0,
+		};
+		mocks.rows.FirewallList = [{ ...working }];
+		file("firewall-lists", {
+			id: 7,
+			name: "Empty replacement",
+			reason: "Website access rule",
+			source_type: "url",
+			source_url: "https://example.test/vpn.txt",
+			entry_count: 999,
+			enabled,
+			entries,
+		});
+
+		const result = await gitops.importConfig(access, { overwrite: true });
+
+		expect(result.success).toBe(false);
+		expect(result.errors).toContainEqual(
+			expect.stringMatching(/firewall-lists\/1.yaml:.*Cached URL firewall list is empty/),
+		);
+		expect(mocks.writes).toEqual([]);
+		expect(mocks.prunes).toEqual([]);
+		expect(mocks.rows.FirewallList).toEqual([working]);
+	});
 	it("restores a host from list A to list B and removes stale A in one full sync", async () => {
 		mocks.rows.FirewallList = [{ id: 1, name: "A", entries: "203.0.113.10", enabled: true, is_deleted: 0 }];
 		mocks.rows.ProxyHost = [{ id: 9, is_deleted: 0, meta: { ip_firewall: { enabled: true, list_ids: [1] } } }];
@@ -338,6 +381,42 @@ describe("GitOps import sanitization and safe restore", () => {
 		expect(result.errors).toContain("Nginx reload failed");
 		expect(mocks.rows.FirewallList.find((row) => row.id === 1).is_deleted).toBe(0);
 		expect(mocks.prunes.some(({ name }) => name === "FirewallList")).toBe(false);
+	});
+	it("retains the active firewall list when the real Nginx batch rolls back failed validation", async () => {
+		mocks.rows.FirewallList = [{ id: 1, name: "A", entries: "203.0.113.10", enabled: true, is_deleted: 0 }];
+		mocks.rows.ProxyHost = [{ id: 9, is_deleted: 0, meta: { ip_firewall: { enabled: true, list_ids: [1] } } }];
+		file("firewall-lists", { id: 2, name: "B", reason: "Replacement list", entries: "198.51.100.0/24" });
+		file("proxy-hosts", { id: 9, meta: { ip_firewall: { enabled: true, list_ids: [2] } } });
+		const { default: realNginx } = await vi.importActual("../../internal/nginx.js");
+		const failure = new Error("Restored Nginx configuration is invalid");
+		const staged = [];
+		const configure = vi.spyOn(realNginx, "configureHost").mockImplementation(async (model, host_type, host) => {
+			const stage = { model, host_type, host };
+			staged.push(stage);
+			return stage;
+		});
+		const test = vi.spyOn(realNginx, "test").mockRejectedValueOnce(failure);
+		const rollback = vi.spyOn(realNginx, "rollbackStagedConfig").mockResolvedValue({ nginx_online: false });
+		const commit = vi.spyOn(realNginx, "commitStagedConfig");
+		vi.mocked(nginx.bulkGenerateConfigGroups).mockImplementationOnce(realNginx.bulkGenerateConfigGroups);
+		try {
+			const result = await gitops.importConfig(access, { overwrite: true });
+
+			expect(result.success).toBe(false);
+			expect(result.errors).toContain(failure.message);
+			expect(nginx.bulkGenerateConfigGroups).toHaveBeenCalledWith(expect.any(Array), { throwOnError: true });
+			expect(test).toHaveBeenCalledOnce();
+			expect(rollback).toHaveBeenCalledExactlyOnceWith(staged[0], failure);
+			expect(commit).not.toHaveBeenCalled();
+			expect(nginx.reload).not.toHaveBeenCalled();
+			expect(mocks.rows.FirewallList.find((row) => row.id === 1).is_deleted).toBe(0);
+			expect(mocks.prunes.some(({ name }) => name === "FirewallList")).toBe(false);
+		} finally {
+			configure.mockRestore();
+			test.mockRestore();
+			rollback.mockRestore();
+			commit.mockRestore();
+		}
 	});
 	it.each([true, false])(
 		"prevents a new host write with a dangling firewall reference even when enabled=%s",

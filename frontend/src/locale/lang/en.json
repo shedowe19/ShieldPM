@@ -980,5 +980,6 @@
 	"firewall.host.geoip.configurationUnavailable": "The active GeoIP configuration could not be verified. Country blocks cannot be activated.",
 	"firewall.host.geoip.retry": "Check again",
 	"firewall.host.geoip.rulesRetained": "Saved country settings are retained. You can remove selected countries or disable unknown-country blocking while GeoIP is unavailable.",
-	"firewall.host.geoip.enableBlocked": "This host has saved country blocks. Restore GeoIP support or remove those blocks below before enabling the firewall."
+	"firewall.host.geoip.enableBlocked": "This host has saved country blocks. Restore GeoIP support or remove those blocks below before enabling the firewall.",
+	"proxy-host.config-preview.firewall-rule-summaries": "Firewall rule tables are summarized by entry count and a fingerprint so large lists stay readable. Changes to the rules change the fingerprint. All rules are enforced when you save."
 }

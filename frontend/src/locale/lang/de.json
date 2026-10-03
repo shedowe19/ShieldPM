@@ -980,5 +980,6 @@
 	"firewall.host.geoip.configurationUnavailable": "Die aktive GeoIP-Konfiguration konnte nicht bestätigt werden. Ländersperren können nicht aktiviert werden.",
 	"firewall.host.geoip.retry": "Erneut prüfen",
 	"firewall.host.geoip.rulesRetained": "Gespeicherte Ländereinstellungen bleiben erhalten. Ausgewählte Länder kannst du entfernen und die Sperre unbekannter Länder ausschalten, während GeoIP nicht verfügbar ist.",
-	"firewall.host.geoip.enableBlocked": "Dieser Host hat gespeicherte Ländersperren. Stelle die GeoIP-Unterstützung wieder her oder entferne diese Sperren unten, bevor du die Firewall einschaltest."
+	"firewall.host.geoip.enableBlocked": "Dieser Host hat gespeicherte Ländersperren. Stelle die GeoIP-Unterstützung wieder her oder entferne diese Sperren unten, bevor du die Firewall einschaltest.",
+	"proxy-host.config-preview.firewall-rule-summaries": "Firewall-Regeln werden mit Anzahl und Prüfsumme zusammengefasst, damit große Listen lesbar bleiben. Änderungen an den Regeln ändern die Prüfsumme. Beim Speichern werden alle Regeln angewendet."
 }

@@ -75,4 +75,19 @@ describe("ProxyHostConfigPreview", () => {
 		expect(screen.getByTestId("host-config-preview")).toHaveTextContent("listen 8080;");
 		expect(screen.getByTestId("host-config-preview")).not.toHaveTextContent("-listen 80;");
 	});
+	it("explains summarized firewall rules when the server bounds the preview", async () => {
+		vi.mocked(previewProxyHost).mockResolvedValue({
+			config: "# firewall rules: entries=200000 sha256=example",
+			diff: "+# firewall rules: entries=200000 sha256=example",
+			hasCurrent: true,
+			nginxValidated: false,
+			limitations: ["render-only", "firewall-rule-summaries"],
+		});
+		renderForm(7);
+		fireEvent.click(screen.getByRole("button", { name: "proxy-host.config-preview.action" }));
+		await waitFor(() =>
+			expect(screen.getByText("proxy-host.config-preview.firewall-rule-summaries")).toBeInTheDocument(),
+		);
+		expect(screen.getByTestId("host-config-preview")).toHaveTextContent("entries=200000");
+	});
 });

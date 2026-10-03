@@ -1,6 +1,7 @@
 import dns from "node:dns/promises";
 import https from "node:https";
 import net from "node:net";
+import tls from "node:tls";
 import { TextDecoder } from "node:util";
 import ipaddr from "ipaddr.js";
 import errs from "./error.js";
@@ -8,6 +9,8 @@ import errs from "./error.js";
 const MAX_BYTES = 8 * 1024 * 1024;
 const MAX_REDIRECTS = 3;
 const DOWNLOAD_TIMEOUT = 15_000;
+// The lookup key is never resolved by DNS: pinnedLookup supplies every transport address.
+const PINNED_TRANSPORT_HOST = "shieldpm-firewall-download.invalid";
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 // biome-ignore lint/suspicious/noControlCharactersInRegex: Reject controls before URL parsing can normalize them away.
 const UNSAFE_URL_CHARACTERS = /[\s\u0000-\u001f\u007f]/u;
@@ -116,6 +119,7 @@ function pinnedLookup(addresses) {
 }
 
 function readResponse(url, addresses, signal) {
+	const originHostname = url.hostname.replace(/^\[|\]$/g, "");
 	return new Promise((resolve, reject) => {
 		let settled = false;
 		let request;
@@ -134,13 +138,23 @@ function readResponse(url, addresses, signal) {
 			}
 		};
 		request = https.get(
-			url,
 			{
+				// Separate connection routing from origin identity. A constant lookup key preserves
+				// Node's address-family fallback while only validated candidates reach the socket.
+				hostname: PINNED_TRANSPORT_HOST,
+				port: url.port || 443,
+				path: `${url.pathname}${url.search}`,
 				agent: false,
 				signal,
 				rejectUnauthorized: true,
 				lookup: pinnedLookup(addresses),
-				headers: { "Accept-Encoding": "identity", "User-Agent": "ShieldPM-Firewall-Lists" },
+				servername: net.isIP(originHostname) ? "" : originHostname,
+				checkServerIdentity: (_servername, certificate) => tls.checkServerIdentity(originHostname, certificate),
+				headers: {
+					Host: url.host,
+					"Accept-Encoding": "identity",
+					"User-Agent": "ShieldPM-Firewall-Lists",
+				},
 			},
 			(incoming) => {
 				response = incoming;

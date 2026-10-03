@@ -873,5 +873,19 @@
 	"wireguard.settings.serverAddress": "Адрес сервера",
 	"wireguard.settings.title": "Настройки WireGuard",
 	"wireguard.title": "Туннели WireGuard",
-	"settings.gitops.save-before-action": "Сохраните изменения конфигурации перед проверкой соединения или выполнением операций Git."
+	"settings.gitops.save-before-action": "Сохраните изменения конфигурации перед проверкой соединения или выполнением операций Git.",
+	"firewall.editNamed": "Edit {name}",
+	"firewall.deleteNamed": "Delete {name}",
+	"firewall.refresh": "Update {name} now",
+	"firewall.refreshed": "Blocklist updated.",
+	"firewall.saved": "Blocklist saved.",
+	"firewall.search": "Search blocklists",
+	"firewall.import.upload": "Upload TXT file",
+	"firewall.import.fileError": "Select a .txt file no larger than 8 MiB.",
+	"firewall.import.readError": "The file could not be read.",
+	"firewall.host.removeEntry": "Remove block {row}",
+	"firewall.host.previewTitle": "IP firewall block page preview",
+	"firewall.host.countries.placeholder": "Search for a country name or ISO code…",
+	"firewall.host.countries.noMatches": "No countries found",
+	"proxy-host.config-preview.firewall-rule-summaries": "Firewall rule tables are summarized by entry count and a fingerprint so large lists stay readable. Changes to the rules change the fingerprint. All rules are enforced when you save."
 }

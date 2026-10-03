@@ -17,6 +17,28 @@ const fileSystem = (content, files = []) => ({
 });
 
 describe("IP firewall reuse of existing Analytics GeoIP support", () => {
+	it("reads the master configuration used by the Docker and native launch scripts", async () => {
+		const database = "/data/nginx/GeoLite2-Country.mmdb";
+		const fs = fileSystem("", [database]);
+		fs.readFile.mockImplementation(async (path) =>
+			path === "/usr/local/nginx/conf/nginx.conf"
+				? configuration(database)
+				: "# stale distribution configuration",
+		);
+		expect((await getFirewallGeoipStatus({ fileSystem: fs })).available).toBe(true);
+		expect(fs.readFile).toHaveBeenCalledExactlyOnceWith("/usr/local/nginx/conf/nginx.conf", "utf8");
+	});
+	it("does not accept a stale distribution configuration when the active master cannot be read", async () => {
+		const database = "/data/nginx/GeoLite2-Country.mmdb";
+		const fs = fileSystem("", [database]);
+		fs.readFile.mockImplementation(async (path) => {
+			if (path === "/etc/nginx/nginx.conf") return configuration(database);
+			throw new Error("Active master is unavailable");
+		});
+		expect((await getFirewallGeoipStatus({ fileSystem: fs })).reason).toBe("configuration_unavailable");
+		expect(fs.readFile).toHaveBeenCalledExactlyOnceWith("/usr/local/nginx/conf/nginx.conf", "utf8");
+		expect(fs.stat).not.toHaveBeenCalled();
+	});
 	it.each(["/data/nginx/GeoLite2-Country.mmdb", "/data/goaccess/geoip/GeoLite2-City.mmdb"])(
 		"uses the configured nonempty database without downloading or exposing paths: %s",
 		async (path) => {

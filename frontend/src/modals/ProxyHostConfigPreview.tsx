@@ -73,6 +73,11 @@ const ProxyHostConfigPreview = ({ id }: Props) => {
 							<T id="proxy-host.config-preview.certificate-pending" />
 						</p>
 					)}
+					{result.limitations.includes("firewall-rule-summaries") && (
+						<p className="text-sm text-muted-foreground">
+							<T id="proxy-host.config-preview.firewall-rule-summaries" />
+						</p>
+					)}
 					{id !== "new" && !result.hasCurrent && (
 						<p className="text-sm text-muted-foreground">
 							<T id="proxy-host.config-preview.no-active" />

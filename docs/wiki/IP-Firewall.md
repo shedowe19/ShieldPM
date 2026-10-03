@@ -41,6 +41,8 @@ The preview reports valid entries, duplicates, and invalid line numbers. It does
 
 Existing hosts start with the firewall disabled. A list can be assigned to several hosts without requiring the same selection for every host.
 
+The host's configuration preview summarizes generated IP rule tables with entry counts and fingerprints, keeping large lists readable. Changes to the address rules change the fingerprint; saving still applies the complete rules. Preview access requires permission to read every list assigned to the saved host or draft, including assignments removed in the draft.
+
 | Host example           | Firewall selection              |
 | ---------------------- | ------------------------------- |
 | Public website         | VPN list                        |
@@ -69,6 +71,8 @@ In **Proxy Host → Security → IP Firewall**, use the searchable **Country fil
 Country filtering reuses the existing [Analytics GeoIP setup](./Analytics.md#enabling-geoip-country-statistics), including its MMDB database and Nginx country lookup. If that setup is already available, no additional database download, subscription, or external geolocation API is needed. The country refers to the database's classification of the visitor IP, rather than a verified physical location.
 
 The editor checks GeoIP readiness and explains whether the module, database, or country configuration is missing. While that check is loading, fails, or reports unavailable, you can remove saved country rules but cannot add new ones or enable unknown-country blocking. Use **Check again** after correcting the existing GeoIP setup. A disabled firewall with saved country rules cannot be re-enabled until GeoIP is ready or those rules are removed. Manual IP and list blocking remain available without GeoIP.
+
+A disabled Proxy Host with active country rules also requires GeoIP readiness before it can be enabled again. A failed check leaves that host disabled.
 
 When country rules are active, the blocking page, JSON response, and firewall log also show the detected country code, even when a manual or list rule supplied the blocking reason. A dedicated firewall analytics screen is not provided.
 
@@ -106,13 +110,19 @@ Disabling a central list stops its rules on assigned hosts while preserving the 
 
 Matching requests are recorded as JSON lines in `/data/logs/ip_firewall_<host-id>.log`. These files are separate from the host's regular access log. A dedicated firewall analytics screen is not provided.
 
+The bundled startup scripts preserve these logs across restarts and prepare the directory for the configured runtime user before Nginx validates the host configuration. Keep `/data` on persistent storage to retain the history across container replacements.
+
 The bundled logrotate configuration includes these files. Enable `LOGROTATE=true` to use daily rotation; it is disabled by default. `LOGROTATIONS` controls the retained file count and defaults to 3. Native deployments must use the corresponding logrotate configuration.
 
 ## GitOps backups
 
 GitOps exports include firewall lists, their last valid downloaded content, and host assignments. Restoring the saved content does not require downloading the feed immediately; enabled subscriptions can update afterward. Older backups without firewall-list data preserve existing lists.
 
+URL subscriptions require a saved cache containing at least one valid entry, including disabled subscriptions. Missing, empty, or comment-only caches are rejected before that list is restored.
+
 Removing obsolete firewall lists during a full restore is deferred until every import and the Nginx validation and reload succeed. A failed restore does not remove previous lists through this cleanup, and lists that are still assigned to hosts remain protected.
+
+The restore is not one database transaction. Objects successfully imported before a later error can remain changed; review the reported errors before retrying.
 
 ## Related pages
 

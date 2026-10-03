@@ -21,6 +21,8 @@ docker compose up -d
 
 **Persistente Daten**: `/opt/shieldpm` → gemountet nach `/data` im Container. `compose.yaml` verwendet `network_mode: host`; Ports werden daher direkt am Docker-Host gebunden. `compose.easy.yaml` ist die reduzierte Variante.
 
+Die gemeinsamen Startskripte für Docker und native Installationen löschen `/data/logs` nicht beim Neustart. Vor der Nginx-Validierung wird dieses Verzeichnis mit Eigentümer `PUID:PGID` und Modus `0700` vorbereitet; ein Symlink als Verzeichnis wird zurückgewiesen. Der bestehende Eigentümerwechsel unter `/data` übernimmt erhaltene Logdateien für die gewählte Laufzeit-UID. Damit bleiben unter anderem die [Firewall-Trefferlogs](../module/ip-firewall.md#sperrseite-und-protokoll) erhalten, sofern `/data` dauerhaft gespeichert wird.
+
 ## Native / LXC (Proxmox)
 
 ```bash
@@ -115,6 +117,11 @@ Workflows unter `.github/workflows/`:
 | `.github/codeql/codeql-config.yml`        | CodeQL-Analyse-Konfiguration                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `.github/delete-merged-branch-config.yml` | GitHub Auto-Delete Merged Branch Konfiguration                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
+Nach erfolgreicher CodeQL-Analyse werden die SARIF-Dateien aus `codeql-results/` als Artefakt
+`codeql-results-<Sprache>` für sieben Tage gespeichert. Fehlende SARIF-Dateien lassen den Upload fehlschlagen.
+Ein erfolgreicher Analysejob allein bestätigt nicht, dass ein bestimmter Befund behoben ist; dafür werden die
+tatsächlichen SARIF-Ergebnisse geprüft. Die Artefaktsicherung verändert keine Regeln oder Unterdrückungen.
+
 Der frühere `dependency-updates.yml`-Workflow wurde entfernt: Er bearbeitete ausschließlich die nicht mehr vorhandenen Dockerfile-Argumente `CSNB_VER` und `CRS_VER`. Diese Bestandteile kommen aus dem separaten Nginx-Basisimage beziehungsweise dem nativen `nginx-binaries`-Release. Der Caddy-Build meldet sich ausschließlich bei seiner Zielregistry GHCR an und benötigt keine DockerHub-Zugangsdaten.
 
 ## Hilfs-Skripte
@@ -122,6 +129,12 @@ Der frühere `dependency-updates.yml`-Workflow wurde entfernt: Er bearbeitete au
 Docker-Publikationen derselben Git-Referenz laufen nacheinander; alle manuellen Latest-Publikationen teilen ebenfalls eine Warteschlange. So kann ein anderer Lauf die Architektur-Tags nicht während der Manifest-Erstellung ersetzen.
 
 Der Docker-Build-Workflow berücksichtigt auch `.dockerignore`, `scripts/install.sh` und `scripts/setup-node-apt.sh`. Pull Requests bauen lokale Images für die Prüfung. PRs aus demselben Repository melden sich bei GHCR an, damit das geschützte Nginx-Basisimage geladen werden kann; Fork-PRs erhalten keine Registry-Zugangsdaten. Push und Multiarch-Publikation laufen nur außerhalb von Pull Requests. Der manuelle Latest-Workflow übergibt und validiert den Release-Tag als Umgebungsvariable, statt Benutzereingaben direkt in Shell-Code einzusetzen.
+
+Der Docker-Smoke prüft die Laufzeit zunächst unter UID 0 und anschließend unter UID 1000 mit übernommener
+Firewall-Loghistorie. Verzeichniseigentümer, Modus und Schreibrechte werden vor Nginx-Test und Reload geprüft.
+Der isolierte [Firewall-Smoke](../module/ip-firewall.md#offene-fragen-und-validierung) ermittelt dynamische
+Modulpfade aus dem tatsächlichen Nginx-Build und der Konfiguration; ModSecurity-Direktiven bleiben verpflichtend,
+ohne einen statischen Modulbuild vorauszusetzen.
 
 Ein erfolgreicher, vom Pfadfilter in `docker.yml` erfasster `develop`-Push erstellt zusätzlich zum Image `ghcr.io/shedowe19/shieldpm:develop` ein GitHub-Release für `v<.version>`, sofern diese Version noch kein Release besitzt. Reine Wiki- oder Markdown-Änderungen starten diesen Docker-Workflow nicht. Dasselbe gilt für einen Push des exakt passenden Versionstags. Der Tag eines neuen Releases verweist auf den gebauten Commit; vorhandene Releases und ihre Artefakte bleiben bei späteren Builds derselben Version unverändert. Ein bereits belegter Versionstag auf einem anderen Commit blockiert die Veröffentlichung. Der Release-Job läuft weder bei Pull Requests noch bei `workflow_dispatch`. Für ein neues Release müssen `.version` sowie beide Paketversionen gemeinsam erhöht werden.
 

@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import tls from "node:tls";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ lookup: vi.fn(), get: vi.fn() }));
@@ -12,7 +13,7 @@ const MAX_BYTES = 8 * 1024 * 1024;
 
 function mockResponse({ status = 200, headers = {}, chunks = [Buffer.from("1.2.3.4\n")], complete = true } = {}) {
 	const responses = [];
-	mocks.get.mockImplementation((_url, options, onResponse) => {
+	mocks.get.mockImplementation((options, onResponse) => {
 		const request = new EventEmitter();
 		request.destroy = vi.fn();
 		const response = Object.assign(new EventEmitter(), { statusCode: status, headers, complete, destroy: vi.fn() });
@@ -39,7 +40,10 @@ describe("firewall list HTTPS downloads", () => {
 		vi.clearAllMocks();
 		mocks.lookup.mockResolvedValue([PUBLIC_IP]);
 	});
-	afterEach(() => vi.useRealTimers());
+	afterEach(() => {
+		vi.useRealTimers();
+		vi.restoreAllMocks();
+	});
 
 	it.each([
 		"0.0.0.0",
@@ -109,10 +113,36 @@ describe("firewall list HTTPS downloads", () => {
 		mockResponse({ chunks: [body.subarray(0, 10), body.subarray(10)] });
 		await expect(fetchIpList("https://lists.example/list.txt")).resolves.toBe("# Sperrgründe\n1.2.3.4\n");
 		expect(mocks.lookup).toHaveBeenCalledWith("lists.example", { all: true, verbatim: true });
-		expect(mocks.get.mock.calls[0][1]).toMatchObject({
+		expect(mocks.get.mock.calls[0][0]).toMatchObject({
+			hostname: "shieldpm-firewall-download.invalid",
+			port: 443,
+			path: "/list.txt",
 			agent: false,
 			rejectUnauthorized: true,
-			headers: { "Accept-Encoding": "identity" },
+			servername: "lists.example",
+			headers: { Host: "lists.example", "Accept-Encoding": "identity" },
+		});
+	});
+
+	it("keeps origin routing and TLS identity separate from the pinned transport lookup key", async () => {
+		mockResponse();
+		await fetchIpList("https://lists.example:8443/a%2Fb.txt?value=%2F");
+		const options = mocks.get.mock.calls[0][0];
+		expect(options).toMatchObject({
+			hostname: "shieldpm-firewall-download.invalid",
+			port: "8443",
+			path: "/a%2Fb.txt?value=%2F",
+			servername: "lists.example",
+			headers: { Host: "lists.example:8443" },
+		});
+		expect(options.checkServerIdentity(options.hostname, { subjectaltname: "DNS:lists.example" })).toBeUndefined();
+		expect(
+			options.checkServerIdentity("lists.example", { subjectaltname: `DNS:${options.hostname}` }),
+		).toMatchObject({
+			code: "ERR_TLS_CERT_ALTNAME_INVALID",
+		});
+		expect(options.checkServerIdentity("lists.example", { subjectaltname: "DNS:wrong.example" })).toMatchObject({
+			code: "ERR_TLS_CERT_ALTNAME_INVALID",
 		});
 	});
 
@@ -133,32 +163,54 @@ describe("firewall list HTTPS downloads", () => {
 		mocks.lookup.mockResolvedValue([{ address: "127.0.0.1", family: 4 }]);
 		mockResponse();
 		await fetchIpList("https://lists.example/list.txt");
-		const options = mocks.get.mock.calls[0][1];
+		const options = mocks.get.mock.calls[0][0];
 		const single = vi.fn();
-		options.lookup("lists.example", {}, single);
+		options.lookup(options.hostname, {}, single);
 		expect(single).toHaveBeenCalledWith(null, "1.1.1.1", 4);
 		const all = vi.fn();
-		options.lookup("lists.example", { all: true }, all);
+		options.lookup(options.hostname, { all: true }, all);
 		expect(all).toHaveBeenCalledWith(null, [PUBLIC_IP, { address: "2606:4700:4700::1111", family: 6 }]);
 		const onlyIpv6 = vi.fn();
-		options.lookup("lists.example", { family: 6 }, onlyIpv6);
+		options.lookup(options.hostname, { family: 6 }, onlyIpv6);
 		expect(onlyIpv6).toHaveBeenCalledWith(null, "2606:4700:4700::1111", 6);
 		expect(mocks.lookup).toHaveBeenCalledTimes(1);
 	});
 
-	it("downloads a public literal without DNS resolution", async () => {
-		mockResponse();
-		await expect(fetchIpList("https://1.1.1.1/list.txt")).resolves.toBe("1.2.3.4\n");
-		expect(mocks.lookup).not.toHaveBeenCalled();
-	});
+	it.each([
+		["1.1.1.1", "1.1.1.1", 4],
+		["[2606:4700:4700::1111]", "2606:4700:4700::1111", 6],
+	])(
+		"downloads public literal %s without DNS or SNI and verifies its IP certificate",
+		async (authority, ip, family) => {
+			mockResponse();
+			await expect(fetchIpList(`https://${authority}:8443/list.txt`)).resolves.toBe("1.2.3.4\n");
+			expect(mocks.lookup).not.toHaveBeenCalled();
+			const options = mocks.get.mock.calls[0][0];
+			expect(options).toMatchObject({ servername: "", port: "8443", headers: { Host: `${authority}:8443` } });
+			const all = vi.fn();
+			options.lookup(options.hostname, { all: true }, all);
+			expect(all).toHaveBeenCalledWith(null, [{ address: ip, family }]);
+			const certificate = { subjectaltname: `IP Address:${ip}` };
+			const identityCheck = vi.spyOn(tls, "checkServerIdentity");
+			const identityError = options.checkServerIdentity(options.hostname, certificate);
+			expect(identityCheck).toHaveBeenCalledWith(ip, certificate);
+			// IPv6 IP-SAN acceptance depends on the Node runtime's native TLS implementation.
+			if (family === 4) {
+				expect(identityError).toBeUndefined();
+			}
+			expect(options.checkServerIdentity(ip, { subjectaltname: `DNS:${ip}` })).toMatchObject({
+				code: "ERR_TLS_CERT_ALTNAME_INVALID",
+			});
+		},
+	);
 
 	it("revalidates and resolves a relative redirect before its separate connection", async () => {
 		const requests = [];
-		mocks.get.mockImplementation((url, _options, onResponse) => {
+		mocks.get.mockImplementation((options, onResponse) => {
 			const request = Object.assign(new EventEmitter(), { destroy: vi.fn() });
 			requests.push(request);
 			queueMicrotask(() => {
-				const first = url.pathname === "/list.txt";
+				const first = options.path === "/list.txt";
 				const response = Object.assign(new EventEmitter(), {
 					statusCode: first ? 302 : 200,
 					headers: first ? { location: "/actual.txt" } : {},
@@ -263,7 +315,7 @@ describe("firewall list HTTPS downloads", () => {
 	it("aborts a stalled HTTPS body at the same overall deadline", async () => {
 		vi.useFakeTimers();
 		let signal;
-		mocks.get.mockImplementation((_url, options, onResponse) => {
+		mocks.get.mockImplementation((options, onResponse) => {
 			signal = options.signal;
 			const request = Object.assign(new EventEmitter(), { destroy: vi.fn() });
 			const response = Object.assign(new EventEmitter(), {
@@ -289,7 +341,7 @@ describe("firewall list HTTPS downloads", () => {
 	it("keeps the same deadline across a slow redirect and its subsequent DNS lookup", async () => {
 		vi.useFakeTimers();
 		mocks.lookup.mockResolvedValueOnce([PUBLIC_IP]).mockImplementationOnce(() => new Promise(() => {}));
-		mocks.get.mockImplementation((_url, _options, onResponse) => {
+		mocks.get.mockImplementation((_options, onResponse) => {
 			const request = Object.assign(new EventEmitter(), { destroy: vi.fn() });
 			setTimeout(() => {
 				onResponse(

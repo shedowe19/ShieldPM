@@ -35,6 +35,17 @@ export const validateHostFirewall = async (access, data, existing = {}) => {
 	data.meta = { ...meta, ip_firewall: policy };
 };
 
+/** A config preview also exposes existing rules, including assignments removed from the draft. */
+export const validateFirewallPreviewReferences = async (access, data, existing = {}) => {
+	const ids = new Set([
+		...(normalizeFirewallPolicy(readMeta(existing.meta)?.ip_firewall)?.list_ids || []),
+		...(normalizeFirewallPolicy(readMeta(data.meta)?.ip_firewall)?.list_ids || []),
+	]);
+	if (!ids.size) return;
+	const { default: lists } = await import("./firewall-list.js");
+	for (const id of ids) await lists.get(access, { id });
+};
+
 /** Keep list deletion and the final host database write mutually exclusive.
  * @template T
  * @param {Object} data
