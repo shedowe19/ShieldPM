@@ -386,6 +386,7 @@
 	"route-error.title": "This page could not be loaded.",
 	"expires.on": "Expires: {date}",
 	"expiresOn": "Expires On",
+	"firewall-list": "Firewall List",
 	"form.location": "Location",
 	"form.placeholder.api-key": "Enter API key...",
 	"form.placeholder.auth-host": "auth.example.com",

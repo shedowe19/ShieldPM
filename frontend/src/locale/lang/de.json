@@ -386,6 +386,7 @@
 	"route-error.title": "Diese Seite konnte nicht geladen werden.",
 	"expires.on": "Ablauf am: {date}",
 	"expiresOn": "Läuft ab am",
+	"firewall-list": "Firewall-Liste",
 	"form.location": "Standort",
 	"form.placeholder.api-key": "API-Schlüssel eingeben...",
 	"form.placeholder.auth-host": "auth.example.com",

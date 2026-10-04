@@ -228,6 +228,20 @@ describe("Audit log table loading", () => {
 		});
 	});
 
+	it("includes the localized firewall list filter and forwards its object type", () => {
+		mockAuditLogPage([{ id: 73 }]);
+
+		renderAuditTable();
+
+		fireEvent.click(screen.getByRole("button", { name: "Firewall-Liste" }));
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], {
+			limit: 100,
+			object_type: "firewall-list",
+			page: 1,
+		});
+		expect(screen.getByTestId("audit-log-location")).toHaveTextContent("object_type=firewall-list");
+	});
+
 	it("filters audit events by the entered user and object identifiers from the first page", () => {
 		mockAuditLogPage([{ id: 73 }]);
 

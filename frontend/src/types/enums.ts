@@ -218,6 +218,7 @@ export type UserRole = (typeof USER_ROLE)[keyof typeof USER_ROLE];
 
 export const AUDIT_LOG_OBJECT_TYPE = {
 	ACCESS_LIST: "access-list",
+	FIREWALL_LIST: "firewall-list",
 	USER: "user",
 	PROXY_HOST: "proxy-host",
 	REDIRECTION_HOST: "redirection-host",

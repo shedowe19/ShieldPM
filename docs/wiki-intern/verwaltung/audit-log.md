@@ -15,10 +15,12 @@ Um Änderungen im System nachvollziehbar zu machen (z. B. die Erstellung eines P
 - `frontend/src/hooks/useAuditLogs.ts` — React-Query-Zugriff mit suchspezifischem Cache-Key
 - `frontend/src/pages/AuditLog/TableWrapper.tsx` — Audit-Tabelle, Filter und CSV-Export
 - `frontend/src/pages/AuditLog/audit-log-csv.ts` — sichere lokale CSV-Serialisierung
+- `frontend/src/components/Table/Formatter/EventFormatter.tsx`, `frontend/src/types/enums.ts` — Ereignisnamen, Objektmetadaten und Symbolzuordnung
 
 ## Verhalten
 
 - Erfasst die Felder `id`, `action`, `user_id`, `object_id`, `object_type`, `meta`, `created_on` und `modified_on`. (Die IP-Adresse wird nicht erfasst).
+- Der Objekttyp `firewall-list` erscheint mit Schildsymbol, übersetztem Namen „Firewall-Liste“ beziehungsweise „Firewall List“ und dem Listennamen aus `meta.name`; er ist auch im Objekttypfilter auswählbar. Erstellen, Bearbeiten und Löschen verwenden `created`, `updated` und `deleted`; ein erfolgreicher manueller Refresh verwendet ebenfalls `updated`. Fehlt der Listenname, zeigt die Oberfläche `N/A`.
 - Die Listen- und Detailabfrage verlangen serverseitig `auditlog:list`.
 - Die Liste ist absteigend nach Erstellungszeit und ID sortiert. Bestehende API-Aufrufe ohne Paginierungsparameter bleiben aus Kompatibilitätsgründen auf 100 Treffer begrenzt. Mit `page` und/oder `limit` (je 1–100) liefert die API `items` samt `pagination`-Metadaten; alle Filter laufen vor der Seitenbildung. Die Audit-Ansicht lädt damit stets 100 Ereignisse pro Seite und ermöglicht die Navigation über den gesamten autorisierten Trefferbestand.
 - Das Suchfeld der Audit-Seite sendet `query` an `/api/audit-log`. Der Server sucht vor dieser Begrenzung als Teilzeichenkette in `meta`, `action` und `object_type`; die React-Query-Keys halten Treffer unterschiedlicher Suchbegriffe getrennt.
@@ -41,3 +43,4 @@ SQLite speichert die historischen Audit-Zeitstempel als lokale Zeit mit einem Le
 ## Verwandte Seiten
 
 - [Verwaltungsübersicht](./README.md)
+- [IP-Firewall](../module/ip-firewall.md)

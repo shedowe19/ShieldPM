@@ -238,6 +238,8 @@ Bei verfügbaren Quellen zeigen Sperrseite und JSON das Land sowie ASN und Netzw
 
 Treffer werden je Proxy-Host als JSON-Zeilen unter `/data/logs/ip_firewall_<id>.log` protokolliert. Das mit `escape=json` definierte Log enthält `time`, `host_id`, `host`, `ip`, `request_id`, `rule_id`, `reason`, `source` und `status`. Beim Rendern verfügbare Informationsquellen ergänzen `country_code`, `asn` und `asn_organization`. Im Log ist `asn` ein numerischer String beziehungsweise leer bei fehlender Zuordnung. `rule_id` ist eine Referenz im kompilierten Regelwerk, nicht die Datenbank-ID einer Liste. Diese Datei ist von den normalen Zugriffslogs getrennt. Eine eigene Firewall-Statistik- oder Analyseoberfläche gehört nicht zu dieser Umsetzung.
 
+Administrative Listenaktionen verwenden im [Audit-Log](../verwaltung/audit-log.md) den Objekttyp `firewall-list` mit `created`, `updated` oder `deleted`. Die Metadaten enthalten den Listennamen und weitere Zusammenfassungsfelder, aber keine `entries`. Ein erfolgreicher manueller Refresh erscheint als `updated`; automatische Scheduler-Updates und fehlgeschlagene Refreshs erzeugen kein Audit-Ereignis.
+
 `start.sh` erhält `/data/logs` bei Neustarts. Vor der Nginx-Validierung erstellt `prepare_nginx_log_directory()` das Verzeichnis bei Bedarf, setzt seinen Eigentümer auf `PUID:PGID` und den Modus auf `0700`; ein Symlink an diesem Pfad wird abgewiesen. Der anschließende bestehende Eigentümerwechsel unter `/data` übernimmt auch erhaltene Logdateien für die gewählte Laufzeit-UID. Das gilt für Docker und native Installationen mit denselben Startskripten.
 
 `rootfs/etc/logrotate` erfasst auch `/data/logs/ip_firewall_*.log` mit `daily`, `missingok`, `notifempty` und `copytruncate`. Rotation ist an `LOGROTATE=true` gebunden und standardmäßig deaktiviert; `LOGROTATIONS` bestimmt die Aufbewahrung (Standard 3 Dateien). Die Startskripte übernehmen die bestehende Logrotate-Integration; ein abweichendes natives Deployment muss die Konfiguration ebenfalls verwenden.
@@ -303,5 +305,6 @@ Bei der damaligen Prüfung wurde die echte ASN-Datei aus demselben Release ausdr
 - [IP-Ranges](./ip-ranges.md)
 - [GitOps](./gitops.md)
 - [Analytics](./analytics.md)
+- [Audit-Log](../verwaltung/audit-log.md)
 - [Feature-Übersicht](../features/README.md)
 - [Benutzeranleitung](../../wiki/IP-Firewall.md)

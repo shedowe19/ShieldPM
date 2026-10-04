@@ -126,6 +126,8 @@ Disabling a central list stops its rules on assigned hosts while preserving the 
 
 ## Logs
 
+Administrative list changes appear under **Audit Logs** with the list name and the translated **Firewall List** label. Creation, updates, deletion, and successful manual refreshes are recorded; refreshes appear as updates.
+
 Matching requests are recorded as JSON lines in `/data/logs/ip_firewall_<host-id>.log`. These files are separate from the host's regular access log. A dedicated firewall analytics screen is not provided.
 
 The bundled startup scripts preserve these logs across restarts and prepare the directory for the configured runtime user before Nginx validates the host configuration. Keep `/data` on persistent storage to retain the history across container replacements.

@@ -30,6 +30,7 @@ const getEventValue = (event: AuditLog): string => {
 
 	switch (event.objectType) {
 		case AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST:
+		case AUDIT_LOG_OBJECT_TYPE.FIREWALL_LIST:
 		case AUDIT_LOG_OBJECT_TYPE.USER:
 			return meta.name ?? "N/A";
 		case AUDIT_LOG_OBJECT_TYPE.PROXY_HOST:
@@ -88,6 +89,7 @@ const getIcon = (row: AuditLog) => {
 			ico = <IconLock size={16} className={c} />;
 			break;
 		case AUDIT_LOG_OBJECT_TYPE.CERTIFICATE:
+		case AUDIT_LOG_OBJECT_TYPE.FIREWALL_LIST:
 			ico = <IconShield size={16} className={c} />;
 			break;
 		case AUDIT_LOG_OBJECT_TYPE.DDNS_PROVIDER:
