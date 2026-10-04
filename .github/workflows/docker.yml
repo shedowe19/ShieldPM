@@ -12,6 +12,7 @@ on:
       - scripts/setup-node-apt.sh
       - scripts/ci/docker-smoke.sh
       - scripts/ci/ip-firewall-smoke.mjs
+      - scripts/ci/mmdb-oracle.py
       - scripts/ci/nginx-smoke-modules.mjs
       - scripts/ci/fixtures/**
       - global/certbot-dns-plugins.json
@@ -33,6 +34,7 @@ on:
       - scripts/setup-node-apt.sh
       - scripts/ci/docker-smoke.sh
       - scripts/ci/ip-firewall-smoke.mjs
+      - scripts/ci/mmdb-oracle.py
       - scripts/ci/nginx-smoke-modules.mjs
       - scripts/ci/fixtures/**
       - global/certbot-dns-plugins.json

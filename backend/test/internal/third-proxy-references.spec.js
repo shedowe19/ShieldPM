@@ -6,8 +6,14 @@ const mocks = vi.hoisted(() => ({
 	firewallList: vi.fn(),
 	query: vi.fn(),
 	geoip: vi.fn(),
+	asn: vi.fn(),
+	status: vi.fn(),
 }));
-vi.mock("../../lib/firewall-geoip.js", () => ({ assertCountryFirewallAvailable: mocks.geoip }));
+vi.mock("../../lib/firewall-geoip.js", () => ({
+	assertCountryFirewallAvailable: mocks.geoip,
+	assertAsnFirewallAvailable: mocks.asn,
+	getFirewallGeoipStatus: mocks.status,
+}));
 vi.mock("../../internal/certificate.js", () => ({ default: { get: mocks.certificate } }));
 vi.mock("../../internal/access-list.js", () => ({ default: { get: mocks.list } }));
 vi.mock("../../internal/firewall-list.js", () => ({ default: { get: mocks.firewallList } }));
@@ -40,6 +46,8 @@ describe("host references use the referenced resource's authorization", () => {
 		mocks.list.mockRejectedValue(new Error("Access list not visible"));
 		mocks.firewallList.mockRejectedValue(new Error("Firewall list not visible"));
 		mocks.geoip.mockResolvedValue(undefined);
+		mocks.asn.mockResolvedValue(undefined);
+		mocks.status.mockResolvedValue({ available: true, asn: { available: true } });
 	});
 	afterEach(() => vi.restoreAllMocks());
 	it.each(services)("rejects inaccessible TLS references before creating a host", async (service) => {
@@ -133,4 +141,22 @@ describe("host references use the referenced resource's authorization", () => {
 		expect(mocks.certificate).toHaveBeenCalledExactlyOnceWith(access, { id: 2 });
 		expect(mocks.list).toHaveBeenCalledExactlyOnceWith(access, { id: 3 });
 	});
+	it.each(["create", "update"])(
+		"rejects unsupported ASN filtering before proxy %s queries or writes",
+		async (operation) => {
+			vi.spyOn(proxy, "get").mockResolvedValue({ id: 1, meta: {} });
+			mocks.asn.mockRejectedValueOnce(new Error("ASN firewall requires supported GeoIP ASN configuration"));
+			await expect(
+				proxy[operation](access, {
+					id: 1,
+					domain_names: operation === "create" ? ["example.test"] : undefined,
+					meta: { ip_firewall: { enabled: true, asn_denylist: [{ asn: 13335 }] } },
+				}),
+			).rejects.toThrow(/supported GeoIP ASN/);
+			expect(mocks.asn).toHaveBeenCalledExactlyOnceWith(
+				expect.objectContaining({ enabled: true, asn_denylist: [{ asn: 13335, reason: "" }] }),
+			);
+			expect(mocks.query).not.toHaveBeenCalled();
+		},
+	);
 });

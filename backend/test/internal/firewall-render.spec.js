@@ -1,12 +1,22 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn() } }));
 vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: () => "test-token" }));
 vi.mock("../../internal/firewall-list.js", () => ({ default: { getForHost: vi.fn() } }));
-vi.mock("../../lib/firewall-geoip.js", () => ({ assertCountryFirewallAvailable: vi.fn() }));
+vi.mock("../../lib/firewall-geoip.js", () => ({
+	assertAsnFirewallAvailable: vi.fn(),
+	assertConfiguredFirewallLookups: vi.fn(),
+	assertCountryFirewallAvailable: vi.fn(),
+	getFirewallGeoipStatus: vi.fn(),
+}));
 
 import lists from "../../internal/firewall-list.js";
 import nginx from "../../internal/nginx.js";
+import {
+	assertAsnFirewallAvailable,
+	assertCountryFirewallAvailable,
+	getFirewallGeoipStatus,
+} from "../../lib/firewall-geoip.js";
 import { buildFirewallRender } from "../../lib/firewall-render.js";
 
 const host = (policy = {}, extra = {}) => ({
@@ -22,6 +32,9 @@ const host = (policy = {}, extra = {}) => ({
 });
 
 describe("mandatory host IP firewall config", () => {
+	beforeEach(() => {
+		getFirewallGeoipStatus.mockResolvedValue({ available: false, asn: { available: false } });
+	});
 	afterEach(() => vi.clearAllMocks());
 
 	it("canonicalizes duplicate IPv4 and IPv6 CIDRs while retaining the first reason", async () => {
@@ -65,6 +78,7 @@ describe("mandatory host IP firewall config", () => {
 			expect(config).not.toContain("spm_fw_");
 		}
 		expect(lists.getForHost).not.toHaveBeenCalled();
+		expect(getFirewallGeoipStatus).not.toHaveBeenCalled();
 	});
 
 	it("renders manual-only rules without querying subscription storage", async () => {
@@ -78,6 +92,7 @@ describe("mandatory host IP firewall config", () => {
 	});
 
 	it("reuses Analytics country lookup with known codes, optional unknown blocking and IP precedence", async () => {
+		getFirewallGeoipStatus.mockResolvedValue({ available: true, asn: { available: false } });
 		lists.getForHost.mockResolvedValue([{ id: 9, name: "VPN", reason: "list", entries: ["198.51.100.0/24"] }]);
 		const policy = {
 			list_ids: [9],
@@ -93,7 +108,7 @@ describe("mandatory host IP firewall config", () => {
 		expect(config).toContain("XX 4;");
 		expect(config).toContain("0 $spm_fw_17_country_rule;");
 		expect(config).toContain("0 $spm_fw_17_list_or_country;");
-		expect(config).toContain('"country_code":"$spm_fw_17_country"');
+		expect(config).toContain('"country_code":"$spm_fw_17_country_info"');
 		expect(config).not.toContain("geoip2 /");
 		const data = await buildFirewallRender(host(policy), [
 			{ id: 9, name: "VPN", reason: "list", entries: ["198.51.100.0/24"] },
@@ -101,6 +116,97 @@ describe("mandatory host IP firewall config", () => {
 		expect(data.known_country_codes).toHaveLength(250);
 		expect(data.details.map((rule) => rule.source_type)).toEqual(["manual", "list", "country", "country_unknown"]);
 	});
+
+	it("loads lookup readiness once and shares optional country/ASN information on an IP denial", async () => {
+		const status = { available: true, asn: { available: true } };
+		getFirewallGeoipStatus.mockResolvedValue(status);
+		const policy = { denylist: [{ address: "2001:db8::9", reason: "manual" }] };
+		const entry = host(policy);
+		const config = await nginx.renderConfig("proxy_host", entry);
+		expect(getFirewallGeoipStatus).toHaveBeenCalledOnce();
+		expect(assertCountryFirewallAvailable).toHaveBeenCalledWith(entry.meta.ip_firewall, status);
+		expect(assertAsnFirewallAvailable).toHaveBeenCalledWith(entry.meta.ip_firewall, status);
+		expect(config).not.toContain("map $geoip2_country_code");
+		expect(config).not.toContain("map $spm_geoip2_asn");
+		expect(config).toContain("local raw_country = ngx.var.geoip2_country_code");
+		expect(config).toContain('tonumber(ngx.var.spm_geoip2_asn or "")');
+		expect(config).toContain('organization = ngx.var.spm_geoip2_asn_org or ""');
+		expect(config).toContain('set $spm_fw_17_country_info "";');
+		expect(config).toContain('set $spm_fw_17_asn_info "";');
+		expect(config).toContain('"asn_organization":"$spm_fw_17_asn_org_info"');
+		expect(config).toContain("asn = asn, asn_organization = organization");
+	});
+
+	it("keeps ASN rules independent of the country capability and inserts them before country matches", async () => {
+		getFirewallGeoipStatus.mockResolvedValue({ available: false, asn: { available: true } });
+		const config = await nginx.renderConfig(
+			"proxy_host",
+			host({ asn_denylist: [{ asn: 15169, reason: "Network" }] }),
+		);
+		expect(config).toContain("map $spm_geoip2_asn $spm_fw_17_asn_rule");
+		expect(config).toContain("15169 1;");
+		expect(config).toContain("0 $spm_fw_17_asn_or_country;");
+		expect(config).not.toContain("geoip2_country_code");
+		const data = await buildFirewallRender(
+			host({
+				denylist: [{ address: "2001:db8::1", reason: "manual" }],
+				list_ids: [7],
+				asn_denylist: [{ asn: 15169, reason: "ASN" }],
+				country_denylist: ["GB"],
+			}),
+			[{ id: 7, name: "list", reason: "list", entries: ["2001:db8::/32"] }],
+		);
+		expect(data.details.map((rule) => rule.source_type)).toEqual(["manual", "list", "asn", "country"]);
+		expect(data.asn_rules).toEqual([{ asn: 15169, value: 3 }]);
+		expect(data.country_rules).toEqual([{ code: "GB", value: 4 }]);
+	});
+
+	it.each([0, -1, 1.5, 4294967296, "15169; return 200;"])("never emits invalid ASN map key %s", async (asn) => {
+		await expect(buildFirewallRender(host({ asn_denylist: [{ asn }] }))).rejects.toThrow("integer");
+	});
+
+	it("fails closed when an explicitly unavailable source is required by an active policy", async () => {
+		await expect(
+			buildFirewallRender(host({ asn_denylist: [{ asn: 15169 }] }), [], { country: true, asn: false }),
+		).rejects.toThrow("ASN filtering");
+		await expect(
+			buildFirewallRender(host({ country_denylist: ["GB"] }), [], { country: false, asn: true }),
+		).rejects.toThrow("Country filtering");
+	});
+
+	it.each([false, true])(
+		"keeps ASN enforcement before OAuth/WAF and outside Anubis internals (%s)",
+		async (anubis) => {
+			getFirewallGeoipStatus.mockResolvedValue({ available: false, asn: { available: true } });
+			const config = await nginx.renderConfig(
+				"proxy_host",
+				host(
+					{
+						asn_denylist: [{ asn: 4294967295, reason: '<script>"ASN"</script>' }],
+						allowlist: ["2001:db8:1::/64"],
+					},
+					{
+						anubis_enabled: anubis,
+						block_exploits: true,
+						access_list_id: 4,
+						access_list: { meta: { auth_type: "oauth2_proxy" }, clients: [], items: [] },
+					},
+				),
+			);
+			expect(config).toContain("4294967295 1;");
+			expect(config).toContain("2001:db8:1::/64 1;");
+			expect(config).toContain("modsecurity on;");
+			expect(config).toContain("modsecurity off;");
+			expect(config).toContain("error_page       401 403 = @oauth2_proxy_signin;");
+			expect(config).toContain("access_by_lua_block { }");
+			expect(config.match(/if \(\$spm_fw_17_blocked\)/g)).toHaveLength(1);
+			expect(config).toContain("ASN-Regel");
+			expect(config).toContain("labels.asn_organization = organization");
+			expect(config).not.toContain("geoip2_country_code");
+			if (anubis)
+				expect(config.slice(config.indexOf("# --- Backend Server (Internal) ---"))).not.toContain("spm_fw_");
+		},
+	);
 
 	it("can use country rules alone and omits unknown blocking unless selected", async () => {
 		const data = await buildFirewallRender(host({ country_denylist: ["GB"], country_reason: "Country policy" }));

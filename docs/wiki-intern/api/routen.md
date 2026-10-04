@@ -66,7 +66,9 @@ entfernten Zuordnungen. Details und Größenlimits stehen unter [IP-Firewall](..
 `GET`/`POST /api/nginx/firewall-lists`, `GET`/`PUT`/`DELETE /:list_id`, `POST /preview` und
 `POST /:list_id/refresh` verwenden die bestehenden `access_lists`-Rechte und Eigentümersichtbarkeit.
 `GET /api/nginx/firewall-lists/geoip` benötigt dagegen `proxy_hosts:list` und gibt keine lokalen
-Konfigurations- oder Datenbankpfade aus. Die vollständigen Verträge stehen unter
+Konfigurations- oder Datenbankpfade aus. Die bestehenden vier Statusfelder beschreiben weiterhin die
+Länderquelle; `asn` enthält unabhängig davon dieselben Felder für die ASN-Quelle. Ein fehlendes `asn` in einer
+älteren Antwort gilt nicht als verfügbare ASN-Unterstützung. Die vollständigen Verträge stehen unter
 [IP-Firewall-API](../module/ip-firewall.md#api).
 
 ### Proxy-Host-Diagnose

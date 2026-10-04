@@ -65,6 +65,31 @@
 				"$ref": "./firewall-country-code.json"
 			}
 		},
+		"asn_denylist": {
+			"type": "array",
+			"maxItems": 1000,
+			"uniqueItems": true,
+			"default": [],
+			"description": "Blocked autonomous system numbers with optional public explanations.",
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": [
+					"asn"
+				],
+				"properties": {
+					"asn": {
+						"type": "integer",
+						"minimum": 1,
+						"maximum": 4294967295
+					},
+					"reason": {
+						"type": "string",
+						"maxLength": 1000
+					}
+				}
+			}
+		},
 		"country_reason": {
 			"type": "string",
 			"maxLength": 1000,

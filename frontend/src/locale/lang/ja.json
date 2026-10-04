@@ -887,5 +887,6 @@
 	"firewall.host.previewTitle": "IP firewall block page preview",
 	"firewall.host.countries.placeholder": "Search for a country name or ISO code…",
 	"firewall.host.countries.noMatches": "No countries found",
-	"proxy-host.config-preview.firewall-rule-summaries": "Firewall rule tables are summarized by entry count and a fingerprint so large lists stay readable. Changes to the rules change the fingerprint. All rules are enforced when you save."
+	"proxy-host.config-preview.firewall-rule-summaries": "Firewall rule tables are summarized by entry count and a fingerprint so large lists stay readable. Changes to the rules change the fingerprint. All rules are enforced when you save.",
+	"firewall.host.asn.remove": "Remove ASN rule {row}"
 }

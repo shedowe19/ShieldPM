@@ -1,5 +1,6 @@
 import type { FirewallList } from "src/api/backend/firewallLists";
 import type { FirewallPolicy } from "src/api/backend/models";
+import { MAX_FIREWALL_ASN } from "src/lib/firewallAsn";
 import blockedPage from "../../../backend/templates/ip-blocked.html?raw";
 
 type PreviewOptions = {
@@ -7,6 +8,7 @@ type PreviewOptions = {
 	lists?: Pick<FirewallList, "id" | "name" | "reason" | "enabled">[];
 	host?: string;
 	language?: string;
+	asnAvailable?: boolean;
 };
 
 const htmlEntities: Record<string, string> = {
@@ -41,12 +43,22 @@ export const renderProxyHostFirewallPreview = ({
 	lists = [],
 	host = "example.com",
 	language = "en",
+	asnAvailable,
 }: PreviewOptions): string => {
 	const de = language.toLowerCase().startsWith("de");
 	const manual = policy.denylist.find((rule) => rule.address.trim());
 	const selected = policy.listIds.map((id) => lists.find((list) => list.id === id && list.enabled)).find(Boolean);
+	const asnRule = policy.asnDenylist.find(
+		(rule) => Number.isSafeInteger(rule.asn) && rule.asn > 0 && rule.asn <= MAX_FIREWALL_ASN,
+	);
+	const asnExample = !manual && !selected && !!asnRule;
+	const showAsn = asnAvailable ?? !!asnRule;
+	const exampleAsn = asnRule?.asn ?? 13335;
+	const asnDefaultReason = de
+		? `Die IP-Adresse gehört zum gesperrten autonomen System AS${exampleAsn}. Der Betreiber schränkt Zugriffe aus diesem Netzwerk ein.`
+		: `This IP address belongs to the blocked autonomous system AS${exampleAsn}. The operator restricts access from this network.`;
 	const country = policy.countryDenylist[0] || (policy.blockUnknownCountry ? "XX" : "");
-	const countryExample = !manual && !selected && country !== "";
+	const countryExample = !manual && !selected && !asnExample && country !== "";
 	const countryDefaultReason =
 		country === "XX"
 			? de
@@ -87,7 +99,11 @@ export const renderProxyHostFirewallPreview = ({
 	Object.assign(labels, {
 		reason:
 			(manual ? manual.reason : selected?.reason) ||
-			(countryExample ? policy.countryReason || countryDefaultReason : defaultReason),
+			(asnExample
+				? asnRule?.reason || asnDefaultReason
+				: countryExample
+					? policy.countryReason || countryDefaultReason
+					: defaultReason),
 		message:
 			policy.publicMessage ||
 			(de
@@ -96,13 +112,23 @@ export const renderProxyHostFirewallPreview = ({
 		source:
 			!manual && selected
 				? selected.name
-				: countryExample
+				: asnExample
 					? de
-						? "GeoIP-Länderregel"
-						: "GeoIP country rule"
-					: de
-						? "Manuelle IP-Sperre"
-						: "Manual IP block",
+						? "ASN-Regel"
+						: "ASN rule"
+					: countryExample
+						? de
+							? "GeoIP-Länderregel"
+							: "GeoIP country rule"
+						: de
+							? "Manuelle IP-Sperre"
+							: "Manual IP block",
+		asn_label: de ? "Autonomes System (ASN)" : "Autonomous system (ASN)",
+		asn: showAsn ? `AS${exampleAsn}` : "",
+		asn_hidden: showAsn ? "" : "hidden",
+		asn_organization_label: de ? "Netzwerkbetreiber" : "Network operator",
+		asn_organization: showAsn ? (de ? "Netzwerkbetreiber (Beispiel)" : "Network operator (example)") : "",
+		asn_organization_hidden: showAsn ? "" : "hidden",
 		country_label: de ? "Erkanntes Land (ISO)" : "Detected country (ISO)",
 		country: country === "XX" ? (de ? "Unbekannt (XX)" : "Unknown (XX)") : country,
 		country_hidden: country ? "" : "hidden",

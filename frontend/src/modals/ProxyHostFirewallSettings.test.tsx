@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Form, Formik, useFormikContext } from "formik";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ProxyHostFirewallSettings from "./ProxyHostFirewallSettings";
 import {
@@ -41,11 +42,29 @@ const enabledMeta = (): NonNullable<ProxyHostFormValues["meta"]> => ({
 	ipFirewall: createProxyHostFirewallPolicy({ enabled: true }),
 });
 
+const MountableSettings = () => {
+	const [mounted, setMounted] = useState(true);
+	return (
+		<>
+			<button type="button" onClick={() => setMounted(!mounted)}>
+				Switch settings tab
+			</button>
+			{mounted && <ProxyHostFirewallSettings />}
+		</>
+	);
+};
+
 describe("ProxyHostFirewallSettings", () => {
 	beforeEach(() => {
 		mocks.refetchGeoip.mockClear();
 		mocks.useFirewallGeoip.mockReturnValue({
-			data: { available: true, moduleEnabled: true, databasePresent: true, reason: null },
+			data: {
+				available: true,
+				moduleEnabled: true,
+				databasePresent: true,
+				reason: null,
+				asn: { available: true, moduleEnabled: true, databasePresent: true, reason: null },
+			},
 			isLoading: false,
 			isError: false,
 			refetch: mocks.refetchGeoip,
@@ -282,7 +301,154 @@ describe("ProxyHostFirewallSettings", () => {
 		renderSettings({ meta: enabledMeta() });
 		expect(screen.getByText("firewall.host.geoip.error")).toBeInTheDocument();
 		expect(screen.getByRole("switch", { name: "firewall.host.countries.blockUnknown" })).toBeDisabled();
-		fireEvent.click(screen.getByRole("button", { name: "firewall.host.geoip.retry" }));
+		fireEvent.click(screen.getAllByRole("button", { name: "firewall.host.geoip.retry" })[0]);
 		expect(mocks.refetchGeoip).toHaveBeenCalledOnce();
+	});
+
+	it("accepts AS-prefixed and numeric ASN input with public reasons without changing other rules", async () => {
+		renderSettings({ accessListId: 7, meta: enabledMeta() });
+		fireEvent.click(screen.getByRole("button", { name: "firewall.host.asn.add" }));
+		fireEvent.change(screen.getByLabelText("firewall.host.asn.number"), { target: { value: "AS13335" } });
+		fireEvent.change(screen.getByLabelText("firewall.host.asn.reason"), { target: { value: "Network policy" } });
+		fireEvent.click(screen.getByRole("button", { name: "firewall.host.asn.add" }));
+		fireEvent.change(screen.getAllByLabelText("firewall.host.asn.number")[1], { target: { value: "4294967295" } });
+		await waitFor(() =>
+			expect(state()).toMatchObject({
+				accessListId: 7,
+				meta: {
+					ipFirewall: {
+						asnDenylist: [
+							{ asn: 13335, reason: "Network policy" },
+							{ asn: 4294967295, reason: "" },
+						],
+						countryDenylist: [],
+						denylist: [],
+					},
+				},
+			}),
+		);
+		fireEvent.click(screen.getByRole("button", { name: "firewall.host.preview" }));
+		expect(screen.getByTitle("firewall.host.previewTitle").getAttribute("srcdoc")).toContain("AS13335");
+		fireEvent.click(screen.getAllByRole("button", { name: "firewall.host.asn.remove" })[0]);
+		await waitFor(() => expect(state().meta?.ipFirewall?.asnDenylist).toEqual([{ asn: 4294967295, reason: "" }]));
+		expect(screen.getByLabelText("firewall.host.asn.number")).toHaveValue("4294967295");
+	});
+
+	it("retains invalid and duplicate ASN rows visibly instead of dropping them from the draft", async () => {
+		renderSettings({
+			meta: {
+				ipFirewall: createProxyHostFirewallPolicy({ enabled: true, asnDenylist: [{ asn: 13335, reason: "" }] }),
+			},
+		});
+		fireEvent.click(screen.getByRole("button", { name: "firewall.host.asn.add" }));
+		const input = screen.getAllByLabelText("firewall.host.asn.number")[1];
+		fireEvent.change(input, { target: { value: "AS4294967296" } });
+		await waitFor(() =>
+			expect(state().meta?.ipFirewall?.asnDenylist).toEqual([
+				{ asn: 13335, reason: "" },
+				{ asn: 0, reason: "" },
+			]),
+		);
+		expect(input).toHaveValue("AS4294967296");
+		expect(input).toHaveAttribute("aria-invalid", "true");
+		expect(screen.getByText("firewall.host.asn.invalid")).toBeInTheDocument();
+		fireEvent.change(input, { target: { value: "as13335" } });
+		await waitFor(() => expect(screen.getAllByText("firewall.host.asn.duplicate")).toHaveLength(2));
+	});
+
+	it("keeps the full invalid ASN input across tab unmounts without putting raw text in the payload", async () => {
+		render(
+			<Formik initialValues={createProxyHostInitialValues({ meta: enabledMeta() })} onSubmit={vi.fn()}>
+				<Form>
+					<MountableSettings />
+					<FormState />
+				</Form>
+			</Formik>,
+		);
+		fireEvent.click(screen.getByRole("button", { name: "firewall.host.asn.add" }));
+		fireEvent.change(screen.getByLabelText("firewall.host.asn.number"), { target: { value: "AS-invalid-draft" } });
+		fireEvent.click(screen.getByRole("button", { name: "Switch settings tab" }));
+		expect(screen.queryByLabelText("firewall.host.asn.number")).not.toBeInTheDocument();
+		fireEvent.click(screen.getByRole("button", { name: "Switch settings tab" }));
+		expect(screen.getByLabelText("firewall.host.asn.number")).toHaveValue("AS-invalid-draft");
+		expect(screen.getByLabelText("firewall.host.asn.number")).toHaveAttribute("aria-invalid", "true");
+		await waitFor(() => expect(state().meta?.ipFirewall?.asnDenylist).toEqual([{ asn: 0, reason: "" }]));
+		expect(JSON.stringify(state())).not.toContain("AS-invalid-draft");
+	});
+
+	it("keeps saved ASN rules removable while missing ASN data blocks additions and reactivation", async () => {
+		mocks.useFirewallGeoip.mockReturnValue({
+			data: {
+				available: true,
+				moduleEnabled: true,
+				databasePresent: true,
+				reason: null,
+				asn: { available: false, moduleEnabled: true, databasePresent: false, reason: "database_missing" },
+			},
+			isLoading: false,
+			isError: false,
+			refetch: mocks.refetchGeoip,
+		});
+		renderSettings({
+			meta: {
+				ipFirewall: createProxyHostFirewallPolicy({
+					enabled: false,
+					asnDenylist: [{ asn: 13335, reason: "Saved reason" }],
+				}),
+			},
+		});
+		expect(screen.getByRole("switch", { name: "firewall.host.title" })).toBeDisabled();
+		expect(screen.getByRole("button", { name: "firewall.host.asn.add" })).toBeDisabled();
+		expect(screen.getByLabelText("firewall.host.asn.number")).toBeDisabled();
+		expect(screen.getByText("firewall.host.asn.databaseMissing")).toBeInTheDocument();
+		fireEvent.click(screen.getByRole("button", { name: "firewall.host.asn.remove" }));
+		await waitFor(() => expect(state().meta?.ipFirewall?.asnDenylist).toEqual([]));
+		expect(screen.getByRole("switch", { name: "firewall.host.title" })).not.toBeDisabled();
+		fireEvent.click(screen.getByRole("switch", { name: "firewall.host.title" }));
+		await waitFor(() => expect(state().meta?.ipFirewall?.enabled).toBe(true));
+		expect(screen.getByRole("switch", { name: "firewall.host.countries.blockUnknown" })).not.toBeDisabled();
+	});
+
+	it("allows ASN rules independently when country lookup is unavailable", async () => {
+		mocks.useFirewallGeoip.mockReturnValue({
+			data: {
+				available: false,
+				moduleEnabled: true,
+				databasePresent: false,
+				reason: "database_missing",
+				asn: { available: true, moduleEnabled: true, databasePresent: true, reason: null },
+			},
+			isLoading: false,
+			isError: false,
+			refetch: mocks.refetchGeoip,
+		});
+		renderSettings({ meta: enabledMeta() });
+		expect(screen.getByRole("button", { name: "firewall.host.asn.add" })).not.toBeDisabled();
+		expect(screen.getByRole("switch", { name: "firewall.host.countries.blockUnknown" })).toBeDisabled();
+		fireEvent.click(screen.getByRole("button", { name: "firewall.host.asn.add" }));
+		fireEvent.change(screen.getByLabelText("firewall.host.asn.number"), { target: { value: "AS13335" } });
+		await waitFor(() => expect(state().meta?.ipFirewall?.asnDenylist).toEqual([{ asn: 13335, reason: "" }]));
+	});
+
+	it.each([
+		{ isLoading: true, isError: false },
+		{ isLoading: false, isError: true },
+	])("never assumes cached ASN availability after a loading or failed capability request: %s", (requestState) => {
+		mocks.useFirewallGeoip.mockReturnValue({
+			data: {
+				available: true,
+				moduleEnabled: true,
+				databasePresent: true,
+				reason: null,
+				asn: { available: true, moduleEnabled: true, databasePresent: true, reason: null },
+			},
+			...requestState,
+			refetch: mocks.refetchGeoip,
+		});
+		renderSettings({ meta: enabledMeta() });
+		expect(screen.getByRole("button", { name: "firewall.host.asn.add" })).toBeDisabled();
+		expect(
+			screen.getByText(requestState.isLoading ? "firewall.host.asn.loading" : "firewall.host.asn.error"),
+		).toBeInTheDocument();
 	});
 });

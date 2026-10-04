@@ -13,6 +13,7 @@ import { useLocaleRevision } from "src/context/LocaleContext";
 import { useFirewallGeoip } from "src/hooks/useFirewallGeoip";
 import { useFirewallLists } from "src/hooks/useFirewallLists";
 import { intl, T } from "src/locale";
+import ProxyHostFirewallAsnSettings from "./ProxyHostFirewallAsnSettings";
 import ProxyHostFirewallCountrySettings from "./ProxyHostFirewallCountrySettings";
 import { renderProxyHostFirewallPreview } from "./ProxyHostFirewallPreview";
 import { createProxyHostFirewallPolicy, type ProxyHostFormValues } from "./ProxyHostModalFormValues";
@@ -25,7 +26,8 @@ const ProxyHostFirewallSettings = () => {
 	const [showPreview, setShowPreview] = useState(false);
 	const { data: lists = [], isLoading, isError } = useFirewallLists({ enabled: policy.enabled });
 	const hasCountryRules = policy.countryDenylist.length > 0 || policy.blockUnknownCountry;
-	const geoip = useFirewallGeoip({ enabled: policy.enabled || hasCountryRules });
+	const hasAsnRules = policy.asnDenylist.length > 0;
+	const geoip = useFirewallGeoip({ enabled: policy.enabled || hasCountryRules || hasAsnRules });
 	const geoipReady =
 		!geoip.isLoading &&
 		!geoip.isError &&
@@ -33,6 +35,14 @@ const ProxyHostFirewallSettings = () => {
 		geoip.data.moduleEnabled &&
 		geoip.data.databasePresent &&
 		geoip.data.reason === null;
+	const asnReady =
+		!geoip.isLoading &&
+		!geoip.isError &&
+		geoip.data?.asn?.available === true &&
+		geoip.data.asn.moduleEnabled &&
+		geoip.data.asn.databasePresent &&
+		geoip.data.asn.reason === null;
+	const activationBlocked = (hasCountryRules && !geoipReady) || (hasAsnRules && !asnReady);
 	const unavailableIds = isLoading ? [] : policy.listIds.filter((id) => !lists.some((list) => list.id === id));
 
 	const update = <K extends keyof FirewallPolicy>(field: K, value: FirewallPolicy[K]) =>
@@ -69,9 +79,9 @@ const ProxyHostFirewallSettings = () => {
 				<Switch
 					id="ip-firewall-enabled"
 					checked={policy.enabled}
-					disabled={!policy.enabled && hasCountryRules && !geoipReady}
+					disabled={!policy.enabled && activationBlocked}
 					onCheckedChange={(checked) => {
-						if (!checked || !hasCountryRules || geoipReady) update("enabled", checked);
+						if (!checked || !activationBlocked) update("enabled", checked);
 					}}
 				/>
 			</div>
@@ -85,6 +95,24 @@ const ProxyHostFirewallSettings = () => {
 				<p className="text-sm text-amber-600 dark:text-amber-400">
 					<T id="firewall.host.geoip.enableBlocked" />
 				</p>
+			)}
+			{!policy.enabled && hasAsnRules && !asnReady && (
+				<p className="text-sm text-amber-600 dark:text-amber-400">
+					<T id="firewall.host.asn.enableBlocked" />
+				</p>
+			)}
+			{(policy.enabled || hasAsnRules) && (
+				<ProxyHostFirewallAsnSettings
+					policy={policy}
+					ready={asnReady}
+					status={geoip.data?.asn}
+					loading={geoip.isLoading || (!geoip.data && !geoip.isError)}
+					error={geoip.isError}
+					onRetry={() => {
+						void geoip.refetch();
+					}}
+					onChange={update}
+				/>
 			)}
 			{(policy.enabled || hasCountryRules) && (
 				<ProxyHostFirewallCountrySettings
@@ -324,6 +352,7 @@ const ProxyHostFirewallSettings = () => {
 										lists,
 										host: values.domainNames?.[0],
 										language: intl.locale,
+										asnAvailable: asnReady,
 									})}
 								/>
 							</div>

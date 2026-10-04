@@ -5,6 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn() } }));
 vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: () => "test-token" }));
+// The isolated host files have no system master; the firewall guard is tested separately.
+vi.mock("../../lib/firewall-geoip.js", async (importOriginal) => ({
+	...(await importOriginal()),
+	assertConfiguredFirewallLookups: vi.fn().mockResolvedValue(undefined),
+}));
 
 import nginx from "../../internal/nginx.js";
 import utils from "../../lib/utils.js";

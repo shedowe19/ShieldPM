@@ -358,6 +358,135 @@ access_log off; # stream
                 self.assertIn("access_log off; # stream", content)
                 self.assertIn("#error_log /data/nginx/error.log warn;", content)
 
+    def configure_asn_fixture(self, config, database, enabled="true"):
+        # Redirect only the fixed DB path in a helper copy; production has no
+        # database-path environment override and these tests never touch /data.
+        helper = self.root / "runtime-asn-test.sh"
+        helper.write_text(HELPERS.read_text().replace(
+            'Path("/data/nginx/GeoLite2-ASN.mmdb")', f"Path({str(database)!r})"))
+        self.shell('. "$2"; configure_nginx_modules "$1"', config, helper,
+                   NGINX_LOAD_GEOIP2_MODULE=enabled)
+
+    def test_optional_asn_block_is_idempotent_and_reversible_with_existing_country(self):
+        config = self.root / "nginx.conf"
+        database = self.root / "GeoLite2-ASN.mmdb"
+        database.write_bytes((REPO / "scripts/ci/fixtures/GeoLite2-ASN-Test.mmdb").read_bytes())
+        config.write_text('''#load_module modules/ngx_http_geoip2_module.so;
+events { worker_connections 32; }
+http {
+    #geoip2 /data/nginx/GeoLite2-Country.mmdb {
+    #    $geoip2_country_code default=XX source=$remote_addr country iso_code;
+    #}
+    geoip2 /operator/asn.mmdb { $geoip2_asn source=$remote_addr autonomous_system_number; }
+}
+''')
+        self.configure_asn_fixture(config, database)
+        first = config.read_text()
+        self.assertEqual(first.count("# ShieldPM managed ASN GeoIP2 BEGIN"), 1)
+        self.assertEqual(first.count(f"geoip2 {database} {{"), 1)
+        self.assertIn("$spm_geoip2_asn default=0 source=$remote_addr autonomous_system_number;", first)
+        self.assertIn('$spm_geoip2_asn_org source=$remote_addr autonomous_system_organization;', first)
+        self.assertIn("    geoip2 /data/nginx/GeoLite2-Country.mmdb {", first)
+        foreign = "geoip2 /operator/asn.mmdb { $geoip2_asn source=$remote_addr autonomous_system_number; }"
+        self.assertIn(foreign, first)
+        for _ in range(2):
+            self.configure_asn_fixture(config, database)
+            self.assertEqual(config.read_text(), first)
+        self.configure_asn_fixture(config, database, "false")
+        disabled = config.read_text()
+        self.assertNotIn("$spm_geoip2_asn", disabled)
+        self.assertIn(foreign, disabled)
+        self.assertIn("    #geoip2 /data/nginx/GeoLite2-Country.mmdb {", disabled)
+        self.configure_asn_fixture(config, database)
+        self.assertEqual(config.read_text(), first)
+        database.unlink()
+        self.configure_asn_fixture(config, database)
+        self.assertNotIn("$spm_geoip2_asn", config.read_text())
+        self.assertIn("    geoip2 /data/nginx/GeoLite2-Country.mmdb {", config.read_text())
+
+    def test_missing_nonregular_and_empty_asn_database_preserve_country_runtime(self):
+        config = self.root / "nginx.conf"
+        database = self.root / "GeoLite2-ASN.mmdb"
+        original = '''#load_module modules/ngx_http_geoip2_module.so;
+events { worker_connections 32; }
+http {
+    #geoip2 /data/nginx/GeoLite2-Country.mmdb {
+    #    $geoip2_country_code default=XX source=$remote_addr country iso_code;
+    #}
+}
+'''
+        regular = self.root / "regular.mmdb"
+        regular.write_bytes((REPO / "scripts/ci/fixtures/GeoLite2-ASN-Test.mmdb").read_bytes())
+        for kind in ("missing", "empty", "directory", "symlink"):
+            with self.subTest(kind=kind):
+                config.write_text(original)
+                if kind == "empty": database.touch()
+                if kind == "directory": database.mkdir()
+                if kind == "symlink": database.symlink_to(regular)
+                self.configure_asn_fixture(config, database)
+                self.assertNotIn("$spm_geoip2_asn", config.read_text())
+                self.assertIn("    geoip2 /data/nginx/GeoLite2-Country.mmdb {", config.read_text())
+                if database.is_dir(): database.rmdir()
+                elif database.exists() or database.is_symlink(): database.unlink()
+
+    def test_asn_is_inserted_only_in_direct_http_not_comment_quote_or_stream_context(self):
+        config = self.root / "nginx.conf"
+        database = self.root / "GeoLite2-ASN.mmdb"
+        database.write_bytes((REPO / "scripts/ci/fixtures/GeoLite2-ASN-Test.mmdb").read_bytes())
+        config.write_text('''# http { commented example }
+events { worker_connections 32; }
+stream { map $name $value { default "http { quoted }"; } }
+http
+{
+    # Custom reserved writers remain intact so readiness can reject the conflict.
+    map $host $spm_geoip2_asn { default 123; }
+}
+''')
+        self.configure_asn_fixture(config, database)
+        first = config.read_text()
+        self.assertIn('stream { map $name $value { default "http { quoted }"; } }', first)
+        self.assertIn("http\n{\n    # ShieldPM managed ASN GeoIP2 BEGIN", first)
+        self.assertIn("map $host $spm_geoip2_asn { default 123; }", first)
+        self.configure_asn_fixture(config, database)
+        self.assertEqual(config.read_text(), first)
+
+    def test_actual_nginx_optional_asn_removal_preserves_country_and_required_asn_fails_closed(self):
+        nginx = os.environ.get("NGINX_BIN") or shutil.which("nginx")
+        module = os.environ.get("NGINX_GEOIP2_MODULE")
+        if not nginx or not module:
+            self.skipTest("GeoIP2 module not available; Docker smoke exercises the image startup block")
+        config = self.root / "nginx.conf"
+        database = self.root / "GeoLite2-ASN.mmdb"
+        country = self.root / "GeoLite2-Country.mmdb"
+        database.write_bytes((REPO / "scripts/ci/fixtures/GeoLite2-ASN-Test.mmdb").read_bytes())
+        country.write_bytes((REPO / "scripts/ci/fixtures/GeoIP2-Country-Test.mmdb").read_bytes())
+        config.write_text(
+            f"#load_module {module};\nmaster_process off;\n"
+            f"pid {self.root}/nginx.pid;\nerror_log stderr notice;\n"
+            "events { worker_connections 8; }\nhttp {\n"
+            f"geoip2 {country} {{ $geoip2_country_code default=XX source=$remote_addr country iso_code; }}\n"
+            "}\n")
+        command = [nginx, "-p", f"{self.root}/", "-c", str(config), "-tq"]
+        self.configure_asn_fixture(config, database)
+        first = config.read_text()
+        for _ in range(2):
+            self.configure_asn_fixture(config, database)
+            self.assertEqual(config.read_text(), first)
+            result = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        database.unlink()
+        self.configure_asn_fixture(config, database)
+        result = subprocess.run(command, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        # Existing IP/Country hosts survive. A policy that requires the removed
+        # raw ASN lookup fails validation instead of receiving a fallback map.
+        content = config.read_text()
+        config.write_text(content[:content.rfind("}")] +
+                          "map $spm_geoip2_asn $required_asn_policy { default 0; 15169 1; }\n}\n")
+        required = subprocess.run(command, capture_output=True, text=True)
+        self.assertNotEqual(required.returncode, 0)
+        self.assertIn('unknown "spm_geoip2_asn" variable', required.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -90,9 +90,13 @@ const mocks = vi.hoisted(() => {
 			return query;
 		},
 	});
-	return { files, writes, prunes, rows, makeModel, pruneError, geoip: vi.fn() };
+	return { files, writes, prunes, rows, makeModel, pruneError, geoip: vi.fn(), asn: vi.fn(), status: vi.fn() };
 });
-vi.mock("../../lib/firewall-geoip.js", () => ({ assertCountryFirewallAvailable: mocks.geoip }));
+vi.mock("../../lib/firewall-geoip.js", () => ({
+	assertCountryFirewallAvailable: mocks.geoip,
+	assertAsnFirewallAvailable: mocks.asn,
+	getFirewallGeoipStatus: mocks.status,
+}));
 vi.mock("node:fs", () => ({
 	default: {
 		existsSync: (path) =>
@@ -184,6 +188,8 @@ describe("GitOps import sanitization and safe restore", () => {
 		mocks.prunes.length = 0;
 		mocks.pruneError.value = null;
 		mocks.geoip.mockResolvedValue(undefined);
+		mocks.asn.mockResolvedValue(undefined);
+		mocks.status.mockResolvedValue({ available: true, asn: { available: true } });
 		for (const key of Object.keys(mocks.rows)) delete mocks.rows[key];
 	});
 	it("removes unknown top-level and nested fields from the actual database payload", async () => {
@@ -510,6 +516,70 @@ describe("GitOps import sanitization and safe restore", () => {
 			enabled: false,
 			country_denylist: ["DE"],
 			block_unknown_country: true,
+		});
+	});
+	it("roundtrips ASN rules and public reasons through GitOps export YAML and restore", async () => {
+		const exported = gitops.sanitizeForExport(
+			{
+				id: 9,
+				is_deleted: 0,
+				meta: {
+					ip_firewall: {
+						enabled: true,
+						country_denylist: ["de"],
+						asn_denylist: [{ asn: 13335, reason: " Network policy " }, { asn: 4294967295 }],
+					},
+				},
+			},
+			["is_deleted"],
+		);
+		mocks.files.set("/data/gitops/shieldpm-config/proxy-hosts/1.yaml", yaml.dump(exported, { indent: 2 }));
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(true);
+		expect(mocks.writes.find(({ name }) => name === "ProxyHost").data.meta.ip_firewall).toMatchObject({
+			country_denylist: ["DE"],
+			asn_denylist: [
+				{ asn: 13335, reason: "Network policy" },
+				{ asn: 4294967295, reason: "" },
+			],
+		});
+		expect(mocks.status).toHaveBeenCalledOnce();
+	});
+	it.each([
+		[{ asn: 0 }],
+		[{ asn: 4294967296 }],
+		[{ asn: "13335" }],
+		[{ asn: 13335 }, { asn: 13335, reason: "Another rule" }],
+	])("rejects malformed restored ASN rules before writes or host pruning: %j", async (asnRules) => {
+		file("proxy-hosts", { id: 9, meta: { ip_firewall: { asn_denylist: asnRules } } });
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(result.errors).toContainEqual(expect.stringMatching(/Firewall ASN|Duplicate firewall ASN/));
+		expect(mocks.writes).toEqual([]);
+		expect(mocks.prunes).toEqual([]);
+	});
+	it("rejects active ASN restoration before host writes or pruning without ASN support", async () => {
+		mocks.asn.mockRejectedValueOnce(new Error("ASN firewall requires supported GeoIP ASN configuration"));
+		file("proxy-hosts", { id: 9, meta: { ip_firewall: { enabled: true, asn_denylist: [{ asn: 13335 }] } } });
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(result.errors).toContainEqual(expect.stringMatching(/supported GeoIP ASN/));
+		expect(mocks.writes).toEqual([]);
+		expect(mocks.prunes).toEqual([]);
+	});
+	it("restores disabled ASN rules while ASN filtering is unavailable", async () => {
+		mocks.asn.mockImplementationOnce(async (policy) => {
+			if (policy.enabled) throw new Error("ASN firewall requires supported GeoIP ASN configuration");
+		});
+		file("proxy-hosts", {
+			id: 9,
+			meta: { ip_firewall: { enabled: false, asn_denylist: [{ asn: 13335, reason: "Retained" }] } },
+		});
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(true);
+		expect(mocks.writes.find(({ name }) => name === "ProxyHost").data.meta.ip_firewall).toMatchObject({
+			enabled: false,
+			asn_denylist: [{ asn: 13335, reason: "Retained" }],
 		});
 	});
 	it("reports invalid imports and prevents pruning that model", async () => {

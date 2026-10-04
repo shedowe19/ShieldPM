@@ -13,6 +13,7 @@ const invalid = () => new errs.ValidationError("Invalid or oversized Nginx confi
 /** Incremental Nginx lexer. Opaque table/Lua bodies do not allocate CIDR or script tokens. */
 export class ConfigurationLexer {
 	word = "";
+	wordStarted = false;
 	words = [];
 	quote = "";
 	escaped = false;
@@ -27,16 +28,69 @@ export class ConfigurationLexer {
 	longTail = "";
 	commentOpening = false;
 	directiveLength = 0;
+	mapDepth = null;
+	mapFirst = true;
+	mapKind = "";
+	mapWords = [];
+	mapIgnoreWord = false;
+	mapLastChar = "";
+	mapRowStarted = false;
+
+	constructor({ mapTable = false } = {}) {
+		if (mapTable) this.mapDepth = 0;
+	}
 
 	append(char) {
-		this.word += char;
+		this.wordStarted = true;
+		if (this.mapDepth !== null) {
+			this.mapRowStarted = true;
+			this.mapLastChar = char;
+			if (this.mapFirst) {
+				if (this.mapIgnoreWord) return;
+				this.word += char;
+				if (!this.word.startsWith("~") && !"include".startsWith(this.word)) {
+					this.word = "";
+					this.mapIgnoreWord = true;
+					return;
+				}
+			} else if (this.mapKind === "include") this.word += char;
+			else return;
+		} else this.word += char;
 		if (this.word.length > MAX_WORD || ++this.directiveLength > 2 * MAX_WORD) throw invalid();
 	}
 
 	flush() {
-		if (this.word) this.words.push(this.word);
+		if (this.mapDepth !== null && this.wordStarted) {
+			if (this.mapFirst) {
+				this.mapKind = this.word === "include" ? "include" : this.word.startsWith("~") ? "regex" : "";
+				if (this.mapKind) this.mapWords.push(this.word);
+			} else if (this.mapKind === "include") this.mapWords.push(this.word);
+			this.mapFirst = false;
+			this.mapIgnoreWord = false;
+			this.mapLastChar = "";
+			if (this.mapWords.length > 16384) throw invalid();
+		} else if (this.wordStarted) this.words.push(this.word);
 		this.word = "";
+		this.wordStarted = false;
 		if (this.words.length > 16384) throw invalid();
+	}
+
+	resetMapRow() {
+		this.mapFirst = true;
+		this.mapKind = "";
+		this.mapWords = [];
+		this.mapIgnoreWord = false;
+		this.mapLastChar = "";
+		this.mapRowStarted = false;
+		this.word = "";
+		this.wordStarted = false;
+		this.directiveLength = 0;
+	}
+
+	/** Map rows stay opaque except their regex key or include directive. */
+	inspectMap() {
+		this.mapDepth = this.depth;
+		this.resetMapRow();
 	}
 
 	skipBlock(lua = false) {
@@ -97,8 +151,12 @@ export class ConfigurationLexer {
 				else if (!this.skipped) this.append(char);
 				continue;
 			}
-			if (char === '"' || char === "'") {
+			if ((char === '"' || char === "'") && (this.skipped || !this.wordStarted)) {
 				this.quote = char;
+				if (!this.skipped) {
+					this.wordStarted = true;
+					if (this.mapDepth !== null) this.mapRowStarted = true;
+				}
 				this.dash = false;
 				continue;
 			}
@@ -113,7 +171,7 @@ export class ConfigurationLexer {
 					this.longOpening = "[";
 					continue;
 				}
-			} else if (char === "#") {
+			} else if (char === "#" && (this.skipped || !this.wordStarted)) {
 				if (!this.skipped) this.flush();
 				this.comment = true;
 				continue;
@@ -123,7 +181,7 @@ export class ConfigurationLexer {
 				if (char === "}") this.variable = false;
 				continue;
 			}
-			if (char === "{" && this.word.endsWith("$")) {
+			if (char === "{" && (this.word.endsWith("$") || this.mapLastChar === "$")) {
 				this.variable = true;
 				this.append(char);
 				continue;
@@ -134,6 +192,21 @@ export class ConfigurationLexer {
 					this.depth--;
 					this.lua = this.dash = false;
 				}
+				continue;
+			}
+			if (this.mapDepth !== null) {
+				if (/\s/.test(char)) this.flush();
+				else if (char === ";") {
+					this.flush();
+					if (this.mapWords.length) yield { words: this.mapWords, boundary: ";", lexer: this };
+					this.resetMapRow();
+				} else if (char === "}") {
+					if (this.mapRowStarted || this.depth !== this.mapDepth || --this.depth < 0) throw invalid();
+					this.mapDepth = null;
+					yield { words: [], boundary: "}", lexer: this };
+					this.resetMapRow();
+				} else if (char === "{") throw invalid();
+				else this.append(char);
 				continue;
 			}
 			if (/\s/.test(char)) {
@@ -162,6 +235,8 @@ export class ConfigurationLexer {
 			this.variable ||
 			this.longClosing ||
 			this.word ||
+			this.wordStarted ||
+			this.mapRowStarted ||
 			this.words.length
 		)
 			throw invalid();
@@ -323,17 +398,18 @@ export const readConfigurationDirectives = async function* (fileSystem, masterCo
 	// Preserve symlink/.. traversal until the filesystem resolves it, just as Nginx does.
 	const prefix = path.dirname(path.isAbsolute(masterConfig) ? masterConfig : `${process.cwd()}/${masterConfig}`);
 	const budget = { files: 0, globEntries: 0 };
-	const read = async function* (filename, ancestry) {
+	const read = async function* (filename, ancestry, mapTable = false) {
 		if (++budget.files > MAX_FILES || ancestry.length >= MAX_DEPTH) throw invalid();
 		const canonical = fileSystem.realpath ? await fileSystem.realpath(filename) : path.resolve(filename);
 		if (ancestry.includes(canonical)) throw invalid();
-		const lexer = new ConfigurationLexer();
+		const lexer = new ConfigurationLexer({ mapTable });
 		for await (const chunk of configurationChunks(fileSystem, filename)) {
 			for (const directive of lexer.feed(chunk)) {
 				if (directive.boundary === ";" && directive.words[0] === "include") {
 					if (directive.words.length !== 2) throw invalid();
 					const paths = await includePaths(fileSystem, prefix, directive.words[1], budget);
-					for (const included of paths) yield* read(included, [...ancestry, canonical]);
+					for (const included of paths)
+						yield* read(included, [...ancestry, canonical], lexer.mapDepth !== null);
 				} else yield directive;
 			}
 		}

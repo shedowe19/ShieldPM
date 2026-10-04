@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import ipaddr from "ipaddr.js";
+import errs from "./error.js";
 import { normalizeAddress } from "./firewall-addresses.js";
 import { FIREWALL_COUNTRY_CODES } from "./firewall-policy.js";
 
@@ -21,12 +22,13 @@ const networkKey = (value) => {
 /**
  * Compile validated host policy into CIDR maps and numeric rule references.
  * Text is kept out of Nginx directives and is serialized only through the Lua string filter.
- * Manual matches always take precedence over subscriptions; geo chooses the longest matching prefix.
+ * Priority is manual IP, subscription, ASN, then country; geo chooses the longest matching prefix.
  * @param {Object} host
  * @param {Array<{id:number,name:string,reason:string,entries:string[]}>} lists
+ * @param {{country:boolean,asn:boolean}} [capabilities] Available shared lookups; isolated callers default to policy needs.
  * @returns {Promise<object | null>}
  */
-export const buildFirewallRender = async (host, lists = []) => {
+export const buildFirewallRender = async (host, lists = [], capabilities = undefined) => {
 	const policy = host.meta?.ip_firewall;
 	if (!host.enabled || host.is_deleted || policy?.enabled !== true) return null;
 	const allow = new Map();
@@ -57,6 +59,26 @@ export const buildFirewallRender = async (host, lists = []) => {
 	}
 	const countryDenylist = policy.country_denylist || [];
 	const hasCountryRules = countryDenylist.length > 0 || policy.block_unknown_country === true;
+	const asnDenylist = policy.asn_denylist || [];
+	const hasAsnRules = asnDenylist.length > 0;
+	const hasCountryInfo = capabilities ? capabilities.country === true : hasCountryRules;
+	const hasAsnInfo = capabilities ? capabilities.asn === true : hasAsnRules;
+	if (hasCountryRules && !hasCountryInfo) {
+		throw new errs.ValidationError("Country filtering requires an available country lookup");
+	}
+	if (hasAsnRules && !hasAsnInfo) {
+		throw new errs.ValidationError("ASN filtering requires an available ASN lookup");
+	}
+	const asnRules = new Map();
+	for (const rule of asnDenylist) {
+		if (!Number.isInteger(rule.asn) || rule.asn < 1 || rule.asn > 4294967295) {
+			throw new errs.ValidationError("Firewall ASN rules require an integer from 1 to 4294967295");
+		}
+		if (asnRules.has(rule.asn)) continue;
+		const id = details.length + 1;
+		details.push({ id, reason: rule.reason || "", source: "", source_type: "asn" });
+		asnRules.set(rule.asn, id);
+	}
 	const countryRules = [];
 	if (countryDenylist.length) {
 		const id = details.length + 1;
@@ -76,7 +98,11 @@ export const buildFirewallRender = async (host, lists = []) => {
 		manual_rules: rules(manual),
 		list_rules: rules(subscribed),
 		has_country_rules: hasCountryRules,
-		known_country_codes: hasCountryRules ? FIREWALL_COUNTRY_CODES : [],
+		has_country_info: hasCountryInfo,
+		has_asn_rules: hasAsnRules,
+		has_asn_info: hasAsnInfo,
+		known_country_codes: hasCountryInfo ? FIREWALL_COUNTRY_CODES : [],
+		asn_rules: [...asnRules].map(([asn, value]) => ({ asn, value })),
 		country_rules: countryRules,
 		details,
 		public_message: policy.public_message || "",

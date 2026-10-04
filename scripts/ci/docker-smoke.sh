@@ -188,10 +188,17 @@ http {
 }
 GRPC_SMOKE
 
-# Use the image's implementation and templates for the IP/country firewall runtime checks.
+# Use the image's implementation and templates for IP/country/ASN runtime checks.
 sed 's|../../backend/|/app/|g' "$(dirname "$0")/ip-firewall-smoke.mjs" > "$fixture/ip-firewall-smoke.mjs"
 cp "$(dirname "$0")/nginx-smoke-modules.mjs" "$fixture/nginx-smoke-modules.mjs"
+cp "$(dirname "$0")/mmdb-oracle.py" "$fixture/mmdb-oracle.py"
 cp "$(dirname "$0")/fixtures/GeoIP2-Country-Test.mmdb" "$fixture/GeoIP2-Country-Test.mmdb"
+cp "$(dirname "$0")/fixtures/GeoLite2-ASN-Test.mmdb" "$fixture/GeoLite2-ASN-Test.mmdb"
+# Enable the image's real startup configuration with three offline test databases.
+mkdir -p "$fixture/nginx"
+cp "$fixture/GeoIP2-Country-Test.mmdb" "$fixture/nginx/GeoLite2-Country.mmdb"
+cp "$(dirname "$0")/fixtures/GeoIP2-City-Test.mmdb" "$fixture/nginx/GeoLite2-City.mmdb"
+cp "$fixture/GeoLite2-ASN-Test.mmdb" "$fixture/nginx/GeoLite2-ASN.mmdb"
 
 for service_uid in 0 1000; do
     container="shieldpm-smoke-${fixture##*/}-$service_uid"
@@ -204,6 +211,7 @@ for service_uid in 0 1000; do
         --health-interval 5s --health-timeout 10s --health-start-period 5s --health-retries 3 \
         --env TZ=UTC --env PUID="$service_uid" --env PGID="$service_uid" \
         --env DISABLE_IPV6=true --env SKIP_IP_RANGES=true \
+        --env NGINX_LOAD_GEOIP2_MODULE=true \
         --env TOR_ENABLED=false --env ANUBIS_ENABLED=false \
         --env ACME_OCSP_STAPLING=false --env CUSTOM_OCSP_STAPLING=false \
         "$image" >/dev/null
@@ -263,6 +271,7 @@ for service_uid in 0 1000; do
         # Reuse the image module paths and require the actual ModSecurity directive.
         NGINX_SMOKE_DISCOVER_MODULES=true NGINX_REQUIRE_MODSECURITY=true \
             NGINX_GEOIP_DATABASE=/data/GeoIP2-Country-Test.mmdb \
+            NGINX_ASN_DATABASE=/data/GeoLite2-ASN-Test.mmdb NGINX_REQUIRE_ASN_STARTUP=true \
             node /data/ip-firewall-smoke.mjs
     ' smoke "$service_uid"
     if [[ "$service_uid" == 0 ]]; then

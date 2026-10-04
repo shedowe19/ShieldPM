@@ -9,7 +9,13 @@ describe("firewall JSON request limits", () => {
 	beforeAll(async () => {
 		const app = express();
 		app.use(jsonBody);
-		app.use((req, res) => res.json({ parsed: true, rules: req.body.meta?.ip_firewall?.denylist.length }));
+		app.use((req, res) =>
+			res.json({
+				parsed: true,
+				rules: req.body.meta?.ip_firewall?.denylist.length,
+				asnRules: req.body.meta?.ip_firewall?.asn_denylist?.length || undefined,
+			}),
+		);
 		app.use((error, _req, res, _next) => res.status(error.status ?? 500).json({ error: error.type }));
 		server = await new Promise((resolve) => {
 			const instance = app.listen(0, "127.0.0.1", () => resolve(instance));
@@ -23,7 +29,7 @@ describe("firewall JSON request limits", () => {
 
 	const send = (path, body, method = "POST") =>
 		fetch(`${origin}${path}`, { method, headers: { "Content-Type": "application/json" }, body });
-	const policyBody = (count, reason) =>
+	const policyBody = (count, reason, asnCount = 0) =>
 		JSON.stringify({
 			meta: {
 				ip_firewall: normalizeFirewallPolicy({
@@ -32,6 +38,7 @@ describe("firewall JSON request limits", () => {
 						address: `2001:db8::${(index + 1).toString(16)}`,
 						reason,
 					})),
+					asn_denylist: Array.from({ length: asnCount }, (_, index) => ({ asn: index + 1, reason })),
 				}),
 			},
 		});
@@ -56,8 +63,15 @@ describe("firewall JSON request limits", () => {
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ parsed: true, rules: 1000 });
 	});
-	it("keeps proxy-host requests bounded at 8 MiB", async () => {
-		const response = await send("/nginx/proxy-hosts", JSON.stringify({ text: "a".repeat(8 * 1024 * 1024) }));
+	it("accepts the maximum combined IP and ASN policy with escaped explanatory text", async () => {
+		const body = policyBody(1000, "\u0001".repeat(1000), 1000);
+		expect(Buffer.byteLength(body)).toBeGreaterThan(11 * 1024 * 1024);
+		const response = await send("/nginx/proxy-hosts", body);
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ parsed: true, rules: 1000, asnRules: 1000 });
+	});
+	it("keeps proxy-host requests bounded at 16 MiB", async () => {
+		const response = await send("/nginx/proxy-hosts", JSON.stringify({ text: "a".repeat(16 * 1024 * 1024) }));
 		expect(response.status).toBe(413);
 		expect(await response.json()).toEqual({ error: "entity.too.large" });
 	});

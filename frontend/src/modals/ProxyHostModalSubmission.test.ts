@@ -107,6 +107,7 @@ describe("createProxyHostPayload", () => {
 				listIds: [3, 9],
 				allowlist: ["198.51.100.42"],
 				denylist: [{ address: "203.0.113.0/24", reason: "Repeated abuse" }],
+				asnDenylist: [{ asn: 13335, reason: "Network restriction" }],
 				countryDenylist: ["DE", "XK"],
 				countryReason: "Country restriction",
 				blockUnknownCountry: false,

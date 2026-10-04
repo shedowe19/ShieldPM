@@ -49,6 +49,7 @@ describe("createProxyHostInitialValues", () => {
 					listIds: [],
 					allowlist: [],
 					denylist: [],
+					asnDenylist: [],
 					countryDenylist: [],
 					countryReason: "",
 					blockUnknownCountry: false,
@@ -232,6 +233,7 @@ describe("createProxyHostInitialValues", () => {
 				listIds: [4, 12],
 				allowlist: ["198.51.100.42"],
 				denylist: [{ address: "203.0.113.0/24", reason: "Repeated abuse" }],
+				asnDenylist: [{ asn: 13335, reason: "Network restriction" }],
 				countryDenylist: ["DE", "XK"],
 				countryReason: "Country restriction",
 				blockUnknownCountry: true,
@@ -244,6 +246,8 @@ describe("createProxyHostInitialValues", () => {
 		expect(values.meta).toStrictEqual(meta);
 		expect(values.meta?.ipFirewall?.listIds).not.toBe(meta.ipFirewall.listIds);
 		expect(values.meta?.ipFirewall?.denylist[0]).not.toBe(meta.ipFirewall.denylist[0]);
+		expect(values.meta?.ipFirewall?.asnDenylist).not.toBe(meta.ipFirewall.asnDenylist);
+		expect(values.meta?.ipFirewall?.asnDenylist[0]).not.toBe(meta.ipFirewall.asnDenylist[0]);
 		expect(values.meta?.ipFirewall?.countryDenylist).not.toBe(meta.ipFirewall.countryDenylist);
 	});
 
@@ -256,7 +260,7 @@ describe("createProxyHostInitialValues", () => {
 		});
 		expect(values.meta).toMatchObject({
 			featureFlag: "preserved",
-			ipFirewall: { enabled: true, listIds: [5], allowlist: [] },
+			ipFirewall: { enabled: true, listIds: [5], allowlist: [], asnDenylist: [] },
 		});
 	});
 });

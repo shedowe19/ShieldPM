@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The IP Firewall blocks IPv4 addresses, IPv6 addresses, CIDR networks, and selected GeoIP country assignments before requests reach a protected HTTP service. Maintain reusable lists centrally, then decide independently which lists and countries each Proxy Host uses.
+The IP Firewall blocks IPv4 addresses, IPv6 addresses, CIDR networks, autonomous system numbers (ASNs), and selected GeoIP country assignments before requests reach a protected HTTP service. Maintain reusable lists centrally, then decide independently which lists, ASNs, and countries each Proxy Host uses.
 
 Blocked visitors receive a dedicated page with the matching rule or list, its public reason, their IP address, a request reference, and an optional support link. Membership in a VPN or datacenter list describes an address classification; it does **not** prove that a visitor attacked your service.
 
@@ -56,7 +56,7 @@ Select at most 32 central lists per host. Up to 1,000 manual blocks and 1,000 ex
 
 An exception overrides matching blocks from this IP Firewall. It does not bypass Access Lists, login, mTLS, CrowdSec, or WAF rules.
 
-When several blocks match, host-specific manual rules take precedence over subscribed lists, which take precedence over country rules. The public reason belongs to the matching rule. The additional host message can explain your service policy or how to request assistance.
+When several blocks match, host-specific manual IP rules take precedence over subscribed IP lists, followed by ASN rules and then country rules. The public reason belongs to the matching rule. The additional host message can explain your service policy or how to request assistance.
 
 The internal note is administrative and is never included in the public blocking page. List descriptions are also kept out of that page. Avoid putting private details in a public reason or public message.
 
@@ -76,9 +76,19 @@ The editor checks GeoIP readiness and explains whether the module, database, or 
 
 The check follows included Nginx configuration files and rejects conflicting country-variable definitions or directives that overwrite the country result. The country lookup must use the same trusted visitor IP as the address rules. Use an absolute MMDB path in the shared configuration; relative database paths are reported as unavailable.
 
-A disabled Proxy Host with active country rules also requires GeoIP readiness before it can be enabled again. A failed check leaves that host disabled.
+A disabled Proxy Host with active country rules also requires country readiness before it can be enabled again. A failed check leaves that host disabled.
 
-When country rules are active, the blocking page, JSON response, and firewall log also show the detected country code, even when a manual or list rule supplied the blocking reason. A dedicated firewall analytics screen is not provided.
+## Block autonomous systems for a host
+
+In **Proxy Host → Security → IP Firewall**, add ASN rules independently of your IP lists and country selection. Enter a number from **1 to 4,294,967,295**, such as `13335` or `AS13335`, and an optional public explanation. The `AS` prefix is case-insensitive and is converted to a number before saving. Up to **1,000 unique ASNs** are supported per host; duplicate numbers are rejected even when their reasons differ. A reason can contain up to 1,000 characters; an empty reason uses a factual default explanation.
+
+An ASN identifies a network and can have an organization name in the database. It does not identify the visitor or prove an attack. Blocking an ASN can affect many addresses belonging to that network.
+
+ASN lookup needs the existing GeoIP2 module and a separate `GeoLite2-ASN.mmdb` file in `/data/nginx`. Add `GeoLite2-ASN` to the existing GeoIP updater's editions, then restart ShieldPM to prepare the optional lookup. See [Analytics GeoIP setup](./Analytics.md#enabling-geoip-country-statistics). ASN support is checked independently of country support. Keep the Country/City files referenced by active Analytics configuration blocks available as well.
+
+The editor checks ASN support independently. While that check is loading, fails, or reports unavailable, existing reasons can be edited and rules removed, but numbers cannot be changed or new rules added. A firewall or disabled host with active ASN rules cannot be enabled until ASN support is ready or those rules are removed. Use **Check again** after correcting the setup. Invalid or duplicate ASN input must be corrected before saving or previewing the host; changing tabs keeps that unfinished input. IP and country rules remain available without ASN support. There is no **Block unknown ASNs** option; missing ASN assignments do not match an ASN rule.
+
+Every blocked request can show the available country code, ASN, and network organization on the blocking page, in its JSON response, and in the firewall log, including when an IP rule supplied the reason. These values use the same trusted visitor IP. Missing optional data does not enable a blocking rule or prevent IP rules from working. A dedicated firewall analytics screen is not provided.
 
 ## Subscribe to X4BNet lists
 

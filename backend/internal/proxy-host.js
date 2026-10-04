@@ -2,14 +2,13 @@ import fs from "node:fs";
 import _ from "lodash";
 import { encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
-import { assertCountryFirewallAvailable } from "../lib/firewall-geoip.js";
 import { sanitizeHostMeta, sanitizeProxyHost } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import AccessList from "../models/access_list.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
-import { validateHostFirewall, withFirewallReferences } from "./firewall-policy.js";
+import { assertHostFirewallGeoipAvailable, validateHostFirewall, withFirewallReferences } from "./firewall-policy.js";
 import internalGitDeploy from "./git-deploy.js";
 import internalGitOps from "./gitops.js";
 import internalHost from "./host.js";
@@ -540,7 +539,7 @@ const internalProxyHost = {
 			throw new errs.ValidationError("Host is already enabled");
 		}
 		if (row.upload_relay_enabled) await validateRelayConfigForHost(row);
-		await assertCountryFirewallAvailable(row.meta?.ip_firewall);
+		await assertHostFirewallGeoipAvailable(row.meta?.ip_firewall);
 
 		row.enabled = 1;
 

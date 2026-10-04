@@ -11,6 +11,7 @@ it("uses the shared authenticated client for GeoIP readiness and preserves an un
 				module_enabled: true,
 				database_present: false,
 				reason: "database_missing",
+				asn: { available: true, module_enabled: true, database_present: true, reason: null },
 			}),
 		),
 	);
@@ -20,6 +21,7 @@ it("uses the shared authenticated client for GeoIP readiness and preserves an un
 		moduleEnabled: true,
 		databasePresent: false,
 		reason: "database_missing",
+		asn: { available: true, moduleEnabled: true, databasePresent: true, reason: null },
 	});
 	expect(fetchMock).toHaveBeenCalledWith(
 		"/api/nginx/firewall-lists/geoip",

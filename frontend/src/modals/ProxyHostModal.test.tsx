@@ -58,7 +58,28 @@ vi.mock("./ProxyHostDetailsTab", async () => {
 });
 vi.mock("./ProxyHostMaintenanceTab", () => ({ default: () => null }));
 vi.mock("./ProxyHostNotesTab", () => ({ default: () => null }));
-vi.mock("./ProxyHostSecurityTab", () => ({ default: () => null }));
+vi.mock("./ProxyHostSecurityTab", async () => {
+	const { useFormikContext } = await import("formik");
+	const { TabsContent } = await import("src/components/ui/tabs");
+	const { PROXY_HOST_TAB } = await import("src/types/enums");
+	const SecurityDraft = () => {
+		const { setFieldValue } = useFormikContext();
+		return (
+			<TabsContent value={PROXY_HOST_TAB.SECURITY}>
+				<button
+					type="button"
+					onClick={() => setFieldValue("meta.ipFirewall.asnDenylist", [{ asn: 0, reason: "" }])}
+				>
+					Add invalid ASN
+				</button>
+				<button type="button" onClick={() => setFieldValue("meta.ipFirewall.asnDenylist", [])}>
+					Remove ASN
+				</button>
+			</TabsContent>
+		);
+	};
+	return { default: SecurityDraft };
+});
 vi.mock("./ProxyHostSslTab", () => ({ default: () => null }));
 
 beforeEach(async () => {
@@ -121,5 +142,28 @@ describe("ProxyHostModal", () => {
 		});
 		rerender(<Modal id={73} remove={vi.fn()} visible />);
 		await waitFor(() => expect(input).toHaveValue("edited.example.test"));
+	});
+
+	it("blocks saving an invalid ASN draft after leaving its security tab and allows explicit removal", async () => {
+		const mutate = vi.fn();
+		mocks.useSetProxyHost.mockReturnValue({ mutate });
+		mocks.useProxyHost.mockReturnValue({ data: { id: 73, forwardHost: "app.test" }, isLoading: false });
+		mocks.useUser.mockReturnValue({ data: { id: 1 }, isLoading: false });
+		const { showProxyHostModal } = await import("./ProxyHostModal");
+		showProxyHostModal(73);
+		const Modal = mocks.show.mock.calls[0][0];
+		render(<Modal id={73} remove={vi.fn()} visible />);
+		const save = screen.getByRole("button", { name: "Speichern" });
+		fireEvent.mouseDown(screen.getAllByRole("tab")[3], { button: 0, ctrlKey: false });
+		fireEvent.click(await screen.findByRole("button", { name: "Add invalid ASN" }));
+		await waitFor(() => expect(save).toBeDisabled());
+		fireEvent.mouseDown(screen.getAllByRole("tab")[0], { button: 0, ctrlKey: false });
+		await waitFor(() => expect(screen.queryByRole("button", { name: "Add invalid ASN" })).not.toBeInTheDocument());
+		expect(save).toBeDisabled();
+		fireEvent.click(save);
+		expect(mutate).not.toHaveBeenCalled();
+		fireEvent.mouseDown(screen.getAllByRole("tab")[3], { button: 0, ctrlKey: false });
+		fireEvent.click(await screen.findByRole("button", { name: "Remove ASN" }));
+		await waitFor(() => expect(save).not.toBeDisabled());
 	});
 });

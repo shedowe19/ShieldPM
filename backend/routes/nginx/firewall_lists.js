@@ -25,7 +25,7 @@ router
 		res.status(201).send(await internalFirewallList.create(res.locals.access, payload));
 	});
 
-// Register the named endpoint before the ID route.
+// Register shared country/ASN readiness before the ID route; authorize before inspecting local configuration.
 router
 	.route("/geoip")
 	.options((_, res) => res.sendStatus(204))

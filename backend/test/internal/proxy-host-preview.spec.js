@@ -21,13 +21,18 @@ vi.mock("../../models/access_list.js", () => ({ default: { query: vi.fn() } }));
 vi.mock("../../models/certificate.js", () => ({ default: { query: vi.fn() } }));
 vi.mock("../../internal/upload-relay.js", () => ({ validateRelayConfigForHost: vi.fn() }));
 vi.mock("../../internal/firewall-list.js", () => ({ default: { get: vi.fn() } }));
-vi.mock("../../lib/firewall-geoip.js", () => ({ assertCountryFirewallAvailable: vi.fn() }));
+vi.mock("../../lib/firewall-geoip.js", () => ({
+	assertCountryFirewallAvailable: vi.fn(),
+	assertAsnFirewallAvailable: vi.fn(),
+	getFirewallGeoipStatus: vi.fn().mockResolvedValue({ available: true, asn: { available: true } }),
+}));
 
 import lists from "../../internal/firewall-list.js";
 import internalHost from "../../internal/host.js";
 import internalNginx from "../../internal/nginx.js";
 import internalProxyHost from "../../internal/proxy-host.js";
 import preview from "../../internal/proxy-host-preview.js";
+import { assertAsnFirewallAvailable } from "../../lib/firewall-geoip.js";
 
 const payload = {
 	domain_names: ["proposed.test"],
@@ -80,6 +85,18 @@ describe("Proxy host configuration preview", () => {
 		expect(internalProxyHost.get).not.toHaveBeenCalled();
 		expect(open).not.toHaveBeenCalled();
 		expect(writeFile).not.toHaveBeenCalled();
+	});
+	it("rejects an unavailable ASN policy before rendering a preview or reading live configuration", async () => {
+		const open = vi.spyOn(fs.promises, "open");
+		vi.mocked(assertAsnFirewallAvailable).mockRejectedValueOnce(new Error("ASN configuration unavailable"));
+		await expect(
+			preview.preview(access, {
+				...payload,
+				meta: { ip_firewall: { enabled: true, asn_denylist: [{ asn: 13335 }] } },
+			}),
+		).rejects.toThrow("ASN configuration unavailable");
+		expect(internalNginx.renderConfig).not.toHaveBeenCalled();
+		expect(open).not.toHaveBeenCalled();
 	});
 
 	it("checks host ownership before reading only its active config, and redacts secrets on both sides", async () => {

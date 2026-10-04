@@ -54,6 +54,13 @@ describe("protected firewall GeoIP readiness route", () => {
 	it.each([
 		{ available: true, module_enabled: true, database_present: true, reason: null },
 		{ available: false, module_enabled: true, database_present: false, reason: "database_missing" },
+		{
+			available: false,
+			module_enabled: true,
+			database_present: false,
+			reason: "country_variable_missing",
+			asn: { available: true, module_enabled: true, database_present: true, reason: null },
+		},
 	])("returns the exact public readiness payload after JWT and proxy-host permission checks: %j", async (status) => {
 		state.status.mockImplementationOnce(async () => {
 			state.events.push("read");
@@ -65,7 +72,15 @@ describe("protected firewall GeoIP readiness route", () => {
 		const body = await response.json();
 		expect(response.status).toBe(200);
 		expect(body).toEqual(status);
-		expect(Object.keys(body).sort()).toEqual(["available", "database_present", "module_enabled", "reason"]);
+		expect(Object.keys(body).sort()).toEqual(
+			[
+				...(Object.hasOwn(status, "asn") ? ["asn"] : []),
+				"available",
+				"database_present",
+				"module_enabled",
+				"reason",
+			].sort(),
+		);
 		expect(JSON.stringify(body)).not.toMatch(/\/data\/|\/etc\/|\.mmdb/);
 		expect(state.events).toEqual(["jwt", "permission", "read"]);
 		expect(state.jwt).toHaveBeenCalledOnce();

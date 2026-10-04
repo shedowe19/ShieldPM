@@ -28,6 +28,9 @@ export const createProxyHostFirewallPolicy = (policy?: Partial<FirewallPolicy>):
 	listIds: Array.isArray(policy?.listIds) ? [...policy.listIds] : [],
 	allowlist: Array.isArray(policy?.allowlist) ? [...policy.allowlist] : [],
 	denylist: Array.isArray(policy?.denylist) ? policy.denylist.map((entry) => ({ ...entry })) : [],
+	asnDenylist: Array.isArray(policy?.asnDenylist)
+		? policy.asnDenylist.map((entry) => ({ ...entry, reason: entry.reason ?? "" }))
+		: [],
 	countryDenylist: Array.isArray(policy?.countryDenylist) ? [...policy.countryDenylist] : [],
 	countryReason: policy?.countryReason ?? "",
 	blockUnknownCountry: policy?.blockUnknownCountry === true,

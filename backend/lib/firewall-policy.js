@@ -18,6 +18,7 @@ const fields = new Set([
 	"country_denylist",
 	"country_reason",
 	"block_unknown_country",
+	"asn_denylist",
 ]);
 
 const text = (value, name, maximum) => {
@@ -84,6 +85,27 @@ export const normalizeFirewallPolicy = (value) => {
 		seen.add(address);
 		return { address, reason: text(rule.reason, "reason", 1000) };
 	});
+	const asnRules = value.asn_denylist === undefined ? [] : value.asn_denylist;
+	if (!Array.isArray(asnRules) || asnRules.length > MAX_RULES) {
+		throw new errs.ValidationError(`Firewall ASN denylist must contain at most ${MAX_RULES} rules`);
+	}
+	const seenAsns = new Set();
+	const asnDenylist = asnRules.map((rule) => {
+		if (
+			!rule ||
+			typeof rule !== "object" ||
+			Array.isArray(rule) ||
+			Object.keys(rule).some((key) => !["asn", "reason"].includes(key)) ||
+			!Number.isInteger(rule.asn) ||
+			rule.asn < 1 ||
+			rule.asn > 4294967295
+		) {
+			throw new errs.ValidationError("Firewall ASN rules require an integer ASN from 1 to 4294967295");
+		}
+		if (seenAsns.has(rule.asn)) throw new errs.ValidationError(`Duplicate firewall ASN rule: AS${rule.asn}`);
+		seenAsns.add(rule.asn);
+		return { asn: rule.asn, reason: text(rule.reason, "ASN reason", 1000) };
+	});
 	const supportUrl = text(value.support_url, "support URL", 2048);
 	if (supportUrl) {
 		let url;
@@ -110,6 +132,7 @@ export const normalizeFirewallPolicy = (value) => {
 		public_message: text(value.public_message, "public message", 2000),
 		support_url: supportUrl,
 		internal_note: text(value.internal_note, "internal note", 2000),
+		asn_denylist: asnDenylist,
 		country_denylist: countryDenylist,
 		country_reason: text(value.country_reason, "country reason", 1000),
 		block_unknown_country: value.block_unknown_country ?? false,

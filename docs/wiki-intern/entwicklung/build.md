@@ -87,11 +87,11 @@ gzip-komprimierten JavaScript-Assets zusammen. Das Gesamtbudget wurde dafür von
 angepasst; der neue Grenzwert lässt rund 8,7 KB Spielraum über der gemessenen Baseline. Die Limits für den größten
 JavaScript-Chunk und die Stylesheets blieben unverändert.
 
-Für IP-Firewall und Länderfilter in PR #149 wurde der `develop`-Vergleichsstand mit 1.246.243 Byte und der
-erweiterte Build mit 1.273.317 Byte gemessen: 27.074 Byte beziehungsweise rund 2,2 % zusätzliche komprimierte
+Für IP-Firewall einschließlich Länder- und ASN-Regeln in PR #149 wurde der `develop`-Vergleichsstand mit 1.246.243 Byte und der
+erweiterte Build mit 1.275.682 Byte gemessen: 29.439 Byte beziehungsweise rund 2,4 % zusätzliche komprimierte
 JavaScript-Assets. Das Gesamtbudget wurde deshalb von 1.255.000 auf 1.285.000 Byte angepasst. Die Grenzwerte für
 den größten JavaScript-Chunk und die Stylesheets blieben unverändert; die gemessenen 284.537 beziehungsweise
-16.294 Byte liegen weiterhin innerhalb dieser Grenzen.
+16.310 Byte liegen weiterhin innerhalb dieser Grenzen.
 
 ## Native / LXC Build
 

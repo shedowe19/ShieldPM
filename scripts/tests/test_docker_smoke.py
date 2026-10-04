@@ -43,12 +43,18 @@ elif args[0] == 'cp':
     assert (fixture / 'grpc-smoke.mjs').is_file()
     assert (fixture / 'ip-firewall-smoke.mjs').is_file()
     assert (fixture / 'nginx-smoke-modules.mjs').is_file()
+    assert (fixture / 'mmdb-oracle.py').is_file()
     retained_log = (fixture / 'logs/ip_firewall_ci.log').read_text()
     assert retained_log.splitlines()[0] == 'CI retained firewall log marker'
     if args[2].endswith('-1000:/data/'):
         assert 'CI service UID 0 append probe' in retained_log.splitlines()
     country_database = fixture / 'GeoIP2-Country-Test.mmdb'
     assert hashlib.sha256(country_database.read_bytes()).hexdigest() == 'b37601903448683d241af52893c8cbf0fed461e0cdebe0bfaca01891fdeb6db9'
+    asn_database = fixture / 'GeoLite2-ASN-Test.mmdb'
+    assert hashlib.sha256(asn_database.read_bytes()).hexdigest() == '75901b98ed6e58d3bd41af9985044b747a7ec0be1369f930c24f5e044427181a'
+    assert (fixture / 'nginx/GeoLite2-ASN.mmdb').read_bytes() == asn_database.read_bytes()
+    assert (fixture / 'nginx/GeoLite2-Country.mmdb').read_bytes() == country_database.read_bytes()
+    assert hashlib.sha256((fixture / 'nginx/GeoLite2-City.mmdb').read_bytes()).hexdigest() == 'ed972738e4e03a3e56e12041a6af4d91592249d110f7e4a647e5f2fa0e639c09'
 elif args[0] == 'exec' and mode == 'write-failure':
     print('Permission denied: simulated runtime write', file=sys.stderr)
     sys.exit(42)
@@ -91,12 +97,13 @@ elif args[0] == 'logs':
         for uid, call in zip((0, 1000), creates):
             self.assertEqual(call[call.index("--network") + 1], "none")
             self.assertEqual(call[call.index("--pull") + 1], "never")
-            for value in (f"PUID={uid}", f"PGID={uid}", "TZ=UTC", "DISABLE_IPV6=true", "SKIP_IP_RANGES=true"):
+            for value in (f"PUID={uid}", f"PGID={uid}", "TZ=UTC", "DISABLE_IPV6=true", "SKIP_IP_RANGES=true", "NGINX_LOAD_GEOIP2_MODULE=true"):
                 self.assertIn(value, call)
         executions = [call for call in calls if call[0] == "exec"]
         self.assertEqual([call[call.index("--user") + 1] for call in executions], ["0:0", "1000:1000"])
         for call in executions:
             self.assertTrue(any("NGINX_GEOIP_DATABASE=/data/GeoIP2-Country-Test.mmdb" in arg for arg in call))
+            self.assertTrue(any("NGINX_ASN_DATABASE=/data/GeoLite2-ASN-Test.mmdb" in arg and "NGINX_REQUIRE_ASN_STARTUP=true" in arg for arg in call))
             self.assertTrue(any("NGINX_SMOKE_DISCOVER_MODULES=true" in arg and "NGINX_REQUIRE_MODSECURITY=true" in arg for arg in call))
             self.assertFalse(any("NGINX_MODSECURITY_STATIC=true" in arg for arg in call))
             self.assertTrue(any("CI retained firewall log marker" in arg and "CI service UID $1 append probe" in arg for arg in call))

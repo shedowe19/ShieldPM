@@ -72,7 +72,7 @@ Open the admin UI at `https://<your-ip>:81` (self-signed certificate — accept 
 - **SSL/TLS** — Automatic Let's Encrypt certificates with HTTP/2 and HTTP/3 (QUIC) support
 - **WAF** — ModSecurity with OWASP CoreRuleSet + OpenAppSec integration
 - **CrowdSec IPS** — Community-powered intrusion prevention
-- **[IP Firewall](./docs/wiki/IP-Firewall.md)** — Per-host IPv4/IPv6/CIDR lists, TXT/HTTPS imports, optional GeoIP country rules, and a page explaining blocked requests
+- **[IP Firewall](./docs/wiki/IP-Firewall.md)** — Per-host IPv4/IPv6/CIDR lists, TXT/HTTPS imports, optional ASN and country rules, and a page explaining blocked requests
 - **Cloudflare Tunnels** — Create and manage Zero Trust tunnels directly from the UI
 - **PHP-FPM** — Optional PHP 8.2 / 8.3 / 8.4 integration
 - **Analytics** — Built-in GoAccess dashboard on port `:91`

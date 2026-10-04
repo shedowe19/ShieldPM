@@ -23,6 +23,8 @@ docker compose up -d
 
 Die gemeinsamen Startskripte für Docker und native Installationen löschen `/data/logs` nicht beim Neustart. Vor der Nginx-Validierung wird dieses Verzeichnis mit Eigentümer `PUID:PGID` und Modus `0700` vorbereitet; ein Symlink als Verzeichnis wird zurückgewiesen. Der bestehende Eigentümerwechsel unter `/data` übernimmt erhaltene Logdateien für die gewählte Laufzeit-UID. Damit bleiben unter anderem die [Firewall-Trefferlogs](../module/ip-firewall.md#sperrseite-und-protokoll) erhalten, sofern `/data` dauerhaft gespeichert wird.
 
+Für optionale [ASN-Regeln und -Informationen](../module/ip-firewall.md#asn-quelle-und-host-regeln) verwendet dieselbe Laufzeit `/data/nginx/GeoLite2-ASN.mmdb`. Mit `NGINX_LOAD_GEOIP2_MODULE=true` und einer regulären, nicht leeren Datei ohne Symlink wird ein markierter HTTP-GeoIP2-Block idempotent eingerichtet; nach erstmaliger Bereitstellung ist ein Neustart nötig. Die bestehenden Country-/City-Blöcke behalten ihre bisherige Modulsteuerung und benötigen ihre referenzierten Dateien weiterhin. Die ASN-Integration erfordert keinen eigenen Datenbankdownload und verändert weder diese Blöcke noch benutzerdefinierte ASN-Variablen.
+
 ## Native / LXC (Proxmox)
 
 ```bash

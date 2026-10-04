@@ -117,3 +117,9 @@ systemctl restart shieldpm
 Once restarted, Nginx will load the GeoIP database, and new requests will be tagged with their country code.
 
 With `GOA=true`, GoAccess also discovers the City, Country, and ASN databases in `/data/nginx` at startup. For each database, an existing non-empty file in `/data/goaccess/geoip` takes precedence. An explicit `--geoip-database` setting in `GOACLA` disables this automatic discovery.
+
+### ASN data for the IP Firewall
+
+The [IP Firewall](./IP-Firewall.md#block-autonomous-systems-for-a-host) can reuse the optional `GeoLite2-ASN.mmdb` from this updater to show the visitor network and apply per-host ASN rules. Add `GeoLite2-ASN` to `GEOIPUPDATE_EDITION_IDS` or the native updater's `EditionIDs`, keep `NGINX_LOAD_GEOIP2_MODULE=true`, and restart ShieldPM after the first download. The firewall startup configuration uses `/data/nginx/GeoLite2-ASN.mmdb`; a file available only to GoAccess under `/data/goaccess/geoip` does not configure this Nginx lookup.
+
+Keep the Country/City databases referenced by existing active Analytics blocks available. Their configuration and the existing GoAccess discovery remain unchanged. ASN data does not provide country codes, and this integration adds no ASN chart to the Analytics dashboard.

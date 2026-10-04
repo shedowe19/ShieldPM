@@ -5,7 +5,12 @@ import dayjs from "dayjs";
 import _ from "lodash";
 import punycode from "punycode.js";
 import errs from "../lib/error.js";
-import { assertCountryFirewallAvailable } from "../lib/firewall-geoip.js";
+import {
+	assertAsnFirewallAvailable,
+	assertConfiguredFirewallLookups,
+	assertCountryFirewallAvailable,
+	getFirewallGeoipStatus,
+} from "../lib/firewall-geoip.js";
 import { compactFirewallForPreview, summarizeFirewallPreviewConfig } from "../lib/firewall-preview.js";
 import { buildFirewallRender } from "../lib/firewall-render.js";
 import { sanitizeHostMeta } from "../lib/host-response.js";
@@ -151,7 +156,11 @@ const internalNginx = {
 	 * @returns {Promise}
 	 */
 	test: async () => {
-		return utils.execFile("nginx", ["-tq"]);
+		const output = await utils.execFile("nginx", ["-tq"]);
+		// Inspect the complete staged configuration, including new advanced directives,
+		// before any reload can activate a conflicting shared country/ASN variable.
+		await assertConfiguredFirewallLookups();
+		return output;
 	},
 
 	/**
@@ -271,14 +280,19 @@ const internalNginx = {
 		const nice_host_type = internalNginx.getFileFriendlyHostType(host_type);
 		let firewallSummaries;
 		if (nice_host_type === "proxy_host" && host.enabled && host.meta?.ip_firewall?.enabled === true) {
-			await assertCountryFirewallAvailable(host.meta.ip_firewall);
+			const geoipStatus = await getFirewallGeoipStatus();
+			await assertCountryFirewallAvailable(host.meta.ip_firewall, geoipStatus);
+			await assertAsnFirewallAvailable(host.meta.ip_firewall, geoipStatus);
 			let lists = [];
 			if (host.meta.ip_firewall.list_ids?.length) {
 				// Lazy import avoids the list service/configuration engine cycle for ordinary/manual-only hosts.
 				const { default: firewallLists } = await import("./firewall-list.js");
 				lists = await firewallLists.getForHost(host.meta.ip_firewall.list_ids);
 			}
-			host.firewall = await buildFirewallRender(host, lists);
+			host.firewall = await buildFirewallRender(host, lists, {
+				country: geoipStatus.available === true,
+				asn: geoipStatus.asn?.available === true,
+			});
 			if (options.preview && host.firewall) {
 				const compact = compactFirewallForPreview(host.firewall);
 				host.firewall = compact.firewall;

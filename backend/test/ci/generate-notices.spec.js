@@ -81,7 +81,7 @@ describe("third-party notice generator", () => {
 			const generated = fs.readFileSync(fixture.noticesPath, "utf8");
 			expect(generated).toContain(source);
 			expect(generated.match(/## Optional IP Firewall Feed Presets/g)).toHaveLength(1);
-			expect(generated.match(/## MaxMind GeoIP2 Test Fixture/g)).toHaveLength(1);
+			expect(generated.match(/## MaxMind GeoIP Test Fixtures/g)).toHaveLength(1);
 			expect(generated).toContain("./scripts/ci/fixtures/MAXMIND-LICENSE.txt");
 		}
 	});

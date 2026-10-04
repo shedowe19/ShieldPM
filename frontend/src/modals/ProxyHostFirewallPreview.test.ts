@@ -79,4 +79,50 @@ describe("renderProxyHostFirewallPreview", () => {
 		const ipPage = renderProxyHostFirewallPreview({ policy: createProxyHostFirewallPolicy() });
 		expect(ipPage).toContain("<div hidden><dt>Detected country (ISO)</dt>");
 	});
+
+	it("uses an ASN rule before a country rule and escapes its public reason", () => {
+		const page = renderProxyHostFirewallPreview({
+			language: "de",
+			policy: createProxyHostFirewallPolicy({
+				asnDenylist: [{ asn: 13335, reason: "<b>Netzwerk & Anbieter</b>" }],
+				countryDenylist: ["DE"],
+				countryReason: "Lower priority country reason",
+				internalNote: "PRIVATE ASN CASE",
+			}),
+		});
+		expect(page).toContain("ASN-Regel");
+		expect(page).toContain("&lt;b&gt;Netzwerk &amp; Anbieter&lt;/b&gt;");
+		expect(page).toContain("<dd>AS13335</dd>");
+		expect(page).toContain("Netzwerkbetreiber (Beispiel)");
+		expect(page).not.toContain("Lower priority country reason");
+		expect(page).not.toContain("PRIVATE ASN CASE");
+		expect(page).not.toMatch(/%\{[a-z_]+\}/);
+	});
+
+	it("uses a localized ASN default without claiming a real network operator", () => {
+		const policy = createProxyHostFirewallPolicy({ asnDenylist: [{ asn: 4294967295, reason: "" }] });
+		const english = renderProxyHostFirewallPreview({ policy });
+		expect(english).toContain("blocked autonomous system AS4294967295");
+		expect(english).toContain("Network operator (example)");
+		const german = renderProxyHostFirewallPreview({ policy, language: "de" });
+		expect(german).toContain("gesperrten autonomen System AS4294967295");
+		expect(german).toContain("Netzwerkbetreiber (Beispiel)");
+	});
+
+	it("keeps IP-list precedence while showing independent example ASN information only when available", () => {
+		const options = {
+			policy: createProxyHostFirewallPolicy({
+				listIds: [4],
+				asnDenylist: [{ asn: 13335, reason: "Lower priority ASN reason" }],
+			}),
+			lists: [{ id: 4, name: "VPN", reason: "List reason", enabled: true }],
+		};
+		const page = renderProxyHostFirewallPreview({ ...options, asnAvailable: true });
+		expect(page).toContain("List reason");
+		expect(page).not.toContain("Lower priority ASN reason");
+		expect(page).toContain("<dd>AS13335</dd>");
+		const unavailable = renderProxyHostFirewallPreview({ ...options, asnAvailable: false });
+		expect(unavailable).toContain("<div hidden><dt>Autonomous system (ASN)</dt><dd></dd>");
+		expect(unavailable).not.toContain("Network operator (example)");
+	});
 });

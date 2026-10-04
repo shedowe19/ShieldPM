@@ -3,7 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn() } }));
 vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: () => "test-token" }));
-vi.mock("../../lib/firewall-geoip.js", () => ({ assertCountryFirewallAvailable: vi.fn() }));
+vi.mock("../../lib/firewall-geoip.js", () => ({
+	assertAsnFirewallAvailable: vi.fn(),
+	assertConfiguredFirewallLookups: vi.fn(),
+	assertCountryFirewallAvailable: vi.fn(),
+	getFirewallGeoipStatus: vi.fn().mockResolvedValue({ available: false, asn: { available: false } }),
+}));
 vi.mock("../../internal/firewall-list.js", () => ({ default: { get: vi.fn(), getForHost: vi.fn() } }));
 vi.mock("../../internal/host.js", () => ({
 	default: {

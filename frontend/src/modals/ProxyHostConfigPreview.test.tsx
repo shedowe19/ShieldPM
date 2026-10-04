@@ -4,11 +4,12 @@ import { Field, Form, Formik } from "formik";
 import { previewProxyHost } from "src/api/backend";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ProxyHostConfigPreview from "./ProxyHostConfigPreview";
+import { createProxyHostFirewallPolicy } from "./ProxyHostModalFormValues";
 
 vi.mock("src/api/backend", () => ({ previewProxyHost: vi.fn() }));
 vi.mock("src/locale", () => ({ T: ({ id }: { id: string }) => <>{id}</> }));
 
-const renderForm = (id: number | "new") => {
+const renderForm = (id: number | "new", asnDenylist: { asn: number; reason: string }[] = []) => {
 	const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
 	return render(
 		<QueryClientProvider client={client}>
@@ -18,6 +19,7 @@ const renderForm = (id: number | "new") => {
 					forwardScheme: "http",
 					forwardHost: "old.test",
 					forwardPort: 8080,
+					meta: { ipFirewall: createProxyHostFirewallPolicy({ asnDenylist }) },
 				}}
 				onSubmit={vi.fn()}
 			>
@@ -89,5 +91,37 @@ describe("ProxyHostConfigPreview", () => {
 			expect(screen.getByText("proxy-host.config-preview.firewall-rule-summaries")).toBeInTheDocument(),
 		);
 		expect(screen.getByTestId("host-config-preview")).toHaveTextContent("entries=200000");
+	});
+
+	it("blocks config requests for invalid ASN drafts and explains how to fix them", () => {
+		renderForm(7, [{ asn: 0, reason: "Incomplete rule" }]);
+		const action = screen.getByRole("button", { name: "proxy-host.config-preview.action" });
+		expect(action).toBeDisabled();
+		expect(screen.getByRole("alert")).toHaveTextContent("firewall.host.asn.fixErrors");
+		fireEvent.click(action);
+		expect(previewProxyHost).not.toHaveBeenCalled();
+	});
+
+	it("previews valid ASN rules as numeric policy values with their public reason", async () => {
+		vi.mocked(previewProxyHost).mockResolvedValue({
+			config: "# ASN rules",
+			diff: "+# ASN rules",
+			hasCurrent: true,
+			nginxValidated: false,
+			limitations: ["render-only"],
+		});
+		renderForm(7, [{ asn: 13335, reason: "Network policy" }]);
+		fireEvent.click(screen.getByRole("button", { name: "proxy-host.config-preview.action" }));
+		await waitFor(() =>
+			expect(previewProxyHost).toHaveBeenCalledWith(
+				expect.objectContaining({
+					meta: expect.objectContaining({
+						ipFirewall: expect.objectContaining({
+							asnDenylist: [{ asn: 13335, reason: "Network policy" }],
+						}),
+					}),
+				}),
+			),
+		);
 	});
 });

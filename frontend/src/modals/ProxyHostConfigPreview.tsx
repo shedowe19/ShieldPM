@@ -5,6 +5,7 @@ import { useState } from "react";
 import { type ProxyHostConfigPreview as PreviewResult, previewProxyHost } from "src/api/backend";
 import { Alert, AlertDescription } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
+import { firewallAsnRuleError } from "src/lib/firewallAsn";
 import { T } from "src/locale";
 import type { ProxyHostFormValues } from "./ProxyHostModalFormValues";
 import { createProxyHostPayload, type ProxyHostPayload } from "./ProxyHostModalSubmission";
@@ -21,6 +22,7 @@ const ProxyHostConfigPreview = ({ id }: Props) => {
 	const [showDiff, setShowDiff] = useState(true);
 	const [expanded, setExpanded] = useState(false);
 	const payload = createProxyHostPayload({ id, values });
+	const asnError = firewallAsnRuleError(values.meta?.ipFirewall?.asnDenylist);
 	const draft = JSON.stringify(payload);
 	const current = previewedDraft === draft && !mutation.isPending;
 	const result = current ? mutation.data : undefined;
@@ -32,7 +34,7 @@ const ProxyHostConfigPreview = ({ id }: Props) => {
 				<Button
 					type="button"
 					variant="outline"
-					disabled={mutation.isPending}
+					disabled={mutation.isPending || !!asnError}
 					onClick={() => {
 						setPreviewedDraft(draft);
 						setExpanded(true);
@@ -53,6 +55,11 @@ const ProxyHostConfigPreview = ({ id }: Props) => {
 					</Button>
 				)}
 			</div>
+			{asnError && (
+				<p role="alert" className="mt-2 text-sm text-destructive">
+					<T id="firewall.host.asn.fixErrors" />
+				</p>
+			)}
 			{expanded && error && (
 				<Alert variant="destructive" className="mt-3">
 					<AlertDescription>{error.message}</AlertDescription>

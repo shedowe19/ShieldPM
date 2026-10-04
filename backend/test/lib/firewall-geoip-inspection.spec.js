@@ -65,7 +65,7 @@ http {
 `;
 		expect(inspectGeoipConfiguration(configuration).databasePath).toBe("/private/database.mmdb");
 		const status = await statusFor(configuration);
-		expect(status).toEqual({
+		expect(status).toMatchObject({
 			available: true,
 			module_enabled: true,
 			database_present: true,
@@ -102,7 +102,7 @@ http {
 		"http { geoip2 /private/country.mmdb { $geoip2_country_code source=$remote_addr country iso_code } }",
 		"http {} }",
 	])("rejects structurally incomplete configuration without exposing its contents: %s", async (configuration) => {
-		expect(await statusFor(configuration)).toEqual({
+		expect(await statusFor(configuration)).toMatchObject({
 			available: false,
 			module_enabled: false,
 			database_present: false,
