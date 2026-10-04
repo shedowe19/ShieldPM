@@ -202,7 +202,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [is-stream@4.0.1](https://www.npmjs.com/package/is-stream/v/4.0.1) - MIT
 - [is-typed-array@1.1.15](https://www.npmjs.com/package/is-typed-array/v/1.1.15) - MIT
 - [isarray@2.0.5](https://www.npmjs.com/package/isarray/v/2.0.5) - MIT
-- [isomorphic-git@1.42.3](https://www.npmjs.com/package/isomorphic-git/v/1.42.3) - MIT
+- [isomorphic-git@1.43.0](https://www.npmjs.com/package/isomorphic-git/v/1.43.0) - MIT
 - [jose@6.2.12](https://www.npmjs.com/package/jose/v/6.2.12) - MIT
 - [js-yaml@5.4.2](https://www.npmjs.com/package/js-yaml/v/5.4.2) - MIT
 - [json-parse-better-errors@1.0.2](https://www.npmjs.com/package/json-parse-better-errors/v/1.0.2) - MIT
@@ -212,7 +212,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [jws@4.0.1](https://www.npmjs.com/package/jws/v/4.0.1) - MIT
 - [knex@3.3.0](https://www.npmjs.com/package/knex/v/3.3.0) - MIT
 - [lazystream@1.0.1](https://www.npmjs.com/package/lazystream/v/1.0.1) - MIT
-- [liquidjs@10.29.0](https://www.npmjs.com/package/liquidjs/v/10.29.0) - MIT
+- [liquidjs@10.30.0](https://www.npmjs.com/package/liquidjs/v/10.30.0) - MIT
 - [load-json-file@4.0.0](https://www.npmjs.com/package/load-json-file/v/4.0.0) - MIT
 - [locate-path@2.0.0](https://www.npmjs.com/package/locate-path/v/2.0.0) - MIT
 - [lodash.camelcase@4.3.0](https://www.npmjs.com/package/lodash.camelcase/v/4.3.0) - MIT
@@ -239,7 +239,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [mkdirp-classic@0.5.3](https://www.npmjs.com/package/mkdirp-classic/v/0.5.3) - MIT
 - [mri@1.2.0](https://www.npmjs.com/package/mri/v/1.2.0) - MIT
 - [ms@2.1.3](https://www.npmjs.com/package/ms/v/2.1.3) - MIT
-- [mysql2@3.24.4](https://www.npmjs.com/package/mysql2/v/3.24.4) - MIT
+- [mysql2@3.24.5](https://www.npmjs.com/package/mysql2/v/3.24.5) - MIT
 - [named-placeholders@1.1.6](https://www.npmjs.com/package/named-placeholders/v/1.1.6) - MIT
 - [nan@2.28.0](https://www.npmjs.com/package/nan/v/2.28.0) - MIT
 - [negotiator@1.0.0](https://www.npmjs.com/package/negotiator/v/1.0.0) - MIT
@@ -267,13 +267,13 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [path-parse@1.0.7](https://www.npmjs.com/package/path-parse/v/1.0.7) - MIT
 - [path-to-regexp@8.4.2](https://www.npmjs.com/package/path-to-regexp/v/8.4.2) - MIT
 - [path@0.12.7](https://www.npmjs.com/package/path/v/0.12.7) - MIT
-- [pg-cloudflare@1.4.0](https://www.npmjs.com/package/pg-cloudflare/v/1.4.0) - MIT
+- [pg-cloudflare@1.4.1](https://www.npmjs.com/package/pg-cloudflare/v/1.4.1) - MIT
 - [pg-connection-string@2.6.2](https://www.npmjs.com/package/pg-connection-string/v/2.6.2) - MIT
 - [pg-int8@1.0.1](https://www.npmjs.com/package/pg-int8/v/1.0.1) - ISC
 - [pg-pool@3.14.0](https://www.npmjs.com/package/pg-pool/v/3.14.0) - MIT
-- [pg-protocol@1.16.0](https://www.npmjs.com/package/pg-protocol/v/1.16.0) - MIT
+- [pg-protocol@1.16.1](https://www.npmjs.com/package/pg-protocol/v/1.16.1) - MIT
 - [pg-types@2.2.0](https://www.npmjs.com/package/pg-types/v/2.2.0) - MIT
-- [pg@8.23.0](https://www.npmjs.com/package/pg/v/8.23.0) - MIT
+- [pg@8.23.1](https://www.npmjs.com/package/pg/v/8.23.1) - MIT
 - [pgpass@1.0.5](https://www.npmjs.com/package/pgpass/v/1.0.5) - MIT
 - [pify@4.0.1](https://www.npmjs.com/package/pify/v/4.0.1) - MIT
 - [pkg-conf@2.1.0](https://www.npmjs.com/package/pkg-conf/v/2.1.0) - MIT
@@ -344,7 +344,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [supports-preserve-symlinks-flag@1.0.0](https://www.npmjs.com/package/supports-preserve-symlinks-flag/v/1.0.0) - MIT
 - [swagger-ui-dist@5.32.11](https://www.npmjs.com/package/swagger-ui-dist/v/5.32.11) - Apache-2.0
 - [swagger-ui-express@5.0.1](https://www.npmjs.com/package/swagger-ui-express/v/5.0.1) - MIT
-- [systeminformation@5.33.14](https://www.npmjs.com/package/systeminformation/v/5.33.14) - MIT
+- [systeminformation@5.33.15](https://www.npmjs.com/package/systeminformation/v/5.33.15) - MIT
 - [tail@2.2.6](https://www.npmjs.com/package/tail/v/2.2.6) - MIT
 - [tar-fs@2.1.5](https://www.npmjs.com/package/tar-fs/v/2.1.5) - MIT
 - [tar-stream@3.2.0](https://www.npmjs.com/package/tar-stream/v/3.2.0) - MIT
@@ -384,23 +384,23 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [@apidevtools/openapi-schemas@2.1.0](https://www.npmjs.com/package/@apidevtools/openapi-schemas/v/2.1.0) - MIT
 - [@apidevtools/swagger-methods@3.0.2](https://www.npmjs.com/package/@apidevtools/swagger-methods/v/3.0.2) - MIT
 - [@apidevtools/swagger-parser@13.1.0](https://www.npmjs.com/package/@apidevtools/swagger-parser/v/13.1.0) - MIT
-- [@biomejs/biome@2.5.14](https://www.npmjs.com/package/@biomejs/biome/v/2.5.14) - MIT OR Apache-2.0
-- [@biomejs/cli-linux-x64-musl@2.5.14](https://www.npmjs.com/package/@biomejs/cli-linux-x64-musl/v/2.5.14) - MIT OR Apache-2.0
-- [@biomejs/cli-linux-x64@2.5.14](https://www.npmjs.com/package/@biomejs/cli-linux-x64/v/2.5.14) - MIT OR Apache-2.0
+- [@biomejs/biome@2.5.15](https://www.npmjs.com/package/@biomejs/biome/v/2.5.15) - MIT OR Apache-2.0
+- [@biomejs/cli-linux-x64-musl@2.5.15](https://www.npmjs.com/package/@biomejs/cli-linux-x64-musl/v/2.5.15) - MIT OR Apache-2.0
+- [@biomejs/cli-linux-x64@2.5.15](https://www.npmjs.com/package/@biomejs/cli-linux-x64/v/2.5.15) - MIT OR Apache-2.0
 - [@electric-sql/pglite@0.5.8](https://www.npmjs.com/package/@electric-sql/pglite/v/0.5.8) - Apache-2.0
 - [@jridgewell/resolve-uri@3.1.2](https://www.npmjs.com/package/@jridgewell/resolve-uri/v/3.1.2) - MIT
 - [@jridgewell/sourcemap-codec@1.6.0](https://www.npmjs.com/package/@jridgewell/sourcemap-codec/v/1.6.0) - MIT
 - [@jridgewell/trace-mapping@0.3.31](https://www.npmjs.com/package/@jridgewell/trace-mapping/v/0.3.31) - MIT
-- [@oxc-project/types@0.151.0](https://www.npmjs.com/package/@oxc-project/types/v/0.151.0) - MIT
-- [@rolldown/binding-linux-x64-gnu@1.2.11](https://www.npmjs.com/package/@rolldown/binding-linux-x64-gnu/v/1.2.11) - MIT
-- [@rolldown/binding-linux-x64-musl@1.2.11](https://www.npmjs.com/package/@rolldown/binding-linux-x64-musl/v/1.2.11) - MIT
+- [@oxc-project/types@0.152.0](https://www.npmjs.com/package/@oxc-project/types/v/0.152.0) - MIT
+- [@rolldown/binding-linux-x64-gnu@1.2.12](https://www.npmjs.com/package/@rolldown/binding-linux-x64-gnu/v/1.2.12) - MIT
+- [@rolldown/binding-linux-x64-musl@1.2.12](https://www.npmjs.com/package/@rolldown/binding-linux-x64-musl/v/1.2.12) - MIT
 - [@rolldown/pluginutils@1.0.1](https://www.npmjs.com/package/@rolldown/pluginutils/v/1.0.1) - MIT
 - [@types/chai@5.2.3](https://www.npmjs.com/package/@types/chai/v/5.2.3) - MIT
 - [@types/deep-eql@4.0.2](https://www.npmjs.com/package/@types/deep-eql/v/4.0.2) - MIT
 - [@types/estree@1.0.9](https://www.npmjs.com/package/@types/estree/v/1.0.9) - MIT
 - [@typescript/typescript-linux-x64@7.0.2](https://www.npmjs.com/package/@typescript/typescript-linux-x64/v/7.0.2) - Apache-2.0
-- [@vitest/mocker@5.0.2](https://www.npmjs.com/package/@vitest/mocker/v/5.0.2) - MIT
-- [@vitest/spy@5.0.2](https://www.npmjs.com/package/@vitest/spy/v/5.0.2) - MIT
+- [@vitest/mocker@5.0.3](https://www.npmjs.com/package/@vitest/mocker/v/5.0.3) - MIT
+- [@vitest/spy@5.0.3](https://www.npmjs.com/package/@vitest/spy/v/5.0.3) - MIT
 - [ajv-draft-04@1.0.0](https://www.npmjs.com/package/ajv-draft-04/v/1.0.0) - MIT
 - [assertion-error@2.0.1](https://www.npmjs.com/package/assertion-error/v/2.0.1) - MIT
 - [bl@4.1.0](https://www.npmjs.com/package/bl/v/4.1.0) - MIT
@@ -427,7 +427,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [postcss@8.5.28](https://www.npmjs.com/package/postcss/v/8.5.28) - MIT
 - [process-nextick-args@2.0.1](https://www.npmjs.com/package/process-nextick-args/v/2.0.1) - MIT
 - [require-main-filename@2.0.0](https://www.npmjs.com/package/require-main-filename/v/2.0.0) - ISC
-- [rolldown@1.2.11](https://www.npmjs.com/package/rolldown/v/1.2.11) - MIT
+- [rolldown@1.2.12](https://www.npmjs.com/package/rolldown/v/1.2.12) - MIT
 - [set-blocking@2.0.0](https://www.npmjs.com/package/set-blocking/v/2.0.0) - ISC
 - [shieldpm@4.4.1](https://www.npmjs.com/package/shieldpm/v/4.4.1) - UNLICENSED
 - [source-map-js@1.2.1](https://www.npmjs.com/package/source-map-js/v/1.2.1) - BSD-3-Clause
@@ -437,10 +437,10 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [tinyglobby@0.2.17](https://www.npmjs.com/package/tinyglobby/v/0.2.17) - MIT
 - [typescript@7.0.2](https://www.npmjs.com/package/typescript/v/7.0.2) - Apache-2.0
 - [util-deprecate@1.0.2](https://www.npmjs.com/package/util-deprecate/v/1.0.2) - MIT
-- [vite@8.3.1](https://www.npmjs.com/package/vite/v/8.3.1) - MIT
-- [vitest@5.0.2](https://www.npmjs.com/package/vitest/v/5.0.2) - MIT
+- [vite@8.3.2](https://www.npmjs.com/package/vite/v/8.3.2) - MIT
+- [vitest@5.0.3](https://www.npmjs.com/package/vitest/v/5.0.3) - MIT
 - [which-module@2.0.1](https://www.npmjs.com/package/which-module/v/2.0.1) - ISC
-- [why-is-node-running@3.2.2](https://www.npmjs.com/package/why-is-node-running/v/3.2.2) - MIT
+- [why-is-node-running@3.2.1](https://www.npmjs.com/package/why-is-node-running/v/3.2.1) - MIT
 
 ## Frontend Dependencies (from frontend/package.json)
 
@@ -530,8 +530,8 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [@standard-schema/utils@0.3.0](https://www.npmjs.com/package/@standard-schema/utils/v/0.3.0) - MIT
 - [@tabler/icons-react@3.48.0](https://www.npmjs.com/package/@tabler/icons-react/v/3.48.0) - MIT
 - [@tabler/icons@3.48.0](https://www.npmjs.com/package/@tabler/icons/v/3.48.0) - MIT
-- [@tanstack/query-core@5.104.0](https://www.npmjs.com/package/@tanstack/query-core/v/5.104.0) - MIT
-- [@tanstack/react-query@5.104.0](https://www.npmjs.com/package/@tanstack/react-query/v/5.104.0) - MIT
+- [@tanstack/query-core@5.104.1](https://www.npmjs.com/package/@tanstack/query-core/v/5.104.1) - MIT
+- [@tanstack/react-query@5.104.1](https://www.npmjs.com/package/@tanstack/react-query/v/5.104.1) - MIT
 - [@tanstack/react-store@0.11.1](https://www.npmjs.com/package/@tanstack/react-store/v/0.11.1) - MIT
 - [@tanstack/react-table@9.2.4](https://www.npmjs.com/package/@tanstack/react-table/v/9.2.4) - MIT
 - [@tanstack/store@0.11.1](https://www.npmjs.com/package/@tanstack/store/v/0.11.1) - MIT
@@ -627,7 +627,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [filter-obj@5.1.0](https://www.npmjs.com/package/filter-obj/v/5.1.0) - MIT
 - [find-root@1.1.0](https://www.npmjs.com/package/find-root/v/1.1.0) - MIT
 - [formik@2.4.9](https://www.npmjs.com/package/formik/v/2.4.9) - Apache-2.0
-- [framer-motion@13.4.5](https://www.npmjs.com/package/framer-motion/v/13.4.5) - MIT
+- [framer-motion@14.0.0](https://www.npmjs.com/package/framer-motion/v/14.0.0) - MIT
 - [function-bind@1.1.2](https://www.npmjs.com/package/function-bind/v/1.1.2) - MIT
 - [generate-password-browser@1.1.0](https://www.npmjs.com/package/generate-password-browser/v/1.1.0) - MIT
 - [get-nonce@1.0.1](https://www.npmjs.com/package/get-nonce/v/1.0.1) - MIT
@@ -672,7 +672,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [lodash@4.18.1](https://www.npmjs.com/package/lodash/v/4.18.1) - MIT
 - [longest-streak@3.1.0](https://www.npmjs.com/package/longest-streak/v/3.1.0) - MIT
 - [loose-envify@1.4.0](https://www.npmjs.com/package/loose-envify/v/1.4.0) - MIT
-- [lucide-react@1.48.0](https://www.npmjs.com/package/lucide-react/v/1.48.0) - ISC
+- [lucide-react@1.51.0](https://www.npmjs.com/package/lucide-react/v/1.51.0) - ISC
 - [markdown-table@3.0.4](https://www.npmjs.com/package/markdown-table/v/3.0.4) - MIT
 - [mdast-util-find-and-replace@3.0.2](https://www.npmjs.com/package/mdast-util-find-and-replace/v/3.0.2) - MIT
 - [mdast-util-from-markdown@2.0.3](https://www.npmjs.com/package/mdast-util-from-markdown/v/2.0.3) - MIT
@@ -718,8 +718,8 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [micromark-util-symbol@2.0.1](https://www.npmjs.com/package/micromark-util-symbol/v/2.0.1) - MIT
 - [micromark-util-types@2.0.2](https://www.npmjs.com/package/micromark-util-types/v/2.0.2) - MIT
 - [micromark@4.0.2](https://www.npmjs.com/package/micromark/v/4.0.2) - MIT
-- [motion-dom@13.4.5](https://www.npmjs.com/package/motion-dom/v/13.4.5) - MIT
-- [motion-utils@13.3.0](https://www.npmjs.com/package/motion-utils/v/13.3.0) - MIT
+- [motion-dom@14.0.0](https://www.npmjs.com/package/motion-dom/v/14.0.0) - MIT
+- [motion-utils@14.0.0](https://www.npmjs.com/package/motion-utils/v/14.0.0) - MIT
 - [ms@2.1.3](https://www.npmjs.com/package/ms/v/2.1.3) - MIT
 - [object-assign@4.1.1](https://www.npmjs.com/package/object-assign/v/4.1.1) - MIT
 - [parent-module@1.0.1](https://www.npmjs.com/package/parent-module/v/1.0.1) - MIT
@@ -816,9 +816,9 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 ### Development Dependencies
 - [@adobe/css-tools@4.5.0](https://www.npmjs.com/package/@adobe/css-tools/v/4.5.0) - MIT
 - [@alloc/quick-lru@5.2.0](https://www.npmjs.com/package/@alloc/quick-lru/v/5.2.0) - MIT
-- [@biomejs/biome@2.5.14](https://www.npmjs.com/package/@biomejs/biome/v/2.5.14) - MIT OR Apache-2.0
-- [@biomejs/cli-linux-x64-musl@2.5.14](https://www.npmjs.com/package/@biomejs/cli-linux-x64-musl/v/2.5.14) - MIT OR Apache-2.0
-- [@biomejs/cli-linux-x64@2.5.14](https://www.npmjs.com/package/@biomejs/cli-linux-x64/v/2.5.14) - MIT OR Apache-2.0
+- [@biomejs/biome@2.5.15](https://www.npmjs.com/package/@biomejs/biome/v/2.5.15) - MIT OR Apache-2.0
+- [@biomejs/cli-linux-x64-musl@2.5.15](https://www.npmjs.com/package/@biomejs/cli-linux-x64-musl/v/2.5.15) - MIT OR Apache-2.0
+- [@biomejs/cli-linux-x64@2.5.15](https://www.npmjs.com/package/@biomejs/cli-linux-x64/v/2.5.15) - MIT OR Apache-2.0
 - [@corvu/utils@0.4.2](https://www.npmjs.com/package/@corvu/utils/v/0.4.2) - MIT
 - [@formatjs/cli-native-linux-x64-musl@1.0.24](https://www.npmjs.com/package/@formatjs/cli-native-linux-x64-musl/v/1.0.24) - MIT
 - [@formatjs/cli-native-linux-x64@1.1.26](https://www.npmjs.com/package/@formatjs/cli-native-linux-x64/v/1.1.26) - MIT
@@ -827,13 +827,13 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [@jridgewell/remapping@2.3.5](https://www.npmjs.com/package/@jridgewell/remapping/v/2.3.5) - MIT
 - [@kobalte/core@0.13.14](https://www.npmjs.com/package/@kobalte/core/v/0.13.14) - MIT
 - [@kobalte/utils@0.9.2](https://www.npmjs.com/package/@kobalte/utils/v/0.9.2) - MIT
-- [@oxc-project/types@0.151.0](https://www.npmjs.com/package/@oxc-project/types/v/0.151.0) - MIT
+- [@oxc-project/types@0.152.0](https://www.npmjs.com/package/@oxc-project/types/v/0.152.0) - MIT
 - [@parcel/watcher-linux-x64-glibc@2.6.0](https://www.npmjs.com/package/@parcel/watcher-linux-x64-glibc/v/2.6.0) - MIT
 - [@parcel/watcher-linux-x64-musl@2.6.0](https://www.npmjs.com/package/@parcel/watcher-linux-x64-musl/v/2.6.0) - MIT
 - [@parcel/watcher@2.6.0](https://www.npmjs.com/package/@parcel/watcher/v/2.6.0) - MIT
 - [@playwright/test@1.63.0](https://www.npmjs.com/package/@playwright/test/v/1.63.0) - Apache-2.0
-- [@rolldown/binding-linux-x64-gnu@1.2.11](https://www.npmjs.com/package/@rolldown/binding-linux-x64-gnu/v/1.2.11) - MIT
-- [@rolldown/binding-linux-x64-musl@1.2.11](https://www.npmjs.com/package/@rolldown/binding-linux-x64-musl/v/1.2.11) - MIT
+- [@rolldown/binding-linux-x64-gnu@1.2.12](https://www.npmjs.com/package/@rolldown/binding-linux-x64-gnu/v/1.2.12) - MIT
+- [@rolldown/binding-linux-x64-musl@1.2.12](https://www.npmjs.com/package/@rolldown/binding-linux-x64-musl/v/1.2.12) - MIT
 - [@rolldown/pluginutils@1.0.1](https://www.npmjs.com/package/@rolldown/pluginutils/v/1.0.1) - MIT
 - [@solid-primitives/event-listener@2.4.6](https://www.npmjs.com/package/@solid-primitives/event-listener/v/2.4.6) - MIT
 - [@solid-primitives/keyed@1.5.3](https://www.npmjs.com/package/@solid-primitives/keyed/v/1.5.3) - MIT
@@ -855,8 +855,8 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [@tailwindcss/oxide@4.3.3](https://www.npmjs.com/package/@tailwindcss/oxide/v/4.3.3) - MIT
 - [@tailwindcss/postcss@4.3.3](https://www.npmjs.com/package/@tailwindcss/postcss/v/4.3.3) - MIT
 - [@tanstack/match-sorter-utils@9.1.2](https://www.npmjs.com/package/@tanstack/match-sorter-utils/v/9.1.2) - MIT
-- [@tanstack/query-devtools@5.104.0](https://www.npmjs.com/package/@tanstack/query-devtools/v/5.104.0) - MIT
-- [@tanstack/react-query-devtools@5.104.0](https://www.npmjs.com/package/@tanstack/react-query-devtools/v/5.104.0) - MIT
+- [@tanstack/query-devtools@5.104.1](https://www.npmjs.com/package/@tanstack/query-devtools/v/5.104.1) - MIT
+- [@tanstack/react-query-devtools@5.104.1](https://www.npmjs.com/package/@tanstack/react-query-devtools/v/5.104.1) - MIT
 - [@testing-library/dom@10.4.2](https://www.npmjs.com/package/@testing-library/dom/v/10.4.2) - MIT
 - [@testing-library/jest-dom@7.0.1](https://www.npmjs.com/package/@testing-library/jest-dom/v/7.0.1) - MIT
 - [@testing-library/react@16.3.3](https://www.npmjs.com/package/@testing-library/react/v/16.3.3) - MIT
@@ -865,14 +865,14 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [@types/country-flag-icons@1.2.2](https://www.npmjs.com/package/@types/country-flag-icons/v/1.2.2) - MIT
 - [@types/deep-eql@4.0.2](https://www.npmjs.com/package/@types/deep-eql/v/4.0.2) - MIT
 - [@types/humps@2.0.6](https://www.npmjs.com/package/@types/humps/v/2.0.6) - MIT
-- [@types/node@26.6.3](https://www.npmjs.com/package/@types/node/v/26.6.3) - MIT
+- [@types/node@26.6.4](https://www.npmjs.com/package/@types/node/v/26.6.4) - MIT
 - [@types/topojson-client@3.1.5](https://www.npmjs.com/package/@types/topojson-client/v/3.1.5) - MIT
 - [@types/topojson-specification@1.0.5](https://www.npmjs.com/package/@types/topojson-specification/v/1.0.5) - MIT
 - [@types/whatwg-mimetype@3.0.2](https://www.npmjs.com/package/@types/whatwg-mimetype/v/3.0.2) - MIT
 - [@types/ws@8.18.1](https://www.npmjs.com/package/@types/ws/v/8.18.1) - MIT
 - [@vitejs/plugin-react@6.1.1](https://www.npmjs.com/package/@vitejs/plugin-react/v/6.1.1) - MIT
-- [@vitest/mocker@5.0.2](https://www.npmjs.com/package/@vitest/mocker/v/5.0.2) - MIT
-- [@vitest/spy@5.0.2](https://www.npmjs.com/package/@vitest/spy/v/5.0.2) - MIT
+- [@vitest/mocker@5.0.3](https://www.npmjs.com/package/@vitest/mocker/v/5.0.3) - MIT
+- [@vitest/spy@5.0.3](https://www.npmjs.com/package/@vitest/spy/v/5.0.3) - MIT
 - [ansi-regex@5.0.1](https://www.npmjs.com/package/ansi-regex/v/5.0.1) - MIT
 - [ansi-styles@5.2.0](https://www.npmjs.com/package/ansi-styles/v/5.2.0) - MIT
 - [aria-query@5.3.0](https://www.npmjs.com/package/aria-query/v/5.3.0) - Apache-2.0
@@ -929,8 +929,8 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [redent@3.0.0](https://www.npmjs.com/package/redent/v/3.0.0) - MIT
 - [remove-accents@0.5.0](https://www.npmjs.com/package/remove-accents/v/0.5.0) - MIT
 - [retry@0.12.0](https://www.npmjs.com/package/retry/v/0.12.0) - MIT
-- [rolldown@1.2.11](https://www.npmjs.com/package/rolldown/v/1.2.11) - MIT
-- [sass@1.105.0](https://www.npmjs.com/package/sass/v/1.105.0) - MIT
+- [rolldown@1.2.12](https://www.npmjs.com/package/rolldown/v/1.2.12) - MIT
+- [sass@1.105.1](https://www.npmjs.com/package/sass/v/1.105.1) - MIT
 - [seroval-plugins@1.5.6](https://www.npmjs.com/package/seroval-plugins/v/1.5.6) - MIT
 - [seroval@1.5.6](https://www.npmjs.com/package/seroval/v/1.5.6) - MIT
 - [shieldpm@4.4.1](https://www.npmjs.com/package/shieldpm/v/4.4.1) - UNLICENSED
@@ -952,10 +952,10 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - [unicorn-magic@0.3.0](https://www.npmjs.com/package/unicorn-magic/v/0.3.0) - MIT
 - [update-browserslist-db@1.3.3](https://www.npmjs.com/package/update-browserslist-db/v/1.3.3) - MIT
 - [vite-plugin-checker@0.14.5](https://www.npmjs.com/package/vite-plugin-checker/v/0.14.5) - MIT
-- [vite@8.3.1](https://www.npmjs.com/package/vite/v/8.3.1) - MIT
-- [vitest@5.0.2](https://www.npmjs.com/package/vitest/v/5.0.2) - MIT
+- [vite@8.3.2](https://www.npmjs.com/package/vite/v/8.3.2) - MIT
+- [vitest@5.0.3](https://www.npmjs.com/package/vitest/v/5.0.3) - MIT
 - [whatwg-mimetype@3.0.0](https://www.npmjs.com/package/whatwg-mimetype/v/3.0.0) - MIT
-- [why-is-node-running@3.2.2](https://www.npmjs.com/package/why-is-node-running/v/3.2.2) - MIT
+- [why-is-node-running@3.2.1](https://www.npmjs.com/package/why-is-node-running/v/3.2.1) - MIT
 - [ws@8.21.1](https://www.npmjs.com/package/ws/v/8.21.1) - MIT
 
-The above information reflects the installed packages as of September 29, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
+The above information reflects the installed packages as of October 4, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
