@@ -49,11 +49,44 @@ Built-in analytics are enabled by default. GoAccess is **off** by default (`GOA=
 
 ### Enabling GeoIP (Country Statistics)
 
-To enable the country breakdown in the analytics dashboard, you need to provide MaxMind GeoIP databases and enable the Nginx module.
+ShieldPM prepares `GeoLite2-Country.mmdb`, `GeoLite2-City.mmdb`, and `GeoLite2-ASN.mmdb` in `/data/nginx` automatically before services start. The default `GEOIP_AUTO_UPDATE=true` checks the [latest GeoLite.mmdb release](https://github.com/shedowe19/GeoLite.mmdb/releases/latest) on the first start and every later start. This needs no MaxMind account, license key, or separate updater container.
 
-#### 1. Configure GeoIP Update
+Files already matching the release's size, SHA-256 digest, and database validation are reused. New files are staged and all three databases verified before replacement: the native MMDB reader must open each file with the expected database type and format. If downloading or verification fails, a complete valid previous cache permits startup with a warning; without that cache, startup stops before services run. Unsafe destination paths, another running updater, or incomplete recovery also stop startup. Automatic updates run during startup.
 
-**🐳 Docker:** Uncomment the `geoipupdate` service in your `compose.yaml`. You will need a free account from [MaxMind](https://www.maxmind.com/en/geolite2/signup).
+Downloading the files is independent of module activation. To use country statistics and the firewall's country/ASN lookups, enable the GeoIP2 module.
+
+#### 1. Enable the Nginx module
+
+```yaml
+# Docker (compose.yaml)
+environment:
+  - "GEOIP_AUTO_UPDATE=true" # default; prepares all three databases at startup
+  - "NGINX_LOAD_GEOIP2_MODULE=true"
+```
+
+```bash
+# Native / LXC (/data/.env)
+GEOIP_AUTO_UPDATE=true
+NGINX_LOAD_GEOIP2_MODULE=true
+```
+
+#### 2. Restart ShieldPM
+
+```bash
+# Docker
+docker compose up -d
+
+# Native / LXC
+systemctl restart shieldpm
+```
+
+Once started, Nginx uses the prepared databases and new requests can include country and ASN information. With `GOA=true`, GoAccess also discovers City, Country, and ASN files in `/data/nginx` at startup. For each database, an existing non-empty file in `/data/goaccess/geoip` takes precedence. An explicit `--geoip-database` setting in `GOACLA` disables this automatic discovery.
+
+### Offline or custom GeoIP data
+
+Set **`GEOIP_AUTO_UPDATE=false`** in the ShieldPM environment to disable the automatic GitHub release check and downloads. Use this for offline installations or databases maintained through your own MaxMind updater. Provide the files required by active Nginx GeoIP blocks in `/data/nginx`; module activation remains a separate setting.
+
+**Docker with a custom MaxMind updater:** Keep `GEOIP_AUTO_UPDATE=false` on the ShieldPM service and configure the optional sidecar with your own [MaxMind account](https://www.maxmind.com/en/geolite2/signup):
 
 ```yaml
 geoipupdate:
@@ -63,7 +96,7 @@ geoipupdate:
   network_mode: bridge
   environment:
     - "TZ=Europe/Berlin"
-    - "GEOIPUPDATE_EDITION_IDS=GeoLite2-Country GeoLite2-City" # GeoLite2-ASN is optional
+    - "GEOIPUPDATE_EDITION_IDS=GeoLite2-Country GeoLite2-City GeoLite2-ASN"
     - "GEOIPUPDATE_ACCOUNT_ID=<your-account-id>"
     - "GEOIPUPDATE_LICENSE_KEY=<your-license-key>"
     - "GEOIPUPDATE_FREQUENCY=24"
@@ -74,7 +107,7 @@ geoipupdate:
 > [!IMPORTANT]
 > The volume path must be `/opt/shieldpm/nginx` on the host side, as this maps to `/data/nginx` inside the ShieldPM container, which is where Nginx expects the files.
 
-**📦 Native / LXC:** The installer offers GeoIP as an optional step (`Install GeoIP Update? [y/N]`). For manual setup:
+**Native / LXC with a custom MaxMind updater:** Set `GEOIP_AUTO_UPDATE=false` in `/data/.env`, then configure your own updater:
 
 ```bash
 apt install -y geoipupdate
@@ -84,42 +117,22 @@ LicenseKey <your-license-key>
 EditionIDs GeoLite2-Country GeoLite2-City GeoLite2-ASN
 DatabaseDirectory /data/nginx
 EOF
+chmod 600 /etc/GeoIP.conf
 geoipupdate
 # Setup weekly cron
 echo "0 3 * * 3 root /usr/bin/geoipupdate > /dev/null 2>&1" > /etc/cron.d/geoipupdate
 ```
 
-#### 2. Enable Nginx Module
-
-Set `NGINX_LOAD_GEOIP2_MODULE=true`:
-
-```yaml
-# Docker (compose.yaml)
-environment:
-  - "NGINX_LOAD_GEOIP2_MODULE=true"
-```
-
-```bash
-# Native / LXC (/data/.env)
-NGINX_LOAD_GEOIP2_MODULE=true
-```
-
-#### 3. Restart
-
-```bash
-# Docker
-docker compose up -d
-
-# Native / LXC
-systemctl restart shieldpm
-```
-
-Once restarted, Nginx will load the GeoIP database, and new requests will be tagged with their country code.
-
-With `GOA=true`, GoAccess also discovers the City, Country, and ASN databases in `/data/nginx` at startup. For each database, an existing non-empty file in `/data/goaccess/geoip` takes precedence. An explicit `--geoip-database` setting in `GOACLA` disables this automatic discovery.
+Enable `NGINX_LOAD_GEOIP2_MODULE=true` and restart ShieldPM after first providing the custom databases. Existing independently configured updater services or cron jobs remain your responsibility; automatic startup downloads are disabled by the opt-out.
 
 ### ASN data for the IP Firewall
 
-The [IP Firewall](./IP-Firewall.md#block-autonomous-systems-for-a-host) can reuse the optional `GeoLite2-ASN.mmdb` from this updater to show the visitor network and apply per-host ASN rules. Add `GeoLite2-ASN` to `GEOIPUPDATE_EDITION_IDS` or the native updater's `EditionIDs`, keep `NGINX_LOAD_GEOIP2_MODULE=true`, and restart ShieldPM after the first download. The firewall startup configuration uses `/data/nginx/GeoLite2-ASN.mmdb`; a file available only to GoAccess under `/data/goaccess/geoip` does not configure this Nginx lookup.
+The [IP Firewall](./IP-Firewall.md#block-autonomous-systems-for-a-host) uses the same automatically prepared `GeoLite2-ASN.mmdb` to show the visitor network and apply per-host ASN rules. Keep `NGINX_LOAD_GEOIP2_MODULE=true`. For a custom updater, include `GeoLite2-ASN` in its editions. The firewall startup configuration uses `/data/nginx/GeoLite2-ASN.mmdb`; a file available only to GoAccess under `/data/goaccess/geoip` does not configure this Nginx lookup.
 
 Keep the Country/City databases referenced by existing active Analytics blocks available. Their configuration and the existing GoAccess discovery remain unchanged. ASN data does not provide country codes, and this integration adds no ASN chart to the Analytics dashboard.
+
+## Related pages
+
+- [IP Firewall](./IP-Firewall.md)
+- [Configuration](./Configuration.md)
+- [Docker Compose reference](./Docker-Compose-Reference.md)

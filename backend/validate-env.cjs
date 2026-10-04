@@ -209,6 +209,7 @@ const boolDefaults = {
     'SKIP_IP_RANGES': 'true',
     'LOGROTATE': 'false',
     'GOA': 'false',
+    'GEOIP_AUTO_UPDATE': 'true',
     'PHP82': 'false',
     'PHP83': 'false',
     'PHP84': 'false',

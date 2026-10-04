@@ -58,7 +58,7 @@ class FourthInfrastructureTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("package", result.stdout + result.stderr)
         for filename in ("app/package.json", "html/frontend/index.html", "usr/local/nginx/sbin/nginx",
-                         "rootfs/usr/local/bin/start.sh"):
+                         "rootfs/usr/local/bin/start.sh", "rootfs/usr/local/bin/update-geoip.py"):
             path = self.root / filename
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("packaged artifact")
@@ -84,6 +84,38 @@ cp() { [ "$active" = false ] || { echo "service still serving old code" >&2; ret
 '''
         result = subprocess.run(["bash", "-e", "-c", fixture + program], cwd=self.root, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_default_geoip_setup_never_prompts_for_credentials_or_changes_custom_updates(self):
+        section = self.installer.split("# 12. Shared GeoIP databases", 1)[1].split("\n", 1)[1].split("# 13.", 1)[0]
+        etc = self.root / "etc"
+        (etc / "cron.d").mkdir(parents=True)
+        configuration, cron = etc / "GeoIP.conf", etc / "cron.d/geoipupdate"
+        configuration.write_text("custom provider configuration\n")
+        cron.write_text("custom update schedule\n")
+        env_file = self.root / ".env"
+        env_file.write_text("GEOIP_AUTO_UPDATE=false\n")
+        original = {filename: filename.read_bytes() for filename in (configuration, cron, env_file)}
+        program = "read() { echo unexpected-credential-prompt >&2; exit 72; };\n" + section.replace("/etc/", f"{etc}/")
+        result = subprocess.run(["bash", "-e", "-c", program], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("No MaxMind account", result.stdout)
+        self.assertIn("Existing MaxMind configuration and update jobs have been retained", result.stdout)
+        for filename, content in original.items():
+            self.assertEqual(filename.read_bytes(), content)
+
+    def test_native_health_window_allows_geoip_preparation_and_backend_startup(self):
+        section = self.installer.split('echo "--> Waiting for the backend', 1)[1].split("\n", 1)[1].split('echo "=== Installation Complete', 1)[0]
+        fixture = '''
+curl() { ((SECONDS >= 242)) && printf '{"status":"OK"}'; }
+jq() { body=$(cat); [[ "$body" == '{"status":"OK"}' ]]; }
+sleep() { if ((SECONDS == 0)); then SECONDS=241; else SECONDS=$((SECONDS + 1)); fi; }
+SECONDS=0
+'''
+        result = subprocess.run(["bash", "-e", "-c", fixture + section + '\nprintf "deadline=%s elapsed=%s" "$INSTALL_HEALTH_DEADLINE" "$SECONDS"'],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("deadline=360", result.stdout)
+        self.assertIn("elapsed=242", result.stdout)
 
     def test_openappsec_failure_does_not_continue_as_success(self):
         branch = self.installer.split("    # Run installer", 1)[1].split("    # Ask about Advanced ML Model", 1)[0]

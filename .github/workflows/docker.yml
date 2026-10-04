@@ -11,6 +11,7 @@ on:
       - scripts/install.sh
       - scripts/setup-node-apt.sh
       - scripts/ci/docker-smoke.sh
+      - scripts/ci/geoip-update-smoke.sh
       - scripts/ci/ip-firewall-smoke.mjs
       - scripts/ci/mmdb-oracle.py
       - scripts/ci/nginx-smoke-modules.mjs
@@ -33,6 +34,7 @@ on:
       - scripts/install.sh
       - scripts/setup-node-apt.sh
       - scripts/ci/docker-smoke.sh
+      - scripts/ci/geoip-update-smoke.sh
       - scripts/ci/ip-firewall-smoke.mjs
       - scripts/ci/mmdb-oracle.py
       - scripts/ci/nginx-smoke-modules.mjs
@@ -184,6 +186,14 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-final
 
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
+
+      - name: "🌍 Smoke GeoIP bootstrap from latest release"
+        timeout-minutes: 10
+        env:
+          SMOKE_IMAGE: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
+        run: |
+          docker image inspect "$SMOKE_IMAGE" >/dev/null 2>&1 || docker pull "$SMOKE_IMAGE"
+          bash scripts/ci/geoip-update-smoke.sh "$SMOKE_IMAGE"
 
       - name: "🧪 Smoke loaded image as root and UID 1000"
         timeout-minutes: 10

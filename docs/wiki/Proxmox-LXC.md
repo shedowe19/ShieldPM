@@ -90,9 +90,10 @@ If you want to use **MySQL** or **PostgreSQL** (instead of the default SQLite):
 > - **Database** (MySQL / PostgreSQL — can be installed natively via the [Native Installer](Installation))
 > - **CrowdSec** (can be installed natively — see [CrowdSec Guide](CrowdSec))
 > - **OpenAppSec** (can be installed natively — see [OpenAppSec Guide](OpenAppSec))
-> - **GeoIP Update** (can be installed natively via the [Native Installer](Installation))
 >
 > You must install/host these services yourself (e.g., in another LXC container, VM, or managed service) if you require them.
+
+GeoIP Country, City, and ASN data are prepared by the same built-in startup updater as Docker; no MaxMind sidecar or credentials are needed. Set `GEOIP_AUTO_UPDATE=false` for offline or custom data and enable `NGINX_LOAD_GEOIP2_MODULE=true` to use Nginx lookups. See [GeoIP setup](./Analytics.md#enabling-geoip-country-statistics).
 
 1.  Enable `DB_MYSQL_` or `DB_POSTGRES_` variables in `/data/.env`.
 2.  Ensure the container can reach your database IP.

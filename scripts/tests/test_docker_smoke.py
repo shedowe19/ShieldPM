@@ -97,7 +97,7 @@ elif args[0] == 'logs':
         for uid, call in zip((0, 1000), creates):
             self.assertEqual(call[call.index("--network") + 1], "none")
             self.assertEqual(call[call.index("--pull") + 1], "never")
-            for value in (f"PUID={uid}", f"PGID={uid}", "TZ=UTC", "DISABLE_IPV6=true", "SKIP_IP_RANGES=true", "NGINX_LOAD_GEOIP2_MODULE=true"):
+            for value in (f"PUID={uid}", f"PGID={uid}", "TZ=UTC", "DISABLE_IPV6=true", "SKIP_IP_RANGES=true", "GEOIP_AUTO_UPDATE=false", "NGINX_LOAD_GEOIP2_MODULE=true"):
                 self.assertIn(value, call)
         executions = [call for call in calls if call[0] == "exec"]
         self.assertEqual([call[call.index("--user") + 1] for call in executions], ["0:0", "1000:1000"])

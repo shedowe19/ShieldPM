@@ -17,7 +17,7 @@ fi
 # Resolve the release payload beside this script, independently of the caller's
 # working directory. Reject an incomplete/source checkout before changing apt.
 INSTALL_SOURCE_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-for required_file in app/package.json html/frontend/index.html usr/local/nginx/sbin/nginx rootfs/usr/local/bin/start.sh; do
+for required_file in app/package.json html/frontend/index.html usr/local/nginx/sbin/nginx rootfs/usr/local/bin/start.sh rootfs/usr/local/bin/update-geoip.py; do
     if [ ! -f "$INSTALL_SOURCE_DIR/$required_file" ]; then
         echo "ERROR: Incomplete native installer package: missing $required_file." >&2
         echo "Extract the full shieldpm-install-linux archive before running install.sh." >&2
@@ -530,68 +530,17 @@ else
     echo "--> Skipping CrowdSec (can be installed later)."
 fi
 
-# 12. GeoIP Database Updates (Optional)
+# 12. Shared GeoIP databases (automatic at service startup)
 echo ""
-echo "=== GeoIP Database Updates (Optional) ==="
-echo "MaxMind GeoIP databases enable geographic analytics and country-based blocking."
-echo "This installs 'geoipupdate' to automatically download GeoLite2 databases."
-echo "Requires a free MaxMind account: https://www.maxmind.com/en/geolite2/signup"
-echo ""
-read -r -p "Install GeoIP Update? [y/N] (Default: N): " geoip_choice
-
-if [[ "$geoip_choice" =~ ^[Yy]$ ]]; then
-    echo "--> Installing geoipupdate..."
-    # Add MaxMind PPA and install
-    apt-get install -y software-properties-common
-    add-apt-repository -y ppa:maxmind/ppa 2>/dev/null || true
-    apt-get update
-    apt-get install -y geoipupdate || {
-        # Fallback: direct download if PPA not available
-        echo "  > PPA not available, trying direct install..."
-        ARCH=$(dpkg --print-architecture)
-        GEOIP_URL="https://github.com/maxmind/geoipupdate/releases/download/v7.1.0/geoipupdate_7.1.0_linux_${ARCH}.deb"
-        curl -fL -o "$INSTALL_TMP_DIR/geoipupdate.deb" "$GEOIP_URL"
-        dpkg -i "$INSTALL_TMP_DIR/geoipupdate.deb" || apt-get install -f -y
-        rm -f "$INSTALL_TMP_DIR/geoipupdate.deb"
-    }
-
-    # Prompt for MaxMind credentials
-    echo ""
-    echo "  Enter your MaxMind account details (from https://www.maxmind.com/en/accounts):"
-    read -r -p "  Account ID: " GEOIP_ACCOUNT_ID
-    read -r -s -p "  License Key: " GEOIP_LICENSE_KEY
-    echo
-
-    if [ -n "$GEOIP_ACCOUNT_ID" ] && [ -n "$GEOIP_LICENSE_KEY" ]; then
-        # Write GeoIP config
-        cat > /etc/GeoIP.conf << GEOIP_EOF
-AccountID $GEOIP_ACCOUNT_ID
-LicenseKey $GEOIP_LICENSE_KEY
-EditionIDs GeoLite2-Country GeoLite2-City GeoLite2-ASN
-DatabaseDirectory /data/nginx
-GEOIP_EOF
-        chmod 600 /etc/GeoIP.conf
-
-        # Run initial download
-        echo "--> Downloading GeoIP databases to /data/nginx/..."
-        mkdir -p /data/nginx
-        geoipupdate -v 2>&1 || echo "  > Initial download failed. Check your credentials."
-
-        # Setup weekly cron job (every Wednesday at 3 AM)
-        cat > /etc/cron.d/geoipupdate << 'CRON_EOF'
-# GeoIP Database Update (weekly)
-0 3 * * 3 root /usr/bin/geoipupdate > /dev/null 2>&1
-CRON_EOF
-        chmod 644 /etc/cron.d/geoipupdate
-
-        echo "  > GeoIP configured! Databases will auto-update weekly."
-        echo "  > Files: /data/nginx/GeoLite2-Country.mmdb, GeoLite2-City.mmdb, GeoLite2-ASN.mmdb"
-        echo "  > Enable in ShieldPM: set NGINX_LOAD_GEOIP2_MODULE=true in /data/.env"
-    else
-        echo "  > Skipped: No credentials provided. Configure manually in /etc/GeoIP.conf"
-    fi
-else
-    echo "--> Skipping GeoIP Update (can be installed later)."
+echo "=== GeoIP Database Updates ==="
+echo "ShieldPM checks the latest shedowe19/GeoLite.mmdb GitHub release at every service start."
+echo "Country, City and ASN databases are installed in /data/nginx before configuration and services."
+echo "No MaxMind account or download credentials are required for the default source."
+echo "Set GEOIP_AUTO_UPDATE=false in /data/.env for offline or custom-managed databases."
+echo "Enable NGINX_LOAD_GEOIP2_MODULE=true separately to use the Nginx lookups."
+if [ -s /etc/GeoIP.conf ] || [ -s /etc/cron.d/geoipupdate ]; then
+    echo "Existing MaxMind configuration and update jobs have been retained."
+    echo "Use GEOIP_AUTO_UPDATE=false to keep those jobs responsible for the shared files."
 fi
 
 # 13. Anubis AI Firewall (Optional)
@@ -806,11 +755,12 @@ echo "--> Starting service to run initial migrations..."
 systemctl start shieldpm
 
 echo "--> Waiting for the backend and initial database migrations..."
-INSTALL_HEALTH_DEADLINE=$((SECONDS + 180))
+# The startup GeoIP preparation may use 240s; retain 120s for backend readiness.
+INSTALL_HEALTH_DEADLINE=$((SECONDS + 360))
 while ! curl --fail --silent --show-error --max-time 2 --unix-socket /run/shieldpm/shieldpm.sock \
     http://localhost/ 2>/dev/null | jq -e '.status == "OK"' >/dev/null; do
     if ((SECONDS >= INSTALL_HEALTH_DEADLINE)); then
-        echo "ERROR: ShieldPM did not become healthy within 180 seconds. Check journalctl -u shieldpm."
+        echo "ERROR: ShieldPM did not become healthy within 360 seconds. Check journalctl -u shieldpm."
         exit 1
     fi
     sleep 1

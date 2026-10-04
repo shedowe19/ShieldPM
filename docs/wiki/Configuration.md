@@ -161,13 +161,16 @@ ShieldPM runs schema migrations for the **selected** database on startup. When y
 
 ## 🧩 Module Loading
 
-| Variable                                  | Description                             | Default |
-| :---------------------------------------- | :-------------------------------------- | :------ |
-| `NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE` | Load OpenAppSec WAF module              | `false` |
-| `NGINX_LOAD_GEOIP2_MODULE`                | Load GeoIP2 module                      | `false` |
-| `NGINX_LOAD_NJS_MODULE`                   | Load Nginx JavaScript (njs) module      | `false` |
-| `NGINX_LOAD_NTLM_MODULE`                  | Load NTLM authentication module         | `false` |
-| `NGINX_LOAD_VHOST_TRAFFIC_STATUS_MODULE`  | Load virtual host traffic status module | `false` |
+`GEOIP_AUTO_UPDATE` defaults to `true`: every startup prepares the latest Country, City, and ASN databases before services start, independently of module loading. Set it to `false` for offline or custom databases. See [GeoIP setup](./Analytics.md#enabling-geoip-country-statistics).
+
+| Variable                                  | Description                              | Default |
+| :---------------------------------------- | :--------------------------------------- | :------ |
+| `GEOIP_AUTO_UPDATE`                       | Prepare Country/City/ASN data at startup | `true`  |
+| `NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE` | Load OpenAppSec WAF module               | `false` |
+| `NGINX_LOAD_GEOIP2_MODULE`                | Load GeoIP2 module                       | `false` |
+| `NGINX_LOAD_NJS_MODULE`                   | Load Nginx JavaScript (njs) module       | `false` |
+| `NGINX_LOAD_NTLM_MODULE`                  | Load NTLM authentication module          | `false` |
+| `NGINX_LOAD_VHOST_TRAFFIC_STATUS_MODULE`  | Load virtual host traffic status module  | `false` |
 
 ---
 

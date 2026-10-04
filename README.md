@@ -32,6 +32,8 @@ Open the admin UI at `https://<your-ip>:81` (self-signed certificate — accept 
 
 **First login:** There are no default credentials — the **Setup Wizard** creates your admin account on first visit. Automated deployments can set `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` instead.
 
+GeoIP Country, City, and ASN databases are prepared from the [latest GeoLite.mmdb release](https://github.com/shedowe19/GeoLite.mmdb/releases/latest) before services start, then checked again on every start. No MaxMind credentials are required. Set `GEOIP_AUTO_UPDATE=false` for offline or custom databases; enable `NGINX_LOAD_GEOIP2_MODULE=true` to use country and ASN lookups. See [GeoIP setup and startup failures](./docs/wiki/Analytics.md#enabling-geoip-country-statistics).
+
 ---
 
 ## 🛠️ Tech Stack

@@ -115,6 +115,9 @@ services:
       # - "SKIP_IP_RANGES=false"                   # Skip Cloudflare IP range fetch, default: true
       # - "IPRT=3"                                 # Hours between IP range updates, default: 1
 
+      # ── GeoIP Databases ───────────────────────────────────────────────────
+      # - "GEOIP_AUTO_UPDATE=false"                         # Default: true; disable for offline/custom database updates
+
       # ── Nginx Modules ─────────────────────────────────────────────────────
       # - "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true"       # OpenAppSec WAF (requires ipc: host + shm-volume)
       # - "NGINX_LOAD_GEOIP2_MODULE=true"                     # GeoIP2 module
@@ -228,7 +231,8 @@ services:
   #     - "/opt/shieldpm/postgres:/var/lib/postgresql/data"
 
 
-  # ── GeoIP Update (for GoAccess) ─────────────────────────────────────────
+  # ── Optional MaxMind Update (shared Analytics/firewall databases) ───────
+  # Custom alternative: set GEOIP_AUTO_UPDATE=false on ShieldPM first.
   # geoipupdate:
   #   container_name: shieldpm-geoipupdate
   #   image: ghcr.io/maxmind/geoipupdate:latest

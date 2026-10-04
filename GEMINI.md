@@ -125,9 +125,9 @@ bash scripts/install.sh
 
 **Agent Action**: When modifying `install.sh`, ensure you handle:
 
-1. **Dependency Checks**: `node`, `npm`, `nginx`, `sqlite3`, `python3-certbot-nginx`.
+1. **Dependency Checks**: `node`, `npm`, `nginx`, `sqlite3`, `python3`, `curl`, `libmaxminddb0`, `python3-certbot-nginx`.
 2. **Service Creation**: `systemd` unit files.
-3. **Parsers/Collections**: Downloading CrowdSec/GeoIP configs to `/etc/` paths (using raw GitHub URLs).
+3. **Parsers/Collections**: CrowdSec configurations under `/etc/`; shared Docker/native GeoIP provisioning runs at startup after loading `/data/.env`, before environment validation or services.
 
 ### Development Environment
 
@@ -185,6 +185,7 @@ yarn dev # Nodemon
 ### 6.1b Proxy Host IP Firewall
 
 - **Sources and ownership**: `firewall_list` stores normalized IP/CIDR text, source metadata, update state, and ownership. The `/api/nginx/firewall-lists` CRUD, preview, and refresh endpoints reuse `access_lists` permissions. HTTPS source updates preserve the last valid list on failure.
+- **GeoIP provisioning**: `GEOIP_AUTO_UPDATE=true` by default checks the latest `shedowe19/GeoLite.mmdb` GitHub release at every startup and prepares Country, City, and ASN in `/data/nginx` without MaxMind credentials. `envs.sh` runs it after loading `/data/.env` and before `validate-env.cjs`, configuration, or services. Matching validated files are reused; all new files are staged and verified before replacement. An update failure can continue only with a complete valid previous cache. Set `GEOIP_AUTO_UPDATE=false` for offline/custom sources; `NGINX_LOAD_GEOIP2_MODULE=true` separately enables Nginx lookups.
 - **Per-host policy**: `meta.ip_firewall` contains `enabled`, `list_ids`, `allowlist`, `denylist`, `asn_denylist`, `country_denylist`, `country_reason`, `block_unknown_country`, `public_message`, `support_url`, and `internal_note`. Each host independently selects central lists, up to 1000 unique numeric ASN rules with optional public reasons, and countries; exceptions bypass only the IP firewall. Internal notes never appear on the public page.
 - **Nginx behavior**: Generated `geo` lookups and a server-level filter protect the public Proxy Host entrance, including custom routes and Anubis. Firewall matches return a dedicated non-cacheable 403 response without changing the handling of OAuth2 or other authorization failures. Priority is manual IP rules, list matches, ASN rules, then country rules. Country filtering reuses `$geoip2_country_code`; optional ASN lookups use reserved `$spm_geoip2_asn` and `$spm_geoip2_asn_org` variables from `/data/nginx/GeoLite2-ASN.mmdb`, always with `source=$remote_addr`. `/api/nginx/firewall-lists/geoip` reports country readiness and an independent nested `asn` status using `proxy_hosts:list`. IP-only rules require no GeoIP. Existing open connections are not terminated.
 - **Scope**: HTTP/HTTPS Proxy Hosts only; TCP/UDP Streams and TLS passthrough are not covered. Feed membership expresses the configured network policy, not proof of an attack. Details: [IP firewall internals](./docs/wiki-intern/module/ip-firewall.md) and [user guide](./docs/wiki/IP-Firewall.md).

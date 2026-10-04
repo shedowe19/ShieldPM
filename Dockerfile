@@ -61,7 +61,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 # ==========================================
 FROM ${SHIELDPM_NGINX_IMAGE}
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
-ENV NODE_ENV=production
+ENV NODE_ENV=production GEOIP_AUTO_UPDATE=true
 COPY scripts/setup-node-apt.sh /usr/local/bin/setup-node-apt.sh
 RUN bash /usr/local/bin/setup-node-apt.sh && \
     apt-get install -y --no-install-recommends nodejs && \
@@ -80,8 +80,10 @@ COPY --from=frontend /app/dist /html/frontend
 # Static Files
 COPY rootfs /
 
-# --- WireGuard Support ---
+# --- Runtime dependencies: GeoIP updates and WireGuard ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    libmaxminddb0 \
     wireguard-tools \
     iproute2 \
     iptables \
@@ -108,4 +110,4 @@ RUN echo "exit 101" > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d &&
     find /tmp -mindepth 1 -delete
 
 ENTRYPOINT ["tini", "-g", "--", "entrypoint.sh"]
-HEALTHCHECK CMD ["healthcheck.sh"]
+HEALTHCHECK --start-period=300s CMD ["healthcheck.sh"]

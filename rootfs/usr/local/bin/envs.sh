@@ -35,6 +35,9 @@ set -a
 . /data/.env
 set +a
 
+# Refresh the shared databases before validation discovers GoAccess GeoIP flags.
+# The helper handles the explicit GEOIP_AUTO_UPDATE=false opt-out.
+python3 /usr/local/bin/update-geoip.py --directory /data/nginx || exit 1
 
 # Run Node.js validation script
 # Capture output to evaluate exports
