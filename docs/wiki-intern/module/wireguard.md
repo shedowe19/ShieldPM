@@ -89,6 +89,12 @@ Subnetz und Serveradresse verlangen kanonische IPv4-Adressen mit vier Dezimalokt
 
 Auch Peer-Änderung, Löschung, Aktivierung und Deaktivierung nutzen dieselbe Warteschlange wie Peer-Erstellung und Servereinstellungen. Sie umfasst jeweils Datenbankänderung, Schreiben von `wg0.conf` und Anwendung auf dem Interface. Eine langsame ältere Änderung kann damit einen später deaktivierten oder gelöschten Peer nicht wieder in die Laufzeitkonfiguration aufnehmen.
 
+### Audit-Protokoll
+
+Das [Audit-Log](../verwaltung/audit-log.md) unterscheidet `wireguard-peer` und `wireguard-settings`. Peer-Erstellung, Änderung und Löschung verwenden `created`, `updated` und `deleted`; Aktivieren und Deaktivieren bleiben `updated` mit `meta.status: "enabled"` beziehungsweise `"disabled"`. Änderungen der Servereinstellungen verwenden ebenfalls `updated`.
+
+Die Oberfläche zeigt für Peers nur ihren Namen oder den lokalisierten Ersatz „Peer #ID“ im Badge. Servereinstellungen erhalten einen festen lokalisierten Titel. Diese Zeilenkennzeichnungen zeigen keine Schlüssel oder Konfigurationen; der Detaildialog bleibt eine durch `auditlog:list` geschützte Metadatenansicht. Beide Objekttypen sind getrennt filterbar.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
@@ -100,3 +106,4 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Tor Onion Services](./tor.md)
 - [DDNS](./ddns.md)
 - [Umgebungsvariablen](../konfiguration/umgebungsvariablen.md)
+- [Audit-Log](../verwaltung/audit-log.md)

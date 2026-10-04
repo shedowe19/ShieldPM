@@ -3,14 +3,17 @@ import {
 	IconBolt,
 	IconBoltOff,
 	IconDisc,
+	IconHistory,
 	IconLock,
 	IconNote,
 	IconShield,
 	IconUser,
 } from "@tabler/icons-react";
 import cn from "classnames";
+import type { ReactNode } from "react";
 import type { AuditLog } from "src/api/backend";
 import { Badge } from "src/components/ui/badge";
+import { getAuditLogObjectTypeMessageId } from "src/lib/audit-log-object-types";
 import { formatDateTime, T } from "src/locale";
 import { AUDIT_LOG_ACTION, AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
@@ -25,7 +28,7 @@ interface AuditMeta {
 	[key: string]: unknown;
 }
 
-const getEventValue = (event: AuditLog): string => {
+const getEventValue = (event: AuditLog): ReactNode => {
 	const meta = (event.meta || {}) as AuditMeta;
 
 	switch (event.objectType) {
@@ -47,11 +50,27 @@ const getEventValue = (event: AuditLog): string => {
 		case AUDIT_LOG_OBJECT_TYPE.SETTING:
 			return meta.name || meta.id || "N/A";
 		case AUDIT_LOG_OBJECT_TYPE.DASHBOARD_NOTE:
-			return meta.content || "Dashboard Note";
+			return meta.content || <T id="dashboard_note" />;
 		case AUDIT_LOG_OBJECT_TYPE.TOR_ONION:
 			return meta.onionAddress || "N/A";
+		case AUDIT_LOG_OBJECT_TYPE.WIREGUARD_PEER:
+			return typeof meta.name === "string" && meta.name.trim() ? (
+				meta.name
+			) : (
+				<T id="audit-log.peer-id" data={{ id: event.objectId }} />
+			);
+		case AUDIT_LOG_OBJECT_TYPE.WIREGUARD_SETTINGS:
+			return <T id="audit-log.filter.wireguard-settings" />;
 		default:
-			return `UNKNOWN EVENT TYPE: ${event.objectType}`;
+			return (
+				<T
+					id="audit-log.unknown-object-type"
+					data={{
+						type:
+							typeof event.objectType === "string" && event.objectType.trim() ? event.objectType : "N/A",
+					}}
+				/>
+			);
 	}
 };
 
@@ -90,6 +109,8 @@ const getIcon = (row: AuditLog) => {
 			break;
 		case AUDIT_LOG_OBJECT_TYPE.CERTIFICATE:
 		case AUDIT_LOG_OBJECT_TYPE.FIREWALL_LIST:
+		case AUDIT_LOG_OBJECT_TYPE.WIREGUARD_PEER:
+		case AUDIT_LOG_OBJECT_TYPE.WIREGUARD_SETTINGS:
 			ico = <IconShield size={16} className={c} />;
 			break;
 		case AUDIT_LOG_OBJECT_TYPE.DDNS_PROVIDER:
@@ -110,6 +131,8 @@ const getIcon = (row: AuditLog) => {
 		case AUDIT_LOG_OBJECT_TYPE.DASHBOARD_NOTE:
 			ico = <IconNote size={16} className={c} />;
 			break;
+		default:
+			ico = <IconHistory size={16} className={c} />;
 	}
 
 	return ico;
@@ -123,7 +146,10 @@ export function EventFormatter({ row }: Props) {
 		<div className="flex-1">
 			<div className="font-medium flex items-center">
 				{getIcon(row)}
-				<T id={`object.event.${row.action}`} tData={{ object: row.objectType }} />
+				<T
+					id={`object.event.${row.action}`}
+					tData={{ object: getAuditLogObjectTypeMessageId(row.objectType) }}
+				/>
 				&nbsp; &mdash;{" "}
 				<Badge variant="secondary" className="ml-2 font-normal max-w-[300px] truncate block">
 					{getEventValue(row)}

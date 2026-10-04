@@ -3,6 +3,35 @@ import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
 import auditLogModel from "../models/audit-log.js";
 
+/**
+ * DDNS provider configuration can contain credentials and does not belong in audit responses.
+ *
+ * @param {string} objectType
+ * @param {any} meta
+ * @returns {any}
+ */
+const safeAuditMetadata = (objectType, meta) => {
+	if (objectType !== "ddns-provider" || !meta || typeof meta !== "object") {
+		return meta;
+	}
+	return Object.fromEntries(Object.entries(meta).filter(([key]) => key !== "config"));
+};
+
+/**
+ * Redact historical DDNS events without changing the database model or its metadata.
+ *
+ * @param {any} row
+ * @returns {any}
+ */
+const safeAuditRow = (row) => {
+	if (row.object_type !== "ddns-provider") {
+		return row;
+	}
+	const result = typeof row.$clone === "function" ? row.$clone() : { ...row };
+	result.meta = safeAuditMetadata(result.object_type, result.meta);
+	return result;
+};
+
 const internalAuditLog = {
 	/**
 	 * All logs
@@ -73,7 +102,7 @@ const internalAuditLog = {
 			const pageResult = await query.page(pagination.page - 1, pagination.limit);
 
 			return {
-				items: pageResult.results,
+				items: pageResult.results.map(safeAuditRow),
 				pagination: {
 					limit: pagination.limit,
 					page: pagination.page,
@@ -83,7 +112,7 @@ const internalAuditLog = {
 			};
 		}
 
-		return await query.limit(100);
+		return (await query.limit(100)).map(safeAuditRow);
 	},
 
 	/**
@@ -108,7 +137,7 @@ const internalAuditLog = {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 
-		return row;
+		return safeAuditRow(row);
 	},
 
 	/**
@@ -126,9 +155,6 @@ const internalAuditLog = {
 	 * @returns {Promise}
 	 */
 	add: async (access, data) => {
-		if (typeof data.user_id === "undefined" || !data.user_id) {
-			data.user_id = access.token.getUserId(1);
-		}
 		if (typeof data.action === "undefined" || !data.action) {
 			throw new errs.InternalValidationError("Audit log entry must contain an Action");
 		}
@@ -141,7 +167,7 @@ const internalAuditLog = {
 				action: data.action,
 				object_type: data.object_type,
 				object_id: data.object_id,
-				meta: data.meta || {},
+				meta: safeAuditMetadata(data.object_type, data.meta || {}),
 			}),
 		);
 	},

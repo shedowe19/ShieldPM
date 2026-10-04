@@ -10,17 +10,24 @@ Um Änderungen im System nachvollziehbar zu machen (z. B. die Erstellung eines P
 
 ## Wichtige Dateien
 
-- `backend/internal/audit-log.js` (3 KB) — Business-Logik
+- `backend/internal/audit-log.js` — Business-Logik und DDNS-Metadatenredaktion
+- `backend/test/internal/audit-log-ddns-redaction.spec.js` — neue Audit-Snapshots und historische DDNS-Abfragen ohne Änderung von Providerdaten oder Historie
 - `backend/routes/audit-log.js` — geschützte REST-Abfrage unter `/api/audit-log`
 - `frontend/src/hooks/useAuditLogs.ts` — React-Query-Zugriff mit suchspezifischem Cache-Key
 - `frontend/src/pages/AuditLog/TableWrapper.tsx` — Audit-Tabelle, Filter und CSV-Export
 - `frontend/src/pages/AuditLog/audit-log-csv.ts` — sichere lokale CSV-Serialisierung
 - `frontend/src/components/Table/Formatter/EventFormatter.tsx`, `frontend/src/types/enums.ts` — Ereignisnamen, Objektmetadaten und Symbolzuordnung
+- `frontend/src/lib/audit-log-object-types.ts` — gemeinsame lokalisierte Objekttypen für Ereignisüberschriften und Filter
+- `frontend/src/lib/audit-log-object-types.test.ts` — Abgleich mit allen tatsächlichen Backend-Literalemittern und Fallback-Prüfungen
 
 ## Verhalten
 
-- Erfasst die Felder `id`, `action`, `user_id`, `object_id`, `object_type`, `meta`, `created_on` und `modified_on`. (Die IP-Adresse wird nicht erfasst).
+- Erfasst die Felder `id`, `action`, `user_id`, `object_id`, `object_type`, `meta`, `created_on` und `modified_on`. Ein eigenes Feld für die IP-Adresse der API-Anfrage ist nicht vorgesehen.
 - Der Objekttyp `firewall-list` erscheint mit Schildsymbol, übersetztem Namen „Firewall-Liste“ beziehungsweise „Firewall List“ und dem Listennamen aus `meta.name`; er ist auch im Objekttypfilter auswählbar. Erstellen, Bearbeiten und Löschen verwenden `created`, `updated` und `deleted`; ein erfolgreicher manueller Refresh verwendet ebenfalls `updated`. Fehlt der Listenname, zeigt die Oberfläche `N/A`.
+- Die Oberfläche erkennt alle aktuell vom Backend emittierten Objekttypen sowie den bereits unterstützten Typ `terminal-host`. Ereignisüberschrift und Objekttypfilter verwenden dieselbe Übersetzungszuordnung, insbesondere für Cloudflare-Tunnels, Terminal-Hosts und WireGuard. Zertifikatserneuerungen verwenden die bestehende Aktion `renewed`.
+- WireGuard-Peers und Servereinstellungen verwenden `wireguard-peer` beziehungsweise `wireguard-settings` mit Schildsymbol. Das Peer-Badge zeigt ausschließlich `meta.name` oder den lokalisierten Ersatz „Peer #ID“; Einstellungen erhalten einen festen lokalisierten Titel. Die Zeilenkennzeichnung liest keine Schlüssel oder Konfigurationen aus Metadaten. Aktivieren und Deaktivieren eines Peers bleiben `updated`; `meta.status` unterscheidet `enabled` und `disabled`.
+- Nicht erkannte oder fehlende Objekttypen erhalten eine generische lokalisierte Ereignisüberschrift und ein lokalisiertes Badge mit dem ursprünglichen Typ beziehungsweise `N/A`. Andere Metadaten werden dafür nicht als vermeintliche Objektbezeichnung interpretiert.
+- Für den exakten Objekttyp `ddns-provider` wird ausschließlich `meta.config` aus neuen Audit-Snapshots und aus den Antworten bestehender Detail-, Listen- und paginierter Abfragen entfernt. Die Redaktion verwendet Kopien; gespeicherte Audit-Historie, tatsächliche Providerkonfiguration und andere Metafelder bleiben unverändert. Andere Objekttypen werden nicht redigiert.
 - Die Listen- und Detailabfrage verlangen serverseitig `auditlog:list`.
 - Die Liste ist absteigend nach Erstellungszeit und ID sortiert. Bestehende API-Aufrufe ohne Paginierungsparameter bleiben aus Kompatibilitätsgründen auf 100 Treffer begrenzt. Mit `page` und/oder `limit` (je 1–100) liefert die API `items` samt `pagination`-Metadaten; alle Filter laufen vor der Seitenbildung. Die Audit-Ansicht lädt damit stets 100 Ereignisse pro Seite und ermöglicht die Navigation über den gesamten autorisierten Trefferbestand.
 - Das Suchfeld der Audit-Seite sendet `query` an `/api/audit-log`. Der Server sucht vor dieser Begrenzung als Teilzeichenkette in `meta`, `action` und `object_type`; die React-Query-Keys halten Treffer unterschiedlicher Suchbegriffe getrennt.
@@ -44,3 +51,5 @@ SQLite speichert die historischen Audit-Zeitstempel als lokale Zeit mit einem Le
 
 - [Verwaltungsübersicht](./README.md)
 - [IP-Firewall](../module/ip-firewall.md)
+- [WireGuard](../module/wireguard.md)
+- [DDNS](../module/ddns.md)

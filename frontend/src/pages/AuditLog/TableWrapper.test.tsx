@@ -242,6 +242,24 @@ describe("Audit log table loading", () => {
 		expect(screen.getByTestId("audit-log-location")).toHaveTextContent("object_type=firewall-list");
 	});
 
+	it.each([
+		{ label: "WireGuard-Peer", objectType: "wireguard-peer" },
+		{ label: "WireGuard-Einstellungen", objectType: "wireguard-settings" },
+		{ label: "Cloudflare Tunnel", objectType: "cloudflared-tunnel" },
+		{ label: "Terminal-Host", objectType: "terminal-host" },
+	])("has a single translated $objectType option and preserves its backend filter", ({ label, objectType }) => {
+		mockAuditLogPage([{ id: 73 }]);
+		renderAuditTable();
+
+		const option = screen.getByRole("button", { name: label });
+		fireEvent.click(option);
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], {
+			limit: 100,
+			object_type: objectType,
+			page: 1,
+		});
+	});
+
 	it("filters audit events by the entered user and object identifiers from the first page", () => {
 		mockAuditLogPage([{ id: 73 }]);
 

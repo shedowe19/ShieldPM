@@ -17,6 +17,7 @@ import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { useAuditLogsPage } from "src/hooks";
+import { getAuditLogObjectTypeMessageId } from "src/lib/audit-log-object-types";
 import { intl, T } from "src/locale";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import { createAuditLogCsv } from "./audit-log-csv";
@@ -49,20 +50,14 @@ const toPositiveId = (value: string) => {
 const allAuditLogActions = "__all_audit_log_actions__";
 const allAuditLogObjectTypes = "__all_audit_log_object_types__";
 const auditLogActions = ["created", "updated", "deleted", "enabled", "disabled", "renewed"] as const;
-const auditLogObjectTypes = [...Object.values(AUDIT_LOG_OBJECT_TYPE), "wireguard-peer", "wireguard-settings"] as const;
-const auditLogObjectTypeMessageIds: Record<string, string> = {
-	[AUDIT_LOG_OBJECT_TYPE.CLOUDFLARED_TUNNEL]: "cloudflared.title",
-	[AUDIT_LOG_OBJECT_TYPE.TERMINAL_HOST]: "terminal.host",
-	"wireguard-peer": "audit-log.filter.wireguard-peer",
-	"wireguard-settings": "audit-log.filter.wireguard-settings",
-};
+const auditLogObjectTypes = Object.values(AUDIT_LOG_OBJECT_TYPE);
 
 const formatAuditLogAction = (action: (typeof auditLogActions)[number]) => {
 	return intl.formatMessage({ id: `object.event.${action}` }, { object: "" }).trim();
 };
 
 const formatAuditLogObjectType = (objectType: (typeof auditLogObjectTypes)[number]) => {
-	return intl.formatMessage({ id: auditLogObjectTypeMessageIds[objectType] ?? objectType });
+	return intl.formatMessage({ id: getAuditLogObjectTypeMessageId(objectType) });
 };
 
 export default function TableWrapper() {

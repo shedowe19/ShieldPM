@@ -199,6 +199,10 @@ Demo Mode blocks changes to WireGuard Tunnels: write API requests return HTTP 40
 - Its IP address becomes available for new peers
 - The client config becomes invalid
 
+### Audit Logs
+
+**Audit Logs** distinguishes **WireGuard peer** events from **WireGuard settings** changes, with separate object filters. Peer badges show the name or **Peer #ID**; settings use a fixed title without displaying keys or configuration in the badge. Enabling or disabling a peer appears as an update, with `enabled` or `disabled` recorded in the event's status metadata.
+
 ## 🛠️ Troubleshooting
 
 ### WireGuard Not Available
