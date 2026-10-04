@@ -6,6 +6,8 @@ The IP Firewall blocks IPv4 addresses, IPv6 addresses, CIDR networks, autonomous
 
 Blocked visitors receive a dedicated page with the matching rule or list, its public reason, their IP address, a request reference, and an optional support link. Membership in a VPN or datacenter list describes an address classification; it does **not** prove that a visitor attacked your service.
 
+The page embeds ShieldPM's original SVG icon and keeps the explanation and request details readable on phones. Short CSS animations settle within a few seconds; the system's reduced-motion preference disables animation. Everything is included in the page, so no external images, fonts, or scripts are loaded.
+
 ## Set up a list
 
 1. Open **L7 Firewall** and choose **Add blocklist**.

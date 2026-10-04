@@ -603,6 +603,111 @@ http {
 	return modsecurity ? 5 : 4;
 }
 
+// A long UTF-8 literal can cross ngx_http_lua's parser buffer even below 4 KiB.
+// Exercise actual config parsing and byte-preserving Lua output at different offsets.
+async function checkLuaPageSerialization({
+	nginx,
+	modules,
+	directory,
+	luaPackagePath,
+	luaPackageCpath,
+}) {
+	const reservation = net.createServer();
+	const port = await listen(reservation);
+	await close(reservation);
+	const engine = utils.getRenderEngine();
+	const pages = [
+		["🌐".repeat(990), "}{%{reason}"].join("").repeat(3),
+		["🌐".repeat(249), '"\\\0\n\r\t}{%{reason}', "🌐".repeat(751)]
+			.join("")
+			.repeat(4),
+	];
+	const locations = await Promise.all(
+		pages.map((page, index) =>
+			engine.parseAndRender(
+				`location = /page-${index} { content_by_lua_block {
+            local page = {{ page | luaPageString }}
+            ngx.print(page)
+        } }`,
+				{ page },
+			),
+		),
+	);
+	const paddingLengths = Array.from({ length: 32 }, (_, index) => index * 128);
+	for (const padding of paddingLengths) {
+		const configFile = path.join(directory, `lua-page-${padding}.conf`);
+		await fs.writeFile(
+			configFile,
+			`${modules.map((module) => `load_module ${quote(module)};`).join("\n")}
+master_process off;
+user ${os.userInfo().username};
+pid ${quote(path.join(directory, "lua-page.pid"))};
+error_log stderr notice;
+events { worker_connections 32; }
+http {
+    access_log off;
+    ${luaPackagePath ? `lua_package_path ${quote(luaPackagePath)};` : ""}
+    ${luaPackageCpath ? `lua_package_cpath ${quote(luaPackageCpath)};` : ""}
+    ${temporaryPaths(directory)}
+    server {
+        listen 127.0.0.1:${port};
+        #${"x".repeat(padding)}
+        ${locations.join("\n")}
+    }
+}`,
+		);
+		await utils.execFile(nginx, [
+			"-p",
+			`${directory}/`,
+			"-c",
+			configFile,
+			"-t",
+		]);
+		const child = spawn(
+			nginx,
+			["-p", `${directory}/`, "-c", configFile, "-g", "daemon off;"],
+			{ stdio: ["ignore", "pipe", "pipe"] },
+		);
+		let output = "";
+		child.stderr.on("data", (chunk) => {
+			output += chunk;
+		});
+		child.on("error", (error) => {
+			output += error.message;
+		});
+		try {
+			for (const [index, page] of pages.entries()) {
+				let response;
+				for (let attempt = 0; attempt < 100; attempt++) {
+					try {
+						response = await request(port, { uri: `/page-${index}` });
+						break;
+					} catch {
+						assert.equal(child.exitCode, null, output);
+						await delay(50);
+					}
+				}
+				assert.equal(
+					response?.status,
+					200,
+					`Lua page ${index}, padding ${padding}: ${output}`,
+				);
+				assert.equal(
+					response.body,
+					page,
+					`Lua page ${index}, padding ${padding} must round-trip exactly`,
+				);
+			}
+		} finally {
+			if (child.exitCode === null) {
+				child.kill("SIGTERM");
+				await new Promise((resolve) => child.once("exit", resolve));
+			}
+		}
+	}
+	return paddingLengths.length * (1 + pages.length);
+}
+
 /**
  * Run the actual firewall partials in an isolated Nginx instance, using real loopback client IPs.
  * A portable Nginx lacking ModSecurity can validate the filter/Lua behavior; the image smoke
@@ -1450,6 +1555,13 @@ http {
 					modsecurity,
 				})
 			: 0;
+		const pageSerializationChecks = await checkLuaPageSerialization({
+			nginx,
+			modules,
+			directory: temporary,
+			luaPackagePath,
+			luaPackageCpath,
+		});
 		return {
 			checks:
 				25 +
@@ -1458,7 +1570,8 @@ http {
 				phaseChecks +
 				writerChecks +
 				asnWriterChecks +
-				missingAsnChecks,
+				missingAsnChecks +
+				pageSerializationChecks,
 			mode: modsecurity ? "full modules" : "portable Lua/geo",
 			hits: hits.length,
 		};

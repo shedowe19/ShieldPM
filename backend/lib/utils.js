@@ -107,14 +107,17 @@ const getRenderEngine = () => {
 	});
 
 	// Lua decimal escapes preserve quotes, backslashes and control characters as data.
-	renderEngine.registerFilter(
-		"luaString",
-		(value) =>
-			`"${String(value ?? "").replace(
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: Escape control bytes instead of emitting them into Lua source.
-				/[\\"\x00-\x1f\x7f]/g,
-				(character) => `\\${String(character.charCodeAt(0)).padStart(3, "0")}`,
-			)}"`,
+	const luaString = (value) =>
+		`"${String(value ?? "").replace(
+			// biome-ignore lint/suspicious/noControlCharactersInRegex: Escape control bytes instead of emitting them into Lua source.
+			/[\\"\x00-\x1f\x7f]/g,
+			(character) => `\\${String(character.charCodeAt(0)).padStart(3, "0")}`,
+		)}"`;
+	renderEngine.registerFilter("luaString", luaString);
+	// Leave headroom in ngx_http_lua's configuration-parser buffer: every token
+	// is at most 1002 UTF-8 bytes after escaping. Never split a surrogate pair.
+	renderEngine.registerFilter("luaPageString", (value) =>
+		(String(value ?? "").match(/[\s\S]{1,250}/gu) || [""]).map(luaString).join(" ..\n            "),
 	);
 
 	if (!development) cachedRenderEngine = renderEngine;

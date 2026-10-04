@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn() } }));
@@ -57,6 +58,58 @@ describe("mandatory host IP firewall config", () => {
 			{ address: "2001:db8:1::/64", value: 2 },
 		]);
 		expect(data.details.map((rule) => rule.reason)).toEqual(["first", "IPv6"]);
+	});
+
+	it("embeds the original ShieldPM icon geometry and gradients without a runtime asset request", async () => {
+		const original = await fs.readFile(
+			new URL("../../../frontend/public/images/logo-no-text.svg", import.meta.url),
+			"utf8",
+		);
+		const { page } = await buildFirewallRender(host());
+		const icons = [...page.matchAll(/<svg\b[^>]*>[\s\S]*?<\/svg>/g)]
+			.map(([svg]) => svg)
+			.filter((svg) => /\bviewBox="0 0 512 512"/.test(svg));
+		expect(icons).toHaveLength(1);
+		// Ignore presentation-only classes while preserving every original vector
+		// coordinate, paint, gradient stop and gradient reference.
+		const vectorAttributes = new Set([
+			"xmlns",
+			"viewBox",
+			"fill",
+			"fill-opacity",
+			"stroke",
+			"stroke-width",
+			"stroke-linecap",
+			"stroke-linejoin",
+			"width",
+			"height",
+			"id",
+			"x1",
+			"y1",
+			"x2",
+			"y2",
+			"gradientUnits",
+			"offset",
+			"stop-color",
+			"d",
+			"cx",
+			"cy",
+			"r",
+			"x",
+			"y",
+			"rx",
+		]);
+		const vectors = (svg) =>
+			[...svg.matchAll(/<(svg|linearGradient|stop|path|circle|rect)\b([^>]*)>/g)].map(([, tag, attributes]) => ({
+				tag,
+				attributes: Object.fromEntries(
+					[...attributes.matchAll(/([\w:.-]+)\s*=\s*"([^"]*)"/g)]
+						.filter(([, name]) => vectorAttributes.has(name))
+						.map(([, name, value]) => [name, value.trim().replace(/\s+/g, " ")]),
+				),
+			}));
+		expect(vectors(icons[0])).toEqual(vectors(original));
+		expect(icons[0]).not.toMatch(/<script\b|<foreignObject\b|\b(?:href|src)\s*=/i);
 	});
 
 	it("retains overlapping networks and deterministically assigns equal networks to the first selected list", async () => {

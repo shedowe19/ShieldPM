@@ -31,6 +31,7 @@ Listen verwenden die vorhandene Berechtigung `access_lists` und deren Eigentüme
 - `backend/lib/firewall-render.js` — kompiliert die Host-Regeln und einmal je Quelle gespeicherte Begründungen.
 - `backend/lib/firewall-preview.js` — begrenzte CIDR-Zusammenfassungen für Entwurf und aktive Host-Konfiguration.
 - `backend/templates/_ip_firewall_geo.conf`, `_ip_firewall.conf`, `ip-blocked.html` — Geo-Auswertung, verpflichtender Filter und Sperrseite.
+- `backend/lib/utils.js` — Templatefilter für maskierte Lua-Strings und begrenzte HTML-Literale.
 - `frontend/src/api/backend/firewallLists.ts`, `frontend/src/hooks/useFirewallLists.ts` — API und React-Query-Hooks.
 - `frontend/src/pages/Firewall.tsx`, `frontend/src/modals/FirewallListModal.tsx` — Listenübersicht unter `/firewall`, TXT-Vorschau und X4BNet-URL-Vorgaben.
 - `frontend/src/modals/ProxyHostFirewallSettings.tsx`, `ProxyHostSecurityTab.tsx` — Einstellungen im Sicherheitstab.
@@ -227,7 +228,11 @@ Der Entwurf wird mit leeren CIDR-Tabellen und separat berechneten Zusammenfassun
 
 Der Serverfilter verwendet intern den reservierten Status 470 für die eigene benannte Sperrlocation; die Antwort an den Besucher ist HTTP **403** mit `Cache-Control: no-store, no-cache, must-revalidate`. Andere Upstream-418-Antworten behalten auch bei aktivem `proxy_intercept_errors` ihren bestehenden Ablauf und Antwortinhalt. Die interne Sperrseite zeigt eine responsive Erklärung mit Besucher-IP, Host, Vorgangskennung, zutreffender Regel beziehungsweise Listenquelle, `public_message` und optionalem Kontaktlink. Bei einem mit `de` beginnenden `Accept-Language` wird Deutsch verwendet, sonst Englisch. `Accept: application/json` ohne gleichzeitiges `text/html` erhält eine JSON-Antwort mit `error: "ip_blocked"` und denselben öffentlichen Details. `X-Request-ID` enthält die Vorgangskennung.
 
+Das originale ShieldPM-Icon aus `frontend/public/images/logo-no-text.svg` ist unverändert als Inline-SVG eingebettet. Erklärung und Detailbereich stehen auf breiten Displays nebeneinander und auf Mobilgeräten untereinander; lange Gründe, IPv6-Adressen und Referenzen umbrechen. Kurze CSS-Animationen enden nach wenigen Sekunden. `prefers-reduced-motion: reduce` deaktiviert Animationen und Übergänge; auch die Druckansicht bleibt ohne Bewegung.
+
 Eingetragene Texte und Links werden vor der HTML-Ausgabe escaped beziehungsweise validiert. Die Seite lädt keine externen Assets; eine Content-Security-Policy verhindert Scripts und Einbettung. `internal_note` und administrative Beschreibungen werden nicht ausgegeben. Geo-Regeln und Seitenvorlage sind in der generierten Konfiguration eingebettet; bei einem einzelnen Request findet kein Listen-Download und kein SQL-Datenbankzugriff statt. Länder- und ASN-Werte verwenden die Nginx-GeoIP2-Lookups derselben vertrauenswürdig korrigierten Besucher-IP.
+
+`luaPageString` bettet die HTML-Vorlage als mit `..` verbundene Lua-Literale von jeweils höchstens 250 Unicode-Codepoints und mit dem bestehenden dezimalen Escaping ein. Jedes Literal bleibt auch nach Escaping beziehungsweise UTF-8-Kodierung bei höchstens 1002 Bytes, damit größere Seiten im Konfigurationspuffer des Lua-Moduls ausreichend Platz behalten.
 
 Bei verfügbaren Quellen zeigen Sperrseite und JSON das Land sowie ASN und Netzwerkorganisation, unabhängig davon, ob eine IP-, Listen-, ASN- oder Länderregel sperrt. Länderwerte werden als ISO-Code beziehungsweise `XX` ausgegeben; HTML zeigt ASNs mit `AS`-Präfix, JSON verwendet `asn` als Zahl und `asn_organization` als Text. Fehlende Nummern oder leere Organisationen erscheinen nicht als JSON-Felder. Diese Informationen aktivieren keine Sperrregel. Die ASN-Regel verwendet ohne eigenen Grund eine lokalisierte Standardbegründung und die Quellenbezeichnung `ASN-Regel` beziehungsweise `ASN rule`; Länderregeln behalten `GeoIP-Länderregel` beziehungsweise `GeoIP country rule`.
 
@@ -244,7 +249,7 @@ Treffer werden je Proxy-Host als JSON-Zeilen unter `/data/logs/ip_firewall_<id>.
 - Die Nginx-Konfigurationsengine prüft und aktiviert generierte Dateien.
 - Das bestehende Rechtemodell `access_lists` begrenzt Listenverwaltung und Sichtbarkeit.
 - GeoIP2 und die passende Country-/City- beziehungsweise ASN-MMDB sind für aktive Länder-/Unknown- beziehungsweise ASN-Regeln erforderlich. Optionale Informationen benötigen keine zusätzlichen Blockregeln.
-- Ausgehender HTTPS-Zugriff ist nur für URL-Abonnements erforderlich.
+- Ausgehender HTTPS-Zugriff wird für URL-Abonnements und das standardmäßige GeoIP-Startupupdate benötigt; Offline- oder Custom-GeoIP-Installationen können `GEOIP_AUTO_UPDATE=false` setzen.
 - Der Nginx-HTTP-`geo`-Support und die für die Sperrseite verwendeten Runtime-Funktionen müssen im eingesetzten Binary vorhanden sein. Kompilierungsänderungen gehören in `shieldpm-nginx`.
 
 Die Funktion betrifft HTTP/HTTPS-Proxy-Hosts. Sie ist keine TCP-/UDP-Stream-Firewall, filtert keinen TLS-Passthrough und ersetzt keine vollständige WAF. URL-Pfade werden gemeinsam über die Host-Regel geschützt; eine eigene Regelauswahl pro Location ist nicht vorgesehen.
@@ -266,6 +271,7 @@ Zugehörige Regressionstests:
 - `backend/test/lib/firewall-preview.spec.js` und `backend/test/internal/proxy-host-preview.spec.js` — Zusammenfassungen großer Regelwerke, Änderungsprüfsummen und Leserechte für bestehende, entfernte oder deaktivierte Zuordnungen.
 - `backend/test/internal/firewall-preview-render.spec.js` — echte große Liquid-Ausgabe und begrenzte Vorschau; Modelle sind isoliert und versehentliche Datenbank-/Konfigurationsimporte schlagen fehl, damit der Test keine JWT-Schlüssel erzeugt.
 - `backend/test/internal/firewall-render.spec.js` — echte Liquid-Ausgabe, Priorität und Sperrseite.
+- `backend/test/lib/lua-page-string.spec.js` — begrenzte Lua-Literale, Unicode-Grenzen und sicheres Escaping der HTML-Seite.
 - `backend/test/internal/gitops-import-validation.spec.js` und `third-proxy-references.spec.js` — Restore ohne Download, ungültige Cache-/Hostdaten sowie Autorisierung und Referenzen vor Datenbankänderungen.
 - `backend/test/internal/nginx-bulk-validation.spec.js` — strenger GitOps-Sammellauf und vorheriger Rückgabestatus nach demselben Dateisystem-Rollback.
 - `backend/test/internal/proxy-host-enable-firewall.spec.js` — GeoIP-Readiness vor der Reaktivierung eines Hosts und unveränderter Deaktivierungsstatus bei fehlender Quelle.
@@ -273,6 +279,7 @@ Zugehörige Regressionstests:
 - `frontend/src/api/backend/firewallLists.test.ts`, `frontend/src/hooks/useFirewallLists.test.tsx`, `frontend/src/modals/FirewallListModal.test.tsx` und `ProxyHostFirewallSettings.test.tsx` — API-Payloads, aktualisierte Fehlerzustände, Schutz bearbeiteter TXT-Entwürfe und entfernbare Host-Zuordnungen bei Ladefehlern.
 - `frontend/src/lib/firewallCountries.test.ts`, `frontend/src/api/backend/firewallGeoip.test.ts` und `ProxyHostFirewallPreview.test.ts` — erlaubte Ländercodes, Readiness-Antworten und Vorschau der tatsächlichen Länderbegründung.
 - `frontend/src/lib/firewallAsn.test.ts`, `ProxyHostFirewallSettings.test.tsx`, `ProxyHostModal.test.tsx` und `ProxyHostModalFormValues.test.ts` — ASN-Eingaben, Duplikate, unabhängiger Status und Erhalt ungültiger Entwürfe über Tabwechsel.
+- `frontend/e2e/firewall-block-page.spec.ts` — öffentliche HTML-Vorlage unter der tatsächlichen Firewall-CSP in Chromium, mobile und breite Ansichten, Kontrast und weitere axe-Prüfungen, endende Animationen, reduzierte Bewegung, lange Werte, ausgeblendete optionale Details und Tastaturfokus des Kontaktlinks.
 
 `scripts/ci/ip-firewall-smoke.mjs` prüft die erzeugten Firewall-Partials zusätzlich mit einem isolierten echten Nginx, unter anderem Sperren, Ausnahmen, Real-IP, IPv6-Regeln, Custom-/Upload-Routen, Anubis-Eingang, ACME, fremde Statusantworten, WAF-/Lua-Access-Priorität und Trefferlogs. Vor der ASN-Erweiterung bestanden lokal 56 vollständige Modulprüfungen einschließlich ModSecurity und GeoIP2, 53 Prüfungen ohne ModSecurity und 30 reine IP-Prüfungen ohne GeoIP2. Die Erweiterung prüft zusätzlich ASN-Nummern und Organisationen, die Priorität IP → Liste → ASN → Land, gemeinsame Besucher-IP-Lookups und optionale Informationen ohne aktive ASN-Regeln. Die kleinen offiziellen MaxMind-Testdatenbanken unter `scripts/ci/fixtures/` dienen nur isolierten Tests und ersetzen keine Produktions-GeoIP-Datenbanken.
 

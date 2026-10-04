@@ -166,3 +166,12 @@ jobs:
 
       - name: Run browser smoke test
         run: cd /tmp && CI=1 npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/frontend" test:e2e:ci
+
+      - name: Upload browser screenshots and failure traces
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: frontend-browser-results
+          path: frontend/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
