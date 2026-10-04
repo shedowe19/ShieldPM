@@ -15,7 +15,8 @@ const decodeLiterals = (expression) => {
 	const literalPattern = /"(?:\\\d{3}|[^"\\])*"/gu;
 	const tokens = expression.match(literalPattern) || [];
 	expect(tokens.length).toBeGreaterThan(0);
-	expect(expression.replace(literalPattern, "")).toMatch(/^(?:\s*\.\.\s*)*$/);
+	const separators = expression.replace(literalPattern, "").split("..");
+	expect(separators.every((separator) => separator.trim() === "")).toBe(true);
 	return tokens.map((token) => {
 		// ngx_http_lua must parse every token before Lua evaluates the concatenation.
 		expect(Buffer.byteLength(token, "utf8")).toBeLessThanOrEqual(1002);
