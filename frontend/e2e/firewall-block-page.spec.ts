@@ -12,7 +12,7 @@ const labels: Record<string, string> = {
 	title: "Zugriff eingeschränkt",
 	subtitle: "Diese Verbindung wurde durch die IP-Firewall geschützt.",
 	reason_label: "Begründung",
-	reason: "Diese Website schränkt Zugriffe von IP-Adressen aus ihrer VPN- und Rechenzentrumssperrliste ein. Deine Adresse gehört zu einem aufgeführten Netz.",
+	reason: "Diese Website schränkt Zugriffe von IP-Adressen aus ihrer VPN- und Rechenzentrumssperrliste ein. Deine IP gehört zu einem aufgeführten Netz.",
 	message:
 		"Der Betreiber schränkt den Zugriff für dieses Netzwerk ein. Ein Listentreffer allein bedeutet nicht, dass ein Angriff stattgefunden hat.",
 	source_label: "Regel / Liste",
@@ -65,6 +65,17 @@ for (const width of [320, 390, 768, 1440]) {
 		const response = await page.goto("/firewall-blocked-fixture");
 		expect(response?.status()).toBe(403);
 		await expect(page.getByRole("heading", { name: labels.title })).toBeVisible();
+		const wordRects = await page.locator("h1").evaluate((heading) => {
+			const node = heading.firstChild;
+			if (!node || node.nodeType !== Node.TEXT_NODE) throw new Error("Expected a text heading");
+			return [...(node.textContent || "").matchAll(/\S+/g)].map((match) => {
+				const range = document.createRange();
+				range.setStart(node, match.index);
+				range.setEnd(node, match.index + match[0].length);
+				return range.getClientRects().length;
+			});
+		});
+		expect(wordRects).toEqual([1, 1]);
 		await expect(page.locator(".reason")).toContainText(labels.reason);
 		await expect(page.locator("dd").filter({ hasText: labels.ip })).toBeVisible();
 		await expect(page.locator("svg[viewBox='0 0 512 512']")).toBeVisible();
@@ -88,9 +99,9 @@ for (const width of [320, 390, 768, 1440]) {
 			return result.violations.map(({ id, nodes }) => ({ id, targets: nodes.map((node) => node.target) }));
 		});
 		expect(violations).toEqual([]);
+		await page.screenshot({ path: testInfo.outputPath(`firewall-${width}.png`), fullPage: true });
 		await page.keyboard.press("Tab");
 		await expect(page.getByRole("link", { name: labels.contact_label })).toBeFocused();
-		await page.screenshot({ path: testInfo.outputPath(`firewall-${width}.png`), fullPage: true });
 		expect(requests).toEqual(["http://127.0.0.1:4173/firewall-blocked-fixture"]);
 	});
 }
