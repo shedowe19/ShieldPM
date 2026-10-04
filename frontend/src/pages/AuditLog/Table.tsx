@@ -61,6 +61,7 @@ export default function Table({ data, isFetching, onFilterByObject, onFilterByUs
 											event.preventDefault();
 											onFilterByUser(auditLog.userId);
 										}}
+										size="icon"
 										title={filterByUserLabel}
 										type="button"
 										variant="ghost"
@@ -79,6 +80,7 @@ export default function Table({ data, isFetching, onFilterByObject, onFilterByUs
 												objectType: auditLog.objectType,
 											});
 										}}
+										size="icon"
 										title={filterByObjectLabel}
 										type="button"
 										variant="ghost"

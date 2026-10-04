@@ -16,6 +16,18 @@ interface DashboardNote {
 
 const localE2eOrigin = "http://127.0.0.1:4173";
 
+const auditEvent = {
+	action: "updated",
+	created_on: "2026-10-04T12:10:00Z",
+	id: 73,
+	meta: { name: "E2E Firewall List" },
+	modified_on: "2026-10-04T12:10:00Z",
+	object_id: 12,
+	object_type: "firewall-list",
+	user: { avatar: "", email: "admin@e2e.test", id: 1, name: "E2E Administrator" },
+	user_id: 1,
+};
+
 async function installMockApi(page: Page) {
 	let authenticated = false;
 	const notes: DashboardNote[] = [];
@@ -96,6 +108,17 @@ async function installMockApi(page: Page) {
 
 		if (method === "GET" && path === "/api/nginx/certificates") {
 			return fulfill(route, []);
+		}
+
+		if (method === "GET" && path === "/api/audit-log") {
+			return fulfill(route, {
+				items: [auditEvent],
+				pagination: { limit: 100, page: 1, total_items: 1, total_pages: 1 },
+			});
+		}
+
+		if (method === "GET" && path === "/api/audit-log/73") {
+			return fulfill(route, auditEvent);
 		}
 
 		if (method === "GET" && path === "/api/dashboard/notes") {
@@ -186,4 +209,83 @@ test("keeps login, top-host analytics, route fallback, a11y, keyboard focus, and
 
 	await page.goto("/not-a-real-route");
 	await expect(page.getByTestId("app-content")).toContainText("Oops… You just found an error page");
+});
+
+test("shows audit row icons at their intended size and preserves filter and details actions", async ({
+	page,
+}, testInfo) => {
+	await installMockApi(page);
+	await signIn(page);
+	await page.goto("/audit-log");
+
+	const row = page.getByRole("row").filter({ hasText: "E2E Firewall List" });
+	const actionLabels = ["Filter by user ID 1", "Filter by object ID 12", "View Details"];
+	await expect(row).toBeVisible();
+
+	for (const width of [1440, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		await row.getByRole("button", { name: "View Details", exact: true }).scrollIntoViewIfNeeded();
+
+		for (const label of actionLabels) {
+			const button = row.getByRole("button", { name: label, exact: true });
+			await expect(button).toBeVisible();
+			await button.scrollIntoViewIfNeeded();
+			await expect(button).toBeInViewport({ ratio: 1 });
+			const geometry = await button.evaluate((element) => {
+				const svg = element.querySelector("svg");
+				if (!svg) throw new Error("Audit action has no SVG icon");
+				const buttonRect = element.getBoundingClientRect();
+				const iconRect = svg.getBoundingClientRect();
+				const style = getComputedStyle(svg);
+				return {
+					button: { height: buttonRect.height, width: buttonRect.width },
+					icon: { height: iconRect.height, width: iconRect.width },
+					insideButton:
+						iconRect.left >= buttonRect.left &&
+						iconRect.right <= buttonRect.right &&
+						iconRect.top >= buttonRect.top &&
+						iconRect.bottom <= buttonRect.bottom,
+					opacity: Number(style.opacity),
+					visibility: style.visibility,
+				};
+			});
+			expect(geometry.button.width, `${label} button width at ${width}px`).toBeGreaterThanOrEqual(24);
+			expect(geometry.button.height, `${label} button height at ${width}px`).toBeGreaterThanOrEqual(24);
+			expect(geometry.icon.width, `${label} SVG width at ${width}px`).toBeGreaterThanOrEqual(15);
+			expect(geometry.icon.height, `${label} SVG height at ${width}px`).toBeGreaterThanOrEqual(15);
+			expect(geometry.insideButton).toBe(true);
+			expect(geometry.opacity).toBeGreaterThan(0);
+			expect(geometry.visibility).toBe("visible");
+			if (label !== "View Details") await expect(button).toHaveAttribute("title", label);
+		}
+		await row
+			.getByRole("button", { name: "View Details", exact: true })
+			.locator("..")
+			.screenshot({ animations: "disabled", path: testInfo.outputPath(`audit-actions-${width}.png`) });
+	}
+
+	const userFilterRequest = page.waitForRequest((request) => {
+		const url = new URL(request.url());
+		return url.pathname === "/api/audit-log" && url.searchParams.get("user_id") === "1";
+	});
+	await row.getByRole("button", { name: "Filter by user ID 1", exact: true }).click();
+	await userFilterRequest;
+	await expect(page.getByLabel("User ID", { exact: true })).toHaveValue("1");
+
+	const objectFilterRequest = page.waitForRequest((request) => {
+		const url = new URL(request.url());
+		return (
+			url.pathname === "/api/audit-log" &&
+			url.searchParams.get("object_id") === "12" &&
+			url.searchParams.get("object_type") === "firewall-list" &&
+			url.searchParams.get("user_id") === "1"
+		);
+	});
+	await row.getByRole("button", { name: "Filter by object ID 12", exact: true }).click();
+	await objectFilterRequest;
+	await expect(page.getByLabel("Object ID", { exact: true })).toHaveValue("12");
+
+	await row.getByRole("button", { name: "View Details", exact: true }).click();
+	await expect(page.getByRole("dialog")).toBeVisible();
+	await expect(page.getByRole("dialog")).toContainText("E2E Firewall List");
 });
