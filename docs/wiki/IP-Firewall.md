@@ -64,6 +64,8 @@ The internal note is administrative and is never included in the public blocking
 
 The blocking page uses German when the request's language preference starts with `de`; otherwise it uses English. API clients requesting `application/json` without `text/html` receive a structured `ip_blocked` response with the same public reason and request reference.
 
+Public reasons, list names, messages, and support URLs retain their text within the documented limits, including Unicode and escaped characters. They are embedded in bounded Lua string segments before HTML escaping or JSON encoding, so long valid text does not exceed Nginx's Lua configuration-token buffer.
+
 ## Block countries for a host
 
 In **Proxy Host → Security → IP Firewall**, use the searchable **Country filter** selection to choose countries by name or ISO code. An optional country reason can explain your policy; leaving it blank uses a factual default explanation. Country rules apply when the host's IP Firewall is enabled. Address exceptions also override country blocks.
@@ -121,7 +123,7 @@ Disabling a central list stops its rules on assigned hosts while preserving the 
 - The firewall applies to normal Proxy Host routes, custom locations, upload routes, and initial WebSocket handshakes. Anubis protection is checked at the public host entrance.
 - The dedicated page returns HTTP **403** and is not cached. Other authorization failures retain their existing handling.
 - Already established WebSocket or streaming connections are not terminated when a list changes.
-- Certificate challenge requests have a narrow ACME exception.
+- The firewall exempts only `/.well-known/acme-challenge/<token>` requests with an ACME token. The static challenge location also disables inherited Basic Auth, OAuth2/Authentik auth requests, and Lua access handlers so existing challenge files can be served without a login. Server-level mTLS checks and forced HTTPS redirects still apply.
 - TCP/UDP Streams and TLS passthrough are outside this feature's scope. The IP Firewall complements a WAF rather than inspecting request payloads for application attacks.
 
 ## Logs

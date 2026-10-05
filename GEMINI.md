@@ -169,6 +169,8 @@ yarn dev # Nodemon
 
 ## 6. Internal Systems Deep Dive
 
+The October repository rescan, confirmed fixes, and validation limits for PR #149 are recorded in [the internal audit report](./docs/wiki-intern/entwicklung/code-audit-2026-10.md).
+
 ### 6.1 Nginx Configuration Engine (`backend/internal/nginx.js`)
 
 - **Core Logic**: Reads DB state -> Renders Liquid templates (`backend/templates/`) -> Writes `.conf` files to `/data/nginx/`.

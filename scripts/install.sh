@@ -303,6 +303,7 @@ PY
 
 # Select exactly one provider, including shell exports and indented assignments.
 # Keep disabled credentials as comments so switching back preserves custom paths.
+# The deprecated DB_SQLITE_FILE must stay disabled; SQLite uses the fixed runtime path.
 configure_database_environment() {
     python3 - "$ENV_FILE" "$1" <<'PY'
 import os
@@ -313,12 +314,13 @@ import tempfile
 
 path = Path(sys.argv[1])
 selected = sys.argv[2]
-pattern = re.compile(r"^(\s*)(#\s*)?((?:export\s+)?DB_(MYSQL|POSTGRES|SQLITE)_[A-Z0-9_]+=.*)$")
+pattern = re.compile(r"^(\s*)(#\s*)?((?:export\s+)?(DB_(MYSQL|POSTGRES|SQLITE)_[A-Z0-9_]+)=.*)$")
 lines = []
 for line in path.read_text().splitlines():
     match = pattern.match(line)
     if match:
-        line = match[1] + ("" if match[4] == selected else "# ") + match[3]
+        active = match[5] == selected and match[4] != "DB_SQLITE_FILE"
+        line = match[1] + ("" if active else "# ") + match[3]
     lines.append(line)
 descriptor, temporary = tempfile.mkstemp(prefix=".shieldpm-env-", dir=path.parent)
 try:

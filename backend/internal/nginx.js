@@ -36,6 +36,7 @@ const updateHostStatus = (model, host, status) =>
 	});
 
 const internalNginx = {
+	updateHostStatus,
 	/**
 	 * This will:
 	 * - test the nginx config first to make sure it's OK

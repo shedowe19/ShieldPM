@@ -18,7 +18,9 @@ import {
 	assertCountryFirewallAvailable,
 	getFirewallGeoipStatus,
 } from "../../lib/firewall-geoip.js";
+import { normalizeFirewallPolicy } from "../../lib/firewall-policy.js";
 import { buildFirewallRender } from "../../lib/firewall-render.js";
+import utils from "../../lib/utils.js";
 
 const host = (policy = {}, extra = {}) => ({
 	id: 17,
@@ -37,6 +39,35 @@ describe("mandatory host IP firewall config", () => {
 		getFirewallGeoipStatus.mockResolvedValue({ available: false, asn: { available: false } });
 	});
 	afterEach(() => vi.clearAllMocks());
+
+	it.each([
+		"::1",
+		"2001:db8::8",
+		"::ffff:127.0.0.1",
+		"[::1]",
+		"127.0.0.1",
+		"upstream.test",
+		"unix:/run/upstream.sock:",
+	])("preserves upstream syntax and brackets only bare IPv6 literals: %s", async (forwardHost) => {
+		const expected =
+			forwardHost.includes(":") && !forwardHost.startsWith("[") && !forwardHost.startsWith("unix:")
+				? `[${forwardHost}]`
+				: forwardHost;
+		const engine = utils.getRenderEngine();
+		expect(await engine.parseAndRender("{{ value | nginxUpstreamHost }}", { value: forwardHost })).toBe(expected);
+		for (const template of ["_proxy_logic.conf", "_proxy_host_custom_location.conf"]) {
+			for (const scheme of ["http", "https"]) {
+				const config = await engine.renderFile(template, {
+					forward_scheme: scheme,
+					forward_host: forwardHost,
+					forward_port: forwardHost.startsWith("unix:") ? null : 8080,
+					use_default_location: true,
+					path: "/custom",
+				});
+				expect(config).toContain(`proxy_pass ${scheme}://${expected}`);
+			}
+		}
+	});
 
 	it("canonicalizes duplicate IPv4 and IPv6 CIDRs while retaining the first reason", async () => {
 		const data = await buildFirewallRender(
@@ -301,6 +332,12 @@ describe("mandatory host IP firewall config", () => {
 			expect(config).toContain("geo $spm_fw_17_manual");
 			expect(config).toContain("geo $spm_fw_17_list");
 			expect(config).toContain("~^/\\.well-known/acme-challenge/[A-Za-z0-9_-]+$ 1;");
+			const challenge = config.match(
+				/location \/\.well-known\/acme-challenge\/ \{([^}]*\{ \}[^}]*|[^}]*)\}/,
+			)?.[0];
+			expect(challenge).toContain("auth_basic off;");
+			expect(challenge).toContain("auth_request off;");
+			expect(challenge).toContain("access_by_lua_block { }");
 			expect(config).toContain("location /custom");
 			if (anubis) {
 				const internal = config.slice(config.indexOf("# --- Backend Server (Internal) ---"));
@@ -325,6 +362,63 @@ describe("mandatory host IP firewall config", () => {
 		expect(config).toContain("escape=json");
 		expect(config).toContain("no-store, no-cache, must-revalidate");
 	});
+
+	it.each(["中", "\\", '"', "\n", "🌐"])(
+		"bounds every emitted firewall text token while preserving maximum-length %s data",
+		async (character) => {
+			const repeated = (length) => character.repeat(Math.floor(length / character.length));
+			const reason = repeated(1000);
+			const listReason = repeated(2000);
+			const listName = repeated(255);
+			const message = repeated(2000);
+			const support = `https://support.test/${"中".repeat(2000)}`;
+			const policy = normalizeFirewallPolicy({
+				enabled: true,
+				list_ids: [9],
+				denylist: [{ address: "192.0.2.1", reason }],
+				asn_denylist: [{ asn: 15169, reason }],
+				country_denylist: ["GB"],
+				country_reason: reason,
+				public_message: message,
+				support_url: support,
+			});
+			const firewall = await buildFirewallRender(host(policy), [
+				{ id: 9, name: listName, reason: listReason, entries: ["192.0.2.2"] },
+			]);
+			const config = await utils.getRenderEngine().renderFile("_ip_firewall.conf", { firewall });
+			const decode = (expression) => {
+				const literal = /"(?:\\\d{3}|[^"\\])*"/gu;
+				const tokens = expression.match(literal) || [];
+				expect(tokens.length).toBeGreaterThan(0);
+				expect(
+					expression
+						.replace(literal, "")
+						.split("..")
+						.every((value) => value.trim() === ""),
+				).toBe(true);
+				return tokens
+					.map((token) => {
+						expect(Buffer.byteLength(token)).toBeLessThanOrEqual(1002);
+						return token
+							.slice(1, -1)
+							.replace(/\\(\d{3})/g, (_, digits) => String.fromCharCode(Number(digits)));
+					})
+					.join("");
+			};
+			const records = [
+				...config.matchAll(/\[\d+\] = \{reason=([\s\S]*?), source=([\s\S]*?), source_type=([\s\S]*?)\},/g),
+			];
+			expect(records.map(([, value]) => decode(value))).toEqual([
+				reason.trim(),
+				listReason,
+				reason.trim(),
+				reason.trim(),
+			]);
+			expect(decode(records[1][2])).toBe(listName);
+			expect(decode(config.match(/local message = ([\s\S]*?)\n {8}if message/)[1])).toBe(message.trim());
+			expect(decode(config.match(/local support = ([\s\S]*?)\n {8}ngx.var/)[1])).toBe(support);
+		},
+	);
 
 	it("uses a unique valid variable name for an unsaved preview and shares large subscription reasons", async () => {
 		const entries = Array.from({ length: 4096 }, (_, index) => `10.${index >> 8}.${index & 255}.0/24`);

@@ -87,6 +87,8 @@ Click **Pull Now** to fetch the latest changes from the remote repository. This 
 
 Click **Import from Git** to import configuration from the YAML files into the database.
 
+Imported records keep their exported IDs. On PostgreSQL, ShieldPM advances each affected automatic ID sequence when necessary, so new records can be created after a restore. Higher existing sequence values are preserved. User permissions, Access List entries and host domain relations receive new child IDs. SQLite, MySQL and settings with text IDs retain their existing behavior.
+
 > [!WARNING]
 > This can overwrite existing hosts if **Overwrite** is enabled. Use with caution.
 

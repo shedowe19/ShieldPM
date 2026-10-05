@@ -23,7 +23,7 @@ import re
 import sys
 from pathlib import Path
 
-LINK_RE = re.compile(r"\[([^\]]+)\]\((\.{1,2}/[^)]+\.md)\)")
+LINK_RE = re.compile(r"\[([^\]]+)\]\((\.{1,2}/[^)]+\.md)(?:#[^)]*)?\)")
 
 # Farben pro Top-Ordner. Andere/unbekannte Ordner erhalten den letzten Eintrag.
 FOLDER_COLORS = {

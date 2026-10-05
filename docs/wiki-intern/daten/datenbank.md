@@ -24,6 +24,8 @@ Eine persistierte Konfiguration mit `database` unter `${DATA_PATH:-/data}/shield
 - **MySQL**: `DB_MYSQL_HOST`, `DB_MYSQL_PORT`, `DB_MYSQL_USER`, `DB_MYSQL_PASSWORD`, `DB_MYSQL_NAME`
 - **PostgreSQL**: `DB_POSTGRES_HOST`, `DB_POSTGRES_PORT`, `DB_POSTGRES_USER`, `DB_POSTGRES_PASSWORD`, `DB_POSTGRES_NAME`
 
+`DB_SQLITE_FILE` ist veraltet und wird von der Startvalidierung abgelehnt. Bei der Datenbankauswahl im nativen Installer bleiben vorhandene Alteinträge deshalb für alle Provider auskommentiert, auch beim Wechsel zurück auf SQLite. Der gespeicherte Kommentar wird erhalten; der SQLite-Pfad wird dadurch nicht geändert. `scripts/tests/test_fourth_infrastructure.py` prüft Providerwechsel mit aktiven und auskommentierten Alteinträgen durch die echte Startvalidierung.
+
 ## Initialisierung
 
 Datei: `backend/db.js`

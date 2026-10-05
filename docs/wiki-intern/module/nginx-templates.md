@@ -54,6 +54,10 @@ Die Templates werden von `nginx.js` gerendert und nach `/data/nginx/` geschriebe
 
 Mit Anubis werden die vertrauenswürdigen Header am öffentlichen Server gesetzt. Der interne Server reicht diese weiter, statt sie durch leere Auth-Unteranfragewerte zu überschreiben. `fourth-proxy-auth-headers.spec.js` prüft die tatsächliche Liquid-Ausgabe einschließlich Headerplatzierung und beider Pass-Auth-Zustände; ein externer OAuth-Provider wird dabei nicht aufgerufen.
 
+## IPv6-HTTP-Upstreams
+
+HTTP-/HTTPS-Proxyziele werden beim Rendern über `nginxUpstreamHost` formatiert: echte rohe IPv6-Literale erhalten die für die URL erforderlichen eckigen Klammern. Bereits geklammerte Adressen, IPv4, Domains und Unix-Socket-Ziele bleiben unverändert. Das gilt für Standard- und Custom-Locations; der gespeicherte Host-Eingabewert wird nicht geändert. Regressionen prüfen die Liquid-Ausgabe und tatsächliche HTTP-/HTTPS-Weiterleitungen einschließlich URI und Query. Diese Formatierung ändert keine gRPC- oder Stream-Direktiven.
+
 ## gRPC-Zieladresse und Methodenpfad
 
 Die automatisch erzeugte `grpc_pass`-Zieladresse erhält keinen angehängten `$request_uri`. Das Nginx-gRPC-Modul erwartet dort ausschließlich eine Serveradresse und übernimmt den Methodenpfad einschließlich Query selbst aus der Anfrage. Der frühere URI-Anhang führte erst beim tatsächlichen Aufruf zu `invalid host`, obwohl `nginx -t` die variable Direktive akzeptierte. Das gilt für Standard- und Custom-Locations sowie `grpc` und `grpcs`.
@@ -70,10 +74,13 @@ Die HTTP-, HTTPS- und TCP-Stream-Templates verwenden für TCP kein `reuseport`. 
 
 - OIDC-Discovery-URL, Client-ID und Client-Secret werden als korrekt maskierte Lua-Zeichenketten ausgegeben. Anführungszeichen, Backslashes und Steuerzeichen bleiben Daten.
 - Authentik-Outpost-Locations setzen `auth_request off`, damit sie nicht ihren eigenen Authentifizierungs-Unteraufruf erneut auslösen.
+- Die statische `/.well-known/acme-challenge/`-Location deaktiviert Basic-Auth, `auth_request` und geerbte Lua-Accesshandler. Vorhandene HTTP-01-Dateien verlangen dadurch keine OAuth2-/Authentik-/OIDC-Anmeldung. Serverseitige mTLS-Ablehnung und erzwungene HTTPS-Weiterleitung bleiben bestehen; normale Proxy-Pfade behalten ihre Authentifizierung.
 - mTLS verlangt für weitergeleitete Anfragen `$ssl_client_verify = SUCCESS`. Damit kann eine unverschlüsselte HTTP-Anfrage die Clientzertifikatsprüfung auch bei ausgeschaltetem SSL-Redirect nicht umgehen.
 - Bandbreitenbegrenzung deklariert `$calculated_rate` auch im Standardserver; fehlendes Request-Burst-Limit wird zu `0`. Request-Limit-Schlüssel enthalten die Host-ID, damit verschiedene Hosts ihre Limits nicht teilen.
 - Statische Hosts sperren `.git`-Verzeichnisse. Verwaltete Websitewurzeln verwenden zusätzlich `disable_symlinks on`. PHP-Programme bleiben ausführbarer, vertrauenswürdiger Anwendungscode; diese Nginx-Einstellung ist keine PHP-Sandbox.
 - `X_FRAME_OPTIONS` wird im vorhandenen HSTS-Headerblock direkt aus der Umgebung gelesen, mit `SAMEORIGIN` als Standard.
+
+Öffentliche Firewalltexte und die Sperrseitenvorlage verwenden `luaPageString` mit höchstens 250 Unicode-Codepoints je Lua-Literal. Auch nach UTF-8-Kodierung und dezimalem Escaping beträgt die maximale Tokenlänge 1002 Bytes. Das verhindert Parserfehler bei gültigen langen Gründen, Listennamen, Nachrichten und Kontaktlinks, ohne den dekodierten Inhalt oder die anschließende HTML-/JSON-Maskierung zu verändern. Der native Firewall-Smoke prüft diese Texte sowie echte statische ACME-Dateien unter lokalen Auth-Stubs; `return 200` wird für diese Challenge-Regression nicht verwendet.
 
 ## Statische Custom-Locations und Bandbreitenzähler
 

@@ -12,20 +12,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("../../models/user.js", () => ({
 	default: {
 		query: vi.fn(() => ({
-			where: vi.fn(() => ({
+			whereRaw: vi.fn(() => ({
 				andWhere: vi.fn(() => ({
-					andWhere: vi.fn(() => ({
-						first: vi.fn(() =>
-							Promise.resolve({
+					limit: vi.fn(() =>
+						Promise.resolve([
+							{
 								id: 1,
 								name: "Alice",
 								email: "alice@example.com",
 								nickname: "alice",
 								avatar: "",
 								roles: ["user"],
-							}),
-						),
-					})),
+							},
+						]),
+					),
 				})),
 			})),
 		})),

@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
 	restoreConfig: vi.fn(),
 	deleteBackupConfig: vi.fn(),
 	reload: vi.fn(),
+	updateHostStatus: vi.fn(),
 	audit: vi.fn(),
 	proxyQuery: vi.fn(),
 	deadQuery: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock("../../internal/audit-log.js", () => ({ default: { add: mocks.audit } })
 vi.mock("../../internal/nginx.js", () => ({
 	default: {
 		reload: mocks.reload,
+		updateHostStatus: mocks.updateHostStatus,
 		generateConfig: mocks.generateConfig,
 		deleteConfig: mocks.deleteConfig,
 		withConfigurationLock: mocks.configurationLock,
@@ -69,6 +71,11 @@ describe("certificate lifecycle regressions", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.configurationLock.mockImplementation(async (operation) => operation());
+		mocks.updateHostStatus.mockImplementation(async (model, host, status) => {
+			const meta = { ...host.meta, ...status };
+			await model.query().where("id", host.id).patch({ meta });
+			return meta;
+		});
 	});
 	afterEach(async () => {
 		vi.restoreAllMocks();
@@ -472,7 +479,7 @@ describe("certificate lifecycle regressions", () => {
 		mocks.reload.mockRejectedValueOnce(new Error("Reload rejected"));
 		await expect(internalCertificate.delete(access(), { id: 2 })).rejects.toThrow("Reload rejected");
 		expect(certificates.patch).toHaveBeenLastCalledWith({ is_deleted: 0 });
-		expect(proxyQuery.patch).toHaveBeenLastCalledWith({ certificate_id: 2, ssl_forced: 1, meta: host.meta });
+		expect(proxyQuery.patch).toHaveBeenLastCalledWith({ certificate_id: 2, ssl_forced: 1 });
 		expect(mocks.restoreConfig).toHaveBeenCalledWith("proxy_host", host);
 		expect(mocks.reload).toHaveBeenCalledTimes(2);
 		expect(remove).not.toHaveBeenCalled();

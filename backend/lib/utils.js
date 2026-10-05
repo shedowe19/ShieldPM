@@ -1,5 +1,6 @@
 import { execFile as nodeExecFile } from "node:child_process";
 import fs from "node:fs";
+import { isIP } from "node:net";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -114,6 +115,8 @@ const getRenderEngine = () => {
 			(character) => `\\${String(character.charCodeAt(0)).padStart(3, "0")}`,
 		)}"`;
 	renderEngine.registerFilter("luaString", luaString);
+	// Only a bare IPv6 literal needs URL brackets; retain every other upstream syntax.
+	renderEngine.registerFilter("nginxUpstreamHost", (value) => (isIP(String(value)) === 6 ? `[${value}]` : value));
 	// Leave headroom in ngx_http_lua's configuration-parser buffer: every token
 	// is at most 1002 UTF-8 bytes after escaping. Never split a surrogate pair.
 	renderEngine.registerFilter("luaPageString", (value) =>

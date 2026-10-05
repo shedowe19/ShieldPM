@@ -13,10 +13,10 @@ const internalReport = {
 		const userId = access.token.getUserId(1);
 
 		const promises = [
-			internalProxyHost.getCount(userId, access_data.visibility),
-			internalRedirectionHost.getCount(userId, access_data.visibility),
-			internalStream.getCount(userId, access_data.visibility),
-			internalDeadHost.getCount(userId, access_data.visibility),
+			internalProxyHost.getCount(userId, access_data.permission_visibility),
+			internalRedirectionHost.getCount(userId, access_data.permission_visibility),
+			internalStream.getCount(userId, access_data.permission_visibility),
+			internalDeadHost.getCount(userId, access_data.permission_visibility),
 		];
 
 		const counts = await Promise.all(promises);

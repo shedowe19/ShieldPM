@@ -86,6 +86,8 @@ wg --version
 
 WireGuard settings are configured **directly in the ShieldPM UI** — no environment variables needed.
 
+The **Help** button on the WireGuard page opens a short setup and routing guide in English or German. Other interface languages use the English guide.
+
 ### Step 1: Configure Server Settings
 
 1. Navigate to **Hosts → WireGuard Tunnels** in the sidebar.
@@ -105,7 +107,7 @@ WireGuard settings are configured **directly in the ShieldPM UI** — no environ
 2. Fill in:
    - **Peer Name**: A friendly identifier (e.g., `Home Raspberry Pi`)
    - **Description** _(optional)_: What services run on this peer
-   - **Allowed IPs**: Default `10.8.0.0/24` (send the IPv4 tunnel subnet through the VPN). A broader value such as `0.0.0.0/0` changes client routing; see the routing note below before using full-tunnel mode.
+   - **Allowed IPs**: Starts with the current server subnet (`10.8.0.0/24` for an unchanged setup), sending that IPv4 tunnel subnet through the VPN. The form loads current server information before saving; use **Refresh** if loading fails. Manual entries and existing peers' saved routes are preserved. A broader value such as `0.0.0.0/0` changes client routing; see the routing note below before using full-tunnel mode.
    - **Keepalive**: `25` seconds (recommended for NAT traversal)
    - **DNS**: `1.1.1.1` or your preferred DNS
 3. Click **Save**.

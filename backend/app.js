@@ -204,6 +204,21 @@ app.use(async (req, res, next) => {
 	const method = req.method;
 	const isInitialSetupUserCreation =
 		method === "POST" && (path === "/api/users" || path === "/users") && !(await isSetup());
+	const isTokenPost = method === "POST" && /^\/(?:api\/)?tokens(?:\/|$)/.test(path);
+	if (isTokenPost || isInitialSetupUserCreation) {
+		// These JSON/bodyless endpoints must not accept browser form submissions.
+		// Reject before CSRF generation, body parsing or session-cookie changes.
+		const contentType = req.get("content-type");
+		const isJson =
+			typeof contentType === "string" && contentType.split(";", 1)[0].trim().toLowerCase() === "application/json";
+		const isBodyless =
+			!contentType &&
+			typeof req.headers["transfer-encoding"] === "undefined" &&
+			!(Number(req.headers["content-length"]) > 0);
+		if (!isJson && !isBodyless) {
+			return res.status(415).send({ error: { code: 415, message: "Unsupported content type" } });
+		}
+	}
 	const isLoginRequest = method === "POST" && (path === "/api/tokens" || path === "/tokens");
 	const isTokenRefresh = method === "POST" && (path === "/api/tokens/refresh" || path === "/tokens/refresh");
 	const isTokenLogout = method === "POST" && (path === "/api/tokens/logout" || path === "/tokens/logout");

@@ -4,6 +4,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import errs from "../lib/error.js";
+import { global as logger } from "../logger.js";
 
 const DEFAULT_CHUNK_SIZE = 80 * 1024 * 1024;
 const MIN_CHUNK_SIZE = 5 * 1024 * 1024;
@@ -471,7 +472,13 @@ const createUploadRelay = ({
 						return true;
 					} catch (err) {
 						if (!(err instanceof errs.ItemNotFoundError)) throw err;
-						await removeUploadDirectory(hostId, uploadId);
+						try {
+							await removeUploadDirectory(hostId, uploadId);
+						} catch (removalError) {
+							// A regular DELETE may have removed the session after readdir.
+							if (removalError.code === "ENOENT") return false;
+							throw removalError;
+						}
 						return true;
 					}
 				});
@@ -906,11 +913,12 @@ const createUploadRelay = ({
 
 		init() {
 			if (cleanupTimer) return;
+			const logMaintenanceError = (error) => logger.error("Upload relay maintenance failed:", error);
 			void (async () => {
 				await cleanupExpired();
 				await recoverInterruptedFinalizations();
-			})();
-			cleanupTimer = setInterval(() => void cleanupExpired(), 60 * 60 * 1000);
+			})().catch(logMaintenanceError);
+			cleanupTimer = setInterval(() => void cleanupExpired().catch(logMaintenanceError), 60 * 60 * 1000);
 			cleanupTimer.unref?.();
 		},
 

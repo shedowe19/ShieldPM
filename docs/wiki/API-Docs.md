@@ -17,6 +17,8 @@ A successful login returns `token`, `expires`, a minimal `user` object and `csrf
 
 API clients can send the access JWT as `Authorization: Bearer <token>`; the web UI uses the HttpOnly access cookie. **POST** `/api/tokens/refresh` rotates an existing refresh token pair (cookie or `refresh_token` in the body). **POST** `/api/tokens/logout` revokes the refresh-token family and clears the cookies. The older `GET /api/tokens` refresh operation is retained for compatibility; new clients should use POST refresh.
 
+Every POST under `/api/tokens`, including 2FA, logout and restore, accepts JSON with `Content-Type: application/json` (optional charset parameters are supported). The anonymous first-user setup follows the same rule. Form submissions (`application/x-www-form-urlencoded`, `multipart/form-data`, `text/plain`) and other body formats receive HTTP 415 before cookies or session state change. Cookie-only requests may omit Content-Type when they send no body: no Transfer-Encoding and no positive Content-Length. JSON refresh-token bodies remain supported.
+
 For state-changing requests, retain the `XSRF-TOKEN` cookie and send its matching token in `X-XSRF-TOKEN`, whether authentication uses a Bearer token or an access cookie. An unauthenticated `GET /api` provides an initial `csrfToken`; if using Bearer authentication, call `GET /api` with that token to obtain a matching CSRF cookie and token pair. Login and refresh return a token for the new session. Login, refresh, logout and the initial user setup have specific CSRF exceptions; the Duo browser handoff still requires CSRF. The API applies endpoint permissions in addition to authentication.
 
 ## Selected endpoints

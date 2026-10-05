@@ -1,9 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2, Shield } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import type { WireguardPeer } from "@/api/backend";
+import { getWireguardPeers } from "@/api/backend/getWireguardPeers";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -29,13 +32,21 @@ interface WireguardPeerModalProps {
 
 export function WireguardPeerModal({ open, onOpenChange, peer, onCreated }: WireguardPeerModalProps) {
 	const { create, update } = useWireguardPeer();
+	const settings = useQuery({
+		queryKey: ["wireguard-peers"],
+		queryFn: getWireguardPeers,
+		enabled: open && !peer,
+		staleTime: 0,
+		refetchOnMount: "always",
+		retry: false,
+	});
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
 			name: "",
 			description: "",
-			allowed_ips: "10.8.0.0/24",
+			allowed_ips: "",
 			persistent_keepalive: 25,
 			dns: "1.1.1.1",
 		},
@@ -46,14 +57,29 @@ export function WireguardPeerModal({ open, onOpenChange, peer, onCreated }: Wire
 			form.reset({
 				name: peer?.name || "",
 				description: peer?.description || "",
-				allowed_ips: peer?.allowedIps || "10.8.0.0/24",
+				allowed_ips: peer?.allowedIps ?? "",
 				persistent_keepalive: peer?.persistentKeepalive ?? 25,
 				dns: peer?.dns ?? "1.1.1.1",
 			});
 		}
 	}, [open, peer, form]);
+	useEffect(() => {
+		if (
+			open &&
+			!peer &&
+			settings.data?.server?.subnet &&
+			!settings.isFetching &&
+			!settings.isError &&
+			!form.getFieldState("allowed_ips").isDirty
+		) {
+			form.resetField("allowed_ips", { defaultValue: settings.data.server.subnet });
+		}
+	}, [open, peer, settings.data, settings.isFetching, settings.isError, form]);
+
+	const settingsUnavailable = !peer && (!settings.data?.server?.subnet || settings.isFetching || settings.isError);
 
 	const onSubmit = (values: z.infer<typeof formSchema>) => {
+		if (settingsUnavailable) return;
 		if (peer) {
 			update.mutate(
 				{ id: peer.id, data: values },
@@ -88,6 +114,19 @@ export function WireguardPeerModal({ open, onOpenChange, peer, onCreated }: Wire
 				<Form {...form}>
 					<form onSubmit={form.handleSubmit(onSubmit)} className="contents">
 						<div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+							{!peer && settings.isError && (
+								<Alert variant="destructive">
+									<AlertDescription>{settings.error.message}</AlertDescription>
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										onClick={() => settings.refetch()}
+									>
+										<T id="wireguard.refresh" />
+									</Button>
+								</Alert>
+							)}
 							<FormField
 								control={form.control}
 								name="name"
@@ -191,10 +230,12 @@ export function WireguardPeerModal({ open, onOpenChange, peer, onCreated }: Wire
 							</Button>
 							<Button
 								type="submit"
-								disabled={isSubmitting}
+								disabled={isSubmitting || settingsUnavailable}
 								className="bg-purple-600/90 text-white hover:bg-purple-600 shadow-sm"
 							>
-								{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+								{(isSubmitting || (!peer && settings.isFetching)) && (
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								)}
 								<T id="save" />
 							</Button>
 						</DialogFooter>

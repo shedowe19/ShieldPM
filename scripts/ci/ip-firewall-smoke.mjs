@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import http from "node:http";
+import https from "node:https";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -11,6 +12,7 @@ import {
 	assertConfiguredFirewallLookups,
 	getFirewallGeoipStatus,
 } from "../../backend/lib/firewall-geoip.js";
+import { normalizeFirewallPolicy } from "../../backend/lib/firewall-policy.js";
 import { buildFirewallRender } from "../../backend/lib/firewall-render.js";
 import utils from "../../backend/lib/utils.js";
 import { resolveNginxSmokeModules } from "./nginx-smoke-modules.mjs";
@@ -706,6 +708,496 @@ http {
 		}
 	}
 	return paddingLengths.length * (1 + pages.length);
+}
+
+// API-valid public text may exceed the Lua parser's byte limit after UTF-8 or
+// decimal escaping. Exercise the actual partial, not a synthetic Lua assignment.
+async function checkFirewallTextSerialization({
+	nginx,
+	modules,
+	directory,
+	luaPackagePath,
+	luaPackageCpath,
+	modsecurity,
+}) {
+	const reservation = net.createServer();
+	const port = await listen(reservation);
+	await close(reservation);
+	const engine = utils.getRenderEngine();
+	const variants = ["中", "\\"];
+	for (const [index, character] of variants.entries()) {
+		const policy = normalizeFirewallPolicy({
+			enabled: true,
+			list_ids: [9],
+			denylist: [{ address: "127.0.0.2", reason: character.repeat(1000) }],
+			public_message: character.repeat(2000),
+			support_url: `https://support.test/${"中".repeat(2000)}`,
+		});
+		const list = {
+			id: 9,
+			name: `${'"\\<>&'.repeat(50)}final`,
+			reason: `${'"\\\n'.repeat(666)}ok`,
+			entries: ["127.0.0.3"],
+		};
+		const firewall = await buildFirewallRender(
+			{ id: 35, enabled: true, meta: { ip_firewall: policy } },
+			[list],
+		);
+		const geo = await engine.renderFile("_ip_firewall_geo.conf", { firewall });
+		let filter = (
+			await engine.renderFile("_ip_firewall.conf", { firewall })
+		).replaceAll("/data/logs/", `${directory}/logs/`);
+		if (!modsecurity)
+			filter = filter.replace(
+				"    modsecurity off;",
+				"    # ModSecurity is unavailable.",
+			);
+		const configFile = path.join(directory, `firewall-text-${index}.conf`);
+		await fs.writeFile(
+			configFile,
+			`${modules.map((module) => `load_module ${quote(module)};`).join("\n")}
+master_process off;
+user ${os.userInfo().username};
+pid ${quote(path.join(directory, "firewall-text.pid"))};
+error_log stderr notice;
+events { worker_connections 32; }
+http {
+    access_log off;
+    ${luaPackagePath ? `lua_package_path ${quote(luaPackagePath)};` : ""}
+    ${luaPackageCpath ? `lua_package_cpath ${quote(luaPackageCpath)};` : ""}
+    ${temporaryPaths(directory)}
+    ${geo}
+    server { listen 127.0.0.1:${port}; ${filter} location / { return 200 "allowed"; } }
+}`,
+		);
+		await utils.execFile(nginx, [
+			"-p",
+			`${directory}/`,
+			"-c",
+			configFile,
+			"-t",
+		]);
+		const child = spawn(
+			nginx,
+			["-p", `${directory}/`, "-c", configFile, "-g", "daemon off;"],
+			{
+				stdio: ["ignore", "pipe", "pipe"],
+			},
+		);
+		let output = "";
+		child.stderr.on("data", (chunk) => {
+			output += chunk;
+		});
+		try {
+			for (const [ip, reason, source] of [
+				["127.0.0.2", policy.denylist[0].reason, "Manual IP block"],
+				["127.0.0.3", list.reason, list.name],
+			]) {
+				let response;
+				for (let attempt = 0; attempt < 100; attempt++) {
+					try {
+						response = await request(port, {
+							ip,
+							headers: { Accept: "application/json" },
+						});
+						break;
+					} catch {
+						assert.equal(child.exitCode, null, output);
+						await delay(50);
+					}
+				}
+				assert.equal(response?.status, 403, output);
+				const json = JSON.parse(response.body);
+				assert.equal(json.reason, reason);
+				assert.equal(json.source, source);
+				assert.equal(json.message, policy.public_message);
+				assert.equal(json.support_url, policy.support_url);
+				const html = await request(port, { ip });
+				assert.equal(html.status, 403);
+				for (const value of [
+					reason,
+					source,
+					policy.public_message,
+					policy.support_url,
+				]) {
+					assert(
+						html.body.includes(escapeHtml(value)),
+						"Firewall HTML must preserve escaped public text",
+					);
+				}
+			}
+		} finally {
+			if (child.exitCode === null) {
+				child.kill("SIGTERM");
+				await new Promise((resolve) => child.once("exit", resolve));
+			}
+		}
+	}
+	return variants.length * 5;
+}
+
+// Use real static files: rewrite-phase return directives would bypass the access
+// handlers whose inheritance this regression is intended to exercise.
+async function checkAcmeAuthentication({
+	nginx,
+	modules,
+	directory,
+	luaPackagePath,
+	luaPackageCpath,
+	modsecurity,
+}) {
+	const fixture = path.join(directory, "acme-auth");
+	await fs.mkdir(path.join(fixture, "acme/.well-known/acme-challenge"), {
+		recursive: true,
+	});
+	await fs.mkdir(path.join(fixture, "resty"));
+	await fs.writeFile(
+		path.join(fixture, "acme/.well-known/acme-challenge/TOKEN"),
+		"challenge-proof",
+	);
+	await fs.writeFile(
+		path.join(fixture, "resty/openidc.lua"),
+		'return { authenticate = function() return ngx.redirect("/oidc/sign-in", 302) end }',
+	);
+	const key = path.join(fixture, "key.pem");
+	const certificate = path.join(fixture, "certificate.pem");
+	await utils.execFile("openssl", [
+		"req",
+		"-x509",
+		"-newkey",
+		"rsa:2048",
+		"-nodes",
+		"-keyout",
+		key,
+		"-out",
+		certificate,
+		"-days",
+		"1",
+		"-subj",
+		"/CN=redirect.test",
+	]);
+	const upstream = http.createServer((req, res) => {
+		const auth =
+			req.url.startsWith("/oauth2/") ||
+			req.url.startsWith("/outpost.goauthentik.io/");
+		res.writeHead(auth ? 401 : 200);
+		res.end(auth ? "authentication required" : "protected upstream");
+	});
+	let child;
+	let output = "";
+	try {
+		const upstreamPort = await listen(upstream);
+		const reserve = net.createServer();
+		const port = await listen(reserve);
+		await close(reserve);
+		const tlsReserve = net.createServer();
+		const tlsPort = await listen(tlsReserve);
+		await close(tlsReserve);
+		const engine = utils.getRenderEngine();
+		const variants = [
+			{ name: "baseline", expected: 200 },
+			...["oauth2_proxy", "authentik_proxy", "oidc"].flatMap((auth) => [
+				{ name: auth, auth, expected: 302 },
+				{ name: `${auth}-firewall`, auth, firewall: true, expected: 302 },
+			]),
+			{ name: "mtls", mtls: true, expected: 403 },
+			{ name: "redirect", redirect: true, expected: 308 },
+		];
+		const definitions = [];
+		const servers = [];
+		for (const [offset, variant] of variants.entries()) {
+			const data = {
+				id: 100 + offset,
+				enabled: true,
+				server_names: [`${variant.name}.test`],
+				forward_scheme: "http",
+				forward_host: "127.0.0.1",
+				forward_port: upstreamPort,
+				use_default_location: true,
+				auth_type: variant.auth || "",
+				is_oauth2: variant.auth === "oauth2_proxy",
+				oidc_enabled: variant.auth === "oidc",
+				access_list_id: variant.auth || variant.mtls ? 4 : 0,
+				access_list: {
+					meta: {
+						auth_type: variant.auth,
+						authentik_host: `http://127.0.0.1:${upstreamPort}`,
+						oidc_discovery_url:
+							"https://fixture.invalid/.well-known/openid-configuration",
+						oidc_client_id: "fixture",
+						oidc_client_secret: "fixture",
+					},
+					clients: [],
+					items: [],
+					mtls_enabled: Boolean(variant.mtls),
+				},
+				certificate_id: variant.redirect ? 5 : 0,
+				certificate: variant.redirect ? { provider: "internal" } : null,
+				ssl_forced: Boolean(variant.redirect),
+				env: {
+					DISABLE_HTTP: "false",
+					DISABLE_IPV6: "true",
+					DISABLE_H3_QUIC: "true",
+					LISTEN_PROXY_PROTOCOL: "false",
+					IPV4_BINDING: "127.0.0.1",
+					HTTP_PORT: port,
+					HTTPS_PORT: tlsPort,
+				},
+			};
+			let filter = "";
+			if (variant.firewall) {
+				data.firewall = await buildFirewallRender({
+					id: data.id,
+					enabled: true,
+					meta: {
+						ip_firewall: {
+							enabled: true,
+							denylist: [
+								{
+									address: "127.0.0.2",
+									reason: "ACME must bypass only the firewall",
+								},
+							],
+						},
+					},
+				});
+				definitions.push(
+					await engine.renderFile("_ip_firewall_geo.conf", data),
+				);
+				filter = (
+					await engine.renderFile("_ip_firewall.conf", data)
+				).replaceAll("/data/logs/", `${fixture}/`);
+				if (!modsecurity) filter = filter.replace("modsecurity off;", "");
+			}
+			const common = (await engine.renderFile("_common.conf", data))
+				// Fancyindex and shared includes are unrelated to the auth inheritance
+				// and need not be installed in the portable native Nginx fixture.
+				.replace("fancyindex off;", "")
+				.replaceAll("/data/acme-challenge", path.join(fixture, "acme"))
+				.replace("/data/tls/internal/npm-5/fullchain.pem", certificate)
+				.replace("/data/tls/internal/npm-5/privkey.pem", key);
+			const logic = (await engine.renderFile("_proxy_logic.conf", data))
+				.replace(/^\s*include [^;]+;/gm, "")
+				.replaceAll(
+					"http://unix:/run/shieldpm/oauth2-proxy-4.sock:/oauth2/auth",
+					`http://127.0.0.1:${upstreamPort}/oauth2/auth`,
+				)
+				.replaceAll(
+					"http://unix:/run/shieldpm/oauth2-proxy-4.sock",
+					`http://127.0.0.1:${upstreamPort}`,
+				);
+			servers.push(`server { ${filter}\n${common}\n${logic}\n }`);
+		}
+		const configuration = `${modules.map((module) => `load_module ${quote(module)};`).join("\n")}
+master_process off;
+user ${os.userInfo().username};
+pid ${quote(path.join(fixture, "nginx.pid"))};
+error_log stderr notice;
+events { worker_connections 128; }
+http {
+    access_log off;
+    ${temporaryPaths(fixture)}
+    lua_package_path ${quote(`${fixture}/?.lua;${luaPackagePath || ""};;`)};
+    ${luaPackageCpath ? `lua_package_cpath ${quote(luaPackageCpath)};` : ""}
+    map $server_port $is_request_port { default ""; }
+    map $server_port $request_port { default ""; }
+    ${definitions.join("\n")}
+    ${servers.join("\n")}
+}`;
+		const file = path.join(fixture, "nginx.conf");
+		await fs.writeFile(file, configuration);
+		await utils.execFile(nginx, ["-p", `${fixture}/`, "-c", file, "-t"]);
+		child = spawn(
+			nginx,
+			["-p", `${fixture}/`, "-c", file, "-g", "daemon off;"],
+			{
+				stdio: ["ignore", "pipe", "pipe"],
+			},
+		);
+		child.stdout.on("data", (chunk) => {
+			output += chunk;
+		});
+		child.stderr.on("data", (chunk) => {
+			output += chunk;
+		});
+		child.on("error", (error) => {
+			output += error.message;
+		});
+		for (let attempt = 0; attempt < 40; attempt++) {
+			try {
+				await request(port, { host: "baseline.test" });
+				break;
+			} catch {
+				assert.equal(child.exitCode, null, output);
+				await delay(50);
+			}
+		}
+		for (const variant of variants) {
+			const host = `${variant.name}.test`;
+			const challenge = await request(port, {
+				host,
+				ip: "127.0.0.2",
+				uri: "/.well-known/acme-challenge/TOKEN",
+			});
+			assert.equal(
+				challenge.status,
+				variant.mtls || variant.redirect ? variant.expected : 200,
+				host,
+			);
+			if (!variant.mtls && !variant.redirect)
+				assert.equal(challenge.body, "challenge-proof", host);
+			const ordinary = await request(port, { host, uri: "/private" });
+			assert.equal(ordinary.status, variant.expected, host);
+			if (variant.auth)
+				assert(ordinary.headers.location, `${host} must require sign-in`);
+			if (variant.redirect)
+				assert.equal(
+					ordinary.headers.location,
+					"https://redirect.test/private",
+				);
+			if (variant.firewall) {
+				assert.equal(
+					(await request(port, { host, ip: "127.0.0.2", uri: "/private" }))
+						.status,
+					403,
+				);
+			}
+		}
+		return (
+			1 +
+			variants.length * 2 +
+			variants.filter((variant) => variant.firewall).length
+		);
+	} finally {
+		if (child && child.exitCode === null) {
+			child.kill("SIGTERM");
+			await new Promise((resolve) => child.once("exit", resolve));
+		}
+		if (upstream.listening) await close(upstream);
+	}
+}
+
+async function checkIpv6Upstreams({
+	nginx,
+	modules,
+	directory,
+	luaPackagePath,
+	luaPackageCpath,
+}) {
+	const fixture = path.join(directory, "ipv6-upstreams");
+	await fs.mkdir(fixture);
+	// Mapped loopback exercises a real IPv6 URL while retaining portability in
+	// network-none CI containers that have no native ::1 address configured.
+	const bare = "::ffff:127.0.0.1";
+	const key = await fs.readFile(path.join(directory, "acme-auth/key.pem"));
+	const cert = await fs.readFile(
+		path.join(directory, "acme-auth/certificate.pem"),
+	);
+	const upstreams = [
+		["http", http.createServer((req, res) => res.end(`http:${req.url}`))],
+		[
+			"https",
+			https.createServer({ key, cert }, (req, res) =>
+				res.end(`https:${req.url}`),
+			),
+		],
+	];
+	let child;
+	let output = "";
+	try {
+		const reserve = net.createServer();
+		const port = await listen(reserve);
+		await close(reserve);
+		const engine = utils.getRenderEngine();
+		const servers = [];
+		const variants = [];
+		for (const [scheme, upstream] of upstreams) {
+			const upstreamPort = await listen(upstream);
+			for (const [name, forwardHost] of [
+				["bare", bare],
+				["bracketed", `[${bare}]`],
+			]) {
+				const host = `${scheme}-${name}.test`;
+				const data = {
+					forward_scheme: scheme,
+					forward_host: forwardHost,
+					forward_port: upstreamPort,
+					use_default_location: true,
+					path: "/custom",
+				};
+				const location = await engine.renderFile(
+					"_proxy_host_custom_location.conf",
+					data,
+				);
+				const logic = await engine.renderFile("_proxy_logic.conf", {
+					...data,
+					locations: location,
+				});
+				servers.push(
+					`server { listen 127.0.0.1:${port}; server_name ${host}; ${logic.replace(/^\s*include [^;]+;/gm, "")} }`,
+				);
+				variants.push({ host, scheme });
+			}
+		}
+		const config = `${modules.map((module) => `load_module ${quote(module)};`).join("\n")}
+master_process off;
+user ${os.userInfo().username};
+pid ${quote(path.join(fixture, "nginx.pid"))};
+error_log stderr notice;
+events { worker_connections 128; }
+http {
+    access_log off;
+    ${luaPackagePath ? `lua_package_path ${quote(luaPackagePath)};` : ""}
+    ${luaPackageCpath ? `lua_package_cpath ${quote(luaPackageCpath)};` : ""}
+    ${temporaryPaths(fixture)}
+    ${servers.join("\n")}
+}`;
+		const file = path.join(fixture, "nginx.conf");
+		await fs.writeFile(file, config);
+		await utils.execFile(nginx, ["-p", `${fixture}/`, "-c", file, "-t"]);
+		child = spawn(
+			nginx,
+			["-p", `${fixture}/`, "-c", file, "-g", "daemon off;"],
+			{ stdio: ["ignore", "pipe", "pipe"] },
+		);
+		child.stdout.on("data", (chunk) => {
+			output += chunk;
+		});
+		child.stderr.on("data", (chunk) => {
+			output += chunk;
+		});
+		child.on("error", (error) => {
+			output += error.message;
+		});
+		for (let attempt = 0; attempt < 40; attempt++) {
+			try {
+				await request(port, { host: variants[0].host });
+				break;
+			} catch {
+				assert.equal(child.exitCode, null, output);
+				await delay(50);
+			}
+		}
+		for (const { host, scheme } of variants) {
+			for (const uri of ["/", "/custom/probe?a=1"]) {
+				const response = await request(port, { host, uri });
+				assert.equal(response.status, 200, `${host} ${uri}: ${output}`);
+				assert.equal(
+					response.body,
+					`${scheme}:${uri}`,
+					`${host} must retain the request URI`,
+				);
+			}
+		}
+		return 1 + variants.length * 2;
+	} finally {
+		if (child && child.exitCode === null) {
+			child.kill("SIGTERM");
+			await new Promise((resolve) => child.once("exit", resolve));
+		}
+		for (const [, upstream] of upstreams)
+			if (upstream.listening) await close(upstream);
+	}
 }
 
 /**
@@ -1562,6 +2054,29 @@ http {
 			luaPackagePath,
 			luaPackageCpath,
 		});
+		const textSerializationChecks = await checkFirewallTextSerialization({
+			nginx,
+			modules,
+			directory: temporary,
+			luaPackagePath,
+			luaPackageCpath,
+			modsecurity,
+		});
+		const acmeChecks = await checkAcmeAuthentication({
+			nginx,
+			modules,
+			directory: temporary,
+			luaPackagePath,
+			luaPackageCpath,
+			modsecurity,
+		});
+		const ipv6UpstreamChecks = await checkIpv6Upstreams({
+			nginx,
+			modules,
+			directory: temporary,
+			luaPackagePath,
+			luaPackageCpath,
+		});
 		return {
 			checks:
 				25 +
@@ -1571,7 +2086,10 @@ http {
 				writerChecks +
 				asnWriterChecks +
 				missingAsnChecks +
-				pageSerializationChecks,
+				pageSerializationChecks +
+				textSerializationChecks +
+				acmeChecks +
+				ipv6UpstreamChecks,
 			mode: modsecurity ? "full modules" : "portable Lua/geo",
 			hits: hits.length,
 		};

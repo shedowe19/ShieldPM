@@ -11,6 +11,7 @@ import errs from "../lib/error.js";
 import { normalizeListInput } from "../lib/firewall-list-validation.js";
 import { normalizeFirewallPolicy } from "../lib/firewall-policy.js";
 import { assertNoSymlinkPath, assertSafeConfigTree, writeConfigFile } from "../lib/gitops-files.js";
+import { withImportedIdSequence } from "../lib/gitops-sequences.js";
 import { global as logger } from "../logger.js";
 import AccessList from "../models/access_list.js";
 import Certificate from "../models/certificate.js";
@@ -1189,41 +1190,47 @@ const internalGitOps = {
 								}
 
 								const writeImported = async () => {
-									if (options.overwrite && existingId) {
-										// Use upsertGraph for complex models
-										if (relationGraph) {
-											await modelClass.query().upsertGraph(itemData, {
-												insertMissing: true,
-												relate: true,
-												update: true,
-												noDelete: false, // Delete missing children (items/clients)
-											});
-										} else {
-											const existing = await modelClass.query().findById(existingId);
-											if (existing) {
-												await modelClass.query().patchAndFetchById(existingId, itemData);
+									await withImportedIdSequence(modelClass, async (transaction) => {
+										if (options.overwrite && existingId) {
+											// Use upsertGraph for complex models
+											if (relationGraph) {
+												await modelClass.query(transaction).upsertGraph(itemData, {
+													insertMissing: true,
+													relate: true,
+													update: true,
+													noDelete: false, // Delete missing children (items/clients)
+												});
 											} else {
-												await modelClass.query().insert(itemData);
+												const existing = await modelClass
+													.query(transaction)
+													.findById(existingId);
+												if (existing) {
+													await modelClass
+														.query(transaction)
+														.patchAndFetchById(existingId, itemData);
+												} else {
+													await modelClass.query(transaction).insert(itemData);
+												}
 											}
-										}
-										if (upstreamChanged)
-											await internalProxyHostMonitor.resetHost(existingId, {
-												disableUnsupported: true,
-											});
-									} else {
-										if (modelClass !== User && !itemData.owner_user_id)
-											itemData.owner_user_id = access.token.getUserId(1);
-
-										let newRow;
-										if (relationGraph) {
-											newRow = await modelClass.query().insertGraph(itemData);
 										} else {
-											newRow = await modelClass.query().insert(itemData);
-										}
+											if (modelClass !== User && !itemData.owner_user_id)
+												itemData.owner_user_id = access.token.getUserId(1);
 
-										if (itemData.id) importedIds.push(itemData.id);
-										else if (newRow?.id) importedIds.push(newRow.id);
-									}
+											let newRow;
+											if (relationGraph) {
+												newRow = await modelClass.query(transaction).insertGraph(itemData);
+											} else {
+												newRow = await modelClass.query(transaction).insert(itemData);
+											}
+
+											if (itemData.id) importedIds.push(itemData.id);
+											else if (newRow?.id) importedIds.push(newRow.id);
+										}
+									});
+									if (upstreamChanged)
+										await internalProxyHostMonitor.resetHost(existingId, {
+											disableUnsupported: true,
+										});
 								};
 								if (modelClass === ProxyHost)
 									await withFirewallReferences(itemData, existing || {}, writeImported);

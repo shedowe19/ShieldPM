@@ -31,12 +31,14 @@ export default {
 		data.scope = data.scope || "user";
 		data.expiry = data.expiry || "1d";
 
-		const user = await userModel
+		// Never choose an arbitrary account from historical normalized duplicates.
+		// Disabled accounts still reserve their email until they are soft-deleted.
+		const users = await userModel
 			.query()
-			.where("email", data.identity.toLowerCase().trim())
+			.whereRaw("LOWER(TRIM(??)) = ?", ["email", data.identity.toLowerCase().trim()])
 			.andWhere("is_deleted", 0)
-			.andWhere("is_disabled", 0)
-			.first();
+			.limit(2);
+		const user = users.length === 1 && !users[0].is_disabled ? users[0] : null;
 
 		if (!user) {
 			// Fake work to prevent timing attacks
@@ -122,12 +124,13 @@ export default {
 		// The encrypted browser handoff is valid for the same five minutes as its cookie.
 		data.expiry = "5m";
 
-		const user = await userModel
+		// Apply the same unambiguous account boundary to trusted OIDC claims.
+		const users = await userModel
 			.query()
-			.where("email", data.identity)
+			.whereRaw("LOWER(TRIM(??)) = ?", ["email", data.identity.toLowerCase().trim()])
 			.andWhere("is_deleted", 0)
-			.andWhere("is_disabled", 0)
-			.first();
+			.limit(2);
+		const user = users.length === 1 && !users[0].is_disabled ? users[0] : null;
 
 		if (!user) {
 			throw new errs.AuthError(ERROR_MESSAGE_INVALID_AUTH);

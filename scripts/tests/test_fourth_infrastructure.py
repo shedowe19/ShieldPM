@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -152,8 +153,45 @@ SECONDS=0
                 result = subprocess.run(["bash", "-e", "-c", program, "test", str(env_file)], capture_output=True, text=True)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 result = subprocess.run(["sh", "-c", '. "$1"; printf "%s|%s|%s|%s" "${DB_MYSQL_HOST:-}" "${DB_POSTGRES_HOST:-}" "${DB_SQLITE_FILE:-}" "$TZ"', "test", str(env_file)], capture_output=True, text=True)
-                expected = {"postgres": "|selected||UTC", "mysql": "selected|||UTC", "sqlite": "||/data/custom.sqlite|UTC"}
+                expected = {"postgres": "|selected||UTC", "mysql": "selected|||UTC", "sqlite": "|||UTC"}
                 self.assertEqual(result.stdout, expected[selected])
+
+    def test_legacy_sqlite_path_stays_disabled_through_provider_switches_and_validation(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is required for the real startup validator")
+        env_file = self.root / ".env"
+        validator = self.root / "validate-env.cjs"
+        # Redirect only filesystem discovery; run the production validation
+        # without reading any host's /data files or starting external services.
+        validator.write_text((REPO / "backend/validate-env.cjs").read_text().replace(
+            "/data/", f"{self.root}/data/"))
+        helper = "configure_database_environment() {" + self.installer.split(
+            "configure_database_environment() {", 1)[1].split("\n}\n", 1)[0] + "\n}\n"
+        unrelated = ["TZ=UTC", "GEOIP_AUTO_UPDATE=false",
+                     "SENTINEL='keep spaces # = $'", "# Existing installation"]
+        for legacy in ("DB_SQLITE_FILE=/data/custom.sqlite",
+                       "# DB_SQLITE_FILE=/data/custom.sqlite",
+                       "  export DB_SQLITE_FILE=/data/custom.sqlite",
+                       "  # export DB_SQLITE_FILE=/data/custom.sqlite"):
+            env_file.write_text("\n".join(unrelated + [legacy,
+                "DB_MYSQL_HOST=mysql.example", "DB_POSTGRES_HOST=postgres.example"]) + "\n")
+            for selected in ("MYSQL", "SQLITE", "POSTGRES", "SQLITE"):
+                with self.subTest(legacy=legacy, selected=selected):
+                    result = subprocess.run(["bash", "-eu", "-c",
+                        helper + 'ENV_FILE=$1; configure_database_environment "$2"',
+                        "test", str(env_file), selected],
+                        env={"PATH": os.environ["PATH"]}, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    result = subprocess.run(["sh", "-eu", "-c",
+                        'set -a; . "$1"; exec "$2" "$3"', "test",
+                        str(env_file), node, str(validator)],
+                        env={"PATH": os.environ["PATH"]}, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    updated = env_file.read_text().splitlines()
+                    for line in unrelated:
+                        self.assertIn(line, updated)
+                    self.assertIn("/data/custom.sqlite", env_file.read_text())
 
 
 if __name__ == "__main__":
