@@ -975,7 +975,13 @@ async function checkAcmeAuthentication({
 				.replace("fancyindex off;", "")
 				.replaceAll("/data/acme-challenge", path.join(fixture, "acme"))
 				.replace("/data/tls/internal/npm-5/fullchain.pem", certificate)
-				.replace("/data/tls/internal/npm-5/privkey.pem", key);
+				.replace("/data/tls/internal/npm-5/privkey.pem", key)
+				// ShieldPM builds provide these port variables; portable Nginx does not.
+				// Private fixture stand-ins avoid redefining the build's read-only variables.
+				.replaceAll(
+					"$is_request_port$request_port",
+					"$spm_smoke_acme_port_suffix$spm_smoke_acme_port",
+				);
 			const logic = (await engine.renderFile("_proxy_logic.conf", data))
 				.replace(/^\s*include [^;]+;/gm, "")
 				.replaceAll(
@@ -999,8 +1005,8 @@ http {
     ${temporaryPaths(fixture)}
     lua_package_path ${quote(`${fixture}/?.lua;${luaPackagePath || ""};;`)};
     ${luaPackageCpath ? `lua_package_cpath ${quote(luaPackageCpath)};` : ""}
-    map $server_port $is_request_port { default ""; }
-    map $server_port $request_port { default ""; }
+    map $server_port $spm_smoke_acme_port_suffix { default ""; }
+    map $server_port $spm_smoke_acme_port { default ""; }
     ${definitions.join("\n")}
     ${servers.join("\n")}
 }`;

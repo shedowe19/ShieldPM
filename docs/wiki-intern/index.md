@@ -187,7 +187,7 @@ Details und Dateipfade stehen in der [Modulübersicht](./module/README.md) und d
 
 ---
 
-_Zuletzt aktualisiert: 2026-10-04._
+_Zuletzt aktualisiert: 2026-10-05._
 
 ## Verwandte Seiten
 

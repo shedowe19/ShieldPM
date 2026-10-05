@@ -3042,9 +3042,9 @@
     "backend": {
       "test_files_passed": 216,
       "test_files_skipped": 2,
-      "tests_passed": 1882,
+      "tests_passed": 1886,
       "tests_skipped": 4,
-      "note": "2 optional MariaDB checks and 2 PostgreSQL-isolation checks in SQLite branch skipped; actual MariaDB suite additionally runs in CI."
+      "note": "Final complete run after Gravatar follow-up: 1886 passed, 4 skipped (2 optional MariaDB checks and 2 PostgreSQL-isolation checks in SQLite branch); actual MariaDB suite additionally runs in CI."
     },
     "frontend": {
       "test_files_passed": 199,
@@ -3075,6 +3075,35 @@
       "invalid_file_links": 0
     },
     "types_biome_build_locales": "passed",
-    "ci": "Exact published commit results are maintained in PR149; not claimed by local runtime checks."
+    "ci": "Exact published commit results are maintained in PR149; not claimed by local runtime checks.",
+    "gravatar_followup": {
+      "new_cases": 4,
+      "targeted_tests_passed": 57,
+      "existing_sqlite_branch_skips": 2,
+      "engines": ["SQLite", "PostgreSQL via PGlite"],
+      "fixed_vector_source": "https://docs.gravatar.com/rest/hash/",
+      "types_biome": "passed"
+    }
+  },
+  "abschlussdatum": "2026-10-05",
+  "ci_nachpruefung": {
+    "commit": "e097de1b145d42ba59d21a18dd92e251e8f0c835",
+    "quality_run": 37247471958,
+    "node": "26.10.0",
+    "backend_tests_passed": 1882,
+    "backend_tests_skipped": 4,
+    "frontend_tests_passed": 830,
+    "mariadb_tests_passed": 2,
+    "chromium_tests_passed": 7,
+    "browser_artifact": 11319622691,
+    "browser_artifact_sha256": "ab814460d0d5f99d8def4407b7e963941ccfabef0f3442c5ec1c7650d38704d0",
+    "screenshots_byte_identical_to_reviewed_baseline": 6,
+    "codeql_artifact": 11319561779,
+    "codeql_artifact_sha256": "18549e02f2be2c0203bc38c2f4406cbe7a27a39f4042e9e7d0d338d804d70a69",
+    "codeql_results": 3,
+    "codeql_followup": "Two unchanged vendor findings plus pre-existing Gravatar MD5 path exposed by new test fixtures; avatar helper now uses official SHA-256 format. Fresh final SARIF is checked in PR149. No suppression.",
+    "arm_smoke_failure": "ACME test fixture redeclared read-only port variables provided by image Nginx1.31.3; corrected with private fixture variables, no production template change.",
+    "live_geoip": "ARM64 first boot downloaded Country/City/ASN release2026.10.04; second boot retained all three hashes and inodes (0updated/3unchanged).",
+    "status": "Intermediate evidence; final published commit results remain in PR149."
   }
 }

@@ -2,7 +2,7 @@
 
 ## Zweck und Prüfbereich
 
-Am 4. Oktober wurde [PR #149](https://github.com/shedowe19/ShieldPM/pull/149) ausgehend von `1838bf5d6c8428843eb777c1534aa66fa8469251` erneut geprüft. Das Inventar umfasst 1.752 versionierte Dateien. Backend, Frontend, Nginx, GeoIP-Start, Installer, CI und Wiki-Werkzeuge wurden in getrennten Bereichen untersucht. Der [Prüfnachweis](./code-audit-coverage-2026-10.json) hält Umfang, Methoden und Grenzen fest.
+Am 4. und 5. Oktober wurde [PR #149](https://github.com/shedowe19/ShieldPM/pull/149) ausgehend von `1838bf5d6c8428843eb777c1534aa66fa8469251` erneut geprüft. Das Inventar umfasst 1.752 versionierte Dateien. Backend, Frontend, Nginx, GeoIP-Start, Installer, CI und Wiki-Werkzeuge wurden in getrennten Bereichen untersucht. Der [Prüfnachweis](./code-audit-coverage-2026-10.json) hält Umfang, Methoden und Grenzen fest.
 
 Die Prüfung verbindet Quelllektüre, Abgleich zwischen Berechtigungen und aufrufenden Modulen, repositoryweite Mustersuchen und ausführbare Regressionen. Inventarisierung bedeutet keine vollständige Lektüre jeder Datei. Übersetzungen, Assets und eingebundene Fremdbibliotheken wurden nicht sprachlich beziehungsweise manuell Zeile für Zeile geprüft. Die Ergebnisse sind keine Zusicherung vollständiger Fehlerfreiheit.
 
@@ -28,11 +28,15 @@ Die Prüfung verbindet Quelllektüre, Abgleich zwischen Berechtigungen und aufru
 
 ## Validierung
 
+Die Prüfung korrigiert 15 bestätigte Produktfehler. Zusätzlich zeigte die frische CodeQL-Analyse den bisherigen MD5-E-Mail-Hash für Gravatar: Der gemeinsame Avatar-Helper verwendet nun das von Gravatar dokumentierte SHA-256 mit unveränderter E-Mail-Normalisierung. Dies betrifft keine Passwortprüfung. Zwei neue Vektorfälle werden jeweils in SQLite und PGlite ausgeführt; gespeicherte alte Avatar-URLs benötigen keine Migration.
+
+Der erste ARM64-Lauf deckte außerdem einen Fehler ausschließlich in der neuen ACME-Testfixture auf: Sie definierte Nginx-Portvariablen, die die Image-Version bereits selbst bereitstellt. Private Fixturevariablen erlauben dieselbe echte Challenge-/Auth-Prüfung sowohl mit portablem Nginx 1.24 als auch mit dem Image-Nginx 1.31.3. Die Produktionsvorlagen benötigen hierfür keine Änderung.
+
 Die neuen Regressionen verwenden echte Access-Capabilities und SQLite für Sichtbarkeit, die PostgreSQL-Engine in PGlite für GitOps und Benutzertransaktionen sowie die tatsächlichen React-Formulare und Help-Loader. Der Installertest führt die echte Providerauswahl und anschließend den Umgebungsvalidator aus. Nginx wird mit den tatsächlichen Templates geprüft; die Challenge-Regression verwendet statische Dateien und lokale Auth-Upstreams statt einer vorzeitig antwortenden `return 200`-Location.
 
 TypeScript, Biome, Frontend-Produktionsbuild und das komprimierte Bundle-Budget ergänzen die Funktionsprüfungen. Die geänderten Wiki-Seiten wurden mit Prettier formatiert, relative Links kontrolliert und der Offline-Graph neu erzeugt. Aktuelle Ergebnisse der vollständigen CI, der beiden Containerarchitekturen und der Reviewprüfung stehen am veröffentlichten Commit in PR #149.
 
-Lokale Gesamtläufe nach dem Sourcefreeze: **1.882 Backendtests** bestanden (vier ausgewiesene Skips), **830 Frontendtests** bestanden. Infrastruktur: 127 Fälle, davon 125 bestanden und zwei wegen lokaler OS-Grenzen übersprungen. Der native Vollmodul-Nginx-Smoke besteht **256 Prüfungen mit neun protokollierten Hauptsperren**. Der Build liegt mit 1.280.851 / 1.285.000 JavaScript-gzip-Bytes und 16.325 / 16.600 CSS-Bytes im Budget. Der aktualisierte Wiki-Graph enthält 91 Knoten und 612 Kanten; 650 relative Dateiverweise sind gültig.
+Der abschließende lokale Gesamtlauf besteht **1.886 Backendtests** (vier ausgewiesene Skips); **830 Frontendtests** bestehen. Vor der letzten Gravatar-Ergänzung wurden 1.882 Backendfälle und sämtliche Frontendfälle auch unter Node.js 26.10.0 in CI bestätigt; zwei echte MariaDB- und sieben Chromium-Fälle bestehen ebenfalls. Die sechs Browser-Screenshots sind byteidentisch zum zuvor visuell geprüften Stand. Infrastruktur: 127 Fälle, davon 125 bestanden und zwei wegen lokaler OS-Grenzen übersprungen. Der native Vollmodul-Nginx-Smoke besteht **256 Prüfungen mit neun protokollierten Hauptsperren**. Der Build liegt mit 1.280.851 / 1.285.000 JavaScript-gzip-Bytes und 16.325 / 16.600 CSS-Bytes im Budget. Nach der letzten Dokumentergänzung enthält der Wiki-Graph weiterhin 91 Knoten und 612 Kanten; 650 relative Dateiverweise sind gültig. Die Ergebnisse des endgültigen Commits einschließlich der zusätzlichen Gravatar-Fälle stehen in PR #149.
 
 ## Grenzen und verbleibende Hinweise
 

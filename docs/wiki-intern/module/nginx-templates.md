@@ -82,6 +82,8 @@ Die HTTP-, HTTPS- und TCP-Stream-Templates verwenden für TCP kein `reuseport`. 
 
 Öffentliche Firewalltexte und die Sperrseitenvorlage verwenden `luaPageString` mit höchstens 250 Unicode-Codepoints je Lua-Literal. Auch nach UTF-8-Kodierung und dezimalem Escaping beträgt die maximale Tokenlänge 1002 Bytes. Das verhindert Parserfehler bei gültigen langen Gründen, Listennamen, Nachrichten und Kontaktlinks, ohne den dekodierten Inhalt oder die anschließende HTML-/JSON-Maskierung zu verändern. Der native Firewall-Smoke prüft diese Texte sowie echte statische ACME-Dateien unter lokalen Auth-Stubs; `return 200` wird für diese Challenge-Regression nicht verwendet.
 
+Die isolierte ACME-Redirect-Testkonfiguration verwendet private `spm_smoke_acme_port*`-Variablen als Port-Platzhalter. Damit überschreibt der Test nicht die im ShieldPM-Nginx bereits vorhandenen Portvariablen und bleibt zugleich mit portablem Nginx kompatibel. Diese CI-Fixture-Korrektur verändert weder die produktive `_common.conf` noch das Redirectverhalten.
+
 ## Statische Custom-Locations und Bandbreitenzähler
 
 Auch statische Custom-Locations blockieren `.git` und sperren bei verwalteten Websitewurzeln Symlinks. Das gilt ebenso, wenn die Standard-Location einen HTTP-Upstream verwendet. Der Renderer berücksichtigt den exakten Wartungsbeginn einschließlich des Startzeitpunkts.

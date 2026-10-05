@@ -105,6 +105,12 @@ describe.each(["sqlite", "postgres"])("normalized account email claims in %s", (
 			{ id: 7, email: "first@example.test", name: "First", nickname: "first", roles: "[]", avatar: "" },
 			{ id: 8, email: "second@example.test", name: "Second", nickname: "second", roles: "[]", avatar: "" },
 		]);
+		if (engine === "postgres") {
+			// Explicit fixture IDs do not advance PostgreSQL's generated-ID sequence.
+			await state.db.raw(
+				"SELECT setval(pg_get_serial_sequence('\"user\"', 'id'), (SELECT MAX(id) FROM \"user\"), true)",
+			);
+		}
 		await state.db("auth").insert({ user_id: 7, type: "password", secret: passwordHash, meta: "{}" });
 	});
 	afterEach(() => vi.restoreAllMocks());
@@ -132,6 +138,31 @@ describe.each(["sqlite", "postgres"])("normalized account email claims in %s", (
 		await users.update(access, { id: 7, email: " FREE@Example.Test " });
 		await users.update(access, { id: 7, email: " FREE@example.test " });
 		expect((await state.db("user").where({ id: 7 }).first()).email).toBe("free@example.test");
+	});
+
+	// Fixed normalized-email vector from https://docs.gravatar.com/rest/hash/.
+	const gravatarVector =
+		"https://www.gravatar.com/avatar/84059b07d4be67b806386c0aad8070a23f18836bbaae342275dc0a83414c32ee?d=mm";
+	it("persists the official SHA-256 Gravatar vector when creating an account", async () => {
+		const created = await users.create(access, newAccount(" MyEmailAddress@example.com "));
+		expect(created).toMatchObject({ email: "myemailaddress@example.com", avatar: gravatarVector });
+		expect(await state.db("user").where({ id: created.id }).first()).toMatchObject({
+			email: "myemailaddress@example.com",
+			avatar: gravatarVector,
+		});
+	});
+
+	it("replaces a stored legacy Gravatar URL with the official SHA-256 vector on profile update", async () => {
+		await state.db("user").where({ id: 7 }).update({
+			avatar_type: "gravatar",
+			avatar: "https://www.gravatar.com/avatar/6193176330f8d38747f038c170ddb193?d=mm",
+		});
+		const updated = await users.update(access, { id: 7, email: " MyEmailAddress@example.com " });
+		expect(updated).toMatchObject({ email: "myemailaddress@example.com", avatar: gravatarVector });
+		expect(await state.db("user").where({ id: 7 }).first()).toMatchObject({
+			email: "myemailaddress@example.com",
+			avatar: gravatarVector,
+		});
 	});
 
 	it.each(["create", "update"])("permits reuse after soft deletion via %s", async (operation) => {

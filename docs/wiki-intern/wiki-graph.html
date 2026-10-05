@@ -196,7 +196,7 @@ const $ = id => document.getElementById(id);
 const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
 })[character]);
-$('stats').textContent = NODES.length + ' Seiten · ' + EDGES.length + ' Verknüpfungen · gebaut 2026-10-04 23:52:49';
+$('stats').textContent = NODES.length + ' Seiten · ' + EDGES.length + ' Verknüpfungen · gebaut 2026-10-05 02:33:55';
 
 function showError(msg) {
   const el = $('error');
