@@ -19,6 +19,7 @@ import { AUDIT_LOG_OBJECT_TYPE, AVATAR_TYPE, SHADCN_VARIANT, USER_ROLE } from "s
 import UserAvatarTab from "./UserAvatarTab";
 import UserDetailsTab, { type UserDetailsFormValues } from "./UserDetailsTab";
 import { createUserPayload } from "./UserModalSubmission";
+import { useFreshFormData } from "./useFreshFormData";
 
 const showUserModal = (id: number | "me" | "new") => {
 	EasyModal.show(UserModal, { id });
@@ -28,7 +29,8 @@ interface Props extends InnerModalProps {
 	id: number | "me" | "new";
 }
 const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
-	const { data, isLoading, error } = useUser(id);
+	const query = useUser(id, { refetchOnMount: "always" });
+	const { data, isLoading, error } = useFreshFormData(id, query);
 	const { data: currentUser, isLoading: currentIsLoading } = useUser("me");
 	const { mutate: setUser } = useSetUser();
 	const queryClient = useQueryClient();

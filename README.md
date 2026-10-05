@@ -10,6 +10,7 @@ A modern, security-focused reverse proxy manager built on top of Nginx — with 
 
 > [!CAUTION]
 > **Migration from NPMplus required.**
+>
 > - Update your `compose.yaml` to use `ghcr.io/shedowe19/shieldpm:develop`
 > - Data now lives at `/data/shieldpm` (auto-migrated from `/data/npmplus` on first start)
 > - Switched from Alpine to **Debian Trixie** — use Debian package names (e.g. `php8.2-curl` instead of `php82-curl`)
@@ -30,6 +31,8 @@ docker compose up -d
 Open the admin UI at `https://<your-ip>:81` (self-signed certificate — accept the browser warning on first visit).
 
 **First login:** There are no default credentials — the **Setup Wizard** creates your admin account on first visit. Automated deployments can set `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` instead.
+
+GeoIP Country, City, and ASN databases are prepared from the [latest GeoLite.mmdb release](https://github.com/shedowe19/GeoLite.mmdb/releases/latest) before services start, then checked again on every start. No MaxMind credentials are required. Set `GEOIP_AUTO_UPDATE=false` for offline or custom databases; enable `NGINX_LOAD_GEOIP2_MODULE=true` to use country and ASN lookups. See [GeoIP setup and startup failures](./docs/wiki/Analytics.md#enabling-geoip-country-statistics).
 
 ---
 
@@ -71,6 +74,7 @@ Open the admin UI at `https://<your-ip>:81` (self-signed certificate — accept 
 - **SSL/TLS** — Automatic Let's Encrypt certificates with HTTP/2 and HTTP/3 (QUIC) support
 - **WAF** — ModSecurity with OWASP CoreRuleSet + OpenAppSec integration
 - **CrowdSec IPS** — Community-powered intrusion prevention
+- **[IP Firewall](./docs/wiki/IP-Firewall.md)** — Per-host IPv4/IPv6/CIDR lists, TXT/HTTPS imports, optional ASN and country rules, and a page explaining blocked requests
 - **Cloudflare Tunnels** — Create and manage Zero Trust tunnels directly from the UI
 - **PHP-FPM** — Optional PHP 8.2 / 8.3 / 8.4 integration
 - **Analytics** — Built-in GoAccess dashboard on port `:91`
@@ -119,4 +123,4 @@ Special thanks to **[@ZoeyVid](https://github.com/ZoeyVid)** for the foundationa
 
 ---
 
-*Maintained with ❤️ by the ShieldPM Contributors.*
+_Maintained with ❤️ by the ShieldPM Contributors._

@@ -105,6 +105,7 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 - **Beziehungsgraph**: `python3 scripts/wiki-graph.py` erzeugt `docs/wiki-intern/wiki-graph.html` — eine eigenständige, offline-fähige interaktive Visualisierung aller Wiki-Seiten und ihrer Verlinkungen. Nach jeder größeren Wiki-Änderung neu generieren, um die aktuelle Vernetzung zu inspizieren.
 - Der Generator maskiert Dateinamen für HTML und eingebettete JSON-Daten. Sonderzeichen bleiben in den Graph-IDs erhalten; ein Doppelklick öffnet einen kodierten relativen Pfad. Beim Filtern einer sichtbaren Ordnergruppe bleiben Wurzelseiten und nicht zugeordnete Seiten eingeblendet.
+- Relative Links auf Markdown-Seiten werden auch mit Abschnittsankern erfasst. Der Graph verbindet dabei die Seiten; der Anker erzeugt keinen eigenen Knoten. Mehrere Verweise auf dieselbe Seite bleiben einzeln gezählt, und Ziele außerhalb des Wikis werden weiterhin ausgelassen.
 - **Alternative Tools**: Obsidian (Vault auf `docs/wiki-intern/` setzen, `Strg+G`) oder die VS-Code-Extension "Foam" zeigen den gleichen Graph live.
 
 ## Verwandte Seiten

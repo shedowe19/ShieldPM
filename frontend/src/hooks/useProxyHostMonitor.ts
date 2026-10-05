@@ -21,6 +21,7 @@ export function useProxyHostMonitor(id: number) {
 	return useQuery({
 		queryKey: ["proxy-host-monitors", id],
 		queryFn: () => getProxyHostMonitor(id),
+		refetchOnMount: "always",
 		refetchInterval: 30_000,
 	});
 }

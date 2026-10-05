@@ -36,7 +36,8 @@ const ai = {
 			if (!meta.num_thread) meta.num_thread = 4;
 			if (!meta.keep_alive) meta.keep_alive = "5m";
 			return meta;
-		} catch (_err) {
+		} catch (err) {
+			if (err.status !== 404 && err.code !== 404) throw err;
 			// Return default config if not found
 			return {
 				enabled: false,

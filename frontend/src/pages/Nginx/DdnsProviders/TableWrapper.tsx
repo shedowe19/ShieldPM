@@ -50,8 +50,6 @@ export default function TableWrapper() {
 				item.provider.toLowerCase().includes(search) ||
 				item.domains.some((d) => d.toLowerCase().includes(search)),
 		);
-	} else if (search !== "") {
-		setSearch("");
 	}
 
 	return (
@@ -62,11 +60,12 @@ export default function TableWrapper() {
 					<T id="ddns-providers" />
 				</CardTitle>
 				<div className="flex items-center space-x-2">
-					{data?.length ? (
+					{data?.length || search ? (
 						<div className="relative w-full max-w-sm">
 							<IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 							<Input
 								type="search"
+								value={search}
 								placeholder={intl.formatMessage({ id: "search.placeholder" })}
 								className="pl-8 h-9"
 								onChange={(e) => setSearch(e.target.value.toLowerCase().trim())}

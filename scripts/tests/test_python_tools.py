@@ -56,6 +56,33 @@ class PythonToolTests(unittest.TestCase):
         self.assertNotIn(">", serialized)
         self.assertNotIn("&", serialized)
 
+    def test_graph_section_links_use_the_target_page_and_count_each_link(self):
+        graph = load_module("wiki_graph", REPO / "scripts/wiki-graph.py")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "module").mkdir()
+            (root / "index.md").write_text("[Page](./module/service.md)\n[Details](./module/service.md#details)")
+            (root / "module/service.md").write_text("[Home](../index.md#overview)")
+            nodes, edges = graph.build_graph(root)
+        self.assertEqual(edges, [
+            {"from": "index.md", "to": "module/service.md"},
+            {"from": "index.md", "to": "module/service.md"},
+            {"from": "module/service.md", "to": "index.md"},
+        ])
+        by_id = {node["id"]: node for node in nodes}
+        self.assertEqual(set(by_id), {"index.md", "module/service.md"})
+        self.assertEqual(by_id["index.md"]["outgoing"], 2)
+        self.assertEqual(by_id["module/service.md"]["value"], 2)
+
+    def test_graph_section_links_keep_missing_pages_and_exclude_outside_targets(self):
+        graph = load_module("wiki_graph", REPO / "scripts/wiki-graph.py")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "index.md").write_text("[Missing](./missing.md#details)\n[Outside](../outside.md#details)")
+            nodes, edges = graph.build_graph(root)
+        self.assertEqual(edges, [{"from": "index.md", "to": "missing.md"}])
+        self.assertEqual({node["id"] for node in nodes}, {"index.md", "missing.md"})
+
     def test_graph_generation_keeps_template_marker_filenames_literal(self):
         graph = load_module("wiki_graph", REPO / "scripts/wiki-graph.py")
         names = ["__NODES__.md", "__EDGES__.md", "__COLORS__.md", "__BUILD_TS__.md"]

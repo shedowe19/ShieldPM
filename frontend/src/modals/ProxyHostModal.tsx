@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { useProxyHost, useSetProxyHost, useUser } from "src/hooks";
+import { firewallAsnRuleError } from "src/lib/firewallAsn";
 import { T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
@@ -17,6 +18,7 @@ import ProxyHostConfigPreview from "./ProxyHostConfigPreview";
 import ProxyHostFormTabs from "./ProxyHostFormTabs";
 import { createProxyHostInitialValues, type ProxyHostFormValues } from "./ProxyHostModalFormValues";
 import { createProxyHostPayload } from "./ProxyHostModalSubmission";
+import { useFreshFormData } from "./useFreshFormData";
 
 const showProxyHostModal = (id: number | "new") => {
 	EasyModal.show(ProxyHostModal, { id });
@@ -30,7 +32,8 @@ interface Props extends InnerModalProps {
 
 const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data: currentUser, isLoading: userIsLoading, error: userError } = useUser("me");
-	const { data, isLoading, error } = useProxyHost(id);
+	const hostQuery = useProxyHost(id, { refetchOnMount: "always" });
+	const { data, isLoading, error } = useFreshFormData(id, hostQuery);
 	const { mutate: setProxyHost } = useSetProxyHost();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,8 +78,16 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 					</div>
 				)}
 				{!isLoading && !userIsLoading && data && currentUser && (
-					<Formik initialValues={createProxyHostInitialValues(data)} onSubmit={onSubmit}>
-						{() => (
+					<Formik
+						initialValues={createProxyHostInitialValues(data)}
+						onSubmit={onSubmit}
+						validateOnMount
+						validate={(values) => {
+							const asnError = firewallAsnRuleError(values.meta?.ipFirewall?.asnDenylist);
+							return asnError ? { meta: { ipFirewall: { asnDenylist: asnError } } } : {};
+						}}
+					>
+						{({ isValid }) => (
 							<Form className="flex flex-col h-full overflow-hidden">
 								<DialogHeader className="px-6 py-4 border-b">
 									<DialogTitle className="flex items-center gap-2 text-xl">
@@ -111,7 +122,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											type="submit"
 											variant="default"
 											className="bg-lime-600/90 text-white hover:bg-lime-600 shadow-sm"
-											disabled={isSubmitting}
+											disabled={isSubmitting || !isValid}
 										>
 											{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 											<T id="save" />

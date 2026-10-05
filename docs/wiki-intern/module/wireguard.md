@@ -15,6 +15,8 @@ WireGuard-Tunnels ermöglichen es, Heimserver über einen VPS mit öffentlicher 
 - `backend/routes/nginx/wireguard.js` — API-Routen
 - `frontend/src/components/Nginx/WireguardConfigModal.tsx` — Dialog für Peer-Konfiguration und QR-Code
 - `frontend/src/pages/Nginx/WireguardSettingsCard.tsx` — gekapselte Servereinstellungen mit Query-Invalidierung
+- `frontend/src/components/Nginx/WireguardPeerModal.tsx` — Peer-Formular mit aktuellem Subnetz für die Neuanlage
+- `frontend/src/locale/HelpDoc/{en,de}/WireguardTunnels.md` — registrierte Hilfe für die WireGuard-Seite
 
 ## Verhalten
 
@@ -26,6 +28,16 @@ WireGuard-Tunnels ermöglichen es, Heimserver über einen VPS mit öffentlicher 
   verändern. Nur Berechtigungen mit Sichtbarkeit `all` erhalten und aktualisieren Statusdaten fremder Peers.
 - Die Servereinstellungen sind in `WireguardSettingsCard` gekapselt. Nach erfolgreichem Speichern invalidiert sie sowohl
   Einstellungen als auch Peer-Daten; die Listenansicht behält damit ihren Peer- und Dialogzustand unabhängig.
+- Bei der Neuanlage lädt `WireguardPeerModal` die bestehende Query `wireguard-peers` frisch und verwendet
+  `server.subnet` als Default für `allowed_ips`. Ein alter Cache-Wert nach dem Speichern von Servereinstellungen
+  reicht nicht zur Erstellung. Bis zur aktuellen Antwort bleibt Speichern gesperrt; bei einem Ladefehler zeigt das
+  Formular die Fehlermeldung und eine Aktualisieren-Aktion. Dies benötigt keine zusätzliche `settings:get`-Capability.
+  Nur ein unangetastetes Allowed-IPs-Feld wird vorbelegt; eigene Eingaben, Namen und gespeicherte Peer-Routen bleiben
+  erhalten. `WireguardPeerModal.test.tsx` prüft tatsächliche Create-Payloads, alten Cache, eigene Routen, Fehler/Retry
+  sowie bearbeitete Peers mit Keepalive `0` und leerem DNS.
+- Die Hilfe-Aktion verwendet die registrierte Section `WireguardTunnels`. Englisch und Deutsch besitzen eigene
+  Markdown-Assets; andere Sprachen verwenden den bestehenden englischen Fallback. Der echte
+  `locale/HelpDoc/index.test.ts` prüft die aufgelösten Asset-URLs und Inhalte ohne Mock des HelpDoc-Lookups.
 - Der Konfigurationsdialog beschreibt seinen Zweck für Screenreader und lokalisiert QR-Code-Hinweis, Alternativtext und Schließen-Aktion in allen 13 Sprachen.
 - Die ausschließlich symbolische Kopier-Schaltfläche hat einen lokalisierten zugänglichen Namen in allen 13 Sprachen und bleibt damit für Screenreader eindeutig bedienbar.
 - Die Icon-Aktionen der Peer-Tabelle sowie Aktualisieren und Hilfe verwenden lokalisierte zugängliche Namen. Der Start-/Stopp-Umschalter beschreibt dabei abhängig vom Peer-Status die tatsächlich ausgeführte Aktion.
@@ -89,6 +101,12 @@ Subnetz und Serveradresse verlangen kanonische IPv4-Adressen mit vier Dezimalokt
 
 Auch Peer-Änderung, Löschung, Aktivierung und Deaktivierung nutzen dieselbe Warteschlange wie Peer-Erstellung und Servereinstellungen. Sie umfasst jeweils Datenbankänderung, Schreiben von `wg0.conf` und Anwendung auf dem Interface. Eine langsame ältere Änderung kann damit einen später deaktivierten oder gelöschten Peer nicht wieder in die Laufzeitkonfiguration aufnehmen.
 
+### Audit-Protokoll
+
+Das [Audit-Log](../verwaltung/audit-log.md) unterscheidet `wireguard-peer` und `wireguard-settings`. Peer-Erstellung, Änderung und Löschung verwenden `created`, `updated` und `deleted`; Aktivieren und Deaktivieren bleiben `updated` mit `meta.status: "enabled"` beziehungsweise `"disabled"`. Änderungen der Servereinstellungen verwenden ebenfalls `updated`.
+
+Die Oberfläche zeigt für Peers nur ihren Namen oder den lokalisierten Ersatz „Peer #ID“ im Badge. Servereinstellungen erhalten einen festen lokalisierten Titel. Diese Zeilenkennzeichnungen zeigen keine Schlüssel oder Konfigurationen; der Detaildialog bleibt eine durch `auditlog:list` geschützte Metadatenansicht. Beide Objekttypen sind getrennt filterbar.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
@@ -100,3 +118,4 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Tor Onion Services](./tor.md)
 - [DDNS](./ddns.md)
 - [Umgebungsvariablen](../konfiguration/umgebungsvariablen.md)
+- [Audit-Log](../verwaltung/audit-log.md)

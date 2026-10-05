@@ -43,6 +43,21 @@ describe("createProxyHostInitialValues", () => {
 			maintenanceOnFailure: false,
 			maintenanceReason: "",
 			maintenanceStart: "",
+			meta: {
+				ipFirewall: {
+					enabled: false,
+					listIds: [],
+					allowlist: [],
+					denylist: [],
+					asnDenylist: [],
+					countryDenylist: [],
+					countryReason: "",
+					blockUnknownCountry: false,
+					publicMessage: "",
+					supportUrl: "",
+					internalNote: "",
+				},
+			},
 			note: "",
 			phpEnabled: false,
 			phpOverrideIni: "",
@@ -207,6 +222,45 @@ describe("createProxyHostInitialValues", () => {
 		expect(createProxyHostInitialValues({ advLimitReqRate: 0, advLimitReqBurst: 0 })).toMatchObject({
 			advLimitReqRate: 0,
 			advLimitReqBurst: 0,
+		});
+	});
+
+	it("preserves metadata and saved firewall settings without sharing mutable rule arrays", () => {
+		const meta = {
+			customIntegration: { enabled: true },
+			ipFirewall: {
+				enabled: true,
+				listIds: [4, 12],
+				allowlist: ["198.51.100.42"],
+				denylist: [{ address: "203.0.113.0/24", reason: "Repeated abuse" }],
+				asnDenylist: [{ asn: 13335, reason: "Network restriction" }],
+				countryDenylist: ["DE", "XK"],
+				countryReason: "Country restriction",
+				blockUnknownCountry: true,
+				publicMessage: "Contact the service operator.",
+				supportUrl: "https://example.test/support",
+				internalNote: "Internal case number",
+			},
+		};
+		const values = createProxyHostInitialValues({ meta });
+		expect(values.meta).toStrictEqual(meta);
+		expect(values.meta?.ipFirewall?.listIds).not.toBe(meta.ipFirewall.listIds);
+		expect(values.meta?.ipFirewall?.denylist[0]).not.toBe(meta.ipFirewall.denylist[0]);
+		expect(values.meta?.ipFirewall?.asnDenylist).not.toBe(meta.ipFirewall.asnDenylist);
+		expect(values.meta?.ipFirewall?.asnDenylist[0]).not.toBe(meta.ipFirewall.asnDenylist[0]);
+		expect(values.meta?.ipFirewall?.countryDenylist).not.toBe(meta.ipFirewall.countryDenylist);
+	});
+
+	it("reads legacy JSON metadata without dropping unrelated settings", () => {
+		const values = createProxyHostInitialValues({
+			meta: JSON.stringify({
+				featureFlag: "preserved",
+				ipFirewall: { enabled: true, listIds: [5] },
+			}) as unknown as ProxyHost["meta"],
+		});
+		expect(values.meta).toMatchObject({
+			featureFlag: "preserved",
+			ipFirewall: { enabled: true, listIds: [5], allowlist: [], asnDenylist: [] },
 		});
 	});
 });

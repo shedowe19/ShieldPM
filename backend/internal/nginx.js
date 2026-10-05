@@ -5,6 +5,15 @@ import dayjs from "dayjs";
 import _ from "lodash";
 import punycode from "punycode.js";
 import errs from "../lib/error.js";
+import {
+	assertAsnFirewallAvailable,
+	assertConfiguredFirewallLookups,
+	assertCountryFirewallAvailable,
+	getFirewallGeoipStatus,
+} from "../lib/firewall-geoip.js";
+import { ConfigurationLexer } from "../lib/firewall-geoip-config.js";
+import { compactFirewallForPreview, summarizeFirewallPreviewConfig } from "../lib/firewall-preview.js";
+import { buildFirewallRender } from "../lib/firewall-render.js";
 import { sanitizeHostMeta } from "../lib/host-response.js";
 import { getTerminalAccessToken } from "../lib/terminal-access.js";
 import utils from "../lib/utils.js";
@@ -28,6 +37,7 @@ const updateHostStatus = (model, host, status) =>
 	});
 
 const internalNginx = {
+	updateHostStatus,
 	/**
 	 * This will:
 	 * - test the nginx config first to make sure it's OK
@@ -148,7 +158,11 @@ const internalNginx = {
 	 * @returns {Promise}
 	 */
 	test: async () => {
-		return utils.execFile("nginx", ["-tq"]);
+		const output = await utils.execFile("nginx", ["-tq"]);
+		// Inspect the complete staged configuration, including new advanced directives,
+		// before any reload can activate a conflicting shared country/ASN variable.
+		await assertConfiguredFirewallLookups();
+		return output;
 	},
 
 	/**
@@ -255,7 +269,7 @@ const internalNginx = {
 	},
 
 	/**
-	 * Render a host configuration without writing it. The same output is used by generateConfig().
+	 * Render a host configuration without writing it. Preview mode summarizes CIDR tables and hides terminal tokens.
 	 * @param   {String}  host_type
 	 * @param   {Object}  host_row
 	 * @param   {{preview?: boolean}} [options]
@@ -266,6 +280,27 @@ const internalNginx = {
 		const host = JSON.parse(JSON.stringify(host_row));
 		if (host.is_deleted) host.enabled = false;
 		const nice_host_type = internalNginx.getFileFriendlyHostType(host_type);
+		let firewallSummaries;
+		if (nice_host_type === "proxy_host" && host.enabled && host.meta?.ip_firewall?.enabled === true) {
+			const geoipStatus = await getFirewallGeoipStatus();
+			await assertCountryFirewallAvailable(host.meta.ip_firewall, geoipStatus);
+			await assertAsnFirewallAvailable(host.meta.ip_firewall, geoipStatus);
+			let lists = [];
+			if (host.meta.ip_firewall.list_ids?.length) {
+				// Lazy import avoids the list service/configuration engine cycle for ordinary/manual-only hosts.
+				const { default: firewallLists } = await import("./firewall-list.js");
+				lists = await firewallLists.getForHost(host.meta.ip_firewall.list_ids);
+			}
+			host.firewall = await buildFirewallRender(host, lists, {
+				country: geoipStatus.available === true,
+				asn: geoipStatus.asn?.available === true,
+			});
+			if (options.preview && host.firewall) {
+				const compact = compactFirewallForPreview(host.firewall);
+				host.firewall = compact.firewall;
+				firewallSummaries = compact.summaries;
+			}
+		}
 
 		const renderEngine = utils.getRenderEngine();
 		const templatePath = `${__dirname}/../templates/${nice_host_type}.conf`;
@@ -347,7 +382,10 @@ const internalNginx = {
 			}
 		}
 
-		return await renderEngine.renderFile(templatePath, host);
+		const rendered = await renderEngine.renderFile(templatePath, host);
+		return firewallSummaries
+			? summarizeFirewallPreviewConfig(rendered, host.id, { summaries: firewallSummaries }).config
+			: rendered;
 	},
 
 	/**
@@ -503,9 +541,10 @@ const internalNginx = {
 	/**
 	 * Render multiple host types into one atomic validation batch.
 	 * @param {Array<{model: object, hostType: string, hosts: Array<object>}>} groups
+	 * @param {{throwOnError?: boolean}} [options]
 	 * @returns {Promise<Array<object>>}
 	 */
-	bulkGenerateConfigGroups: async (groups) =>
+	bulkGenerateConfigGroups: async (groups, options = {}) =>
 		internalNginx.withConfigurationLock(async () => {
 			/** @type {Array<{host: object, host_type: string, model: object}>} */
 			const stages = [];
@@ -527,7 +566,11 @@ const internalNginx = {
 				return statuses;
 			} catch (err) {
 				logger.error(`Nginx batch test failed: ${err.message}`);
-				return await Promise.all(stages.map((stage) => internalNginx.rollbackStagedConfig(stage, err)));
+				const statuses = await Promise.all(
+					stages.map((stage) => internalNginx.rollbackStagedConfig(stage, err)),
+				);
+				if (options.throwOnError) throw err;
+				return statuses;
 			}
 		}),
 
@@ -535,7 +578,25 @@ const internalNginx = {
 	 * @param   {string}  cfg
 	 * @returns {boolean}
 	 */
-	advancedConfigHasDefaultLocation: (cfg) => !!cfg.match(/^(?:.*;)?\s*?location\s*?\/\s*?{/im),
+	advancedConfigHasDefaultLocation: (cfg) => {
+		// Inspect only top-level prefix locations. Quoted arguments and comments
+		// must not hide the generated proxy; exact/regex locations may coexist with it.
+		const lexer = new ConfigurationLexer();
+		for (const { words, boundary } of lexer.feed(cfg)) {
+			if (boundary !== "{") continue;
+			if (
+				words[0] === "location" &&
+				((words.length === 2 && words[1] === "/") ||
+					(words.length === 3 && words[1] === "^~" && words[2] === "/"))
+			) {
+				return true;
+			}
+			// Nested locations do not replace the server's root location. Lua blocks
+			// need their own comment/string handling while skipping their contents.
+			lexer.skipBlock(/_by_lua_block$/.test(words[0] || ""));
+		}
+		return false;
+	},
 
 	/**
 	 * Read nginx log file contents.

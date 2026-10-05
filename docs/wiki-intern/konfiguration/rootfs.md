@@ -13,11 +13,12 @@ Das `rootfs/`-Verzeichnis enthält Dateien, die direkt ins Dateisystem des Conta
 | Datei                | Zweck                                                                                                               |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `entrypoint.sh`      | Docker-Einstieg: Datenverzeichnis-Migration und optionale Prerun-Skripte; ruft `envs.sh` auf                        |
-| `envs.sh`            | Lädt `/data/.env`, validiert Umgebungswerte und prüft den Vorlagenfingerabdruck                                     |
+| `envs.sh`            | Lädt `/data/.env`, bereitet GeoIP vor, validiert Umgebungswerte und prüft den Vorlagenfingerabdruck                 |
 | `migration.sh`       | Übergibt an `start.sh`                                                                                              |
 | `start.sh`           | Konfiguriert Nginx, Module, Zertifikate, Dienste und Berechtigungen; ruft `launch.sh` auf                           |
 | `migrate-data.sh`    | Funktionen für die Migration historischer Datenpfade und Certbot-Dateien                                            |
 | `runtime-config.sh`  | Passt Nginx-, GoAccess- und Certbot-Dateien an aktuelle Laufzeitpfade und Umgebungswerte an                         |
+| `update-geoip.py`    | Prüft die neueste GeoLite.mmdb-Veröffentlichung und bereitet Country, City und ASN vor allen Diensten vor           |
 | `launch.sh`          | Startet Backend-Prozess und optionale Hilfsdienste; beendet den Container, wenn Nginx oder Backend unerwartet endet |
 | `healthcheck.sh`     | Docker-Healthcheck der lokalen HTTPS-UI (`/api/`) und gegebenenfalls GoAccess-/PHP-Dienste                          |
 | `aio.sh`             | Richtet den Nextcloud-AIO-Proxy-Host einschließlich TLS-Zertifikat einmalig ein                                     |
@@ -38,6 +39,20 @@ Das `rootfs/`-Verzeichnis enthält Dateien, die direkt ins Dateisystem des Conta
 - PHP-FPM schreibt seine PID-Dateien nach `/run/shieldpm/php82.pid`, `php83.pid` beziehungsweise `php84.pid`; der konfigurierte Fehlerlogpfad liegt unter `/data/php/XX/php-fpm.log`. Der Start aktualisiert aktive sowie kommentierte Direktiven bei jedem Lauf. PHP-FPM öffnet diese Dateien auch im Vordergrund; alte Pfade unter `/run/php` oder `/var/log` würden den unprivilegierten Start verhindern. `-FOR` gibt die Meldungen weiterhin über das geerbte stderr aus, ohne `/proc/self/fd/2` erneut öffnen oder dessen Besitzer ändern zu müssen. Explizite `listen.owner`-/`listen.group`-Vorgaben werden deaktiviert, sodass die Sockets den effektiven Dienstbenutzer behalten und kein unzulässiger Besitzerwechsel zu `www-data` versucht wird.
 - `runtime-config.sh` passt die mitgelieferten Nginx-, UI- und GoAccess-Konfigurationen vor dem Dienststart gezielt an diese Pfade an. Die veränderliche Default-Site liegt unter `/data/nginx/default.conf`; die bisherige Datei unter `/usr/local/nginx/conf/conf.d/default.conf` wird nach Sicherung des alten Inhalts durch ein atomar erzeugtes, root-eigenes Include ersetzt. Eine bereits vorhandene Zielkonfiguration bleibt erhalten. Die Host-Regenerierung löscht weder dieses Ziel noch `ip_ranges.conf`.
 - DNS-Plugins werden unter `/data/certbot-plugins` installiert. Der Launcher stellt dieses Verzeichnis dem bestehenden `PYTHONPATH` voran; die Python-Systeminstallation unter `/usr/local` benötigt keine Schreibrechte für den Dienstbenutzer.
+
+## GeoIP-Daten vor dem Dienststart
+
+Die gemeinsame Docker-/Native-Startkette `envs.sh` → `migration.sh` → `start.sh` → `launch.sh` bereitet GeoIP standardmäßig mit `GEOIP_AUTO_UPDATE=true` vor. Der Updater läuft in `envs.sh` nach dem Laden von `/data/.env`, vor `validate-env.cjs`, Nginx-Konfiguration und allen Diensten. Damit sieht auch die automatische GoAccess-Dateiauswahl die Country-, City- und ASN-Datenbanken bereits beim ersten Start. Das Laden des GeoIP2-Moduls bleibt unabhängig an `NGINX_LOAD_GEOIP2_MODULE=true` gebunden.
+
+`update-geoip.py --directory /data/nginx` prüft die neueste [GeoLite.mmdb-Veröffentlichung](https://github.com/shedowe19/GeoLite.mmdb/releases/latest) über die GitHub-Release-API. Je Asset werden exakter Dateiname, Releasepfad, Größe und `digest: sha256:…` geprüft. Der Abruf folgt nur zugelassenen HTTPS-GitHub-Endpunkten und prüft jede Weiterleitung. Die Grenzen betragen 2 MiB Metadaten, 128 MiB pro Datenbank, höchstens drei Transfer-Versuche und fünf Redirects sowie 240 Sekunden für den gesamten Updateversuch. Python 3, `curl` und die installierte `libmaxminddb` werden verwendet; ein Python-Zusatzpaket oder MaxMind-Zugangsdaten sind nicht nötig.
+
+Bestehende Dateien werden nur dann ohne Schreibvorgang wiederverwendet, wenn Größe und SHA-256 zum Release passen und `libmaxminddb` sie mit passendem Country-/City-/ASN-Typ und Binärformat 2 öffnen kann. Diese Typ-/Öffnungsprüfung verifiziert nicht jeden Datenbankdatensatz vollständig. Alle geänderten Dateien werden in einem privaten Verzeichnis neben dem Ziel gestagt und geprüft, bevor der Austausch beginnt. Dateiersetzungen sind einzeln atomar; der gesamte Satz ist keine bei Stromverlust atomare Mehrdatei-Transaktion. Die Dateien erhalten Modus `0644`; bestehende UID/GID bleiben erhalten. Unveränderte Dateien behalten Inode, Inhalt und Rechte. Der Updatepfad lehnt Symlink-Komponenten und nicht reguläre Zieldateien ab und sperrt das Zielverzeichnis gegen parallele Updater. Staging, Austausch und Bereinigung verwenden den geöffneten Verzeichnisdeskriptor, damit ein zwischenzeitlicher Pfadwechsel die Schreibvorgänge nicht umlenkt.
+
+Bei Abruf- oder Verifikationsfehlern darf ein vollständiger Cache aus drei regulären, nicht leeren, höchstens 128 MiB großen und nativ typgeprüften MMDB-Dateien den Start mit Warnung fortsetzen. Ein normaler Austauschfehler versucht zunächst, die gesicherten Vorgänger wiederherzustellen; fehlt danach ein gültiger vollständiger Cache, stoppt der Start. Unsichere Ziele, eine belegte Verzeichnissperre und unvollständige Wiederherstellung stoppen unabhängig von einem möglichen Cache. Im letzten Fall bleibt das Staging-Verzeichnis mit Recovery-Sicherungen und ausgegebenem Pfad erhalten.
+
+`GEOIP_AUTO_UPDATE=false` deaktiviert Veröffentlichungskontrolle, Downloads und Cacheprüfungen dieses Helfers für Offline- oder selbst verwaltete Daten. Aktive Nginx-GeoIP-Blöcke benötigen weiterhin ihre eigenen Dateien. Es gibt keinen periodischen Boot-Updater während laufender Dienste; eigene MaxMind-Sidecars oder Cronjobs werden damit nicht automatisch entfernt. Einrichtung: [Analytics](../../wiki/Analytics.md#enabling-geoip-country-statistics).
+
+`scripts/tests/test_geoip_update.py` prüft Release-/Transfergrenzen, echte MMDB-Dateitypen, Cache, Pfadwechsel und Rollbacks mit kontrolliertem Transport. `scripts/tests/test_geoip_startup.py` prüft die Reihenfolge mit echter Umgebungsvalidierung und isolierten Updater-/Dienst-Fixtures; diese lokalen Tests sind kein Nachweis eines Live-GitHub-Downloads oder Docker-Starts.
 
 ## Wiederholter Start und Zertifikatauswahl
 
@@ -67,7 +82,7 @@ Falls Corepack nicht verfügbar ist, installieren sowohl `update-shieldpm` als a
 
 ## Native-Update: Backend-Health-Check
 
-Nach dem Neustart prüft `update-shieldpm` den Backend-Health-Status über `/run/shieldpm/shieldpm.sock` gegen `http://localhost/`. Der native Backend-Router liefert dort `status: "OK"`; `/api/` ist kein Socket-Präfix und antwortet mit 404. Der Check wartet höchstens 120 Sekunden und meldet nur dann ein erfolgreiches Update, wenn der Dienst aktiv und diese Antwort verfügbar ist.
+Nach dem Neustart prüft `update-shieldpm` den Backend-Health-Status über `/run/shieldpm/shieldpm.sock` gegen `http://localhost/`. Der native Backend-Router liefert dort `status: "OK"`; `/api/` ist kein Socket-Präfix und antwortet mit 404. Der Check wartet höchstens 360 Sekunden, einschließlich bis zu 240 Sekunden für GeoIP-Vorbereitung und weiterer 120 Sekunden für Backend und Migrationen, und meldet nur dann ein erfolgreiches Update, wenn der Dienst aktiv und diese Antwort verfügbar ist.
 
 ## Native-Update: Austausch und Fehlerbehandlung
 

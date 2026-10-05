@@ -28,7 +28,7 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 2. Liest aktuelle Daten aus der Datenbank
 3. Rendert Liquid-Templates mit Host-Daten
 4. Schreibt `.conf`-Dateien nach `/data/nginx/`
-5. Prüft die gesamte Konfiguration mit `nginx -tq` und signalisiert danach unmittelbar `nginx -s reload`
+5. Prüft mit `test()` die gesamte Konfiguration durch `nginx -tq` und anschließend die benötigten [Firewall-GeoIP-Quellen](./ip-firewall.md#länderfilter-und-gemeinsame-analytics-geoip-quelle) in den gestagten Dateien samt Includes; erst danach wird `nginx -s reload` signalisiert.
 
 ## Wichtige Hinweise
 
@@ -37,6 +37,7 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 - Templates verwenden ausschließlich Liquid-Syntax (LiquidJS)
 - Eigene Unix-Sockets liegen unter `/run/shieldpm/`: Backend, PHP, GoAccess, Anubis, OAuth2 und HTTP-Ersatzlistener. Die Startskripte vergeben nur diesem Laufzeitverzeichnis Schreibrechte; fremde Host-Sockets unter `/run` bleiben unverändert. Templateänderungen erzwingen die Neuerzeugung gespeicherter Hosts beim Start.
 - Die editierbare Default-Konfiguration einschließlich Sicherungen liegt unter `/data/nginx/default.conf`. Ein festes Include unter `/usr/local/nginx/conf/conf.d/default.conf` bindet sie ein; der Backendprozess benötigt dort keine Schreibrechte mehr.
+- Nginx öffnet konfigurierte Zugriffslogs bereits bei der Syntaxprüfung. `start.sh` erhält deshalb `/data/logs` und bereitet es vor `launch.sh` mit `prepare_nginx_log_directory()` aus `runtime-config.sh` vor: Verzeichnis anlegen, Eigentümer `PUID:PGID`, Modus `0700`, Symlink-Pfad abweisen. Vorhandene Firewall-Trefferlogs bleiben über Neustarts erhalten; der anschließende Eigentümerwechsel unter `/data` berücksichtigt die gewählte Laufzeit-UID.
 
 ## Erweiterte Methoden
 
@@ -59,16 +60,18 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 
 ### Bulk-Operationen
 
-- `bulkGenerateConfigs(model, host_type, hosts)` delegiert an `bulkGenerateConfigGroups(groups)`. Alle Hosts und Hosttypen eines Gruppenlaufs werden zunächst mit Sicherungen geschrieben und dann genau einmal mit `nginx -tq` geprüft. Bei einem Fehler werden die bereits geschriebenen Dateien als `.err` gesichert und auf den vorherigen Zustand zurückgesetzt; nach erfolgreicher Prüfung werden Status und Sicherungen abgeschlossen. Ein gemeinsamer Reload liegt beim Aufrufer. Die Dateiverarbeitung ist serialisiert, aber die einzelnen Schreibvorgänge sind kein atomarer Dateisystem-Commit.
+- `bulkGenerateConfigs(model, host_type, hosts)` delegiert an `bulkGenerateConfigGroups(groups)`. Alle Hosts und Hosttypen eines Gruppenlaufs werden zunächst mit Sicherungen geschrieben und dann genau einmal mit `test()` einschließlich `nginx -tq` und Firewall-Quellenprüfung validiert. Bei einem Fehler werden die bereits geschriebenen Dateien als `.err` gesichert und auf den vorherigen Zustand zurückgesetzt; nach erfolgreicher Prüfung werden Status und Sicherungen abgeschlossen. Ein gemeinsamer Reload liegt beim Aufrufer. Die Dateiverarbeitung ist serialisiert, aber die einzelnen Schreibvorgänge sind kein atomarer Dateisystem-Commit.
+- Mit `{throwOnError: true}` gibt `bulkGenerateConfigGroups()` Render- und Syntaxfehler nach demselben Rollback als Fehler weiter. [GitOps](./gitops.md#import--und-exportkonsistenz) nutzt diesen Modus, damit eine fehlgeschlagene Sammelvalidierung weder als erfolgreicher Restore gilt noch die nachgelagerte Firewall-Listenbereinigung erreicht. Ohne diese Option bleibt der bisherige Rückgabestatus erhalten. `nginx-bulk-validation.spec.js` prüft beide Varianten mit temporären Dateien und simulierten Nginx-Prozessaufrufen.
 
 ### Config-Parsing
 
 - `advancedConfigHasDefaultLocation(advanced_config)` — Parst das `advanced_config`-Feld und prüft, ob ein `location /` Block definiert ist. Gibt `true` zurück, wenn vorhanden. Beeinflusst, ob der Default-Location-Block hinzugefügt wird.
-- `renderConfig(host_type, host_row, options)` — Gemeinsamer reiner Liquid-Renderpfad für
+- `renderConfig(host_type, host_row, options)` — Gemeinsamer Liquid-Renderpfad für
   `generateConfig()` und die Proxy-Host-Vorschau. Bei `{ preview: true }` wird der Terminal-Token
   vor dem Rendern durch einen Platzhalter ersetzt; damit muss eine Vorschau keinen Signierschlüssel
   lesen. `generateConfig()` schreibt das Ergebnis und startet danach optional `nginxbeautifier`.
   Der Vorschau-Diff normalisiert nur Einrückung und Leerzeilen; erst das Speichern führt `nginx -tq` aus.
+- Für die [IP-Firewall](./ip-firewall.md#konfigurationsvorschau) ersetzt `{preview: true}` automatisch generierte CIDR-Tabellen durch Anzahl und SHA-256-Prüfsumme. Der Vorschauentwurf erzeugt keine vollständige CIDR-Ausgabe; die aktive Vergleichsdatei wird gestreamt und ebenso zusammengefasst. Ohne Preview-Option enthält die produktive Konfiguration sämtliche Regeln.
 
 ### Anubis-Integration
 

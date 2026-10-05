@@ -873,5 +873,20 @@
 	"wireguard.settings.serverAddress": "서버 주소",
 	"wireguard.settings.title": "WireGuard 설정",
 	"wireguard.title": "WireGuard 터널",
-	"settings.gitops.save-before-action": "연결을 테스트하거나 Git 작업을 실행하기 전에 구성 변경 사항을 저장하세요."
+	"settings.gitops.save-before-action": "연결을 테스트하거나 Git 작업을 실행하기 전에 구성 변경 사항을 저장하세요.",
+	"firewall.editNamed": "Edit {name}",
+	"firewall.deleteNamed": "Delete {name}",
+	"firewall.refresh": "Update {name} now",
+	"firewall.refreshed": "Blocklist updated.",
+	"firewall.saved": "Blocklist saved.",
+	"firewall.search": "Search blocklists",
+	"firewall.import.upload": "Upload TXT file",
+	"firewall.import.fileError": "Select a .txt file no larger than 8 MiB.",
+	"firewall.import.readError": "The file could not be read.",
+	"firewall.host.removeEntry": "Remove block {row}",
+	"firewall.host.previewTitle": "IP firewall block page preview",
+	"firewall.host.countries.placeholder": "Search for a country name or ISO code…",
+	"firewall.host.countries.noMatches": "No countries found",
+	"proxy-host.config-preview.firewall-rule-summaries": "Firewall rule tables are summarized by entry count and a fingerprint so large lists stay readable. Changes to the rules change the fingerprint. All rules are enforced when you save.",
+	"firewall.host.asn.remove": "Remove ASN rule {row}"
 }

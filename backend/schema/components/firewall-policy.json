@@ -1,0 +1,105 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"enabled": {
+			"type": "boolean",
+			"default": false
+		},
+		"list_ids": {
+			"type": "array",
+			"maxItems": 32,
+			"uniqueItems": true,
+			"items": {
+				"type": "integer",
+				"minimum": 1
+			}
+		},
+		"allowlist": {
+			"type": "array",
+			"maxItems": 1000,
+			"items": {
+				"type": "string",
+				"maxLength": 64
+			}
+		},
+		"denylist": {
+			"type": "array",
+			"maxItems": 1000,
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": [
+					"address"
+				],
+				"properties": {
+					"address": {
+						"type": "string",
+						"maxLength": 64
+					},
+					"reason": {
+						"type": "string",
+						"maxLength": 1000
+					}
+				}
+			}
+		},
+		"public_message": {
+			"type": "string",
+			"maxLength": 2000
+		},
+		"support_url": {
+			"type": "string",
+			"maxLength": 2048
+		},
+		"internal_note": {
+			"type": "string",
+			"maxLength": 2000
+		},
+		"country_denylist": {
+			"type": "array",
+			"maxItems": 250,
+			"uniqueItems": true,
+			"default": [],
+			"items": {
+				"$ref": "./firewall-country-code.json"
+			}
+		},
+		"asn_denylist": {
+			"type": "array",
+			"maxItems": 1000,
+			"uniqueItems": true,
+			"default": [],
+			"description": "Blocked autonomous system numbers with optional public explanations.",
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": [
+					"asn"
+				],
+				"properties": {
+					"asn": {
+						"type": "integer",
+						"minimum": 1,
+						"maximum": 4294967295
+					},
+					"reason": {
+						"type": "string",
+						"maxLength": 1000
+					}
+				}
+			}
+		},
+		"country_reason": {
+			"type": "string",
+			"maxLength": 1000,
+			"default": "",
+			"description": "Optional public explanation for country-based blocks."
+		},
+		"block_unknown_country": {
+			"type": "boolean",
+			"default": false,
+			"description": "Block requests whose actual visitor country could not be determined."
+		}
+	}
+}

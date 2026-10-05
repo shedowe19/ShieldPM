@@ -1,5 +1,7 @@
 import fs from "node:fs";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import apiValidator from "../../lib/validator/api.js";
+import { getCompiledSchema, getValidationSchema } from "../../schema/index.js";
 
 vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn().mockResolvedValue() } }));
 vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: vi.fn().mockReturnValue("host-token") }));
@@ -23,6 +25,9 @@ const host = (overrides = {}) => ({
 });
 
 describe("Nginx configuration regressions", () => {
+	beforeAll(async () => {
+		await getCompiledSchema();
+	});
 	beforeEach(() => {
 		vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", "true");
 		vi.mocked(getTerminalAccessToken).mockClear();
@@ -62,6 +67,33 @@ describe("Nginx configuration regressions", () => {
 		expect(source).toEqual(original);
 	});
 
+	it.each([
+		["# Example; location / { proxy_pass http://example.test; }", false],
+		['set $note "# Example; location / { }";', false],
+		["set $note '# Example; location / { }';", false],
+		['set $note "escaped \\"; location / { }";', false],
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: Literal Nginx variable syntax, not JavaScript interpolation.
+		["set $note ${request_uri}; # location / { }", false],
+		["location = / { return 200 exact; }", false],
+		["location ~ ^/ { return 200 regex; }", false],
+		["location /assets/ { return 200 assets; }", false],
+		["location / { return 200 root; }", true],
+		["location\t/\n{ return 200 root; }", true],
+		['location "/" { return 200 root; }', true],
+		["location '^~' '/' { return 200 root; }", true],
+		['set $note "#;"; location / { return 200 root; }', true],
+		["# location / { ignored }\nlocation / { return 200 root; }", true],
+		["access_by_lua_block { local note = [[ #; } location / { ]] }\nlocation / { return 200 root; }", true],
+	])("detects actual prefix root locations in %s", async (advancedConfig, overridesRoot) => {
+		const source = host({ advanced_config: advancedConfig });
+		const original = structuredClone(source);
+		expect(internalNginx.advancedConfigHasDefaultLocation(advancedConfig)).toBe(overridesRoot);
+		const rendered = await internalNginx.renderConfig("proxy_host", source);
+		expect(rendered.includes("proxy_pass http://127.0.0.1:8080$request_uri;")).toBe(!overridesRoot);
+		expect(rendered).toContain(advancedConfig);
+		expect(source).toEqual(original);
+	});
+
 	it("renders trailing-slash redirects and aliases for custom static locations", async () => {
 		const rendered = await internalNginx.renderLocations(
 			host({ locations: [{ path: "/assets/", forward_scheme: "path", forward_host: "/data/assets/" }] }),
@@ -96,6 +128,65 @@ describe("Nginx configuration regressions", () => {
 		const rendered = fs.promises.writeFile.mock.calls[0][1];
 		expect(rendered).toContain("/data/tls/internal/npm-2/privkey.pem");
 		expect(rendered).not.toContain("/data/tls/custom/npm-2/");
+	});
+
+	it.each([
+		["::1", "[::1]"],
+		["::ffff:127.0.0.1", "[::ffff:127.0.0.1]"],
+		["[::1]", "[::1]"],
+		["127.0.0.1", "127.0.0.1"],
+		["upstream.test", "upstream.test"],
+	])("renders accepted TCP/UDP stream host %s without changing saved input", async (address, renderedAddress) => {
+		const payload = {
+			incoming_port: "9001",
+			forwarding_host: address,
+			forwarding_port: "9000",
+			tcp_forwarding: true,
+			udp_forwarding: true,
+		};
+		await apiValidator(getValidationSchema("/nginx/streams", "post"), payload);
+		const original = structuredClone(payload);
+		const rendered = await internalNginx.renderConfig("stream", { ...payload, id: 7, enabled: true });
+		expect([...rendered.matchAll(/proxy_pass ([^;]+);/g)].map((match) => match[1])).toEqual([
+			`${renderedAddress}:9000`,
+			`${renderedAddress}:9000`,
+		]);
+		expect(payload).toEqual(original);
+	});
+
+	it.each([
+		["::ffff:127.0.0.1", "127.0.0.1"],
+		["0:0:0:0:0:ffff:7f00:1", "127.0.0.1"],
+		["::ffff:127.0.0.1/128", "127.0.0.1"],
+		["::ffff:127.0.0.19/120", "127.0.0.0/24"],
+		["::ffff:127.0.0.1/96", "0.0.0.0/0"],
+		["2001:db8::1/64", "2001:db8::1/64"],
+		["127.0.0.1/24", "127.0.0.1/24"],
+		["all", "all"],
+	])("renders existing ACL address %s in the correct address family", async (address, emitted) => {
+		const list = {
+			name: "Address-family controls",
+			satisfy_any: false,
+			items: [],
+			clients: [{ directive: "deny", address }],
+		};
+		await apiValidator(getValidationSchema("/nginx/access-lists", "post"), list);
+		const original = structuredClone(list);
+		const rendered = await internalNginx.renderConfig("proxy_host", host({ access_list_id: 1, access_list: list }));
+		expect(rendered).toContain(`deny ${emitted};`);
+		expect(list).toEqual(original);
+	});
+
+	it("rejects an existing mapped ACL CIDR that spans beyond IPv4 rather than activating a partial rule", async () => {
+		await expect(
+			internalNginx.renderConfig(
+				"proxy_host",
+				host({
+					access_list_id: 1,
+					access_list: { items: [], clients: [{ directive: "deny", address: "::ffff:127.0.0.1/95" }] },
+				}),
+			),
+		).rejects.toThrow(/prefix of at least 96/);
 	});
 
 	it.each([false, true])(

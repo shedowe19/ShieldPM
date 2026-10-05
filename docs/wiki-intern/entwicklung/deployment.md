@@ -21,6 +21,12 @@ docker compose up -d
 
 **Persistente Daten**: `/opt/shieldpm` → gemountet nach `/data` im Container. `compose.yaml` verwendet `network_mode: host`; Ports werden daher direkt am Docker-Host gebunden. `compose.easy.yaml` ist die reduzierte Variante.
 
+Die gemeinsamen Startskripte für Docker und native Installationen löschen `/data/logs` nicht beim Neustart. Vor der Nginx-Validierung wird dieses Verzeichnis mit Eigentümer `PUID:PGID` und Modus `0700` vorbereitet; ein Symlink als Verzeichnis wird zurückgewiesen. Der bestehende Eigentümerwechsel unter `/data` übernimmt erhaltene Logdateien für die gewählte Laufzeit-UID. Damit bleiben unter anderem die [Firewall-Trefferlogs](../module/ip-firewall.md#sperrseite-und-protokoll) erhalten, sofern `/data` dauerhaft gespeichert wird.
+
+Die gemeinsamen Docker-/Native-Startskripte bereiten GeoIP standardmäßig mit `GEOIP_AUTO_UPDATE=true` vor: Nach Laden von `/data/.env` prüft `envs.sh` vor Umgebungsvalidierung, Konfiguration und Dienststart die neueste Veröffentlichung von [GeoLite.mmdb](https://github.com/shedowe19/GeoLite.mmdb/releases/latest). Country, City und ASN liegen anschließend unter `/data/nginx`. Unveränderte geprüfte Dateien werden wiederverwendet; alle neuen Datenbanken werden vor dem Austausch gestagt und geprüft. Bei Abruf-/Verifikationsfehlern darf nur ein vollständiger gültiger Altbestand den Start mit Warnung fortsetzen. Ohne diesen Bestand endet der Start vor den Diensten; unsichere Ziele und unvollständige Wiederherstellung bleiben ebenfalls fatal. Details: [Rootfs-Boot-Updater](../konfiguration/rootfs.md#geoip-daten-vor-dem-dienststart). Offline- und eigene MaxMind-Installationen können mit `GEOIP_AUTO_UPDATE=false` aussteigen; die [GeoIP-Anleitung](../../wiki/Analytics.md#offline-or-custom-geoip-data) beschreibt diesen Weg.
+
+Für [ASN-Regeln und -Informationen](../module/ip-firewall.md#asn-quelle-und-host-regeln) verwendet dieselbe Laufzeit `/data/nginx/GeoLite2-ASN.mmdb`. Mit `NGINX_LOAD_GEOIP2_MODULE=true` und einer regulären, nicht leeren Datei ohne Symlink wird ein markierter HTTP-GeoIP2-Block idempotent eingerichtet. Der Download ist unabhängig von der Modulaktivierung; die bestehenden Country-/City-Blöcke behalten ihre Modulsteuerung und benötigen ihre referenzierten Dateien weiterhin. Benutzerdefinierte ASN-Variablen bleiben erhalten.
+
 ## Native / LXC (Proxmox)
 
 ```bash
@@ -39,11 +45,15 @@ Der Installer:
 
 Der Aufruf erfolgt im entpackten Release-Paket (für ARM64 entsprechend `shieldpm-install-linux-arm64.tar.gz`). Bei einer erneuten Installation wird die vorhandene `/data/.env` nicht durch die mitgelieferte Vorlage überschrieben. Datenbankwerte werden atomar und für das Laden durch die Shell korrekt maskiert geschrieben; auch Passwörter mit Leerzeichen, Anführungszeichen oder Sonderzeichen bleiben unverändert. PostgreSQL-Aufrufe verwenden `runuser`, sodass kein zusätzliches `sudo`-Paket vorausgesetzt wird. HTTP-Download- und Pipelinefehler führen zum Abbruch.
 
+Der GeoIP-Schritt fragt für die Standardquelle keine MaxMind-Zugangsdaten ab; die Vorbereitung erfolgt beim anschließenden Dienststart. Vorhandene `/etc/GeoIP.conf` und `/etc/cron.d/geoipupdate` werden erhalten. Wer diese eigene Quelle weiter betreibt, setzt `GEOIP_AUTO_UPDATE=false`, damit sie allein für die gemeinsamen Dateien zuständig bleibt.
+
 Der Installer sucht seine Paketdateien neben `install.sh`, unabhängig vom aktuellen Arbeitsverzeichnis. Fehlende Anwendungsdateien, Nginx-Binaries oder Rootfs-Helfer werden vor Paketinstallationen erkannt. Vor dem Austausch vorhandener Binär- und Anwendungsdateien stoppt er einen aktiven ShieldPM-Dienst; der abschließende Start lädt dadurch den neuen Code. Ein späterer Installationsfehler lässt den Dienst angehalten, bis die Installation repariert oder erneut ausgeführt wird.
 
-Die Datenbankauswahl berücksichtigt auch eingerückte Zuweisungen und `export DB_…` in `/data/.env`. Nicht ausgewählte Provider werden deaktiviert. Beim Zurückschalten auf SQLite aktiviert der Installer auch einen vorhandenen `DB_SQLITE_FILE`-Alteintrag; die aktuelle Laufzeit ignoriert diesen Wert und verwendet fest `/data/shieldpm/database.sqlite`. Die Umschaltung kopiert keine Daten zwischen Datenbankservern. Scheitern sowohl automatische als auch manuelle OpenAppSec-Installation, bricht der Installer ab, bevor er das Nginx-Modul aktiviert oder Erfolg meldet.
+Die Datenbankauswahl berücksichtigt auch eingerückte Zuweisungen und `export DB_…` in `/data/.env`. Einfache Literalwerte mit einfachen oder doppelten Anführungszeichen, maskierten Zeichen und mehrzeiligen Werten werden als vollständige Zuweisung behandelt. Nicht ausgewählte Provider werden auf allen Zeilen einer Zuweisung auskommentiert; beim erneuten Auswählen bleiben ihre Werte erhalten. Das Ersetzen eines Werts entfernt ebenfalls die vollständige alte Zuweisung. Andere Variablen und Kommentare bleiben erhalten. Nicht unterstützte Shell-Ausdrücke, etwa Befehlsersetzung oder mehrere Zuweisungen auf einer Zeile, sowie nicht geschlossene Anführungszeichen werden vor dem Schreiben zurückgewiesen; die `.env` bleibt dann unverändert.
 
-Nach dem ersten Dienststart wartet der Installer bis zu 180 Sekunden auf `status: "OK"` über den Backend-Unix-Socket. Ein pauschaler Neustart nach 20 Sekunden entfällt, damit laufende Migrationen nicht unterbrochen werden. Die nativen Laufzeitpakete enthalten außerdem `sqlite3`, `netcat-openbsd` und `libfcgi-bin` für Wartung, Socket-Helfer und FastCGI sowie `wireguard-tools`, `wireguard-go`, `iproute2`, `iptables` und `procps` für WireGuard.
+Ein vorhandener `DB_SQLITE_FILE`-Alteintrag bleibt bei jeder Auswahl auskommentiert: Die Startvalidierung lehnt diese veraltete Variable ab; SQLite verwendet `/data/shieldpm/database.sqlite`. Dadurch aktiviert ein Wechsel zurück auf SQLite keinen ungültigen Alteintrag. Die Umschaltung kopiert keine Daten zwischen Datenbankservern. Scheitern sowohl automatische als auch manuelle OpenAppSec-Installation, bricht der Installer ab, bevor er das Nginx-Modul aktiviert oder Erfolg meldet.
+
+Nach dem ersten Dienststart wartet der Installer bis zu 360 Sekunden auf `status: "OK"` über den Backend-Unix-Socket: bis zu 240 Sekunden für GeoIP-Vorbereitung und weitere 120 Sekunden für Backend und Migrationen. Der native Anwendungsupdater verwendet dieselbe Wartefrist; der Docker-Healthcheck gewährt eine Startphase von 300 Sekunden. Ein pauschaler Neustart nach 20 Sekunden entfällt, damit laufende Migrationen nicht unterbrochen werden. Die nativen Laufzeitpakete enthalten außerdem `sqlite3`, `netcat-openbsd` und `libfcgi-bin` für Wartung, Socket-Helfer und FastCGI sowie `wireguard-tools`, `wireguard-go`, `iproute2`, `iptables` und `procps` für WireGuard.
 
 LXC-Templates enthalten keine gemeinsam verwendeten SSH-Hostkeys oder Maschinen-ID. Der Build entfernt diese Identitäten ausschließlich im temporären Template-Container. Beim Start eines daraus erzeugten LXC erstellt `shieldpm-ssh-hostkeys.service` fehlende Schlüssel vor `ssh.service`; vorhandene Schlüssel bleiben bei späteren Neustarts erhalten.
 
@@ -79,14 +89,14 @@ Das Skript fragt wie gewohnt nach Bestätigung und führt anschließend das norm
 
 ## Optionale Sidecar-Services
 
-| Service          | Image                                | Zweck                 |
-| ---------------- | ------------------------------------ | --------------------- |
-| CrowdSec         | `crowdsecurity/crowdsec:latest`      | IPS                   |
-| MySQL            | `mysql:8`                            | Produktions-DB        |
-| PostgreSQL       | `postgres:17-bookworm`               | Produktions-DB        |
-| GeoIP-Update     | `ghcr.io/maxmind/geoipupdate:latest` | GeoIP-Daten           |
-| Caddy            | `ghcr.io/shedowe19/shieldpm:caddy`   | HTTP→HTTPS Redirector |
-| OpenAppSec-Agent | `ghcr.io/openappsec/agent:latest`    | AI WAF                |
+| Service          | Image                                | Zweck                                              |
+| ---------------- | ------------------------------------ | -------------------------------------------------- |
+| CrowdSec         | `crowdsecurity/crowdsec:latest`      | IPS                                                |
+| MySQL            | `mysql:8`                            | Produktions-DB                                     |
+| PostgreSQL       | `postgres:17-bookworm`               | Produktions-DB                                     |
+| GeoIP-Update     | `ghcr.io/maxmind/geoipupdate:latest` | Eigene GeoIP-Quelle bei deaktiviertem Boot-Updater |
+| Caddy            | `ghcr.io/shedowe19/shieldpm:caddy`   | HTTP→HTTPS Redirector                              |
+| OpenAppSec-Agent | `ghcr.io/openappsec/agent:latest`    | AI WAF                                             |
 
 ## Versionierung
 
@@ -115,6 +125,11 @@ Workflows unter `.github/workflows/`:
 | `.github/codeql/codeql-config.yml`        | CodeQL-Analyse-Konfiguration                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `.github/delete-merged-branch-config.yml` | GitHub Auto-Delete Merged Branch Konfiguration                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
+Nach erfolgreicher CodeQL-Analyse werden die SARIF-Dateien aus `codeql-results/` als Artefakt
+`codeql-results-<Sprache>` für sieben Tage gespeichert. Fehlende SARIF-Dateien lassen den Upload fehlschlagen.
+Ein erfolgreicher Analysejob allein bestätigt nicht, dass ein bestimmter Befund behoben ist; dafür werden die
+tatsächlichen SARIF-Ergebnisse geprüft. Die Artefaktsicherung verändert keine Regeln oder Unterdrückungen.
+
 Der frühere `dependency-updates.yml`-Workflow wurde entfernt: Er bearbeitete ausschließlich die nicht mehr vorhandenen Dockerfile-Argumente `CSNB_VER` und `CRS_VER`. Diese Bestandteile kommen aus dem separaten Nginx-Basisimage beziehungsweise dem nativen `nginx-binaries`-Release. Der Caddy-Build meldet sich ausschließlich bei seiner Zielregistry GHCR an und benötigt keine DockerHub-Zugangsdaten.
 
 ## Hilfs-Skripte
@@ -123,12 +138,20 @@ Docker-Publikationen derselben Git-Referenz laufen nacheinander; alle manuellen 
 
 Der Docker-Build-Workflow berücksichtigt auch `.dockerignore`, `scripts/install.sh` und `scripts/setup-node-apt.sh`. Pull Requests bauen lokale Images für die Prüfung. PRs aus demselben Repository melden sich bei GHCR an, damit das geschützte Nginx-Basisimage geladen werden kann; Fork-PRs erhalten keine Registry-Zugangsdaten. Push und Multiarch-Publikation laufen nur außerhalb von Pull Requests. Der manuelle Latest-Workflow übergibt und validiert den Release-Tag als Umgebungsvariable, statt Benutzereingaben direkt in Shell-Code einzusetzen.
 
+Der Offline-Docker-Smoke mit `GEOIP_AUTO_UPDATE=false` prüft die Laufzeit zunächst unter UID 0 und anschließend unter UID 1000 mit übernommener
+Firewall-Loghistorie. Verzeichniseigentümer, Modus und Schreibrechte werden vor Nginx-Test und Reload geprüft.
+Der isolierte [Firewall-Smoke](../module/ip-firewall.md#offene-fragen-und-validierung) ermittelt dynamische
+Modulpfade aus dem tatsächlichen Nginx-Build und der Konfiguration; ModSecurity-Direktiven bleiben verpflichtend,
+ohne einen statischen Modulbuild vorauszusetzen.
+
+Der vorgeschaltete GeoIP-Smoke prüft den echten Updater mit Netzwerkzugriff und zwei Durchläufen im gebauten Image; der [Build-Vertrag](./build.md) beschreibt die getrennten Prüfungen und deren Grenzen.
+
 Ein erfolgreicher, vom Pfadfilter in `docker.yml` erfasster `develop`-Push erstellt zusätzlich zum Image `ghcr.io/shedowe19/shieldpm:develop` ein GitHub-Release für `v<.version>`, sofern diese Version noch kein Release besitzt. Reine Wiki- oder Markdown-Änderungen starten diesen Docker-Workflow nicht. Dasselbe gilt für einen Push des exakt passenden Versionstags. Der Tag eines neuen Releases verweist auf den gebauten Commit; vorhandene Releases und ihre Artefakte bleiben bei späteren Builds derselben Version unverändert. Ein bereits belegter Versionstag auf einem anderen Commit blockiert die Veröffentlichung. Der Release-Job läuft weder bei Pull Requests noch bei `workflow_dispatch`. Für ein neues Release müssen `.version` sowie beide Paketversionen gemeinsam erhöht werden.
 
 Der Shellcheck-Workflow prüft auch Erweiterungslose Helfer wie `update-shieldpm` und führt `python3 -m unittest discover -s scripts/tests -v` aus. Diese Tests arbeiten mit temporären Verzeichnissen und simulierten externen Befehlen, ohne einen Installer oder laufende Dienste zu starten.
 
 - `scripts/install.sh` — Native/LXC-Installer (siehe oben).
-- `scripts/generate-notices.js` — generiert `THIRD-PARTY-NOTICES.md` aus Metadaten und Lizenzdateien der lokal installierten direkten NPM-Pakete; die Paketnamen sind sichtbar mit der passenden npm-Version verlinkt. Es verwendet das vom Workflow bereitgestellte `license-checker`-Binary und bricht bei einem fehlgeschlagenen Lizenzscan ab, bevor die bestehende Notice-Datei überschrieben werden kann.
+- `scripts/generate-notices.js` — generiert `THIRD-PARTY-NOTICES.md` aus Metadaten und Lizenzdateien der lokal installierten direkten NPM-Pakete; die Paketnamen sind sichtbar mit der passenden npm-Version verlinkt. Statische Nicht-NPM-Hinweise aus `scripts/third-party-notices-extra.txt` erhalten die X4BNet-Attribution und die MaxMind-Testdaten-Lizenz bei automatischer Regeneration. Der Generator verwendet das vom Workflow bereitgestellte `license-checker`-Binary und bricht bei fehlender statischer Quelle oder fehlgeschlagenem Lizenzscan ab, bevor die bestehende Notice-Datei überschrieben wird.
 - `scripts/wiki-graph.py` — erzeugt die interaktive Beziehungs-Visualisierung des internen Wikis (`docs/wiki-intern/wiki-graph.html`). Nutzt `scripts/lib/vis-network.min.js` als Abhängigkeit.
 
 Der Wiki-Generator ersetzt seine HTML-Platzhalter in einem einzigen Durchlauf. Seitennamen wie `__EDGES__.md` bleiben dadurch als Dateinamen erhalten und beschädigen weder die eingebetteten Graphdaten noch das JavaScript. Die Regression führt den vollständigen Generator mit solchen Seitennamen aus und prüft die ausgegebenen Knoten und Verknüpfungen.

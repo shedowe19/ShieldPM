@@ -16,6 +16,7 @@ import AccessListFormTabs from "./AccessListFormTabs";
 import { type AccessListFormValues, createAccessListInitialValues } from "./AccessListModalFormValues";
 import { createAccessListPayload } from "./AccessListModalSubmission";
 import { validateAccessListForm } from "./AccessListModalValidation";
+import { useFreshFormData } from "./useFreshFormData";
 
 const showAccessListModal = (id: number | "new") => {
 	EasyModal.show(AccessListModal, { id });
@@ -26,7 +27,8 @@ interface Props extends InnerModalProps {
 }
 
 const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
-	const { data, isLoading, error } = useAccessList(id, ["items", "clients"]);
+	const query = useAccessList(id, ["items", "clients"], { refetchOnMount: "always" });
+	const { data, isLoading, error } = useFreshFormData(id, query);
 	const { mutate: setAccessList } = useSetAccessList();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);

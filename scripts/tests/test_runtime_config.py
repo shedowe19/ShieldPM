@@ -1,9 +1,15 @@
 """Check repeated startup configuration without changing host services or files."""
 
+import errno
 import os
 from pathlib import Path
+import pwd
+import re
 import shlex
+import shutil
+import socket
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -24,6 +30,126 @@ class RuntimeConfigTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         return result.stdout
+
+    def startup_log_setup(self, uid=None, gid=None):
+        # Execute the real cleanup and log preparation with only /data redirected.
+        source = (REPO / "rootfs/usr/local/bin/start.sh").read_text()
+        program = "rm -vrf /data/letsencrypt-acme-challenge" + source.split(
+            "rm -vrf /data/letsencrypt-acme-challenge", 1)[1].split("\ntouch ", 1)[0]
+        data = self.root / "data"
+        program = program.replace("/data", str(data))
+        self.shell(program, PUID=str(os.getuid() if uid is None else uid),
+                   PGID=str(os.getgid() if gid is None else gid))
+        return data
+
+    def nginx_config(self, data, uid):
+        configuration = self.root / "nginx-log-test.conf"
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as reservation:
+            reservation.bind(("127.0.0.1", 0))
+            port = reservation.getsockname()[1]
+        temp_paths = "\n".join(f"{name}_temp_path {self.root}/{name};"
+                               for name in ("client_body", "proxy", "fastcgi", "uwsgi", "scgi"))
+        configuration.write_text(
+            f"user {pwd.getpwuid(uid).pw_name};\nmaster_process off;\n"
+            f"pid {self.root}/nginx.pid;\nerror_log stderr notice;\nevents {{ worker_connections 8; }}\n"
+            f"http {{ {temp_paths}\nlog_format firewall escape=json '{{\"status\":$status}}';\n"
+            f"server {{ listen 127.0.0.1:{port}; access_log {data}/logs/ip_firewall_test.log firewall; return 403; }} }}\n")
+        return configuration
+
+    def test_startup_retains_firewall_logs_and_recreates_missing_private_directory(self):
+        data = self.root / "data"
+        logs = data / "logs"
+        logs.mkdir(parents=True)
+        historical = logs / "ip_firewall_17.log"
+        historical.write_text('{"status":403}\n')
+        for directory in ("letsencrypt-acme-challenge", "nginx/default_host", "nginx/temp"):
+            obsolete = data / directory
+            obsolete.mkdir(parents=True)
+            (obsolete / "stale").touch()
+        for _ in range(2):
+            self.startup_log_setup()
+            self.assertEqual(historical.read_text(), '{"status":403}\n')
+            self.assertEqual(logs.stat().st_uid, os.getuid())
+            self.assertEqual(logs.stat().st_gid, os.getgid())
+            self.assertEqual(logs.stat().st_mode & 0o777, 0o700)
+            self.assertFalse((data / "nginx/temp").exists())
+        historical.unlink()
+        logs.rmdir()
+        self.startup_log_setup()
+        (logs / "ip_firewall_new.log").write_text("new denial\n")
+        self.assertEqual(logs.stat().st_mode & 0o777, 0o700)
+
+    def test_actual_nginx_validation_recovers_after_log_directory_was_deleted(self):
+        nginx = os.environ.get("NGINX_BIN") or shutil.which("nginx")
+        if not nginx:
+            self.skipTest("Nginx binary not available; CI Docker smoke validates the packaged build")
+        data = self.root / "data"
+        data.mkdir()
+        configuration = self.nginx_config(data, os.getuid())
+        command = [nginx, "-p", f"{self.root}/", "-c", str(configuration), "-tq"]
+        missing = subprocess.run(command, capture_output=True, text=True)
+        self.assertNotEqual(missing.returncode, 0)
+        self.assertIn("ip_firewall_test.log", missing.stderr)
+        self.startup_log_setup()
+        ready = subprocess.run(command, capture_output=True, text=True)
+        self.assertEqual(ready.returncode, 0, ready.stderr)
+        self.assertTrue((data / "logs/ip_firewall_test.log").is_file())
+
+    def test_selected_uid_1000_can_append_retained_log_and_create_new_log_before_validation(self):
+        if os.geteuid() != 0:
+            self.skipTest("Changing the startup service UID requires root; Docker smoke also covers UID1000")
+        ownership_probe = self.root / "ownership-probe"
+        ownership_probe.touch()
+        try:
+            os.chown(ownership_probe, 1000, 1000)
+            os.chown(ownership_probe, os.getuid(), os.getgid())
+        except OSError as error:
+            if error.errno in (errno.EPERM, errno.EACCES, errno.EINVAL) and not os.environ.get("CI"):
+                self.skipTest(f"local runtime prevents selected-UID ownership: {error}")
+            raise
+        self.root.chmod(0o755)
+        data = self.root / "data"
+        data.mkdir()
+        logs = data / "logs"
+        logs.mkdir()
+        historical = logs / "ip_firewall_17.log"
+        historical.write_text("retained denial\n")
+        self.startup_log_setup(1000, 1000)
+        source = (REPO / "rootfs/usr/local/bin/start.sh").read_text()
+        branch = source.split('if [ "$PUID" != "0" ]; then', 1)[1].split("    export HOME=", 1)[0]
+        ownership = re.search(r"(?ms)^    find /data .*?-exec chown[^\n]+\{\} \+", branch).group(0)
+        self.shell(ownership.replace("/data", str(data)), PUID="1000", PGID="1000")
+        code = '''
+import os, sys
+from pathlib import Path
+os.setgroups([])
+os.setgid(1000)
+os.setuid(1000)
+logs = Path(sys.argv[1])
+assert os.getuid() == 1000 and os.getgid() == 1000
+assert (logs.stat().st_mode & 0o777) == 0o700
+with (logs / "ip_firewall_17.log").open("a") as handle:
+    handle.write("service UID denial\\n")
+(logs / "ip_firewall_new.log").write_text("new denial\\n")
+assert (logs / "ip_firewall_new.log").stat().st_uid == 1000
+'''
+        result = subprocess.run([sys.executable, "-c", code, str(logs)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(historical.read_text(), "retained denial\nservice UID denial\n")
+
+    def test_log_directory_preparation_rejects_symlinks_without_changing_target(self):
+        target = self.root / "foreign"
+        target.mkdir(mode=0o755)
+        logs = self.root / "logs"
+        logs.symlink_to(target, target_is_directory=True)
+        result = subprocess.run(
+            ["sh", "-eu", "-c", '. "$1"; prepare_nginx_log_directory "$2" "$3" "$4"',
+             "test", str(HELPERS), str(logs), str(os.getuid()), str(os.getgid())],
+            capture_output=True, text=True,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Refusing a symlink", result.stderr)
+        self.assertEqual(target.stat().st_mode & 0o777, 0o755)
 
     def test_certbot_options_can_be_changed_back_after_restart(self):
         config = self.root / "certbot.ini"
@@ -231,6 +357,135 @@ access_log off; # stream
                 self.assertNotIn("includeSubDomains;", content)
                 self.assertIn("access_log off; # stream", content)
                 self.assertIn("#error_log /data/nginx/error.log warn;", content)
+
+    def configure_asn_fixture(self, config, database, enabled="true"):
+        # Redirect only the fixed DB path in a helper copy; production has no
+        # database-path environment override and these tests never touch /data.
+        helper = self.root / "runtime-asn-test.sh"
+        helper.write_text(HELPERS.read_text().replace(
+            'Path("/data/nginx/GeoLite2-ASN.mmdb")', f"Path({str(database)!r})"))
+        self.shell('. "$2"; configure_nginx_modules "$1"', config, helper,
+                   NGINX_LOAD_GEOIP2_MODULE=enabled)
+
+    def test_optional_asn_block_is_idempotent_and_reversible_with_existing_country(self):
+        config = self.root / "nginx.conf"
+        database = self.root / "GeoLite2-ASN.mmdb"
+        database.write_bytes((REPO / "scripts/ci/fixtures/GeoLite2-ASN-Test.mmdb").read_bytes())
+        config.write_text('''#load_module modules/ngx_http_geoip2_module.so;
+events { worker_connections 32; }
+http {
+    #geoip2 /data/nginx/GeoLite2-Country.mmdb {
+    #    $geoip2_country_code default=XX source=$remote_addr country iso_code;
+    #}
+    geoip2 /operator/asn.mmdb { $geoip2_asn source=$remote_addr autonomous_system_number; }
+}
+''')
+        self.configure_asn_fixture(config, database)
+        first = config.read_text()
+        self.assertEqual(first.count("# ShieldPM managed ASN GeoIP2 BEGIN"), 1)
+        self.assertEqual(first.count(f"geoip2 {database} {{"), 1)
+        self.assertIn("$spm_geoip2_asn default=0 source=$remote_addr autonomous_system_number;", first)
+        self.assertIn('$spm_geoip2_asn_org source=$remote_addr autonomous_system_organization;', first)
+        self.assertIn("    geoip2 /data/nginx/GeoLite2-Country.mmdb {", first)
+        foreign = "geoip2 /operator/asn.mmdb { $geoip2_asn source=$remote_addr autonomous_system_number; }"
+        self.assertIn(foreign, first)
+        for _ in range(2):
+            self.configure_asn_fixture(config, database)
+            self.assertEqual(config.read_text(), first)
+        self.configure_asn_fixture(config, database, "false")
+        disabled = config.read_text()
+        self.assertNotIn("$spm_geoip2_asn", disabled)
+        self.assertIn(foreign, disabled)
+        self.assertIn("    #geoip2 /data/nginx/GeoLite2-Country.mmdb {", disabled)
+        self.configure_asn_fixture(config, database)
+        self.assertEqual(config.read_text(), first)
+        database.unlink()
+        self.configure_asn_fixture(config, database)
+        self.assertNotIn("$spm_geoip2_asn", config.read_text())
+        self.assertIn("    geoip2 /data/nginx/GeoLite2-Country.mmdb {", config.read_text())
+
+    def test_missing_nonregular_and_empty_asn_database_preserve_country_runtime(self):
+        config = self.root / "nginx.conf"
+        database = self.root / "GeoLite2-ASN.mmdb"
+        original = '''#load_module modules/ngx_http_geoip2_module.so;
+events { worker_connections 32; }
+http {
+    #geoip2 /data/nginx/GeoLite2-Country.mmdb {
+    #    $geoip2_country_code default=XX source=$remote_addr country iso_code;
+    #}
+}
+'''
+        regular = self.root / "regular.mmdb"
+        regular.write_bytes((REPO / "scripts/ci/fixtures/GeoLite2-ASN-Test.mmdb").read_bytes())
+        for kind in ("missing", "empty", "directory", "symlink"):
+            with self.subTest(kind=kind):
+                config.write_text(original)
+                if kind == "empty": database.touch()
+                if kind == "directory": database.mkdir()
+                if kind == "symlink": database.symlink_to(regular)
+                self.configure_asn_fixture(config, database)
+                self.assertNotIn("$spm_geoip2_asn", config.read_text())
+                self.assertIn("    geoip2 /data/nginx/GeoLite2-Country.mmdb {", config.read_text())
+                if database.is_dir(): database.rmdir()
+                elif database.exists() or database.is_symlink(): database.unlink()
+
+    def test_asn_is_inserted_only_in_direct_http_not_comment_quote_or_stream_context(self):
+        config = self.root / "nginx.conf"
+        database = self.root / "GeoLite2-ASN.mmdb"
+        database.write_bytes((REPO / "scripts/ci/fixtures/GeoLite2-ASN-Test.mmdb").read_bytes())
+        config.write_text('''# http { commented example }
+events { worker_connections 32; }
+stream { map $name $value { default "http { quoted }"; } }
+http
+{
+    # Custom reserved writers remain intact so readiness can reject the conflict.
+    map $host $spm_geoip2_asn { default 123; }
+}
+''')
+        self.configure_asn_fixture(config, database)
+        first = config.read_text()
+        self.assertIn('stream { map $name $value { default "http { quoted }"; } }', first)
+        self.assertIn("http\n{\n    # ShieldPM managed ASN GeoIP2 BEGIN", first)
+        self.assertIn("map $host $spm_geoip2_asn { default 123; }", first)
+        self.configure_asn_fixture(config, database)
+        self.assertEqual(config.read_text(), first)
+
+    def test_actual_nginx_optional_asn_removal_preserves_country_and_required_asn_fails_closed(self):
+        nginx = os.environ.get("NGINX_BIN") or shutil.which("nginx")
+        module = os.environ.get("NGINX_GEOIP2_MODULE")
+        if not nginx or not module:
+            self.skipTest("GeoIP2 module not available; Docker smoke exercises the image startup block")
+        config = self.root / "nginx.conf"
+        database = self.root / "GeoLite2-ASN.mmdb"
+        country = self.root / "GeoLite2-Country.mmdb"
+        database.write_bytes((REPO / "scripts/ci/fixtures/GeoLite2-ASN-Test.mmdb").read_bytes())
+        country.write_bytes((REPO / "scripts/ci/fixtures/GeoIP2-Country-Test.mmdb").read_bytes())
+        config.write_text(
+            f"#load_module {module};\nmaster_process off;\n"
+            f"pid {self.root}/nginx.pid;\nerror_log stderr notice;\n"
+            "events { worker_connections 8; }\nhttp {\n"
+            f"geoip2 {country} {{ $geoip2_country_code default=XX source=$remote_addr country iso_code; }}\n"
+            "}\n")
+        command = [nginx, "-p", f"{self.root}/", "-c", str(config), "-tq"]
+        self.configure_asn_fixture(config, database)
+        first = config.read_text()
+        for _ in range(2):
+            self.configure_asn_fixture(config, database)
+            self.assertEqual(config.read_text(), first)
+            result = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        database.unlink()
+        self.configure_asn_fixture(config, database)
+        result = subprocess.run(command, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        # Existing IP/Country hosts survive. A policy that requires the removed
+        # raw ASN lookup fails validation instead of receiving a fallback map.
+        content = config.read_text()
+        config.write_text(content[:content.rfind("}")] +
+                          "map $spm_geoip2_asn $required_asn_policy { default 0; 15169 1; }\n}\n")
+        required = subprocess.run(command, capture_output=True, text=True)
+        self.assertNotEqual(required.returncode, 0)
+        self.assertIn('unknown "spm_geoip2_asn" variable', required.stderr)
 
 
 if __name__ == "__main__":

@@ -15,6 +15,18 @@ vi.mock("../../lib/express/jwt-decode.js", () => ({
 		next();
 	},
 }));
+vi.mock("../../models/proxy_host.js", () => ({
+	default: {
+		query: () => {
+			const query = Promise.resolve({ id: 42 });
+			Object.assign(query, {
+				findById: () => query,
+				where: () => query,
+			});
+			return query;
+		},
+	},
+}));
 
 import errs from "../../lib/error.js";
 import { createUploadRelayRouter } from "../../routes/nginx/upload-relay.js";
@@ -33,7 +45,7 @@ let origin;
 beforeEach(async () => {
 	vi.clearAllMocks();
 	auth.authenticated = true;
-	auth.can.mockReset().mockResolvedValue(true);
+	auth.can.mockReset().mockResolvedValue({ permission_visibility: "all" });
 	relay.create.mockResolvedValue({
 		id: "e07f1dda-c1e4-44af-b0ec-cf5c036fa0d7",
 		offset: 0,

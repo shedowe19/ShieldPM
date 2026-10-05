@@ -30,6 +30,7 @@ import { ToggleGroup, ToggleGroupItem } from "src/components/ui/toggle-group";
 import { useHealth, useUser } from "src/hooks";
 import { T } from "src/locale";
 import { AUDIT_LOG_OBJECT_TYPE, PERMISSION_LEVEL, PERMISSION_SCOPE } from "src/types/enums";
+import { useFreshFormData } from "./useFreshFormData";
 
 const showPermissionsModal = (id: number) => {
 	EasyModal.show(PermissionsModal, { id });
@@ -58,7 +59,8 @@ interface PermissionsValues {
 const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const queryClient = useQueryClient();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
-	const { data, isLoading, error } = useUser(id);
+	const query = useUser(id, { refetchOnMount: "always" });
+	const { data, isLoading, error } = useFreshFormData(id, query);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const onSubmit = async (values: PermissionsValues, { setSubmitting }: FormikHelpers<PermissionsValues>) => {

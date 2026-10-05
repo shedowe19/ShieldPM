@@ -7,3 +7,4 @@ export * as ProxyHosts from "./ProxyHosts.md";
 export * as RedirectionHosts from "./RedirectionHosts.md";
 export * as Streams from "./Streams.md";
 export * as TorOnionServices from "./TorOnionServices.md";
+export * as WireguardTunnels from "./WireguardTunnels.md";

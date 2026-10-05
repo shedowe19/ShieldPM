@@ -184,14 +184,35 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 ${backendHealthCheck}
 curl() { printf 'attempt\\n' >&2; return 22; }
 jq() { cat >/dev/null; return 1; }
-sleep() { SECONDS=$((SECONDS + 121)); }
+sleep() { SECONDS=$((SECONDS + 361)); }
 wait_for_backend_health
 `,
 			],
 			{ encoding: "utf8", timeout: 5000 },
 		);
 		expect(result.status).toBe(1);
-		expect(result.stdout).toContain("did not become healthy within 120s");
+		expect(result.stdout).toContain("did not become healthy within 360s");
+	});
+
+	it("allows the GeoIP download budget before backend startup finishes", () => {
+		const result = spawnSync(
+			"bash",
+			[
+				"-c",
+				`set -euo pipefail
+${backendHealthCheck}
+SECONDS=0
+curl() { ((SECONDS >= 242)) && printf '{"status":"OK"}'; }
+jq() { body=$(cat); [[ "$body" == '{"status":"OK"}' ]]; }
+sleep() { if ((SECONDS == 0)); then SECONDS=241; else SECONDS=$((SECONDS + 1)); fi; }
+wait_for_backend_health
+printf 'elapsed=%s' "$SECONDS"
+`,
+			],
+			{ encoding: "utf8", timeout: 5000 },
+		);
+		expect(result.status, result.stderr).toBe(0);
+		expect(result.stdout).toContain("elapsed=242");
 	});
 
 	it("updates optional runtime binaries and waits for migrations to become healthy", () => {

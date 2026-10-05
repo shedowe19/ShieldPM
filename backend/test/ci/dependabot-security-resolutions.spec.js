@@ -49,9 +49,11 @@ const assertPatched = (manifest, packageName, minimumVersion) => {
 
 describe("Dependabot security resolutions", () => {
 	it("keeps every resolved package above the current GitHub advisory fixed versions", () => {
-		assertPatched("backend/yarn.lock", "axios", "1.18.0");
-		assertPatched("backend/yarn.lock", "brace-expansion", "5.0.9");
-		assertPatched("backend/yarn.lock", "fast-uri", "3.1.6");
+		assertPatched("backend/yarn.lock", "axios", "1.20.0");
+		assertPatched("backend/yarn.lock", "brace-expansion", "5.0.12");
+		assertPatched("backend/yarn.lock", "fast-uri", "3.1.8");
+		assertPatched("backend/yarn.lock", "@grpc/grpc-js", "1.14.5");
+		assertPatched("backend/yarn.lock", "ip-address", "10.7.3");
 		assertPatched("backend/yarn.lock", "qs", "6.16.0");
 		assertPatched("backend/yarn.lock", "nanoid", "3.3.18");
 		assertPatched("backend/yarn.lock", "js-yaml", "4.3.2");

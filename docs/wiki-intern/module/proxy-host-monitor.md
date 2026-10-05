@@ -35,6 +35,11 @@ abgebrochen. Ausgeschaltete und gelöschte Hosts werden nicht geprüft.
 - Die Anwendung nimmt keine beliebigen vollständigen URLs entgegen. Nur bestehende Proxy-Hosts mit Berechtigung
   `proxy_hosts:update` dürfen ihre Monitor-Konfiguration ändern. Dateibasierte Ziele und Unix-Sockets werden
   abgelehnt. HTTP-Probes verwenden weder Sitzungs-Cookies noch Redirects; der Response-Body wird verworfen.
+- Detailabfrage, Konfigurationsänderung und manueller Check beachten zusätzlich die Eigentümersichtbarkeit des
+  jeweiligen Proxy-Host-Rechts. Bei `visibility: user` sind nur eigene Hosts erreichbar; fremde Hosts liefern wie
+  nicht vorhandene Hosts `404`, bevor Einstellungen, Verlauf oder Netzwerkprobes verarbeitet werden. Bei
+  `visibility: all` bleibt der Zugriff auf alle Hosts möglich. Die Prüfung verwendet das tatsächliche
+  `permission_visibility` aus `Access.can()`; die Capability allein grenzt die Host-ID nicht ein.
 - HTTPS-Probes prüfen das Upstream-Zertifikat und den Servernamen. Optional kann `upstream_ca` ein PEM-Bundle
   mit höchstens 65.535 Bytes und acht Zertifikaten als Vertrauensbasis festlegen. Dieses Bundle ersetzt die
   standardmäßigen Node.js-Vertrauensanker; ohne Bundle gelten die Node.js-Standardeinstellungen.
@@ -98,6 +103,12 @@ abgebrochen. Ausgeschaltete und gelöschte Hosts werden nicht geprüft.
   Features besitzen keinen Monitor-Ordner; ihr Import lässt lokal vorhandene Monitore unberührt.
 
 ## Schnittstellen
+
+Der Dialog lädt beim Öffnen aktuelle Einstellungen, bevor das Bearbeitungsformular erscheint. Ein Fehler dieses
+Abrufs erlaubt kein Speichern eines alten Cacheeintrags. Spätere Abfragen aktualisieren weiterhin Messwerte und
+Verlauf; ein bereits geöffneter Einstellungsentwurf bleibt auch bei einem Hintergrundfehler bestehen.
+`MonitorDialog.fresh-data.test.tsx` prüft diese Übergänge mit dem tatsächlichen Dialog und den Query-Hooks bei
+simulierten API-Antworten.
 
 | Route                                                | Recht                             | Zweck                                         |
 | ---------------------------------------------------- | --------------------------------- | --------------------------------------------- |

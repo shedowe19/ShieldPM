@@ -37,6 +37,7 @@ Detaillierte Auflistung aller API-Routen-Dateien.
 | `streams.js`           | `/api/nginx/streams`                          |
 | `certificates.js`      | `/api/nginx/certificates`                     |
 | `access_lists.js`      | `/api/nginx/access-lists`                     |
+| `firewall_lists.js`    | `/api/nginx/firewall-lists`                   |
 | `cloudflared.js`       | `/api/nginx/cloudflared-tunnels`              |
 | `tor_onion.js`         | `/api/nginx/tor-onion`                        |
 | `wireguard.js`         | `/api/nginx/wireguard`                        |
@@ -50,9 +51,25 @@ Detaillierte Auflistung aller API-Routen-Dateien.
 `POST /api/nginx/proxy-hosts/:host_id/preview` (Update-Body) rendern nach Berechtigungs- und
 Referenzprüfung einen Entwurf ohne Speicherung. Die Antwort enthält `config`, `diff`, `hasCurrent`,
 `nginxValidated: false` und `limitations` (`render-only`, bei neuen Hosts `id-pending`, bei noch
-auszustellenden Zertifikaten `certificate-pending`). Die gerenderte Konfiguration ist vor der optionalen
+auszustellenden Zertifikaten `certificate-pending`, bei zusammengefassten Firewall-Tabellen
+`firewall-rule-summaries`). Die gerenderte Konfiguration ist vor der optionalen
 Formatierung und maskiert bekannte Geheimnisse; der Diff vergleicht mit der aktiven Konfiguration nur
 des berechtigten Hosts. Ein `nginx -tq` der vorgeschlagenen Konfiguration erfolgt erst beim Speichern.
+
+Automatisch generierte Firewall-CIDR-Tabellen werden in Entwurf und aktivem Vergleich als Anzahl und
+SHA-256-Prüfsumme dargestellt; die produktive Konfiguration behält alle Regeln. Die Vorschau prüft zusätzlich
+Leserechte für sämtliche Listen aus gespeichertem Host und Entwurf, auch bei deaktivierter Firewall oder
+entfernten Zuordnungen. Details und Größenlimits stehen unter [IP-Firewall](../module/ip-firewall.md#konfigurationsvorschau).
+
+### Firewall-Listen und GeoIP-Readiness
+
+`GET`/`POST /api/nginx/firewall-lists`, `GET`/`PUT`/`DELETE /:list_id`, `POST /preview` und
+`POST /:list_id/refresh` verwenden die bestehenden `access_lists`-Rechte und Eigentümersichtbarkeit.
+`GET /api/nginx/firewall-lists/geoip` benötigt dagegen `proxy_hosts:list` und gibt keine lokalen
+Konfigurations- oder Datenbankpfade aus. Die bestehenden vier Statusfelder beschreiben weiterhin die
+Länderquelle; `asn` enthält unabhängig davon dieselben Felder für die ASN-Quelle. Ein fehlendes `asn` in einer
+älteren Antwort gilt nicht als verfügbare ASN-Unterstützung. Die vollständigen Verträge stehen unter
+[IP-Firewall-API](../module/ip-firewall.md#api).
 
 ### Proxy-Host-Diagnose
 

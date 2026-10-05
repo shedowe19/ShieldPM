@@ -18,6 +18,11 @@ vi.mock("../../lib/config.js", () => ({
 }));
 vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn() } }));
 vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: () => "test-token" }));
+// These persistence tests already stub nginx-t; lookup validation has its own staged/runtime coverage.
+vi.mock("../../lib/firewall-geoip.js", async (importOriginal) => ({
+	...(await importOriginal()),
+	assertConfiguredFirewallLookups: vi.fn().mockResolvedValue(undefined),
+}));
 
 import nginx from "../../internal/nginx.js";
 import utils from "../../lib/utils.js";

@@ -18,7 +18,7 @@ const omissions = () => {
 };
 
 const getGravatarUrl = (email) => {
-	const hash = crypto.createHash("md5").update(email.trim().toLowerCase()).digest("hex");
+	const hash = crypto.createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
 	return `https://www.gravatar.com/avatar/${hash}?d=mm`;
 };
 
@@ -77,6 +77,18 @@ const getAvatarPath = (userId, filename) => {
 	return path.resolve(process.env.DATA_PATH || "/data", "avatars", filename);
 };
 
+/** @param {(trx: import("objection").Transaction) => Promise<void>} callback */
+const emailClaimTransaction = (callback) => {
+	const database = userModel.knex();
+	if (database.client.dialect === "postgresql") {
+		// A server-wide REPEATABLE READ default would retain a snapshot taken
+		// before waiting for the unchanged singleton row. Start this claim with
+		// READ COMMITTED so availability sees the preceding claimant's commit.
+		return database.transaction(callback, { isolationLevel: "read committed" });
+	}
+	return userModel.transaction(callback);
+};
+
 const internalUser = {
 	/**
 	 * Create a user can happen unauthenticated only once and only when no active users exist.
@@ -97,10 +109,6 @@ const internalUser = {
 		data.roles = data.roles || [];
 
 		data.email = data.email.toLowerCase().trim();
-		const available = await internalUser.isEmailAvailable(data.email);
-		if (!available) {
-			throw new errs.ValidationError(`Email address already in use - ${data.email}`);
-		}
 
 		if (typeof data.is_disabled !== "undefined") {
 			data.is_disabled = data.is_disabled ? 1 : 0;
@@ -114,15 +122,18 @@ const internalUser = {
 
 		// Use transaction to ensure all user data is created or none at all
 		let user;
-		await userModel.transaction(async (trx) => {
+		await emailClaimTransaction(async (trx) => {
+			// All email claims use this startup singleton before reading availability.
+			// PostgreSQL/MySQL serialize workers through its row lock; SQLite
+			// serializes/conflicts the surrounding write transactions.
+			const lock = await settingModel.query(trx).findById("default-site").forUpdate();
+			if (!lock) throw new errs.PermissionError("Initial setup is not ready");
 			if (initialSetup) {
-				// Startup creates this singleton before accepting HTTP requests. Its
-				// row lock serializes first-admin claims across PostgreSQL/MySQL workers;
-				// SQLite serializes/conflicts the surrounding write transactions.
-				const lock = await settingModel.query(trx).findById("default-site").forUpdate();
-				if (!lock) throw new errs.PermissionError("Initial setup is not ready");
 				const existingUser = await userModel.query(trx).where("is_deleted", 0).first();
 				if (existingUser) throw new errs.PermissionError("Initial setup is already complete");
+			}
+			if (!(await internalUser.isEmailAvailable(data.email, undefined, trx))) {
+				throw new errs.ValidationError(`Email address already in use - ${data.email}`);
 			}
 			user = await userModel.query(trx).insertAndFetch(data);
 
@@ -198,16 +209,10 @@ const internalUser = {
 			delete data.is_disabled;
 		}
 
-		// 2. if email is to be changed, find other users with that email
+		// Email availability is checked in the write transaction below, including
+		// unchanged form values that could collide with a historical duplicate.
 		if (typeof data.email !== "undefined") {
 			data.email = data.email.toLowerCase().trim();
-
-			if (user.email !== data.email) {
-				const available = await internalUser.isEmailAvailable(data.email, data.id);
-				if (!available) {
-					throw new errs.ValidationError(`Email address already in use - ${data.email}`);
-				}
-			}
 		}
 
 		if (user.id !== data.id) {
@@ -251,7 +256,18 @@ const internalUser = {
 			}
 		}
 
-		await userModel.query().patchAndFetchById(user.id, data);
+		if (typeof data.email !== "undefined") {
+			await emailClaimTransaction(async (trx) => {
+				const lock = await settingModel.query(trx).findById("default-site").forUpdate();
+				if (!lock) throw new errs.PermissionError("Initial setup is not ready");
+				if (!(await internalUser.isEmailAvailable(data.email, user.id, trx))) {
+					throw new errs.ValidationError(`Email address already in use - ${data.email}`);
+				}
+				await userModel.query(trx).patchAndFetchById(user.id, data);
+			});
+		} else {
+			await userModel.query().patchAndFetchById(user.id, data);
+		}
 		user = await internalUser.get(access, { id: data.id });
 
 		// Add to audit log
@@ -317,9 +333,14 @@ const internalUser = {
 	 *
 	 * @param email
 	 * @param user_id
+	 * @param {import("objection").Transaction} [trx]
 	 */
-	isEmailAvailable: async (email, user_id) => {
-		const query = userModel.query().where("email", "=", email.toLowerCase().trim()).where("is_deleted", 0).first();
+	isEmailAvailable: async (email, user_id, trx) => {
+		const query = userModel
+			.query(trx)
+			.whereRaw("LOWER(TRIM(??)) = ?", ["email", email.toLowerCase().trim()])
+			.where("is_deleted", 0)
+			.first();
 
 		if (typeof user_id !== "undefined") {
 			query.where("id", "!=", user_id);

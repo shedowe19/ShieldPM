@@ -2,6 +2,7 @@ import express from "express";
 import internalUploadRelay from "../../internal/upload-relay.js";
 import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
+import ProxyHost from "../../models/proxy_host.js";
 
 const TUS_VERSION = "1.0.0";
 
@@ -97,7 +98,11 @@ const createUploadRelayRouter = (relay = internalUploadRelay) => {
 		try {
 			const hostId = parseHostId(req.params.hostId);
 			const permission = req.method === "GET" || req.method === "HEAD" ? "get" : "update";
-			await res.locals.access.can(`proxy_hosts:${permission}`, hostId);
+			const access = res.locals.access;
+			const accessData = await access.can(`proxy_hosts:${permission}`, hostId);
+			const query = ProxyHost.query().findById(hostId).where("is_deleted", 0);
+			if (accessData.permission_visibility !== "all") query.where("owner_user_id", access.token.getUserId(1));
+			if (!(await query)) throw new errs.ItemNotFoundError(hostId);
 			next();
 		} catch (error) {
 			next(error);

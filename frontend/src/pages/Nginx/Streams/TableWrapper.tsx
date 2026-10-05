@@ -60,9 +60,6 @@ export default function TableWrapper() {
 				item.forwardingHost.toLowerCase().includes(search)
 			);
 		});
-	} else if (search !== "") {
-		// this can happen if someone deletes the last item while searching
-		setSearch("");
 	}
 
 	return (
@@ -73,13 +70,14 @@ export default function TableWrapper() {
 					<T id="streams" />
 				</CardTitle>
 				<div className="flex items-center space-x-2">
-					{data?.length ? (
+					{data?.length || search ? (
 						<div className="relative w-full max-w-sm">
 							<IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 							<Input
 								type="search"
 								placeholder={intl.formatMessage({ id: "search.placeholder" })}
 								className="pl-8 h-9"
+								value={search}
 								onChange={(e) => setSearch(e.target.value.toLowerCase().trim())}
 							/>
 						</div>
@@ -93,7 +91,7 @@ export default function TableWrapper() {
 						<IconHelp className="h-4 w-4" />
 					</Button>
 					<HasPermission section={STREAMS} permission={MANAGE} hideError>
-						{data?.length ? (
+						{data?.length || search ? (
 							<Button
 								size="sm"
 								className="bg-blue-600/90 hover:bg-blue-600 text-white shadow-sm"

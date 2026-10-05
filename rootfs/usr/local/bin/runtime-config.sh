@@ -21,6 +21,21 @@ prepare_runtime_directory() {
     chmod 700 "$runtime_root" "$runtime_root/home" || return 1
 }
 
+# Nginx opens configured access logs during validation, before the backend starts.
+# Keep existing firewall audit logs across both native and container restarts.
+prepare_nginx_log_directory() {
+    nginx_log_root=$1
+    nginx_log_uid=$2
+    nginx_log_gid=$3
+    if [ -L "$nginx_log_root" ]; then
+        echo "Refusing a symlink Nginx log directory: $nginx_log_root" >&2
+        return 1
+    fi
+    mkdir -p "$nginx_log_root" || return 1
+    chown -h "$nginx_log_uid:$nginx_log_gid" "$nginx_log_root" || return 1
+    chmod 700 "$nginx_log_root" || return 1
+}
+
 configure_nginx_runtime() {
     python3 - "$1" "$2" <<'PY'
 import os
@@ -159,10 +174,19 @@ configure_nginx_modules() {
 import os
 from pathlib import Path
 import re
+import stat
 import sys
 import tempfile
 
 path = Path(sys.argv[1])
+source = path.read_text()
+asn_begin = "# ShieldPM managed ASN GeoIP2 BEGIN"
+asn_end = "# ShieldPM managed ASN GeoIP2 END"
+asn_pattern = rf"^[ \t]*{re.escape(asn_begin)}\n.*?^[ \t]*{re.escape(asn_end)}\n?"
+managed = list(re.finditer(asn_pattern, source, re.MULTILINE | re.DOTALL))
+if source.count(asn_begin) != len(managed) or source.count(asn_end) != len(managed) or len(managed) > 1:
+    raise RuntimeError("Malformed or duplicate ShieldPM managed ASN block")
+source = re.sub(asn_pattern, "", source, flags=re.MULTILINE | re.DOTALL)
 enabled = lambda key: os.environ.get(key, "false") == "true"
 modules = {
     "libngx_module.so": "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE",
@@ -176,7 +200,7 @@ modules = {
 geoip = False
 hsts = False
 lines = []
-for line in path.read_text().splitlines(keepends=True):
+for line in source.splitlines(keepends=True):
     module = re.match(r"^(\s*)#?\s*(load_module\s+(\S+);.*)", line)
     if module and Path(module[3].rstrip(";")).name in modules:
         name = Path(module[3].rstrip(";")).name
@@ -215,10 +239,75 @@ for line in path.read_text().splitlines(keepends=True):
     if error_log:
         line = error_log[1] + ("" if enabled("LOGROTATE") else "#") + error_log[2] + "\n"
     lines.append(line)
+
+# ASN is optional and independent of the existing Country/City setup. Reserved
+# variables avoid rewriting a user's own ASN variables; readiness rejects any
+# competing writer to these reserved names before an ASN policy is activated.
+content = "".join(lines)
+asn_database = Path("/data/nginx/GeoLite2-ASN.mmdb")
+try:
+    asn_stat = asn_database.lstat()
+    asn_present = stat.S_ISREG(asn_stat.st_mode) and asn_stat.st_size > 0
+except OSError:
+    asn_present = False
+
+def http_block_offset(text):
+    # Read only up to the direct HTTP opener, respecting comments, quoting and
+    # escapes. A commented example or a stream variable must not receive a block.
+    words, word = [], ""
+    depth, quote, comment, escaped = 0, None, False, False
+    for index, char in enumerate(text):
+        if comment:
+            if char == "\n": comment = False
+            continue
+        if escaped:
+            word += char
+            escaped = False
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if quote:
+            if char == quote: quote = None
+            else: word += char
+            continue
+        if char in "\"'":
+            quote = char
+            word += "quoted:"
+            continue
+        if char == "#":
+            comment = True
+            continue
+        if char.isspace() or char in ";{}":
+            if word:
+                words.append(word)
+                word = ""
+            if char == "{" and depth == 0 and words == ["http"]:
+                return index + 1
+            if char == "{": depth += 1
+            if char == "}": depth -= 1
+            if char in ";{}": words = []
+            continue
+        word += char
+    return None
+
+if enabled("NGINX_LOAD_GEOIP2_MODULE") and asn_present:
+    offset = http_block_offset(content)
+    if offset is not None:
+        block = (f"\n    {asn_begin}\n"
+                 f"    geoip2 {asn_database} {{\n"
+                 "        auto_reload 5m;\n"
+                 "        $spm_geoip2_asn default=0 source=$remote_addr autonomous_system_number;\n"
+                 '        $spm_geoip2_asn_org source=$remote_addr autonomous_system_organization;\n'
+                 f"    }}\n    {asn_end}\n")
+        # Consume the opener's existing newline so each restart is byte-stable.
+        tail = content[offset:]
+        if tail.startswith("\n"): tail = tail[1:]
+        content = content[:offset] + block + tail
 descriptor, temporary = tempfile.mkstemp(prefix=".shieldpm-nginx-", dir=path.parent)
 try:
     with os.fdopen(descriptor, "w") as handle:
-        handle.write("".join(lines))
+        handle.write(content)
         os.fchmod(handle.fileno(), path.stat().st_mode & 0o777)
     os.replace(temporary, path)
 finally:

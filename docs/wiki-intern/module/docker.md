@@ -32,6 +32,10 @@ Erkannte Domains werden über `host_domains` mit `insertGraphAndFetch()` beziehu
 
 Der Docker-Ereignisstream ist zeilenweise JSON. Empfangene Daten werden bis zum vollständigen Zeilenende gesammelt; mehrere Ereignisse pro Datenblock und über mehrere Blöcke verteilte Ereignisse werden in ihrer Reihenfolge verarbeitet.
 
+Bei erneuter Discovery bleiben die aktuellen Host-Metadaten erhalten, insbesondere gespeicherte IP-, ASN- und Länder-Firewallregeln sowie andere vom Benutzer gesetzte Werte. Nur `auto_discovered`, `docker_container_id` und die Discovery-Beschreibung werden ersetzt. Der Updatepfad lädt den aktuellen, nicht gelöschten Host nach möglichen Zertifikatsanfragen innerhalb einer kurzen Modelltransaktion mit Rowlock und schreibt den Graph in derselben Transaktion. Er verwendet deshalb keine Metadaten aus dem älteren Discovery-Snapshot. Ein zwischenzeitlich gelöschter Host wird nicht erneut aktiviert. Labelgesteuerte Hostfelder behalten ihre bisherige Aktualisierungslogik.
+
+`docker-metadata-preservation.spec.js` führt die vollständige SQLite-Migrationskette mit den echten Modellen aus und prüft erhaltene Metadaten im gespeicherten und zum Rendern geladenen Host, eine Änderung während einer verzögerten Zertifikatsanfrage, die Transaktionsreihenfolge, eine zwischenzeitliche Löschung und die bisherigen Erstellungsdefaults. SQLite prüft dabei keine wartenden Rowlocks zwischen mehreren Server-Datenbankverbindungen.
+
 Die Direktivenliste für `shieldpm.advanced_config` akzeptiert pro Zeile genau eine erlaubte Direktive mit abschließendem Semikolon. Zusätzliche Direktiven auf derselben Zeile, Blockklammern und `include` werden verworfen.
 
 ### Label-Validierung und Domain-Konflikte

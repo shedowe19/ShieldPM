@@ -53,6 +53,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Certbot](./module/certbot.md)
 - [Interne PKI](./module/pki.md)
 - [Access-Lists](./module/access-lists.md)
+- [IP-Firewall pro Proxy-Host](./module/ip-firewall.md)
 - [OAuth2-Proxy (SSO)](./module/oauth2-proxy.md)
 - [AI-Agent](./module/ai-agent.md)
 - [ChatOps (Telegram)](./module/chatops.md)
@@ -134,7 +135,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 Die zentrale Engine `backend/internal/nginx.js` rendert Nginx-Konfigurationen mit LiquidJS aus `backend/templates/` und prüft sie mit `nginx -tq` vor dem Reload. Die Host-Module (`proxy-host.js`, `redirection-host.js`, `dead-host.js`, `stream.js`) verwenden sie zusammen mit `host.js`, Zertifikaten und GitOps. Der Proxy-Host integriert zusätzlich Überwachung, Diagnose, Git-Deploy, OAuth2-Proxy und optionalen Upload-Relay.
 
 - **Authentifizierung:** `user.js`, `token.js`, `auth-session-service.js` und `2fa-service.js` verwalten Benutzer, Tokens, Sitzungen und zweite Faktoren; die Routen verbinden diese Dienste.
-- **Zugriff und Zertifikate:** `access-list.js`, `oauth2-proxy.js`, `certificate.js`, `certbot.js` und `pki.js` liefern Regeln, SSO und TLS-Material für Hosts.
+- **Zugriff und Zertifikate:** `access-list.js`, `oauth2-proxy.js`, `certificate.js`, `certbot.js` und `pki.js` liefern Regeln, SSO und TLS-Material für Hosts. Die eigenständige [IP-Firewall](./module/ip-firewall.md) verbindet zentrale TXT-/HTTPS-Listen mit je Host gewählten Sperren, Ausnahmen und einer eigenen Sperrseite; sie teilt die Listenberechtigung `access_lists`, nicht deren Authentifizierungsablauf.
 - **Netzwerk:** `tor.js`, `cloudflared.js`, `wireguard.js`, `ddns.js` und `ip_ranges.js` binden externe Dienste beziehungsweise Systemwerkzeuge ein.
 - **Automatisierung:** `gitops.js` importiert und exportiert Konfigurationen; `git-deploy.js` aktualisiert Proxy-Hosts aus Git. `docker.js` erkennt Container über Docker-Labels und bündelt seine eigenen Nginx-Änderungen mit einem 2-Sekunden-Timer.
 - **Verwaltung:** `ai.js` bindet Provider und Tools ein; `chat.js` nutzt den AI-Dienst für Telegram. `maintenance.js` erstellt Wartungskonfigurationen, `dashboard_note.js` verwaltet Dashboard-Notizen und `analytics.js` verarbeitet Zugriffslogs. Die React-Oberfläche rendert Diagramme mit Recharts und Karten mit world-atlas.
@@ -169,6 +170,7 @@ Details und Dateipfade stehen in der [Modulübersicht](./module/README.md) und d
 | `nginx/streams.js`           | `/api/nginx/streams`                          | stream (TCP/UDP)                        |
 | `nginx/certificates.js`      | `/api/nginx/certificates`                     | Zertifikate                             |
 | `nginx/access_lists.js`      | `/api/nginx/access-lists`                     | access-lists                            |
+| `nginx/firewall_lists.js`    | `/api/nginx/firewall-lists`                   | IP-Firewall-Listen                      |
 | `nginx/cloudflared.js`       | `/api/nginx/cloudflared-tunnels`              | cloudflared                             |
 | `nginx/tor_onion.js`         | `/api/nginx/tor-onion`                        | tor                                     |
 | `nginx/wireguard.js`         | `/api/nginx/wireguard`                        | wireguard                               |
@@ -185,7 +187,7 @@ Details und Dateipfade stehen in der [Modulübersicht](./module/README.md) und d
 
 ---
 
-_Zuletzt aktualisiert: 2026-10-02._
+_Zuletzt aktualisiert: 2026-10-05._
 
 ## Verwandte Seiten
 
@@ -197,4 +199,5 @@ _Zuletzt aktualisiert: 2026-10-02._
 
 ## Codeprüfung
 
+- [Codeprüfung Oktober 2026](./entwicklung/code-audit-2026-10.md) — erneute Repository-Scans, Berechtigungs-/Laufzeitkorrekturen, Einzelpfad-Nachweise und Validierungsgrenzen in PR #149.
 - [Codeprüfung September 2026](./entwicklung/code-audit-2026-09.md) — Änderungen, Validierung und Betriebsgrenzen einschließlich des sechsten vollständigen Durchgangs in PR #139.

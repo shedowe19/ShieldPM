@@ -47,7 +47,9 @@ PR-Builds laden das fertige Image nur in den lokalen Docker-Daemon des Runners (
 
 Vom Docker-Workflow erfasste Pushes auf `develop` veröffentlichen nach erfolgreichen Builds beider Architekturen das Multiarch-Image `ghcr.io/shedowe19/shieldpm:develop` und erstellen für eine noch unveröffentlichte `.version` ein GitHub-Release mit den nativen Installern und LXC-Templates. Der Workflow besitzt für Branch-Pushes einen Pfadfilter; reine Wiki-Änderungen lösen diesen Build nicht aus. Ein Push des passenden `v<version>`-Tags kann dasselbe Release auslösen; ein manueller Workflow-Start erstellt kein Release. Der erste Release-Lauf legt einen fehlenden Versions-Tag auf dem tatsächlich gebauten Commit an. Ein bereits vorhandenes Release bleibt bei weiteren Builds derselben Version unverändert; ein vorhandener Tag auf einem anderen Commit verhindert die Veröffentlichung, bis `.version` erhöht ist.
 
-Nach dem Build führt `scripts/ci/docker-smoke.sh` in beiden Architektur-Jobs einen echten Containerstart mit PUID/PGID `0` und `1000` aus: Bei Pull Requests aus dem lokal geladenen Image, bei Pushes aus dem veröffentlichten Architekturbild. Die Runner `ubuntu-latest` und `ubuntu-24.04-arm` passen nativ zu ihren Images; QEMU ist dafür nicht erforderlich. Jeder Container erhält ein eigenes temporäres Datenvolume und `--network none`. `TZ=UTC`, deaktiviertes IPv6 und `SKIP_IP_RANGES=true` halten die Prüfung unabhängig von externen Diensten.
+Vor dem isolierten Anwendungstest ruft der Docker-Workflow in beiden Architektur-Jobs `scripts/ci/geoip-update-smoke.sh` auf. Dieser separate Test führt den echten GeoIP-Helfer des gebauten Images mit Netzwerkzugriff zweimal auf demselben temporären Datenvolume aus: zunächst für alle drei fehlenden Datenbanken, danach für eine erneute Latest-Release-Prüfung. Bei unverändertem Release müssen SHA-256, Größe, Inode und Änderungszeit erhalten bleiben und erneute Asset-Downloads ausbleiben; ein inzwischen geänderter Release-Snapshot darf entsprechend aktualisierte Dateien liefern. Dabei werden keine Anwendungsdienste gestartet.
+
+Anschließend führt `scripts/ci/docker-smoke.sh` in beiden Architektur-Jobs einen echten Containerstart mit PUID/PGID `0` und `1000` aus: Bei Pull Requests aus dem lokal geladenen Image, bei Pushes aus dem veröffentlichten Architekturbild. Die Runner `ubuntu-latest` und `ubuntu-24.04-arm` passen nativ zu ihren Images; QEMU ist dafür nicht erforderlich. Jeder Container erhält ein eigenes temporäres Datenvolume und `--network none`. `TZ=UTC`, deaktiviertes IPv6, `SKIP_IP_RANGES=true` und der ausdrückliche GeoIP-Opt-out `GEOIP_AUTO_UPDATE=false` halten diesen Anwendungstest unabhängig von externen Diensten.
 
 Ein ausdrücklich als Testfixture gekennzeichneter Marker im ACME-Account-Verzeichnis überspringt ausschließlich die sonst vor dem Dienststart versuchte Registrierung. Er enthält keine Zugangsdaten und ist kein nutzbarer ACME-Account. Die Prüfung wartet höchstens 180 Sekunden pro Container auf den vorhandenen Healthcheck. Anschließend prüft sie als jeweilige Service-UID den Backend-Socket, schreibt in die generierte Standardkonfiguration und das Certbot-Plugin-Verzeichnis, führt `nginx -tq`, Reload und Healthcheck aus und kontrolliert, dass `/run`, `/tmp` und `/usr/local` weiterhin Root gehören. Bei Fehlern werden Status und begrenzte Containerlogs ausgegeben; Container, Volumes und lokale Fixtures werden auch im Fehlerfall entfernt. Der Workflow-Schritt ist zusätzlich auf zehn Minuten begrenzt.
 
@@ -86,6 +88,12 @@ Nach dem Dependency-Update in PR #144 maß der CI-Build 1.246.277 Byte für alle
 gzip-komprimierten JavaScript-Assets zusammen. Das Gesamtbudget wurde dafür von 1.242.000 auf 1.255.000 Byte
 angepasst; der neue Grenzwert lässt rund 8,7 KB Spielraum über der gemessenen Baseline. Die Limits für den größten
 JavaScript-Chunk und die Stylesheets blieben unverändert.
+
+Für IP-Firewall einschließlich Länder- und ASN-Regeln in PR #149 wurde der `develop`-Vergleichsstand mit 1.246.243 Byte und der
+erweiterte Build mit 1.275.682 Byte gemessen: 29.439 Byte beziehungsweise rund 2,4 % zusätzliche komprimierte
+JavaScript-Assets. Das Gesamtbudget wurde deshalb von 1.255.000 auf 1.285.000 Byte angepasst. Die Grenzwerte für
+den größten JavaScript-Chunk und die Stylesheets blieben unverändert; die gemessenen 284.537 beziehungsweise
+16.310 Byte liegen weiterhin innerhalb dieser Grenzen.
 
 ## Native / LXC Build
 

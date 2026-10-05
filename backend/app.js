@@ -4,6 +4,7 @@ import { doubleCsrf } from "csrf-csrf";
 import express from "express";
 import helmet from "helmet";
 import swaggerUi from "swagger-ui-express";
+import jsonBody from "./lib/express/json-body.js";
 import jwt from "./lib/express/jwt.js";
 import { debug, express as logger } from "./logger.js";
 import mainRoutes from "./routes/main.js";
@@ -203,6 +204,21 @@ app.use(async (req, res, next) => {
 	const method = req.method;
 	const isInitialSetupUserCreation =
 		method === "POST" && (path === "/api/users" || path === "/users") && !(await isSetup());
+	const isTokenPost = method === "POST" && /^\/(?:api\/)?tokens(?:\/|$)/.test(path);
+	if (isTokenPost || isInitialSetupUserCreation) {
+		// These JSON/bodyless endpoints must not accept browser form submissions.
+		// Reject before CSRF generation, body parsing or session-cookie changes.
+		const contentType = req.get("content-type");
+		const isJson =
+			typeof contentType === "string" && contentType.split(";", 1)[0].trim().toLowerCase() === "application/json";
+		const isBodyless =
+			!contentType &&
+			typeof req.headers["transfer-encoding"] === "undefined" &&
+			!(Number(req.headers["content-length"]) > 0);
+		if (!isJson && !isBodyless) {
+			return res.status(415).send({ error: { code: 415, message: "Unsupported content type" } });
+		}
+	}
 	const isLoginRequest = method === "POST" && (path === "/api/tokens" || path === "/tokens");
 	const isTokenRefresh = method === "POST" && (path === "/api/tokens/refresh" || path === "/tokens/refresh");
 	const isTokenLogout = method === "POST" && (path === "/api/tokens/logout" || path === "/tokens/logout");
@@ -260,7 +276,7 @@ app.use((req, res, next) => {
 	next();
 });
 
-app.use(express.json());
+app.use(jsonBody);
 app.use(express.urlencoded({ extended: true }));
 
 /**

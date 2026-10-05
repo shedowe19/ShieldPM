@@ -1,0 +1,46 @@
+{
+	"operationId": "createFirewallList",
+	"summary": "Create a manual or HTTPS subscribed firewall list",
+	"tags": [
+		"firewall-lists"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"access_lists.manage"
+			]
+		}
+	],
+	"responses": {
+		"201": {
+			"description": "Success",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/firewall-list-object.json"
+					}
+				}
+			}
+		}
+	},
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"allOf": [
+						{
+							"$ref": "../../../components/firewall-list-input.json"
+						},
+						{
+							"required": [
+								"name",
+								"reason"
+							]
+						}
+					]
+				}
+			}
+		}
+	}
+}

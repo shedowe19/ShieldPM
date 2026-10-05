@@ -26,6 +26,14 @@ Proxy-Hosts leiten eingehende HTTP/HTTPS-Anfragen an Upstream-Server weiter. Sie
 4. `nginx.js` rendert Template und schreibt `.conf`
 5. Nginx wird neu geladen
 
+Die Bearbeitungsdialoge für Proxy-, Redirect-, 404-Hosts und Streams fragen beim Öffnen die aktuelle Host-ID
+erneut ab, auch wenn React Query noch einen Cacheeintrag besitzt. Erst die erfolgreiche Antwort initialisiert
+das Formular. Scheitert dieser Abruf, zeigt der Dialog den Fehler und erlaubt kein Speichern alter Cachewerte.
+Danach bleibt der ursprüngliche Formularstand bei Hintergrundabfragen erhalten, damit ein geöffneter Entwurf
+nicht überschrieben wird. Das verhindert keine konkurrierenden Änderungen nach dem Öffnen.
+`frontend/src/modals/HostModal.fresh-data.test.tsx` prüft diese Übergänge mit den tatsächlichen Query-Hooks
+und Formik-Dialogen; die API-Antworten werden dabei simuliert.
+
 ## Konfigurationsvorschau vor dem Speichern
 
 Das Erstellen und Bearbeiten bietet über `ProxyHostConfigPreview.tsx` eine Vorschau der aktuellen Formulardaten.
@@ -33,13 +41,23 @@ Das Erstellen und Bearbeiten bietet über `ProxyHostConfigPreview.tsx` eine Vors
 `POST /api/nginx/proxy-hosts/:host_id/preview` den normalen Update-Payload. Beide Routen benötigen
 Proxy-Host-Verwaltungsrechte, die Update-Route prüft zusätzlich die Berechtigung und Sichtbarkeit der
 konkreten Host-ID. Domains sowie neue Zertifikats-/Access-List-Referenzen werden wie beim Speichern geprüft.
+Für Firewall-Listen benötigt die Vorschau zusätzlich Leserechte auf sämtliche Zuordnungen aus gespeichertem
+Host und Entwurf, auch wenn die Firewall deaktiviert ist oder eine Zuordnung im Entwurf entfernt wird.
 
 `internal/proxy-host-preview.js` lädt die Render-Relationen des berechtigten Hosts, verwendet
 `nginx.renderConfig()` und liest für Änderungen ausschließlich dessen aktive numerische `.conf` (ohne
 Symlinks zu folgen). Der Diff vergleicht Zeilen nach Entfernen von Einrückung und Leerzeilen, damit
-`nginxbeautifier` keine scheinbaren Direktivenänderungen verursacht. Die vollständige Vorschau gibt
+`nginxbeautifier` keine scheinbaren Direktivenänderungen verursacht. Die Vorschau gibt
 den gerenderten Entwurf **vor** der kosmetischen Formatierung zurück. OIDC-Client-Secrets,
 Terminal-Handoff-Token und bekannte geheime Direktiven werden in Ausgabe und Diff maskiert.
+
+Die automatisch generierten Firewall-CIDR-Tabellen werden in Entwurf und aktivem Vergleich durch Anzahl und
+SHA-256-Prüfsumme ersetzt. Die Prüfsumme berücksichtigt die geordneten kompilierten Adress-/Regelreferenzen;
+Einrückung und CRLF ändern sie nicht. Der Entwurf rendert diese Tabellen bereits kompakt, die aktive Datei
+wird in 64-KiB-Blöcken gelesen. Es gelten 512 MiB für die Rohdatei und 2 MiB für die kompakte Ausgabe.
+Die Einschränkung `firewall-rule-summaries` erklärt diese Darstellung in der Oberfläche. Die übrige
+Konfiguration bleibt sichtbar; die produktive Generierung enthält weiterhin alle Firewall-Regeln.
+Details stehen unter [IP-Firewall](./ip-firewall.md#konfigurationsvorschau).
 
 Der Aufruf schreibt weder Host-Datenbankeinträge noch Konfigurationsdateien, legt keine Zertifikate an,
 ruft keinen Nginx-Test oder Reload auf und ist **kein** Syntax- oder Laufzeittest. Erst der reguläre

@@ -38,6 +38,8 @@ Start, Stop, Restart und Löschen laufen pro Tunnel-ID nacheinander. Gleichzeiti
 
 Start und Restart laden innerhalb dieser Warteschlange den aktuellen, nicht gelöschten Datenbankeintrag. Ein alter Snapshot kann daher weder einen gelöschten Tunnel erneut starten noch nach einer Tokenrotation veraltete Zugangsdaten verwenden. Numerische und stringförmige IDs teilen dieselbe Warteschlange und Prozesszuordnung. `fifth-integrations-cloudflared-delete.spec.js` prüft entfernte und soft-gelöschte Einträge, Tokenrotation und einen während der verzögerten Datenbanklöschung eingereihten Restart.
 
+Beim erfolgreichen GitOps-Import mit `overwrite` werden fehlende Tunnel zunächst in der Datenbank soft-gelöscht und anschließend über dieselbe Stop-Warteschlange mit `SIGTERM` beendet. Ein eingereihter Start findet damit keinen aktiven Datensatz mehr. Scheitert die Datenbanklöschung, wird der Prozess nicht gestoppt; scheitert Stop, meldet der Import einen Fehler und kann die bereits persistierte Soft-Löschung erneut bereinigen. Ein fehlendes Modulverzeichnis, ein Import ohne `overwrite` und unverändert importierte Tunnel lösen keinen Stop aus. `gitops-cloudflared-prune.spec.js` prüft diese Verträge mit der vollständigen SQLite-Migrationskette, echten Modellen und Services sowie einem simulierten Child-Prozess ohne Cloudflare-Netzwerkzugriff.
+
 Ändern und Löschen beachten die von der jeweiligen Capability gelieferte `permission_visibility`: `all` erlaubt fremde Tunnel, eingeschränkte Sichtbarkeit begrenzt auf den Eigentümer. Globale Verwaltungsrechte werden nicht durch eine zusätzliche pauschale Owner-Prüfung blockiert.
 
 ## Offene Fragen

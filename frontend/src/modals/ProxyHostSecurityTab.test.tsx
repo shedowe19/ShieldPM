@@ -14,6 +14,10 @@ vi.mock("src/components/AnubisRulesField", () => ({
 	default: () => <div data-testid="anubis-rules-editor" />,
 }));
 
+vi.mock("./ProxyHostFirewallSettings", () => ({
+	default: () => <div data-testid="ip-firewall-settings" />,
+}));
+
 vi.mock("src/components/ui/alert", () => ({
 	Alert: ({ children }: PropsWithChildren) => <div>{children}</div>,
 	AlertDescription: ({ children }: PropsWithChildren) => <div>{children}</div>,

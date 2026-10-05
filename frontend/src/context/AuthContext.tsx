@@ -4,6 +4,7 @@ import { useIntervalWhen } from "rooks";
 import { getToken, loginAsUser, refreshToken, restoreSession, type TokenResponse } from "src/api/backend";
 import * as api from "src/api/backend/base";
 import AuthStore, { AUTHENTICATION_EXPIRED_EVENT } from "src/modules/AuthStore";
+import { showError } from "src/notifications";
 
 // Context
 export interface AuthContextType {
@@ -32,6 +33,8 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		() => window.location.pathname.replace(/\/+$/, "").toLowerCase() === "/duo-callback",
 	);
 	const sessionGeneration = useRef(0);
+	const logoutRequest = useRef(0);
+	const mounted = useRef(true);
 
 	const handleTokenUpdate = useCallback((response: TokenResponse) => {
 		AuthStore.set(response);
@@ -89,6 +92,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	}, [handleTokenUpdate, isDuoCallback]);
 
 	useEffect(() => {
+		mounted.current = true;
 		const handleAuthenticationExpired = () => {
 			sessionGeneration.current += 1;
 			setAuthenticated(false);
@@ -97,6 +101,8 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		window.addEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
 		return () => {
 			// A locale change replaces this provider while its requests may still be pending.
+			mounted.current = false;
+			logoutRequest.current += 1;
 			sessionGeneration.current += 1;
 			window.removeEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
 		};
@@ -139,12 +145,24 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		} catch (_err) {
 			if (generation !== sessionGeneration.current) return;
 			sessionGeneration.current += 1;
+			const request = ++logoutRequest.current;
 			// No backup session found or failed to restore, do a full logout
+			setLoading(true);
 			AuthStore.clear();
 			setAuthenticated(false);
 			queryClient.clear();
-			// Call API to clear cookie (uses internal client for CSRF)
-			await api.post({ url: "/tokens/logout", silentAuth: true });
+			try {
+				// Keep Login unmounted until this response has cleared the old cookies.
+				await api.post({ url: "/tokens/logout", silentAuth: true });
+			} catch (error) {
+				if (mounted.current && request === logoutRequest.current) {
+					showError(error instanceof Error ? error.message : String(error));
+				}
+			} finally {
+				if (mounted.current && request === logoutRequest.current) {
+					setLoading(false);
+				}
+			}
 		}
 	};
 

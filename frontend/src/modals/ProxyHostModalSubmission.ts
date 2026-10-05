@@ -1,5 +1,5 @@
 import { serializeMaintenanceDateTime } from "src/lib/maintenanceDateTime";
-import type { ProxyHostFormValues } from "./ProxyHostModalFormValues";
+import { type ProxyHostFormValues, parseProxyHostMeta } from "./ProxyHostModalFormValues";
 
 export type ProxyHostPayload = Omit<ProxyHostFormValues, "crowdsecEnabled" | "advLimitReqRate" | "advLimitReqBurst"> & {
 	id?: number;
@@ -32,6 +32,9 @@ export const createProxyHostPayload = ({ id, values }: CreateProxyHostPayloadPar
 		maintenanceStart: serializeMaintenanceDateTime(values.maintenanceStart),
 		maintenanceEnd: serializeMaintenanceDateTime(values.maintenanceEnd),
 	};
+	if (values.meta !== undefined) {
+		payload.meta = parseProxyHostMeta(values.meta);
+	}
 
 	if (typeof crowdsecEnabled !== "undefined") {
 		payload.securityCrowdsec = crowdsecEnabled;

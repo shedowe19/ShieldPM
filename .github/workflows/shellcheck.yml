@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: 26
       - name: Install Shellcheck
-        run: sudo apt-get update && sudo apt-get install -y shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck libmaxminddb0
       - name: Run Shellcheck
         run: |
           find scripts rootfs -type f \( -name "*.sh" -o -name "*.bash" -o -name "update-shieldpm" -o -name "npm-reset-password" \) -exec shellcheck {} +

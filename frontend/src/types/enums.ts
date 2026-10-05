@@ -218,6 +218,7 @@ export type UserRole = (typeof USER_ROLE)[keyof typeof USER_ROLE];
 
 export const AUDIT_LOG_OBJECT_TYPE = {
 	ACCESS_LIST: "access-list",
+	FIREWALL_LIST: "firewall-list",
 	USER: "user",
 	PROXY_HOST: "proxy-host",
 	REDIRECTION_HOST: "redirection-host",
@@ -230,6 +231,8 @@ export const AUDIT_LOG_OBJECT_TYPE = {
 	SETTING: "setting",
 	DASHBOARD_NOTE: "dashboard_note",
 	TOR_ONION: "tor-onion",
+	WIREGUARD_PEER: "wireguard-peer",
+	WIREGUARD_SETTINGS: "wireguard-settings",
 } as const;
 export type AuditLogObjectType = (typeof AUDIT_LOG_OBJECT_TYPE)[keyof typeof AUDIT_LOG_OBJECT_TYPE];
 
@@ -239,6 +242,7 @@ export const AUDIT_LOG_ACTION = {
 	UPDATED: "updated",
 	ENABLED: "enabled",
 	DISABLED: "disabled",
+	RENEWED: "renewed",
 } as const;
 export type AuditLogAction = (typeof AUDIT_LOG_ACTION)[keyof typeof AUDIT_LOG_ACTION];
 

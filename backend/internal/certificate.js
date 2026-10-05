@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import _ from "lodash";
 import tempWrite from "temp-write";
 import error from "../lib/error.js";
+import { restrictHostExpansions } from "../lib/host-expansions.js";
 import { sanitizeProxyHost } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import { debug, ssl as logger } from "../logger.js";
@@ -25,6 +26,12 @@ const omissions = () => {
 };
 
 const certificateOperations = new Set();
+const hostRelations = {
+	proxy_hosts: "proxy_hosts",
+	redirection_hosts: "redirection_hosts",
+	dead_hosts: "dead_hosts",
+	streams: "streams",
+};
 const withCertificateLock = async (id, operation) => {
 	if (certificateOperations.has(id)) {
 		throw new error.ValidationError("Another operation is running for this certificate. Please try again later.");
@@ -67,7 +74,14 @@ const cleanUpMissingCertificatesUnlocked = async () => {
 								hsts_subdomains: 0,
 							};
 				await internalNginx.backupConfig(type, host);
-				affectedHosts.push({ model, type, host, previous: _.pick(host, [...Object.keys(patch), "meta"]) });
+				affectedHosts.push({
+					model,
+					type,
+					host,
+					previous: _.pick(host, Object.keys(patch)),
+					previousStatus: { nginx_online: host.meta?.nginx_online, nginx_err: host.meta?.nginx_err },
+					statusWritten: false,
+				});
 				await model.query().where("id", host.id).patch(patch);
 				const query = model.query().findById(host.id);
 				if (graph) query.withGraphFetched(graph);
@@ -83,18 +97,17 @@ const cleanUpMissingCertificatesUnlocked = async () => {
 		if (affectedHosts.length > 0) {
 			// Validate only after every stale reference has been removed from the generated configuration.
 			await internalNginx.reload();
-			for (const { model, host } of affectedHosts) {
-				await model
-					.query()
-					.where("id", host.id)
-					.patch({
-						meta: { ...host.meta, nginx_online: Boolean(host.enabled), nginx_err: null },
-					});
+			for (const affected of affectedHosts) {
+				await internalNginx.updateHostStatus(affected.model, affected.host, {
+					nginx_online: Boolean(affected.host.enabled),
+					nginx_err: null,
+				});
+				affected.statusWritten = true;
 			}
 		}
 	} catch (err) {
 		// Keep certificate files and restore every previous host configuration before releasing the global lock.
-		for (const { model, type, host, previous } of affectedHosts.toReversed()) {
+		for (const { model, type, host, previous, previousStatus, statusWritten } of affectedHosts.toReversed()) {
 			try {
 				await internalNginx.deleteConfig(type, host);
 				await internalNginx.restoreConfig(type, host);
@@ -105,6 +118,7 @@ const cleanUpMissingCertificatesUnlocked = async () => {
 			}
 			try {
 				await model.query().where("id", host.id).patch(previous);
+				if (statusWritten) await internalNginx.updateHostStatus(model, host, previousStatus);
 			} catch (rollbackError) {
 				logger.error(`Failed to restore ${type} ${host.id} metadata: ${rollbackError.message}`);
 			}
@@ -381,6 +395,7 @@ const internalCertificate = {
 
 		if (typeof thisData.expand !== "undefined" && thisData.expand !== null) {
 			query.withGraphFetched(`[${thisData.expand.join(", ")}]`);
+			await restrictHostExpansions(query, access, hostRelations);
 		}
 
 		const row = await query.then(/** @type {any} */ (utils.omitRow(omissions())));
@@ -583,6 +598,7 @@ const internalCertificate = {
 
 		if (typeof expand !== "undefined" && expand !== null) {
 			query.withGraphFetched(`[${expand.join(", ")}]`);
+			await restrictHostExpansions(query, access, hostRelations);
 		}
 
 		const r = await query.then(/** @type {any} */ (utils.omitRows(omissions())));

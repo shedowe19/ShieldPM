@@ -189,7 +189,8 @@ remove_stale_corepack_shims() {
 }
 
 wait_for_backend_health() {
-    local deadline=$((SECONDS + 120))
+    # Startup may spend 240s preparing GeoIP databases, followed by 120s for the backend.
+    local deadline=$((SECONDS + 360))
 
     echo "    - Waiting for the updated backend and database migrations..."
     while ((SECONDS < deadline)); do
@@ -201,7 +202,7 @@ wait_for_backend_health() {
         sleep 1
     done
 
-    echo "    ! ShieldPM did not become healthy within 120s."
+    echo "    ! ShieldPM did not become healthy within 360s."
     return 1
 }
 

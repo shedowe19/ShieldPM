@@ -142,6 +142,9 @@
 		},
 		"meta": {
 			"type": "object",
+			"properties": {
+				"ip_firewall": { "$ref": "./firewall-policy.json" }
+			},
 			"example": {
 				"nginx_online": true,
 				"nginx_err": null

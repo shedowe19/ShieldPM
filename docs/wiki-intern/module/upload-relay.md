@@ -34,6 +34,10 @@ Getrennt vom öffentlichen Nginx-Passthrough steht die Backend-API unter `/api/n
 
 Lokale Sitzungen liegen unter `<DATA_PATH>/upload-relay/host-<hostId>/<uploadId>/` (`DATA_PATH` ist standardmäßig `/data`). Die Host-ID muss gültig sein, die Upload-ID eine UUID. Beim Zugriff auf gespeicherte Metadaten und Chunks werden Dateinamen und Chunk-Angaben geprüft; symbolische Links an den betroffenen Datei- und Verzeichnispfaden sind unzulässig. Lesezugriffe (`GET`, `HEAD`) benötigen `proxy_hosts:get`, schreibende Zugriffe `proxy_hosts:update` und einen gültigen CSRF-Token.
 
+Alle Backend-tus-Endpunkte prüfen außerdem die aktuelle Host-Sichtbarkeit: Bei `permission_visibility: user` muss der aktive Host dem angemeldeten Benutzer gehören. Fremde, gelöschte und fehlende Hosts liefern vor jedem Zugriff auf Sitzungsdaten oder Chunks `404`; `permission_visibility: all` erlaubt weiterhin den Zugriff auf alle aktiven Hosts. Die Prüfung gilt auch für explizite Finalisierung und Löschen.
+
+Die periodische Bereinigung behandelt eine gleichzeitig regulär gelöschte Sitzung als bereits entfernt. Andere Speicherfehler werden bei direkten Bereinigungsaufrufen weiterhin gemeldet; die Hintergrundläufe beim Start und stündlich protokollieren Fehler, ohne den Backend-Prozess durch eine unbehandelte Promise-Ablehnung zu beenden.
+
 ## Grenzen
 
 Ein Reverse Proxy kann eine beliebige einzelne Browser-Formularanfrage nicht transparent in kleinere Anfragen zerlegen: Das Zielsystem bestimmt dabei Feldnamen, Authentifizierung, Checksumme und Abschlusssemantik. Für Dateien oberhalb eines CDN-Request-Limits muss der Client bzw. der Upstream daher ein eigenes Chunking-Protokoll wie Nextcloud-WebDAV oder tus verwenden. ShieldPM transportiert dieses Protokoll ohne Zielpfad-Doppelpflege und verhindert selbst keine Anwendungsspezifika.

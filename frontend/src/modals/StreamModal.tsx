@@ -18,6 +18,7 @@ import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE, STREAM_TAB } from "src/types/enums";
+import { useFreshFormData } from "./useFreshFormData";
 
 const showStreamModal = (id: number | "new") => {
 	EasyModal.show(StreamModal, { id });
@@ -42,7 +43,8 @@ interface StreamValues {
 }
 
 const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
-	const { data, isLoading, error } = useStream(id);
+	const hostQuery = useStream(id, { refetchOnMount: "always" });
+	const { data, isLoading, error } = useFreshFormData(id, hostQuery);
 	const { mutate: setStream } = useSetStream();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);

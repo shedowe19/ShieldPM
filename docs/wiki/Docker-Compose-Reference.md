@@ -2,6 +2,8 @@
 
 This is an annotated example using host networking. The repository's checked-in [`compose.yaml`](https://github.com/shedowe19/ShieldPM/blob/develop/compose.yaml) uses the `shieldpm:develop` image; use `:latest` below for the latest released image. The [Configuration](Configuration) page explains runtime defaults, and [OpenAppSec](OpenAppSec) covers the optional agent setup.
 
+GeoIP Country, City, and ASN data are prepared automatically at every ShieldPM startup, without MaxMind credentials or a sidecar. `GEOIP_AUTO_UPDATE=false` disables this for offline or custom data; `NGINX_LOAD_GEOIP2_MODULE=true` separately enables lookups. See [GeoIP setup and cache failures](./Analytics.md#enabling-geoip-country-statistics).
+
 ## 📝 compose.yaml
 
 > [!NOTE]
@@ -111,7 +113,8 @@ services:
 #      - "INITIAL_DEFAULT_PAGE=444" # default page to set on first start of ShieldPM for the initial user, default congratulations, can be one of: 404, 444, redirect, congratulations or html
 #      - "ENABLE_PRERUN=true" # run /data/prerun/*.sh at startup, default false
 #      - "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true" # loads the openappsec attachment module, you must also set ipc and enable the shm-volume for ShieldPM in this compose file, this will fully disable brotli, default false
-#      - "NGINX_LOAD_GEOIP2_MODULE=true" # loads the geoip2 module, requires manual configuration, default false
+#      - "GEOIP_AUTO_UPDATE=false" # opt out of default startup downloads for offline/custom GeoIP databases
+#      - "NGINX_LOAD_GEOIP2_MODULE=true" # loads the geoip2 module using prepared databases, default false
 #      - "NGINX_LOAD_NJS_MODULE=true" # loads the njs module (nginx JavaScript module), requires manual configuration, default false
 #      - "NGINX_LOAD_NTLM_MODULE=true" # loads the ntlm module, requires manual configuration, default false
 #      - "NGINX_LOAD_VHOST_TRAFFIC_STATUS_MODULE=true" # loads the virtual host traffic status module, requires manual configuration, default false
@@ -167,7 +170,7 @@ services:
 #    volumes:
 #      - "/opt/shieldpm/postgres:/var/lib/postgresql/data"
 
-# This can be used with GOA=true to keep the geoip database updated, environment variables must be configured
+# Optional custom MaxMind updater; set GEOIP_AUTO_UPDATE=false on ShieldPM before using it.
 #  geoipupdate:
 #    container_name: shieldpm-geoipupdate
 #    image: ghcr.io/maxmind/geoipupdate:latest
@@ -180,7 +183,7 @@ services:
 #      - "GEOIPUPDATE_LICENSE_KEY=<your-license-key>" # needs to be changed
 #      - "GEOIPUPDATE_FREQUENCY=24"
 #    volumes:
-#      - "/opt/shieldpm/goaccess/geoip:/usr/share/GeoIP"
+#      - "/opt/shieldpm/nginx:/usr/share/GeoIP"
 
 # This can be used to run openappsec, you must also set NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE to true and set ipc for ShieldPM
 #  openappsec-agent:

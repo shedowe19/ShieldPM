@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="%{lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark">
+<title>%{title} · ShieldPM</title>
+<style>
+:root{color-scheme:dark;--text:#f1f4ff;--muted:#aab7cc;--cyan:#75e3ff;--purple:#b5a1ff;--line:#ffffff14}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;min-height:100svh;display:grid;place-items:center;padding:clamp(24px,5vh,64px) clamp(18px,4vw,64px);background:#070b15;color:var(--text);font:16px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;isolation:isolate}
+body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(ellipse at 14% 16%,#00bfff13,transparent 48%),radial-gradient(ellipse at 87% 78%,#8453ff19,transparent 47%),linear-gradient(135deg,#080d18,#0b0e1d);animation:ambient-in 2.4s ease-out both}
+body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.15;background-image:linear-gradient(#8da7d21a 1px,transparent 1px),linear-gradient(90deg,#8da7d21a 1px,transparent 1px);background-size:72px 72px;mask-image:radial-gradient(ellipse at 50% 38%,#000,transparent 78%)}
+main{width:min(100%,1120px);min-width:0}
+.brand-row{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 5px 20px;animation:rise-in .6s ease-out both}
+.wordmark{color:#eff4ff;font-size:19px;font-weight:750;letter-spacing:-.035em}
+.wordmark span{color:var(--cyan)}
+.badge{display:inline-flex;align-items:center;gap:9px;border:1px solid #89abf12e;border-radius:999px;padding:7px 12px;background:#152139a1;color:#c6dbf7;font-size:11px;font-weight:700;letter-spacing:.095em;white-space:nowrap}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 13px #68daff7a}
+.card{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(310px,1fr);position:relative;overflow:hidden;border:1px solid #94acdf2c;border-radius:28px;background:linear-gradient(140deg,#121c2c,#0e1325 64%,#15142a);box-shadow:0 32px 100px #0006,0 1px 0 #ffffff08 inset;animation:rise-in .75s .08s ease-out both}
+.card::before{content:"";position:absolute;inset:0 0 auto;height:1px;background:linear-gradient(90deg,transparent,#64dbff9c 28%,#b598ff8a 76%,transparent);pointer-events:none}
+.intro{min-width:0;padding:44px 42px 42px}
+.hero{display:flex;align-items:center;gap:20px;margin:0 0 22px;min-width:0}
+.hero-copy{min-width:0;flex:1}
+.hero-mark{flex:none;position:relative;display:grid;place-items:center;width:192px;height:192px;isolation:isolate}
+.hero-mark::before{content:"";position:absolute;inset:5%;border-radius:50%;z-index:-1;background:radial-gradient(circle,#793eff29,#16caff10 48%,transparent 70%);filter:blur(12px);animation:glow-settle 3.8s ease-out both}
+.logo{width:180px;height:180px;position:relative;z-index:1;filter:drop-shadow(0 8px 24px #1f0b5e66);animation:logo-arrive 1.2s .12s cubic-bezier(.2,.75,.25,1) both}
+.logo svg{display:block;width:100%;height:100%}
+.orbit{position:absolute;inset:0;border:1px solid #71dfff29;border-radius:50%;transform:rotate(-32deg);animation:orbit-settle 3.8s .1s cubic-bezier(.2,.7,.25,1) both;pointer-events:none}
+.orbit::before{content:"";position:absolute;width:7px;height:7px;left:22%;top:4%;border-radius:50%;background:#87e7ff;box-shadow:0 0 15px #48dbffa6}
+.orbit-inner{inset:13px;border-color:#b396ff24;transform:rotate(48deg);animation-name:inner-orbit-settle}
+.orbit-inner::before{left:auto;right:12%;top:13%;width:5px;height:5px;background:#c6afff;box-shadow:0 0 14px #8f67ffa6}
+h1{margin:0;font-size:clamp(34px,3.7vw,46px);font-weight:720;line-height:1.08;letter-spacing:-.045em;text-wrap:balance;overflow-wrap:anywhere}
+.subtitle{margin:0 0 26px;color:#b9c6da;font-size:16px;line-height:1.7;max-width:47ch;overflow-wrap:anywhere}
+.reason{position:relative;border:1px solid #77d9ff33;border-radius:17px;padding:22px 24px;background:linear-gradient(115deg,#14304b73,#15233c80 60%,#34235640);box-shadow:0 1px 0 #c3ebff05 inset}
+.eyebrow{display:flex;align-items:center;gap:8px;color:var(--cyan);font-size:11px;font-weight:750;letter-spacing:.11em;text-transform:uppercase}
+.eyebrow::before{content:"";width:4px;height:14px;border-radius:3px;background:linear-gradient(var(--cyan),var(--purple))}
+.reason p{margin:10px 0 0;font-size:16px;line-height:1.7;overflow-wrap:anywhere;white-space:pre-wrap}
+.message{margin:21px 0 0;color:var(--muted);font-size:14px;line-height:1.75;overflow-wrap:anywhere;white-space:pre-wrap}
+.contact{display:inline-flex;align-items:center;justify-content:center;gap:16px;max-width:100%;margin-top:27px;padding:13px 20px;border:1px solid #9bdffe70;border-radius:12px;background:linear-gradient(115deg,#93e6ff,#bcaeff);box-shadow:0 4px 22px #4b96e815;color:#11182c;font-size:14px;font-weight:750;line-height:1.5;text-decoration:none;overflow-wrap:anywhere;transition:background-color .18s,box-shadow .18s}
+.contact:hover{background:#c6edff;box-shadow:0 5px 27px #78caff30}
+.contact:focus-visible{outline:3px solid #fff;outline-offset:5px}
+.contact-arrow{flex:none;font-size:18px;font-weight:500;line-height:1}
+.details{min-width:0;border-left:1px solid var(--line);padding:37px 34px 32px;background:linear-gradient(160deg,#10213659,#13112561)}
+.details-top{display:flex;align-items:center;gap:10px;margin:0 0 17px;color:#94a8c7;font:11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.11em}
+.details-top::before{content:"";height:7px;width:7px;border-radius:2px;background:#a896ed;box-shadow:0 0 12px #a58aff30}
+dl{margin:0;min-width:0}
+dl>div{min-width:0;padding:13px 0;border-bottom:1px solid var(--line);animation:detail-arrive .65s .18s ease-out both}
+dl>div:nth-child(2){animation-delay:.25s}dl>div:nth-child(3){animation-delay:.32s}dl>div:nth-child(4){animation-delay:.39s}dl>div:nth-child(5){animation-delay:.46s}dl>div:nth-child(6){animation-delay:.53s}dl>div:nth-child(7){animation-delay:.6s}
+dl>div:last-child{border:0;padding-bottom:0}
+dt{margin-bottom:5px;color:#9daec7;font-size:12px;font-weight:500;line-height:1.5}
+dd{margin:0;color:#e3ebf9;font:13px/1.75 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere;word-break:normal}
+.source dd{color:#c6baff;font-family:inherit;font-size:14px;font-weight:550}
+.reference dd{color:#96d9f1;letter-spacing:.025em}
+footer{margin:23px auto 0;padding:0 8px;max-width:720px;color:#899bb6;font-size:12px;line-height:1.7;text-align:center;overflow-wrap:anywhere;animation:rise-in .65s .15s ease-out both}
+[hidden]{display:none!important}
+@keyframes rise-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ambient-in{from{opacity:0}to{opacity:1}}
+@keyframes logo-arrive{from{opacity:0;transform:translateY(10px) scale(.91)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes glow-settle{0%{opacity:.2;transform:scale(.8)}50%{opacity:1;transform:scale(1.08)}100%{opacity:.75;transform:scale(1)}}
+@keyframes orbit-settle{from{opacity:0;transform:rotate(-160deg) scale(.94)}to{opacity:1;transform:rotate(-32deg) scale(1)}}
+@keyframes inner-orbit-settle{from{opacity:0;transform:rotate(190deg) scale(.94)}to{opacity:1;transform:rotate(48deg) scale(1)}}
+@keyframes detail-arrive{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@media(min-width:1500px){.hero-mark{width:210px;height:210px}.logo{width:196px;height:196px}}
+@media(max-width:980px){.intro{padding:36px 30px}.hero{gap:12px}.hero-mark{width:148px;height:148px}.logo{width:140px;height:140px}h1{font-size:34px}.details{padding:30px 26px}}
+@media(max-width:900px){body{padding:25px 18px}.card{grid-template-columns:minmax(0,1fr);border-radius:22px}.intro{padding:28px 26px 30px}.hero{justify-content:center;gap:22px;max-width:560px;margin-bottom:21px}.hero-mark{width:168px;height:168px}.logo{width:156px;height:156px}h1{font-size:clamp(32px,6vw,40px)}.details{border-left:0;border-top:1px solid var(--line);padding:24px 26px 27px}.details-top{margin-bottom:8px}dl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:24px}dl>div{padding:13px 0}.source,.reference{grid-column:1/-1}.reference{border-bottom:0}}
+@media(max-width:460px){body{padding:22px 14px}.brand-row{gap:10px;margin-bottom:15px}.wordmark{font-size:18px}.badge{padding:6px 9px;font-size:9px;letter-spacing:.06em;gap:7px}.intro{padding:25px 21px 27px}.hero{flex-direction:column;gap:17px;margin-bottom:20px;text-align:center}.hero-mark{width:178px;height:178px}.logo{width:164px;height:164px}h1{font-size:clamp(30px,9vw,36px);line-height:1.12}.subtitle{text-align:center;font-size:15px;margin-bottom:24px}.reason{padding:19px 19px}.reason p{font-size:15px}.contact{width:100%;gap:12px}.details{padding:23px 21px 25px}dl{grid-template-columns:minmax(0,1fr);column-gap:0}.source,.reference{grid-column:auto}footer{font-size:11px;margin-top:20px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+@media print{:root{color-scheme:light;--text:#15213a;--muted:#3c4d65;--cyan:#12617b;--line:#d8dde7}body{display:block;min-height:0;padding:0;background:#fff;color:var(--text)}body::before,body::after,.orbit{display:none}.card{display:block;border:1px solid #cbd2dd;border-radius:12px;background:#fff;box-shadow:none;overflow:visible}.card::before{display:none}.brand-row{margin:0 0 15px}.wordmark,.wordmark span{color:#15213a}.badge{background:#fff;border-color:#ccd3df;color:#33465e}.intro{padding:25px}.hero-mark{width:100px;height:100px}.logo{width:100px;height:100px;filter:none}.hero-mark::before{display:none}h1{font-size:28px}.subtitle,.message,dt,footer{color:#40506b}.reason{background:#f1f5fa;border-color:#cbd5e2;box-shadow:none}.details{padding:0 25px 25px;border:0;background:#fff}.details-top{color:#40506b}dd,.source dd,.reference dd{color:#15213a}.contact{background:#fff;border-color:#b6c1d3;color:#15213a;box-shadow:none}*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+<div class="brand-row">
+<div class="wordmark">Shield<span>PM</span></div>
+<div class="badge"><span class="badge-dot" aria-hidden="true"></span>IP FIREWALL · 403</div>
+</div>
+<section class="card" aria-labelledby="title">
+<div class="intro">
+<div class="hero">
+<div class="hero-mark" aria-hidden="true">
+<span class="orbit"></span><span class="orbit orbit-inner"></span>
+<div class="logo">
+<!-- Original ShieldPM icon: frontend/public/images/logo-no-text.svg. Keep this SVG unchanged. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="g" x1="96" y1="72" x2="416" y2="456" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00D1FF"/>
+      <stop offset="0.48" stop-color="#7C4DFF"/>
+      <stop offset="0.78" stop-color="#FF3D81"/>
+      <stop offset="1" stop-color="#FFB020"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M256 58
+           L372 108
+           V246
+           C372 342 314 407 256 446
+           C198 407 140 342 140 246
+           V108
+           L256 58 Z"
+        fill="#0B1020" fill-opacity="0.96"
+        stroke="url(#g)"
+        stroke-width="24"
+        stroke-linejoin="round"/>
+
+  <path d="M188 176
+           C236 136 332 150 332 220
+           C332 268 244 256 244 306
+           C244 356 320 362 344 326"
+        stroke="url(#g)"
+        stroke-width="22"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+  <circle cx="188" cy="176" r="12" fill="#0B1020" stroke="url(#g)" stroke-width="8"/>
+  <circle cx="344" cy="326" r="12" fill="#0B1020" stroke="url(#g)" stroke-width="8"/>
+
+  <rect x="314" y="132" width="14" height="56" rx="7" fill="url(#g)"/>
+  <rect x="293" y="153" width="56" height="14" rx="7" fill="url(#g)"/>
+</svg>
+</div>
+</div>
+<div class="hero-copy"><h1 id="title">%{title}</h1></div>
+</div>
+<p class="subtitle">%{subtitle}</p>
+<div class="reason"><div class="eyebrow">%{reason_label}</div><p>%{reason}</p></div>
+<p class="message">%{message}</p>
+<a class="contact" href="%{support}" rel="noreferrer" %{contact_hidden}><span>%{contact_label}</span><span class="contact-arrow" aria-hidden="true">↗</span></a>
+</div>
+<div class="details">
+<div class="details-top" aria-hidden="true">SHIELDPM / IP FIREWALL</div>
+<dl>
+<div class="source"><dt>%{source_label}</dt><dd>%{source}</dd></div>
+<div %{country_hidden}><dt>%{country_label}</dt><dd>%{country}</dd></div>
+<div %{asn_hidden}><dt>%{asn_label}</dt><dd>%{asn}</dd></div>
+<div %{asn_organization_hidden}><dt>%{asn_organization_label}</dt><dd>%{asn_organization}</dd></div>
+<div><dt>%{ip_label}</dt><dd>%{ip}</dd></div>
+<div><dt>%{host_label}</dt><dd>%{host}</dd></div>
+<div class="reference"><dt>%{request_label}</dt><dd>%{request}</dd></div>
+</dl>
+</div>
+</section>
+<footer>%{footer}</footer>
+</main>
+</body>
+</html>

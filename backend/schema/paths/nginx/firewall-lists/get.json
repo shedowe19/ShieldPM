@@ -1,0 +1,99 @@
+{
+	"operationId": "getFirewallLists",
+	"summary": "List visible firewall list summaries without large entry payloads",
+	"tags": [
+		"firewall-lists"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"access_lists.view"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"name": {
+									"type": "string",
+									"minLength": 1,
+									"maxLength": 255
+								},
+								"reason": {
+									"type": "string",
+									"minLength": 1,
+									"maxLength": 2000,
+									"description": "Public explanation shown on the blocked request page."
+								},
+								"description": {
+									"type": "string",
+									"maxLength": 4000,
+									"description": "Internal administrative note, never sent to visitors."
+								},
+								"source_type": {
+									"type": "string",
+									"enum": [
+										"manual",
+										"url"
+									],
+									"default": "manual"
+								},
+								"source_url": {
+									"type": "string",
+									"maxLength": 2048,
+									"description": "Public HTTPS TXT URL; credentials, private destinations, and insecure redirects are rejected."
+								},
+								"update_interval_hours": {
+									"type": "integer",
+									"minimum": 6,
+									"maximum": 168,
+									"default": 24
+								},
+								"enabled": {
+									"type": "boolean",
+									"default": true
+								},
+								"id": {
+									"type": "integer",
+									"minimum": 1
+								},
+								"owner_user_id": {
+									"type": "integer"
+								},
+								"created_on": {
+									"type": "string"
+								},
+								"modified_on": {
+									"type": "string"
+								},
+								"entry_count": {
+									"type": "integer",
+									"minimum": 0
+								},
+								"last_updated_on": {
+									"type": [
+										"string",
+										"null"
+									]
+								},
+								"last_error": {
+									"type": [
+										"string",
+										"null"
+									]
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

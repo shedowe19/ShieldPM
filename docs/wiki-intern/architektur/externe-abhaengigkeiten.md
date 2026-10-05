@@ -98,6 +98,26 @@ Der dokumentierte `yarn audit --json`-Lauf meldete nach der damaligen Korrektur 
 
 Gezielt aktualisiert wurden `fast-uri` von 3.1.5 auf 3.1.6, `qs` von 6.15.3 auf 6.16.0, `nanoid` von 3.3.16 auf 3.3.18 und die transitive `@apidevtools/swagger-parser`-Kette für `js-yaml` auf 4.3.2. Die Resolutions bleiben auf die betroffenen Abhängigkeitspfade begrenzt; die Sicherheitstests kontrollieren die korrigierten Lockfile-Versionen.
 
+## Sicherheitsprüfung Oktober 2026
+
+Die erneute Prüfung von PR #149 beginnt mit 39 Backend-Meldungen zu 25 unterschiedlichen Advisories (17 hoch, 21 mittel, eine niedrig). Dieselbe betroffene Version kann dabei über mehrere Abhängigkeitspfade gezählt werden. Die folgenden Korrekturen bleiben auf die tatsächlichen Herstellerabhängigkeiten begrenzt:
+
+| Abhängigkeit      | Korrigierte Version | Begrenzter Pfad                                  |
+| ----------------- | ------------------- | ------------------------------------------------ |
+| `axios`           | 1.20.0              | Duo Universal                                    |
+| `fast-uri`        | 3.1.8               | Ajv, einschließlich dessen Schema-/ORM-Aufrufern |
+| `brace-expansion` | 5.0.12              | Archiver                                         |
+| `@grpc/grpc-js`   | 1.14.5              | Dockerode                                        |
+| `ip-address`      | 10.7.3              | Express Rate Limit und Proxy Agent               |
+
+Die Axios-Version bringt zugleich ihre reguläre `form-data`-Abhängigkeit 4.0.6 mit. Lockfile-Untergrenzen und tatsächliche URI-/IP-/FTP-Kompatibilitätsproben ergänzen die Anwendungssuiten. [Fast URI 3.1.8](https://github.com/fastify/fast-uri/releases/tag/v3.1.8) korrigiert zusätzlich zur vorherigen 3.1.7 die Hostnormalisierung; die ältere Empfehlung 3.1.7 reicht daher für die aktuelle Prüfung nicht. Die [gRPC-Herstellerwarnung](https://github.com/grpc/grpc-node/security/advisories/GHSA-m9gg-hp2v-232j) nennt 1.14.5 als korrigierte Version der vorhandenen 1.14-Linie. Ein Paketbefund beweist für sich allein keinen über ShieldPM erreichbaren Angriffspfad.
+
+`basic-ftp` bleibt vorerst bei 5.3.1 im transitiven Pfad `proxy-agent → pac-proxy-agent → get-uri`. Die [Hersteller-Releases](https://github.com/patrickjuchli/basic-ftp/releases) korrigieren die bekannte Listing-Schwachstelle erst in 6.2.1; 6.2.2 enthält eine weitere Listing-/PASV-Korrektur. Ein bloßer Major-Override ist mit dem vorhandenen `get-uri` 8.0.1 jedoch nicht kompatibel: Dessen `downloadTo(...).then(...)` hat keinen Rejectionhandler, während FTP v6 getrennte passive Transferhosts standardmäßig ablehnt. Die isolierte Gegenprobe prüft denselben lokalen Splitserver: Mit 5.3.1 gelingt der Download; mit 6.2.2 entsteht nach Rückgabe des Streams eine unbehandelte Promise-Ablehnung und Prozessabbruch. Eine normale FTP-Verbindung auf demselben Host gelingt mit beiden Versionen. Der offene FTP-Befund wird deshalb ausdrücklich erhalten, bis die aufrufende Kette sicher aktualisiert werden kann; eingebundener Vendorcode wird nicht gepatcht oder die Warnung unterdrückt.
+
+Der frische lokale Audit nach den Korrekturen meldet bei 522 Backend-Abhängigkeiten nur noch den genannten einen hohen FTP-Befund (keine niedrigen, mittleren oder kritischen Meldungen); das Frontend meldet bei 629 Abhängigkeiten keine bekannten Befunde. Zuvor waren es 39 Backend-Meldungen.
+
+Der jeweilige Paket-Audit-Snapshot und die abschließenden CI-Ergebnisse stehen im [Oktober-Prüfnachweis](../entwicklung/code-audit-coverage-2026-10.json) und in [PR #149](https://github.com/shedowe19/ShieldPM/pull/149). Diese Zahlen beschreiben den geprüften Zeitpunkt und sind keine dauerhafte Sicherheitszusage.
+
 ## Verwandte Seiten
 
 - [Architektur-Überblick](./ueberblick.md)

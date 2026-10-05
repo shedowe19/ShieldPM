@@ -35,4 +35,19 @@ describe("startup network configuration", () => {
 		expect(result.status).toBe(0);
 		expect(result.stdout).toContain("export HTTP_PORT='80'");
 	});
+	it("defaults shared GeoIP updates on independently of the optional Nginx module", () => {
+		const result = validate({ NGINX_LOAD_GEOIP2_MODULE: "false" });
+		expect(result.status).toBe(0);
+		expect(result.stdout).toContain("export GEOIP_AUTO_UPDATE='true'");
+	});
+	it("retains the explicit offline/custom-database opt-out", () => {
+		const result = validate({ GEOIP_AUTO_UPDATE: "false" });
+		expect(result.status).toBe(0);
+		expect(result.stdout).not.toContain("export GEOIP_AUTO_UPDATE=");
+	});
+	it.each(["no", "1", "auto"])("rejects invalid GeoIP update boolean %s", (value) => {
+		const result = validate({ GEOIP_AUTO_UPDATE: value });
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain("GEOIP_AUTO_UPDATE needs to be true or false");
+	});
 });

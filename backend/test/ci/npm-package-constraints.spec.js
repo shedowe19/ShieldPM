@@ -10,10 +10,13 @@ describe("npm and Yarn dependency constraints", () => {
 	it("pins only remaining vulnerable backend transitive paths and removes obsolete frontend overrides", () => {
 		expect(readManifest("backend").resolutions).toEqual({
 			"@apidevtools/swagger-parser/**/js-yaml": "4.3.2",
-			"@duosecurity/duo_universal/axios": "1.18.0",
-			"ajv/fast-uri": "3.1.6",
-			"archiver/**/brace-expansion": "5.0.9",
+			"@duosecurity/duo_universal/axios": "1.20.0",
+			"ajv/fast-uri": "3.1.8",
+			"archiver/**/brace-expansion": "5.0.12",
+			"dockerode/@grpc/grpc-js": "1.14.5",
 			"express/**/qs": "6.16.0",
+			"express-rate-limit/ip-address": "10.7.3",
+			"proxy-agent/**/ip-address": "10.7.3",
 			"vitest/vite/postcss/nanoid": "3.3.18",
 		});
 		expect(readManifest("frontend").resolutions).toBeUndefined();

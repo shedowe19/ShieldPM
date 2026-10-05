@@ -1,0 +1,78 @@
+{
+	"operationId": "previewFirewallList",
+	"summary": "Validate TXT content without saving or activating rules",
+	"tags": [
+		"firewall-lists"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"access_lists.manage"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"properties": {
+							"entries": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							},
+							"entry_count": {
+								"type": "integer"
+							},
+							"duplicates": {
+								"type": "integer"
+							},
+							"invalid": {
+								"type": "array",
+								"items": {
+									"type": "object",
+									"properties": {
+										"line": {
+											"type": "integer"
+										},
+										"value": {
+											"type": "string"
+										}
+									}
+								}
+							},
+							"totalLines": {
+								"type": "integer"
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": [
+						"entries"
+					],
+					"properties": {
+						"entries": {
+							"type": "string",
+							"maxLength": 8388608,
+							"description": "Manual list only: one IPv4, IPv6, or CIDR per line. 8 MiB UTF-8 / 200000 physical lines maximum."
+						}
+					}
+				}
+			}
+		}
+	}
+}

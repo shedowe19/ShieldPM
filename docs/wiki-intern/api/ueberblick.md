@@ -18,6 +18,7 @@ Die API wird durch Express.js bereitgestellt. Schema-Validierung erfolgt über A
 | Streams           | `/api/nginx/streams`             | TCP/UDP-Streams                                                                                                            |
 | Certificates      | `/api/nginx/certificates`        | SSL-Zertifikate                                                                                                            |
 | Access-Lists      | `/api/nginx/access-lists`        | Zugriffslisten                                                                                                             |
+| Firewall-Listen   | `/api/nginx/firewall-lists`      | [TXT-/HTTPS-Listen, Vorschau, Refresh und GeoIP-Readiness](../module/ip-firewall.md#api)                                   |
 | Cloudflared       | `/api/nginx/cloudflared-tunnels` | CF-Tunnels                                                                                                                 |
 | Tor Onion         | `/api/nginx/tor-onion`           | Tor-Services                                                                                                               |
 | WireGuard         | `/api/nginx/wireguard`           | VPN-Tunnels                                                                                                                |

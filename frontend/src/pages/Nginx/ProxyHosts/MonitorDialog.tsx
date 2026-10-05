@@ -22,6 +22,7 @@ import {
 	useUpdateProxyHostMonitor,
 } from "src/hooks/useProxyHostMonitor";
 import { intl, T } from "src/locale";
+import { useFreshFormData } from "src/modals/useFreshFormData";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { formatMonitorTime, MonitorStatus, monitorMessage } from "./MonitorStatus";
 
@@ -407,7 +408,8 @@ function MonitorMeasurements({ detail }: { detail: ProxyHostMonitorDetail }) {
 }
 
 export function MonitorDialog({ hostId, domain, forwardScheme, hostEnabled, targetSupported, onClose }: Props) {
-	const { data, isLoading, error } = useProxyHostMonitor(hostId);
+	const query = useProxyHostMonitor(hostId);
+	const { data, isLoading, error } = useFreshFormData(hostId, query);
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
 			<DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
@@ -428,13 +430,13 @@ export function MonitorDialog({ hostId, domain, forwardScheme, hostEnabled, targ
 					</Alert>
 				) : data ? (
 					<>
-						<MonitorMeasurements detail={data} />
+						<MonitorMeasurements detail={query.data ?? data} />
 						{targetSupported ? (
 							<MonitorSettings
 								hostId={hostId}
 								config={data.config}
 								forwardScheme={forwardScheme}
-								canCheck={Boolean(data.config?.enabled && hostEnabled)}
+								canCheck={Boolean(query.data?.config?.enabled && hostEnabled)}
 							/>
 						) : (
 							<p className="text-sm text-muted-foreground">

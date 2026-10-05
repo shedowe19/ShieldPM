@@ -6,7 +6,7 @@ GitOps is a powerful feature that allows you to backup, version control, and res
 
 The GitOps feature enables:
 
-- **Configuration Export**: Export Proxy Hosts and monitors, Redirection/Dead Hosts, Streams, Access Lists, certificates (without exported private-key files), DDNS providers, tunnels, users and settings as YAML/files
+- **Configuration Export**: Export Proxy Hosts and monitors, Redirection/Dead Hosts, Streams, Access Lists, IP Firewall lists and their valid caches, certificates (without exported private-key files), DDNS providers, tunnels, users and settings as YAML/files
 - **Version Control**: Every change is committed with full Git history
 - **Configuration Recovery**: Import YAML or revert to a previous commit; keep separate `/data` and database backups for a full recovery
 - **Infrastructure as Code**: Store your configuration alongside your other IaC files
@@ -87,6 +87,8 @@ Click **Pull Now** to fetch the latest changes from the remote repository. This 
 
 Click **Import from Git** to import configuration from the YAML files into the database.
 
+Imported records keep their exported IDs. On PostgreSQL, ShieldPM advances each affected automatic ID sequence when necessary, so new records can be created after a restore. Higher existing sequence values are preserved. User permissions, Access List entries and host domain relations receive new child IDs. SQLite, MySQL and settings with text IDs retain their existing behavior.
+
 > [!WARNING]
 > This can overwrite existing hosts if **Overwrite** is enabled. Use with caution.
 
@@ -121,6 +123,8 @@ shieldpm-config/
 ├── access-lists/
 │   ├── 1.yaml
 │   └── 2.yaml
+├── firewall-lists/
+│   └── 1.yaml
 ├── certificates/
 │   ├── 1-example-com.yaml
 │   └── 2-wildcard.yaml
@@ -155,12 +159,15 @@ shieldpm-config/
 | **Dead Hosts**          | All fields                                                                                                                   |
 | **Streams**             | All fields                                                                                                                   |
 | **Access Lists**        | Items (with hashed passwords), clients, mTLS config                                                                          |
+| **IP Firewall Lists**   | Source metadata, public reasons, administrative descriptions, and validated IP/CIDR caches                                   |
 | **Certificates**        | Database entries with meta, provider, domain names                                                                           |
 | **Certificate Files**   | Public Let's Encrypt, custom and internal CA/leaf certificate files; files named `privkey.pem` or ending `.key` are excluded |
 | **Cloudflared Tunnels** | Tunnel name, token, status, meta                                                                                             |
 | **DDNS Providers**      | Provider configuration, which may include API tokens                                                                         |
 | **Users**               | User data with permissions (no auth credentials)                                                                             |
 | **Settings**            | All settings except GitOps config                                                                                            |
+
+See [IP Firewall backups](./IP-Firewall.md#gitops-backups) for cached subscriptions, host assignments and restore limits.
 
 > [!WARNING]
 > The YAML export can include Access List password hashes and plaintext service credentials, including DDNS provider config tokens and Cloudflared tunnel tokens. It excludes private-key **files**, but does not scrub every secret from YAML fields. **Use a private repository with limited access** and treat the local `/data/gitops/` checkout as sensitive.

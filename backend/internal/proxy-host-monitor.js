@@ -508,8 +508,10 @@ const publicStatus = (row, host) =>
 	};
 
 async function getHost(access, hostId, permission) {
-	await access.can(`proxy_hosts:${permission}`, hostId);
-	const host = await proxyHostModel.query().findById(hostId).where("is_deleted", 0);
+	const accessData = await access.can(`proxy_hosts:${permission}`, hostId);
+	const query = proxyHostModel.query().findById(hostId).where("is_deleted", 0);
+	if (accessData.permission_visibility !== "all") query.where("owner_user_id", access.token.getUserId(1));
+	const host = await query;
 	if (!host) throw new errs.ItemNotFoundError(hostId);
 	return host;
 }

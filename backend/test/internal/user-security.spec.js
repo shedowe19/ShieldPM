@@ -4,11 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ patch: vi.fn(), insert: vi.fn(), findById: vi.fn(), audit: vi.fn() }));
 vi.mock("../../models/user.js", () => ({
 	default: {
+		knex: () => ({ client: { dialect: "sqlite3" } }),
 		transaction: async (callback) => callback({}),
 		query: () => ({ patchAndFetchById: mocks.patch, findById: mocks.findById, insertAndFetch: mocks.insert }),
 	},
 }));
-vi.mock("../../models/setting.js", () => ({ default: {} }));
+vi.mock("../../models/setting.js", () => ({
+	default: { query: () => ({ findById: () => ({ forUpdate: async () => ({ id: "default-site" }) }) }) },
+}));
 vi.mock("../../models/auth-session.js", () => ({ default: {} }));
 vi.mock("../../models/auth.js", () => ({ default: {} }));
 vi.mock("../../models/user_permission.js", () => ({ default: { query: () => ({ insert: vi.fn() }) } }));

@@ -73,6 +73,8 @@ protokolliert. Administratoren mit Sichtbarkeit `all` behalten die Möglichkeit,
 
 ## Verhalten
 
+Die Konfigurationsabfrage liefert Standardwerte ausschließlich, wenn `ai-config` mit einem expliziten 404-Fehler fehlt. Berechtigungs- und Datenbanklesefehler werden an die Oberfläche weitergegeben; sie dürfen vorhandene Provider-, Modell- und Zugangsdaten nicht als leere, speicherbare Konfiguration darstellen. Auch Speichern bricht bei einem fehlgeschlagenen Existenzcheck ab, statt vorhandene Metadaten zu ersetzen. `ai-config-read-errors.spec.js` prüft fehlende Einträge, Lesefehler, verweigerte Berechtigungen sowie Lesen und Speichern mit dem tatsächlichen SQLite-Settings-Modell und verschlüsseltem API-Schlüssel.
+
 1. Die Web-UI sendet an `routes/ai.js`; ChatOps ruft `internal/ai.js` direkt auf.
 2. `internal/ai.js` startet den Chat-Loop: System-Prompt aus `prompt.js`, vom Aufrufer mitgesendete History und aktueller User-Input. ChatOps übergibt für jede Nachricht eine leere History.
 3. Der Provider (`providers.js`) ruft das LLM (Gemini, Ollama oder OpenAI-kompatibel) und liefert ggf. Tool-Calls zurück.

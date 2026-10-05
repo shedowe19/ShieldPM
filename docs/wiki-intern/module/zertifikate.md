@@ -40,13 +40,16 @@ ShieldPM automatisiert die Zertifikatsverwaltung über Let's Encrypt (ACME) und 
 - Verwaiste Zertifikatsverweise, manuelle und automatische Erneuerungs-Reloads verwenden dieselbe Nginx-Konfigurationssperre wie Host-Änderungen und Uploads. Beim Löschen werden Host-Verweise zuerst entfernt und die neue Konfiguration geladen, während die bisherigen TLS-Dateien noch existieren. Ein fehlgeschlagener Ladevorgang stellt Host-Felder und Konfigurationsdateien wieder her, behält die Schlüssel und setzt die Löschmarkierung zurück. Erst danach werden Dateien entfernt und das Audit geschrieben.
 - Das Löschen von Let's-Encrypt-Zertifikaten reserviert zusätzlich die Certbot-Prozesssperre vor Löschmarkierung und Host-Änderungen. Läuft bereits eine Erneuerung oder Ausstellung, scheitert die Löschanfrage ohne diese Änderungen. Fehler beim anschließenden ACME-Widerruf werden weitergegeben; bereits erfolgreich geladene Host-Abkopplungen bleiben bestehen.
 - Das Löschen interner Zertifikate räumt `/data/tls/internal/` auf. Die Bereinigung verwaister Zertifikatsverweise lädt Domains und Zugriffslisten nach, entfernt Konfigurationen deaktivierter Hosts und setzt den erfolgreichen Nginx-Status erst nach dem validierten Reload.
+- Die Bereinigung ergänzt diesen Status mit dem gemeinsamen atomischen Nginx-Meta-Merge unter einer kurzen Zeilensperre. Während des Reloads gespeicherte Einstellungen bleiben erhalten. Ein Fehler stellt weiterhin die vorherigen Zertifikats-/SSL-Felder und Konfigurationsdateien wieder her; bereits geschriebene eigene `nginx_online`-/`nginx_err`-Felder werden zurückgesetzt, ohne die übrigen aktuellen Metadaten zu überschreiben. `certificate-cleanup-metadata.spec.js` prüft Erfolg, Reloadfehler und Fehler nach einem ersten Statuscommit mit tatsächlichen Objection-Modellen in SQLite und einem eingebetteten PostgreSQL-Engine-Lauf.
 - Zertifikatsdaten werden als GMT interpretiert; der Common Name wird gezielt aus `CN` gelesen, auch wenn im Subject zuerst Länder- oder Organisationsfelder stehen.
+- Expandierte Proxy-, Weiterleitungs-, 404-Hosts und Streams in Einzel- und Listenantworten beachten unabhängig die Berechtigung des jeweiligen Hosttyps. `hidden` liefert dafür keine Hosts, Sichtbarkeit `user` nur eigene aktive Hosts und `all` alle aktiven Zuordnungen. Die interne Bereinigung fehlender Zertifikate bearbeitet weiterhin alle betroffenen Hosts unabhängig von öffentlichen Ansichtsrechten.
 
 ## Regressionstests
 
 - `backend/test/internal/certificate-lifecycle.spec.js`
 - `backend/test/routes/certificate-issuance-permissions.spec.js`
 - `backend/test/schema/certificate-validation.spec.js`
+- `backend/test/internal/host-expansion-permissions.spec.js` (tatsächliche Berechtigungsschemata, SQLite und interne Konfigurationspfade)
 
 ## Abhängigkeiten
 

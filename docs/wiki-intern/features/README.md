@@ -26,15 +26,16 @@ ShieldPM bietet eine breite Palette an Features. Diese Seite dient als Einstiegs
 
 ### Sicherheits-Features
 
-| Feature                   | Modul-Dokumentation                       | Status   |
-| ------------------------- | ----------------------------------------- | -------- |
-| ModSecurity WAF (CRS v4)  | [Modulübersicht](../module/README.md)     | Aktiv    |
-| OpenAppSec AI WAF         | [OpenAppSec](../module/openappsec.md)     | Optional |
-| CrowdSec IPS              | [Modulübersicht](../module/README.md)     | Optional |
-| Anubis PoW-Gate           | [Anubis](../module/anubis.md)             | Optional |
-| OAuth2-Proxy (SSO)        | [OAuth2-Proxy](../module/oauth2-proxy.md) | Optional |
-| 2FA (TOTP, WebAuthn, Duo) | [2FA](../module/2fa.md)                   | Aktiv    |
-| Request Rate Limiting     | [Modulübersicht](../module/README.md)     | Aktiv    |
+| Feature                    | Modul-Dokumentation                       | Status   |
+| -------------------------- | ----------------------------------------- | -------- |
+| ModSecurity WAF (CRS v4)   | [Modulübersicht](../module/README.md)     | Aktiv    |
+| OpenAppSec AI WAF          | [OpenAppSec](../module/openappsec.md)     | Optional |
+| CrowdSec IPS               | [Modulübersicht](../module/README.md)     | Optional |
+| Anubis PoW-Gate            | [Anubis](../module/anubis.md)             | Optional |
+| IP-Firewall pro Proxy-Host | [IP-Firewall](../module/ip-firewall.md)   | Optional |
+| OAuth2-Proxy (SSO)         | [OAuth2-Proxy](../module/oauth2-proxy.md) | Optional |
+| 2FA (TOTP, WebAuthn, Duo)  | [2FA](../module/2fa.md)                   | Aktiv    |
+| Request Rate Limiting      | [Modulübersicht](../module/README.md)     | Aktiv    |
 
 ### Netzwerk-Features
 

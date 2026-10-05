@@ -204,8 +204,10 @@ relink_certbot_certificates /data/tls/certbot || exit 1
 
 rm -vrf /data/letsencrypt-acme-challenge \
         /data/nginx/default_host \
-        /data/nginx/temp \
-        /data/logs
+        /data/nginx/temp
+
+# Persistent host firewall logs must exist before launch.sh runs nginx -tq.
+prepare_nginx_log_directory /data/logs "$PUID" "$PGID" || exit 1
 
 touch /data/modsecurity/modsecurity-extra.conf \
       /data/html/index.html \

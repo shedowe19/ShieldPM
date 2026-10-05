@@ -26,6 +26,7 @@
 - **Configuration Preview**: Read-only Nginx draft and active-config diff while creating or editing a proxy host. Saving performs the Nginx syntax check and reload.
 
 * **Security**: WAF (ModSecurity/OpenAppSec), IPS (CrowdSec), Access Lists (Basic Auth/mTLS), SSL (Let's Encrypt/Custom).
+* **IP Firewall per Proxy Host**: Reusable TXT/HTTPS IP and CIDR lists, host-specific IP/ASN blocks, optional country filtering through the existing Analytics GeoIP source, address exceptions, and a reasoned blocking page. Disabled by default on existing hosts; configured in `proxy_host.meta.ip_firewall` and managed through `/api/nginx/firewall-lists` using the existing `access_lists` permission. See [IP firewall internals](./docs/wiki-intern/module/ip-firewall.md).
 * **Advanced Networking**: Cloudflare Tunnels (no open ports), Tor Onion Services, Dynamic DNS (DDNS).
 * **Maintenance**: Scheduled Windows & Failure pages.
 * **Tools**: Web-based Terminal (SSH), GitOps (Backup/Sync), ChatOps (Telegram).
@@ -124,9 +125,9 @@ bash scripts/install.sh
 
 **Agent Action**: When modifying `install.sh`, ensure you handle:
 
-1. **Dependency Checks**: `node`, `npm`, `nginx`, `sqlite3`, `python3-certbot-nginx`.
+1. **Dependency Checks**: `node`, `npm`, `nginx`, `sqlite3`, `python3`, `curl`, `libmaxminddb0`, `python3-certbot-nginx`.
 2. **Service Creation**: `systemd` unit files.
-3. **Parsers/Collections**: Downloading CrowdSec/GeoIP configs to `/etc/` paths (using raw GitHub URLs).
+3. **Parsers/Collections**: CrowdSec configurations under `/etc/`; shared Docker/native GeoIP provisioning runs at startup after loading `/data/.env`, before environment validation or services.
 
 ### Development Environment
 
@@ -168,18 +169,29 @@ yarn dev # Nodemon
 
 ## 6. Internal Systems Deep Dive
 
+The October repository rescan, confirmed fixes, and validation limits for PR #149 are recorded in [the internal audit report](./docs/wiki-intern/entwicklung/code-audit-2026-10.md).
+
 ### 6.1 Nginx Configuration Engine (`backend/internal/nginx.js`)
 
 - **Core Logic**: Reads DB state -> Renders Liquid templates (`backend/templates/`) -> Writes `.conf` files to `/data/nginx/`.
 
 * **Reload Strategy**: Serializes host configuration writes; bulk operations use `skip_reload` and a final validated reload.
 * **Validation**: `nginx -tq` validates generated configurations and reloads; failed host configurations restore their backup.
-* **Preview**: `backend/internal/proxy-host-preview.js` renders a redacted draft from form data and compares it with the authorized host's active config without writing files or running `nginx -tq`. See [Proxy-Host internals](./docs/wiki-intern/module/proxy-host.md#konfigurationsvorschau-vor-dem-speichern).
+* **Preview**: `backend/internal/proxy-host-preview.js` renders a redacted draft from form data and compares it with the authorized host's active config without writing files or running `nginx -tq`. Generated firewall CIDR tables use bounded count/SHA-256 summaries; preview authorization covers all list IDs in the saved host and draft. Runtime configuration keeps the complete rules. See [Proxy-Host internals](./docs/wiki-intern/module/proxy-host.md#konfigurationsvorschau-vor-dem-speichern).
 
 ### 6.1a Proxy Host Observability
 
 - **Active checks**: `backend/internal/proxy-host-monitor.js` schedules bounded HTTP(S)/TCP checks per host, stores status and limited history, and optionally sends status changes through the owner's configured Telegram integration. See [monitoring internals](./docs/wiki-intern/module/proxy-host-monitor.md).
 - **On-demand diagnostics**: `backend/internal/proxy-host-diagnostics.js` checks a stored host's DNS, local TLS and route, upstream connectivity, and applicable authentication or WebSocket behavior. Results are not stored. See [diagnostics internals](./docs/wiki-intern/features/proxy-host-diagnostics.md).
+
+### 6.1b Proxy Host IP Firewall
+
+- **Sources and ownership**: `firewall_list` stores normalized IP/CIDR text, source metadata, update state, and ownership. The `/api/nginx/firewall-lists` CRUD, preview, and refresh endpoints reuse `access_lists` permissions. HTTPS source updates preserve the last valid list on failure.
+- **GeoIP provisioning**: `GEOIP_AUTO_UPDATE=true` by default checks the latest `shedowe19/GeoLite.mmdb` GitHub release at every startup and prepares Country, City, and ASN in `/data/nginx` without MaxMind credentials. `envs.sh` runs it after loading `/data/.env` and before `validate-env.cjs`, configuration, or services. Matching validated files are reused; all new files are staged and verified before replacement. An update failure can continue only with a complete valid previous cache. Set `GEOIP_AUTO_UPDATE=false` for offline/custom sources; `NGINX_LOAD_GEOIP2_MODULE=true` separately enables Nginx lookups.
+- **Per-host policy**: `meta.ip_firewall` contains `enabled`, `list_ids`, `allowlist`, `denylist`, `asn_denylist`, `country_denylist`, `country_reason`, `block_unknown_country`, `public_message`, `support_url`, and `internal_note`. Each host independently selects central lists, up to 1000 unique numeric ASN rules with optional public reasons, and countries; exceptions bypass only the IP firewall. Internal notes never appear on the public page.
+- **Nginx behavior**: Generated `geo` lookups and a server-level filter protect the public Proxy Host entrance, including custom routes and Anubis. Firewall matches return a dedicated non-cacheable 403 response without changing the handling of OAuth2 or other authorization failures. Priority is manual IP rules, list matches, ASN rules, then country rules. Country filtering reuses `$geoip2_country_code`; optional ASN lookups use reserved `$spm_geoip2_asn` and `$spm_geoip2_asn_org` variables from `/data/nginx/GeoLite2-ASN.mmdb`, always with `source=$remote_addr`. `/api/nginx/firewall-lists/geoip` reports country readiness and an independent nested `asn` status using `proxy_hosts:list`. IP-only rules require no GeoIP. Existing open connections are not terminated.
+- **Scope**: HTTP/HTTPS Proxy Hosts only; TCP/UDP Streams and TLS passthrough are not covered. Feed membership expresses the configured network policy, not proof of an attack. Details: [IP firewall internals](./docs/wiki-intern/module/ip-firewall.md) and [user guide](./docs/wiki/IP-Firewall.md).
+- **Related ownership and update contracts**: Docker rediscovery merges discovery keys into the current locked host metadata so manual firewall settings survive. Public certificate/access-list host expansions enforce each relation's host permission and owner; trusted rebuilds still process all affected hosts. Editing dialogs revalidate their opening snapshot and preserve the open draft. See the [October code review](./docs/wiki-intern/entwicklung/code-audit-2026-10.md) for regression evidence and remaining dependency limits.
 
 ### 6.2 AI Core (`backend/internal/ai/`)
 

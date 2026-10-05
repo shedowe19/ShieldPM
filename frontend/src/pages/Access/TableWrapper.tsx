@@ -43,9 +43,6 @@ export default function TableWrapper() {
 		filtered = data?.filter((item) => {
 			return item.name.toLowerCase().includes(search);
 		});
-	} else if (search !== "") {
-		// this can happen if someone deletes the last item while searching
-		setSearch("");
 	}
 
 	return (
@@ -56,11 +53,12 @@ export default function TableWrapper() {
 					<T id="access-lists" />
 				</CardTitle>
 				<div className="flex items-center space-x-2">
-					{data?.length ? (
+					{data?.length || search ? (
 						<div className="relative w-full max-w-sm">
 							<IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 							<Input
 								type="search"
+								value={search}
 								placeholder={intl.formatMessage({ id: "search.placeholder" })}
 								className="pl-8 h-9"
 								onChange={(e) => setSearch(e.target.value.toLowerCase().trim())}
@@ -76,7 +74,7 @@ export default function TableWrapper() {
 						<IconHelp className="h-4 w-4" />
 					</Button>
 					<HasPermission section={ACCESS_LISTS} permission={MANAGE} hideError>
-						{data?.length ? (
+						{data?.length || search ? (
 							<Button
 								size="sm"
 								className="bg-cyan-600/90 hover:bg-cyan-600 text-white shadow-sm"
@@ -93,7 +91,7 @@ export default function TableWrapper() {
 				<Table
 					data={filtered ?? data ?? []}
 					isFetching={isFetching}
-					isFiltered={!!filtered}
+					isFiltered={!!search}
 					onEdit={(id: number) => showAccessListModal(id)}
 					onDelete={(id: number) =>
 						showDeleteConfirmModal({
