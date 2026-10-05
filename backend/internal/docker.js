@@ -508,11 +508,25 @@ class DockerService {
 
 			if (existingHost) {
 				// Update
-				const upstreamChanged =
-					existingHost.forward_scheme !== payload.forward_scheme ||
-					existingHost.forward_host !== payload.forward_host ||
-					Number(existingHost.forward_port) !== payload.forward_port;
-				const updatedHost = await ProxyHost.query().upsertGraphAndFetch({ id: existingHost.id, ...payload });
+				let upstreamChanged = false;
+				const updatedHost = await ProxyHost.transaction(async (trx) => {
+					// Certificate requests can outlive user edits. Merge only after locking the current row.
+					const current = await ProxyHost.query(trx)
+						.findById(existingHost.id)
+						.where("is_deleted", 0)
+						.forUpdate();
+					if (!current) return null;
+					upstreamChanged =
+						current.forward_scheme !== payload.forward_scheme ||
+						current.forward_host !== payload.forward_host ||
+						Number(current.forward_port) !== payload.forward_port;
+					return ProxyHost.query(trx).upsertGraphAndFetch({
+						id: current.id,
+						...payload,
+						meta: { ...current.meta, ...payload.meta },
+					});
+				});
+				if (!updatedHost) return;
 				if (upstreamChanged) {
 					// A previous health result belongs to the old target. Disable HTTP
 					// monitoring if the new scheme cannot be probed by that monitor.

@@ -11,6 +11,7 @@ import {
 	assertCountryFirewallAvailable,
 	getFirewallGeoipStatus,
 } from "../lib/firewall-geoip.js";
+import { ConfigurationLexer } from "../lib/firewall-geoip-config.js";
 import { compactFirewallForPreview, summarizeFirewallPreviewConfig } from "../lib/firewall-preview.js";
 import { buildFirewallRender } from "../lib/firewall-render.js";
 import { sanitizeHostMeta } from "../lib/host-response.js";
@@ -577,7 +578,25 @@ const internalNginx = {
 	 * @param   {string}  cfg
 	 * @returns {boolean}
 	 */
-	advancedConfigHasDefaultLocation: (cfg) => !!cfg.match(/^(?:.*;)?\s*?location\s*?\/\s*?{/im),
+	advancedConfigHasDefaultLocation: (cfg) => {
+		// Inspect only top-level prefix locations. Quoted arguments and comments
+		// must not hide the generated proxy; exact/regex locations may coexist with it.
+		const lexer = new ConfigurationLexer();
+		for (const { words, boundary } of lexer.feed(cfg)) {
+			if (boundary !== "{") continue;
+			if (
+				words[0] === "location" &&
+				((words.length === 2 && words[1] === "/") ||
+					(words.length === 3 && words[1] === "^~" && words[2] === "/"))
+			) {
+				return true;
+			}
+			// Nested locations do not replace the server's root location. Lua blocks
+			// need their own comment/string handling while skipping their contents.
+			lexer.skipBlock(/_by_lua_block$/.test(words[0] || ""));
+		}
+		return false;
+	},
 
 	/**
 	 * Read nginx log file contents.

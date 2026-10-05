@@ -46,6 +46,8 @@ Die Templates werden von `nginx.js` gerendert und nach `/data/nginx/` geschriebe
 - Streams unterscheiden bei TLS zwischen Let's Encrypt, interner CA und importierten Zertifikaten.
 - Terminal-WebSockets übernehmen die Host-Authentifizierung. Der Anubis-OIDC-Pfad enthält keine Ausnahme für `/ws`; die Weitergabe an das Backend verwendet ein hostgebundenes internes Token.
 
+Die Erkennung einer Rootlocation in `advanced_config` betrachtet nur tatsächliche Nginx-Direktiventokens auf Serverebene. Kommentare sowie zitierte oder maskierte Argumente wie `"#; location / { }"` unterdrücken den erzeugten Defaultproxy nicht. `location /` und `location ^~ /` ersetzen denselben Prefix; exakte oder Regex-Locations können daneben bestehen. Insbesondere `location = /` entfernt die Weiterleitung anderer Pfade nicht. Der Advanced-Config-Text bleibt unverändert; diese begrenzte Erkennung ersetzt keine vollständige Nginx-Konfigurationsprüfung. Der Docker-Smoke prüft sieben tatsächliche HTTP-Anfragen über den produktiven Renderer, einschließlich Kommentar-, Quote-, Escape- und exakter Rootkontrollen.
+
 ## Authentifizierungsheader am Upstream
 
 `_proxy_auth_headers.conf` setzt OAuth2-Identitätsheader, die bestehenden Authentik-Kontextheader und die optionale Entfernung des Basic-Auth-Headers direkt in der weiterleitenden Location. Nginx übernimmt `proxy_set_header` aus dem Serverblock nur, wenn die Location keine eigenen Headerdirektiven besitzt; die allgemeinen Proxy-Includes verhinderten deshalb zuvor diese Weitergabe. HTTP- und gRPC-Ziele verwenden jeweils ihre eigene Headerdirektive. Default- und Custom-Locations sowie Terminal-WebSockets werden berücksichtigt.
@@ -56,13 +58,19 @@ Mit Anubis werden die vertrauenswürdigen Header am öffentlichen Server gesetzt
 
 ## IPv6-HTTP-Upstreams
 
-HTTP-/HTTPS-Proxyziele werden beim Rendern über `nginxUpstreamHost` formatiert: echte rohe IPv6-Literale erhalten die für die URL erforderlichen eckigen Klammern. Bereits geklammerte Adressen, IPv4, Domains und Unix-Socket-Ziele bleiben unverändert. Das gilt für Standard- und Custom-Locations; der gespeicherte Host-Eingabewert wird nicht geändert. Regressionen prüfen die Liquid-Ausgabe und tatsächliche HTTP-/HTTPS-Weiterleitungen einschließlich URI und Query. Diese Formatierung ändert keine gRPC- oder Stream-Direktiven.
+HTTP-/HTTPS-Proxyziele werden beim Rendern über `nginxUpstreamHost` formatiert: echte rohe IPv6-Literale erhalten die für die URL erforderlichen eckigen Klammern. Bereits geklammerte Adressen, IPv4, Domains und Unix-Socket-Ziele bleiben unverändert. Das gilt für Standard- und Custom-Locations; der gespeicherte Host-Eingabewert wird nicht geändert. Regressionen prüfen die Liquid-Ausgabe und tatsächliche HTTP-/HTTPS-Weiterleitungen einschließlich URI und Query. gRPC und TCP-/UDP-Streams verwenden dieselbe reine Adressformatierung, ohne URI-Anteile an ihre Ziele anzuhängen.
 
 ## gRPC-Zieladresse und Methodenpfad
 
 Die automatisch erzeugte `grpc_pass`-Zieladresse erhält keinen angehängten `$request_uri`. Das Nginx-gRPC-Modul erwartet dort ausschließlich eine Serveradresse und übernimmt den Methodenpfad einschließlich Query selbst aus der Anfrage. Der frühere URI-Anhang führte erst beim tatsächlichen Aufruf zu `invalid host`, obwohl `nginx -t` die variable Direktive akzeptierte. Das gilt für Standard- und Custom-Locations sowie `grpc` und `grpcs`.
 
-Explizite URI-Anteile im gRPC-Ziel bleiben vom Nginx-Modul nicht unterstützt; die Korrektur führt keine neue Rewrite- oder Präfixersetzungssemantik ein. `fifth-grpc-upstream-address.spec.js` prüft die tatsächliche Liquid-Ausgabe. Der Docker-Smoke startet zusätzlich einen isolierten Nginx-Prozess und einen lokalen Node-HTTP/2-Echodienst; zwei über die Image-Templates erzeugte gRPC-Weiterleitungen müssen POST, Methodenpfad, Query und gerahmten Body vollständig übertragen. Dieser Test benötigt keine externen Provider.
+Rohe IPv6-Adressen erhalten über `nginxUpstreamHost` auch in `grpc_pass` die erforderlichen eckigen Klammern. Bereits geklammerte Adressen behalten ihre Form; weder die gespeicherte Eingabe noch der automatisch übernommene Methodenpfad wird geändert. Explizite URI-Anteile im gRPC-Ziel bleiben vom Nginx-Modul nicht unterstützt; die Korrektur führt keine neue Rewrite- oder Präfixersetzungssemantik ein. `fifth-grpc-upstream-address.spec.js` prüft akzeptierte API-Eingaben und die tatsächliche Liquid-Ausgabe.
+
+Der Docker-Smoke startet zusätzlich einen isolierten Nginx-Prozess sowie lokale unverschlüsselte und TLS-HTTP/2-Echodienste. Zwölf über die Image-Templates erzeugte `grpc`-/`grpcs`-Weiterleitungen prüfen IPv4 sowie rohe und geklammerte IPv4-mapped-IPv6-Adressen in Standard- und Custom-Locations. Jede Anfrage muss POST, Methodenpfad, Query und gerahmten Body vollständig übertragen. Eine getrennte lokale Variante prüft dieselben zwölf Fälle mit der nativen IPv6-Loopbackadresse `::1`. Der lokale isolierte Test benötigt keine externen Provider und ist kein zusätzlicher Docker-/Produktionsstart-Nachweis.
+
+## IPv6-Stream-Upstreams
+
+`stream.conf` formatiert den Host in beiden `proxy_pass`-Direktiven über `nginxUpstreamHost`. Rohe IPv6-Adressen erhalten Klammern; bereits geklammerte Adressen, IPv4 und Domains bleiben unverändert. Das API-Eingabefeld bleibt unverändert gespeichert. Die isolierte Docker-Smoke-Fixture validiert das Stream-API-Schema und rendert das tatsächliche Image-Template. Je drei TCP- und UDP-Echoverbindungen prüfen IPv4 sowie rohe und geklammerte IPv4-mapped-IPv6-Adressen einschließlich aller Nutzbytes. Eine lokale Variante prüft zusätzlich `::1`. Nur die portable Test-Fixture entfernt auf Nginx 1.24 die dort noch nicht unterstützte Stream-Listeneroption `deferred`; die Produktvorlage behält sie.
 
 ## TCP-Listener-Resilienz
 
@@ -83,6 +91,8 @@ Die HTTP-, HTTPS- und TCP-Stream-Templates verwenden für TCP kein `reuseport`. 
 Öffentliche Firewalltexte und die Sperrseitenvorlage verwenden `luaPageString` mit höchstens 250 Unicode-Codepoints je Lua-Literal. Auch nach UTF-8-Kodierung und dezimalem Escaping beträgt die maximale Tokenlänge 1002 Bytes. Das verhindert Parserfehler bei gültigen langen Gründen, Listennamen, Nachrichten und Kontaktlinks, ohne den dekodierten Inhalt oder die anschließende HTML-/JSON-Maskierung zu verändern. Der native Firewall-Smoke prüft diese Texte sowie echte statische ACME-Dateien unter lokalen Auth-Stubs; `return 200` wird für diese Challenge-Regression nicht verwendet.
 
 Die isolierte ACME-Redirect-Testkonfiguration verwendet private `spm_smoke_acme_port*`-Variablen als Port-Platzhalter. Damit überschreibt der Test nicht die im ShieldPM-Nginx bereits vorhandenen Portvariablen und bleibt zugleich mit portablem Nginx kompatibel. Diese CI-Fixture-Korrektur verändert weder die produktive `_common.conf` noch das Redirectverhalten.
+
+`nginxAccessRule` übersetzt IPv4-mapped-IPv6-Adressen in ihre IPv4-Entsprechung, weil Nginx solche Clients in der IPv4-Zugriffstabelle auswertet. Bei CIDRs ab `/96` wird das Präfix um 96 verringert; `/128` entspricht einer einzelnen IPv4-Adresse. Die Umwandlung gilt beim Rendern auch für bestehende Listen. Native IPv4-/IPv6-Regeln sowie `all` behalten ihre Eingabeform. Mapped-Netze mit kleinerem Präfix werden abgelehnt, statt nur einen Teil ihres IPv6-Bereichs als IPv4-Regel zu aktivieren. Zehn tatsächliche HTTP-Anfragen im Docker-Smoke prüfen Allow/Deny-Treffer, Nichttreffer und native Familienkontrollen.
 
 ## Statische Custom-Locations und Bandbreitenzähler
 

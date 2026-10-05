@@ -24,6 +24,7 @@ import RedirectionHost from "../models/redirection_host.js";
 import settingModel from "../models/setting.js";
 import Stream from "../models/stream.js";
 import User from "../models/user.js";
+import internalCloudflared from "./cloudflared.js";
 import { validateHostFirewall, withFirewallReferences } from "./firewall-policy.js";
 import internalNginx from "./nginx.js";
 import internalProxyHostMonitor, { assertMonitorConfig } from "./proxy-host-monitor.js";
@@ -1282,6 +1283,8 @@ const internalGitOps = {
 							} else {
 								await modelClass.query().deleteById(item.id);
 							}
+							// Persist deletion before stopping: queued starts then see the deleted row.
+							if (modelClass === CloudflaredTunnel) await internalCloudflared.stop(item.id);
 							deleted++;
 							logger.info(`GitOps Full Sync: Deleted ${dirName} #${item.id}`);
 						};

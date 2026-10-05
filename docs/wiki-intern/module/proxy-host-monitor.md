@@ -104,6 +104,12 @@ abgebrochen. Ausgeschaltete und gelöschte Hosts werden nicht geprüft.
 
 ## Schnittstellen
 
+Der Dialog lädt beim Öffnen aktuelle Einstellungen, bevor das Bearbeitungsformular erscheint. Ein Fehler dieses
+Abrufs erlaubt kein Speichern eines alten Cacheeintrags. Spätere Abfragen aktualisieren weiterhin Messwerte und
+Verlauf; ein bereits geöffneter Einstellungsentwurf bleibt auch bei einem Hintergrundfehler bestehen.
+`MonitorDialog.fresh-data.test.tsx` prüft diese Übergänge mit dem tatsächlichen Dialog und den Query-Hooks bei
+simulierten API-Antworten.
+
 | Route                                                | Recht                             | Zweck                                         |
 | ---------------------------------------------------- | --------------------------------- | --------------------------------------------- |
 | `GET /api/nginx/proxy-hosts/monitors/status?ids=1,2` | `proxy_hosts:list` + Sichtbarkeit | Zustände für höchstens 100 angeforderte Hosts |

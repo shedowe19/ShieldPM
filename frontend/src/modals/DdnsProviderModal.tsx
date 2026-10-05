@@ -23,6 +23,7 @@ import {
 	IP_VERSION,
 	type IpVersion,
 } from "src/types/enums";
+import { useFreshFormData } from "./useFreshFormData";
 
 const showDdnsProviderModal = (id?: number) => {
 	EasyModal.show(DdnsProviderModal, { id: id || "new" });
@@ -50,15 +51,13 @@ interface DdnsProviderValues {
 
 const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	// If ID is provided, fetch existing data to edit locally or use a hook
-	const {
-		data: providers,
-		isLoading,
-		error: loadError,
-	} = useQuery({
+	const query = useQuery({
 		queryKey: ["ddns-providers"],
 		queryFn: getDdnsProviders,
 		enabled: id !== "new",
+		refetchOnMount: "always",
 	});
+	const { data: providers, isLoading, error: loadError } = useFreshFormData(id, query);
 
 	const data = id && id !== "new" ? providers?.find((p) => p.id === id) : null;
 	const isEditing = id !== "new";

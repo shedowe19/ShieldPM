@@ -26,6 +26,14 @@ Proxy-Hosts leiten eingehende HTTP/HTTPS-Anfragen an Upstream-Server weiter. Sie
 4. `nginx.js` rendert Template und schreibt `.conf`
 5. Nginx wird neu geladen
 
+Die Bearbeitungsdialoge für Proxy-, Redirect-, 404-Hosts und Streams fragen beim Öffnen die aktuelle Host-ID
+erneut ab, auch wenn React Query noch einen Cacheeintrag besitzt. Erst die erfolgreiche Antwort initialisiert
+das Formular. Scheitert dieser Abruf, zeigt der Dialog den Fehler und erlaubt kein Speichern alter Cachewerte.
+Danach bleibt der ursprüngliche Formularstand bei Hintergrundabfragen erhalten, damit ein geöffneter Entwurf
+nicht überschrieben wird. Das verhindert keine konkurrierenden Änderungen nach dem Öffnen.
+`frontend/src/modals/HostModal.fresh-data.test.tsx` prüft diese Übergänge mit den tatsächlichen Query-Hooks
+und Formik-Dialogen; die API-Antworten werden dabei simuliert.
+
 ## Konfigurationsvorschau vor dem Speichern
 
 Das Erstellen und Bearbeiten bietet über `ProxyHostConfigPreview.tsx` eine Vorschau der aktuellen Formulardaten.

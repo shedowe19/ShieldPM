@@ -40,7 +40,9 @@ Streams werden für Dienste verwendet, die nicht über HTTP laufen, z. B. SSH, M
 - Die Kollisionsprüfung erkennt auch überlappende Portbereiche, einschließlich ihrer Grenzen. TCP und UDP dürfen denselben Port getrennt verwenden. Eingehende Ports müssen zwischen 1 und 65535 liegen; Bereiche müssen aufsteigend sein.
 - Der API-Vertrag erlaubt Portbereiche als String (`"8000-8005"`). Das aktuelle UI wandelt das Feld vor dem Senden mit `Number()` um und unterstützt damit praktisch nur einzelne Ports; Bereiche müssen derzeit über die API konfiguriert werden.
 - TLS mit dem Anbieter `internal` verwendet `/data/tls/internal/npm-ID/`; eigene importierte Zertifikate verbleiben unter `/data/tls/custom/npm-ID/`.
+- Rohe IPv6-Upstreamadressen erhalten beim Rendern die erforderlichen eckigen Klammern. Bereits geklammerte IPv6-Adressen, IPv4 und Domains bleiben unverändert; der gespeicherte Eingabewert wird nicht geändert. Das gilt für TCP und UDP.
 - Regressionen: `backend/test/internal/host-update-regressions.spec.js` und `backend/test/internal/nginx-render-regressions.spec.js`.
+- Der Docker-Smoke validiert akzeptierte Stream-API-Eingaben und prüft sechs tatsächliche TCP-/UDP-Echoverbindungen über das Image-Template. Die IPv4-Kontrollen sowie rohe und geklammerte IPv4-mapped-IPv6-Adressen müssen alle Nutzbytes unverändert übertragen.
 
 ## Abhängigkeiten
 

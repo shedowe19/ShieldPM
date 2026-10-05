@@ -199,5 +199,5 @@ _Zuletzt aktualisiert: 2026-10-05._
 
 ## Codeprüfung
 
-- [Codeprüfung Oktober 2026](./entwicklung/code-audit-2026-10.md) — erneuter Repository-Scan, bestätigte Korrekturen und Validierungsgrenzen in PR #149.
+- [Codeprüfung Oktober 2026](./entwicklung/code-audit-2026-10.md) — erneute Repository-Scans, Berechtigungs-/Laufzeitkorrekturen, Einzelpfad-Nachweise und Validierungsgrenzen in PR #149.
 - [Codeprüfung September 2026](./entwicklung/code-audit-2026-09.md) — Änderungen, Validierung und Betriebsgrenzen einschließlich des sechsten vollständigen Durchgangs in PR #139.

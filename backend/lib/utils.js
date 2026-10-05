@@ -4,11 +4,13 @@ import { isIP } from "node:net";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import ipaddr from "ipaddr.js";
 import { Liquid } from "liquidjs";
 import _ from "lodash";
 import { debug, global as logger } from "../logger.js";
 import { getEnvironmentHash } from "./environment-hash.js";
 import errs from "./error.js";
+import { normalizeAddress } from "./firewall-addresses.js";
 
 const nodeExecFilePromise = promisify(nodeExecFile);
 
@@ -102,7 +104,14 @@ const getRenderEngine = () => {
 	 */
 	renderEngine.registerFilter("nginxAccessRule", (v) => {
 		if (typeof v.directive !== "undefined" && typeof v.address !== "undefined" && v.directive && v.address) {
-			return `${v.directive} ${v.address};`;
+			let address = v.address;
+			// Nginx evaluates mapped clients in its IPv4 access-rule table. Normalize
+			// mapped rules too, including existing lists, while retaining native syntax.
+			if (typeof address === "string" && isIP(address.split("/")[0]) === 6) {
+				const parsed = ipaddr.parse(address.split("/")[0]);
+				if (parsed instanceof ipaddr.IPv6 && parsed.isIPv4MappedAddress()) address = normalizeAddress(address);
+			}
+			return `${v.directive} ${address};`;
 		}
 		return "";
 	});

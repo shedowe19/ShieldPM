@@ -2,8 +2,11 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import { isIP } from "node:net";
 import bcrypt from "bcryptjs";
+import ipaddr from "ipaddr.js";
 import _ from "lodash";
 import errs from "../lib/error.js";
+import { normalizeAddress } from "../lib/firewall-addresses.js";
+import { filterHostExpansions, restrictHostExpansions } from "../lib/host-expansions.js";
 import { sanitizeProxyHost } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import { access as logger } from "../logger.js";
@@ -23,6 +26,8 @@ const omissions = () => {
 };
 
 const isBcryptHash = (password) => /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(password);
+
+const hostRelations = { proxy_hosts: "proxy_hosts" };
 
 const auditData = (list) =>
 	_.omit(internalAccessList.maskItems(_.cloneDeep(list)), [
@@ -95,6 +100,10 @@ const validateListInput = (data) => {
 			(parts.length === 2 && (!/^(0|[1-9]\d*)$/.test(parts[1]) || Number(parts[1]) > (family === 4 ? 32 : 128)))
 		) {
 			throw new errs.ValidationError("Access-list client addresses must be IP addresses, CIDR ranges, or all");
+		}
+		if (family === 6) {
+			const address = ipaddr.parse(parts[0]);
+			if (address instanceof ipaddr.IPv6 && address.isIPv4MappedAddress()) normalizeAddress(client.address);
 		}
 	}
 };
@@ -177,6 +186,7 @@ const internalAccessList = {
 				],
 			},
 			true, // skip masking
+			{ includeAllHosts: true }, // trusted configuration rebuild
 		);
 
 		// Audit log
@@ -203,7 +213,7 @@ const internalAccessList = {
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("access-list");
 
-		return internalAccessList.maskItems(freshRow);
+		return internalAccessList.maskItems(await filterHostExpansions(freshRow, access, hostRelations));
 	},
 
 	/**
@@ -231,6 +241,7 @@ const internalAccessList = {
 				expand: ["items", "clients", "proxy_hosts.[host_domains,certificate]"],
 			},
 			true,
+			{ includeAllHosts: true }, // validate every affected host's configuration
 		);
 		if (row.id !== data.id) {
 			// Sanity check that something crazy hasn't happened
@@ -328,6 +339,7 @@ const internalAccessList = {
 				],
 			},
 			true, // skip masking
+			{ includeAllHosts: true }, // trusted configuration rebuild
 		);
 
 		await internalAccessList.build(freshRow);
@@ -348,7 +360,7 @@ const internalAccessList = {
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("access-list");
 
-		return internalAccessList.maskItems(freshRow);
+		return internalAccessList.maskItems(await filterHostExpansions(freshRow, access, hostRelations));
 	},
 
 	/**
@@ -358,9 +370,10 @@ const internalAccessList = {
 	 * @param  {Array}    [data.expand]
 	 * @param  {Array}    [data.omit]
 	 * @param  {Boolean}  [skipMasking]
+	 * @param  {{includeAllHosts?: boolean}} [options] Trusted internal configuration operations only.
 	 * @return {Promise}
 	 */
-	get: async (access, data, skipMasking) => {
+	get: async (access, data, skipMasking, options = {}) => {
 		/** @type {any} */
 		const thisData = data || {};
 		const accessData = await access.can("access_lists:get", thisData.id);
@@ -383,6 +396,7 @@ const internalAccessList = {
 
 		if (typeof thisData.expand !== "undefined" && thisData.expand !== null) {
 			query.withGraphFetched(`[${thisData.expand.join(", ")}]`);
+			if (!options.includeAllHosts) await restrictHostExpansions(query, access, hostRelations);
 		}
 
 		let row = await query;
@@ -419,6 +433,7 @@ const internalAccessList = {
 				expand: ["proxy_hosts.[host_domains,certificate]"],
 			},
 			true,
+			{ includeAllHosts: true }, // detach the list from every affected host
 		);
 
 		if (!row?.id) {

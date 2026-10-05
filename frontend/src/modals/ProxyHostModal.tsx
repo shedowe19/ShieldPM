@@ -18,6 +18,7 @@ import ProxyHostConfigPreview from "./ProxyHostConfigPreview";
 import ProxyHostFormTabs from "./ProxyHostFormTabs";
 import { createProxyHostInitialValues, type ProxyHostFormValues } from "./ProxyHostModalFormValues";
 import { createProxyHostPayload } from "./ProxyHostModalSubmission";
+import { useFreshFormData } from "./useFreshFormData";
 
 const showProxyHostModal = (id: number | "new") => {
 	EasyModal.show(ProxyHostModal, { id });
@@ -31,7 +32,8 @@ interface Props extends InnerModalProps {
 
 const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data: currentUser, isLoading: userIsLoading, error: userError } = useUser("me");
-	const { data, isLoading, error } = useProxyHost(id);
+	const hostQuery = useProxyHost(id, { refetchOnMount: "always" });
+	const { data, isLoading, error } = useFreshFormData(id, hostQuery);
 	const { mutate: setProxyHost } = useSetProxyHost();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);

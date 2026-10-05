@@ -287,13 +287,111 @@ import tempfile
 
 path = Path(sys.argv[1])
 key, value = sys.argv[2:]
-pattern = re.compile(r"^\s*(?:#\s*)?(?:export\s+)?" + re.escape(key) + r"\s*=")
-lines = [line for line in path.read_text().splitlines() if not pattern.match(line)]
-lines.append(f"{key}={shlex.quote(value)}")
+# Keep this literal-only parser identical in both standalone installer helpers.
+def environment_entries(content, managed):
+    lines = re.findall(r"[^\n]*\n|[^\n]+", content)
+    assignment = re.compile(r"^[ \t]*(?:export[ \t]+)?([A-Za-z_][A-Za-z0-9_]*)=")
+    comment = re.compile(r"^([ \t]*)#[ \t]?")
+    entries = []
+    start = 0
+    while start < len(lines):
+        first = lines[start]
+        marker = comment.match(first)
+        commented = marker is not None
+        plain = marker[1] + first[marker.end():] if marker else first
+        match = assignment.match(plain)
+        if commented and (not match or not managed(match[1])):
+            entries.append((None, False, first, first))
+            start += 1
+            continue
+        if not match:
+            if first.strip():
+                raise ValueError(f"Unsupported .env syntax at line {start + 1}")
+            entries.append((None, False, first, first))
+            start += 1
+            continue
+        key = match[1]
+        quote = None
+        trailing = False
+        unquoted = []
+        index = start
+        complete = False
+        while index < len(lines):
+            line = lines[index]
+            if commented:
+                marker = comment.match(line)
+                if marker is None:
+                    raise ValueError(f"Incomplete commented .env assignment at line {start + 1}")
+                line = marker[1] + line[marker.end():]
+            unquoted.append(line)
+            cursor = match.end() if index == start else 0
+            continuation = False
+            while cursor < len(line):
+                char = line[cursor]
+                if char == "\x00":
+                    raise ValueError(f"Unsupported .env syntax at line {start + 1}")
+                if quote == "'":
+                    if char == "'":
+                        quote = None
+                    cursor += 1
+                    continue
+                if char == "\\":
+                    if trailing and (cursor + 1 == len(line) or line[cursor + 1] != "\n"):
+                        raise ValueError(f"Unsupported .env syntax at line {start + 1}")
+                    if cursor + 1 == len(line):
+                        raise ValueError(f"Incomplete .env escape at line {start + 1}")
+                    if line[cursor + 1] == "\n":
+                        continuation = True
+                        break
+                    cursor += 2
+                    continue
+                if quote == '"':
+                    if char == '"':
+                        quote = None
+                    elif char in "$`":
+                        raise ValueError(f"Dynamic .env syntax at line {start + 1} is unsupported")
+                    cursor += 1
+                    continue
+                if char == "\n":
+                    complete = True
+                    break
+                if trailing:
+                    if char == "#":
+                        complete = True
+                        break
+                    if char not in " \t\r":
+                        raise ValueError(f"Unsupported .env syntax at line {start + 1}")
+                elif char in " \t":
+                    trailing = True
+                elif char in "'\"":
+                    quote = char
+                elif char in "$`;&|<>()":
+                    raise ValueError(f"Dynamic .env syntax at line {start + 1} is unsupported")
+                cursor += 1
+            if complete or (quote is None and not continuation):
+                break
+            index += 1
+        if quote is not None or continuation:
+            raise ValueError(f"Incomplete .env assignment at line {start + 1}")
+        raw = "".join(lines[start:index + 1])
+        entries.append((key, commented, raw, "".join(unquoted)))
+        start = index + 1
+    return entries
+
+if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+    sys.exit("Invalid environment key")
+try:
+    entries = environment_entries(path.read_bytes().decode("utf-8"), lambda candidate: candidate == key)
+except (ValueError, UnicodeError) as error:
+    sys.exit("Invalid .env encoding" if isinstance(error, UnicodeError) else str(error))
+content = "".join(raw for candidate, _commented, raw, _plain in entries if candidate != key)
+if content and not content.endswith("\n"):
+    content += "\n"
+content += f"{key}={shlex.quote(value)}\n"
 descriptor, temporary = tempfile.mkstemp(prefix=".shieldpm-env-", dir=path.parent)
 try:
     with os.fdopen(descriptor, "w") as handle:
-        handle.write("\n".join(lines) + "\n")
+        handle.write(content)
     os.replace(temporary, path)
 finally:
     if os.path.exists(temporary):
@@ -314,18 +412,122 @@ import tempfile
 
 path = Path(sys.argv[1])
 selected = sys.argv[2]
-pattern = re.compile(r"^(\s*)(#\s*)?((?:export\s+)?(DB_(MYSQL|POSTGRES|SQLITE)_[A-Z0-9_]+)=.*)$")
-lines = []
-for line in path.read_text().splitlines():
-    match = pattern.match(line)
-    if match:
-        active = match[5] == selected and match[4] != "DB_SQLITE_FILE"
-        line = match[1] + ("" if active else "# ") + match[3]
-    lines.append(line)
+# Keep this literal-only parser identical in both standalone installer helpers.
+def environment_entries(content, managed):
+    lines = re.findall(r"[^\n]*\n|[^\n]+", content)
+    assignment = re.compile(r"^[ \t]*(?:export[ \t]+)?([A-Za-z_][A-Za-z0-9_]*)=")
+    comment = re.compile(r"^([ \t]*)#[ \t]?")
+    entries = []
+    start = 0
+    while start < len(lines):
+        first = lines[start]
+        marker = comment.match(first)
+        commented = marker is not None
+        plain = marker[1] + first[marker.end():] if marker else first
+        match = assignment.match(plain)
+        if commented and (not match or not managed(match[1])):
+            entries.append((None, False, first, first))
+            start += 1
+            continue
+        if not match:
+            if first.strip():
+                raise ValueError(f"Unsupported .env syntax at line {start + 1}")
+            entries.append((None, False, first, first))
+            start += 1
+            continue
+        key = match[1]
+        quote = None
+        trailing = False
+        unquoted = []
+        index = start
+        complete = False
+        while index < len(lines):
+            line = lines[index]
+            if commented:
+                marker = comment.match(line)
+                if marker is None:
+                    raise ValueError(f"Incomplete commented .env assignment at line {start + 1}")
+                line = marker[1] + line[marker.end():]
+            unquoted.append(line)
+            cursor = match.end() if index == start else 0
+            continuation = False
+            while cursor < len(line):
+                char = line[cursor]
+                if char == "\x00":
+                    raise ValueError(f"Unsupported .env syntax at line {start + 1}")
+                if quote == "'":
+                    if char == "'":
+                        quote = None
+                    cursor += 1
+                    continue
+                if char == "\\":
+                    if trailing and (cursor + 1 == len(line) or line[cursor + 1] != "\n"):
+                        raise ValueError(f"Unsupported .env syntax at line {start + 1}")
+                    if cursor + 1 == len(line):
+                        raise ValueError(f"Incomplete .env escape at line {start + 1}")
+                    if line[cursor + 1] == "\n":
+                        continuation = True
+                        break
+                    cursor += 2
+                    continue
+                if quote == '"':
+                    if char == '"':
+                        quote = None
+                    elif char in "$`":
+                        raise ValueError(f"Dynamic .env syntax at line {start + 1} is unsupported")
+                    cursor += 1
+                    continue
+                if char == "\n":
+                    complete = True
+                    break
+                if trailing:
+                    if char == "#":
+                        complete = True
+                        break
+                    if char not in " \t\r":
+                        raise ValueError(f"Unsupported .env syntax at line {start + 1}")
+                elif char in " \t":
+                    trailing = True
+                elif char in "'\"":
+                    quote = char
+                elif char in "$`;&|<>()":
+                    raise ValueError(f"Dynamic .env syntax at line {start + 1} is unsupported")
+                cursor += 1
+            if complete or (quote is None and not continuation):
+                break
+            index += 1
+        if quote is not None or continuation:
+            raise ValueError(f"Incomplete .env assignment at line {start + 1}")
+        raw = "".join(lines[start:index + 1])
+        entries.append((key, commented, raw, "".join(unquoted)))
+        start = index + 1
+    return entries
+
+if selected not in ("MYSQL", "POSTGRES", "SQLITE"):
+    sys.exit("Invalid database provider")
+provider = re.compile(r"DB_(MYSQL|POSTGRES|SQLITE)_[A-Z0-9_]+")
+try:
+    entries = environment_entries(path.read_bytes().decode("utf-8"), lambda key: provider.fullmatch(key) is not None)
+except (ValueError, UnicodeError) as error:
+    sys.exit("Invalid .env encoding" if isinstance(error, UnicodeError) else str(error))
+output = []
+for key, commented, raw, plain in entries:
+    match = provider.fullmatch(key or "")
+    if match is None:
+        output.append(raw)
+        continue
+    active = match[1] == selected and key != "DB_SQLITE_FILE"
+    if active:
+        output.append(plain)
+    elif commented:
+        output.append(raw)
+    else:
+        output.append("".join("# " + line for line in re.findall(r"[^\n]*\n|[^\n]+", plain)))
+content = "".join(output)
 descriptor, temporary = tempfile.mkstemp(prefix=".shieldpm-env-", dir=path.parent)
 try:
     with os.fdopen(descriptor, "w") as handle:
-        handle.write("\n".join(lines) + "\n")
+        handle.write(content)
     os.replace(temporary, path)
 finally:
     if os.path.exists(temporary):

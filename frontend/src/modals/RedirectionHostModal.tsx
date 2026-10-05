@@ -22,6 +22,7 @@ import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME, REDIRECTION_HOST_TAB } from "src/types/enums";
+import { useFreshFormData } from "./useFreshFormData";
 
 const showRedirectionHostModal = (id: number | "new") => {
 	EasyModal.show(RedirectionHostModal, { id });
@@ -33,7 +34,8 @@ interface Props extends InnerModalProps {
 
 const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const queryClient = useQueryClient();
-	const { data, isLoading, error } = useRedirectionHost(id);
+	const hostQuery = useRedirectionHost(id, { refetchOnMount: "always" });
+	const { data, isLoading, error } = useFreshFormData(id, hostQuery);
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 

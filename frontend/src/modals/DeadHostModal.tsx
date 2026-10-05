@@ -16,6 +16,7 @@ import { useDeadHost, useSetDeadHost } from "src/hooks";
 import { intl, T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE, DEAD_HOST_TAB } from "src/types/enums";
+import { useFreshFormData } from "./useFreshFormData";
 
 const showDeadHostModal = (id: number | "new") => {
 	EasyModal.show(DeadHostModal, { id });
@@ -37,7 +38,8 @@ interface DeadHostValues {
 }
 
 const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
-	const { data, isLoading, error } = useDeadHost(id);
+	const hostQuery = useDeadHost(id, { refetchOnMount: "always" });
+	const { data, isLoading, error } = useFreshFormData(id, hostQuery);
 	const { mutate: setDeadHost } = useSetDeadHost();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);

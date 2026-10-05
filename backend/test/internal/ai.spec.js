@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import internalAi from "../../internal/ai.js";
 import internalProxyHost from "../../internal/proxy-host.js";
 import internalSetting from "../../internal/setting.js";
+import errs from "../../lib/error.js";
 import SettingModel from "../../models/setting.js";
 
 // Mock dependencies
@@ -35,7 +36,7 @@ describe("internal/ai.js", () => {
 
 	describe("getConfig", () => {
 		it("should return default config if setting not found", async () => {
-			internalSetting.get.mockRejectedValue(new Error("Not found"));
+			internalSetting.get.mockRejectedValue(new errs.ItemNotFoundError("ai-config"));
 			const config = await internalAi.getConfig(mockAccess);
 			expect(config.provider).toBe("gemini");
 			expect(config.enabled).toBe(false);

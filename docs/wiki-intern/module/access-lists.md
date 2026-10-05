@@ -59,6 +59,7 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - Ein leeres Passwort beim Bearbeiten erhält das bestehende Passwort dieses Benutzernamens. Nicht mehr übermittelte Benutzernamen werden entfernt.
 - mTLS-Zertifikate und andere Optionen können auch ohne Namensänderung aktualisiert werden.
 - Benutzernamen müssen eindeutig sein und dürfen weder Doppelpunkte, Zeilenumbrüche noch Nullbytes enthalten. Clientregeln akzeptieren ausschließlich `allow` oder `deny` mit IPv4, IPv6, gültigem CIDR-Präfix oder `all`.
+- IPv4-mapped-IPv6-Regeln werden beim Rendern in IPv4-Regeln übersetzt, damit sie dieselben Clients treffen wie ihre IPv4-Entsprechung. Bei CIDRs ab `/96` wird das Präfix um 96 verringert. Dies berücksichtigt auch vorhandene Listen; native IPv4-/IPv6-Adressen und `all` bleiben unverändert. Mapped-Präfixe unter `/96` werden abgelehnt, weil sie zusätzlich andere IPv6-Netze umfassen und nicht als einzelne IPv4-Regel darstellbar sind.
 - Audit-Metadaten enthalten keine OAuth2-Client-Secrets, OAuth2-Cookie-Secrets oder OIDC-Client-Secrets. Die eigentliche Konfiguration behält diese Werte. Passwort-Hinweise haben eine feste Länge und verraten weder Anfangszeichen noch Passwortlänge.
 
 Regressionstest: `backend/test/internal/access-list.spec.js` prüft reale Service-Aufrufe einschließlich Schreibreihenfolge, Rollback, mTLS, Geheimnisbereinigung und Eingabevalidierung.
@@ -80,5 +81,7 @@ Auch beim Erstellen werden Liste, Credentials und Clientregeln in einer Transakt
 Die htpasswd-Datei wird vollständig in einer temporären Datei vorbereitet und per Rename ersetzt. Lesende Nginx-Prozesse sehen keine leere oder teilweise geschriebene Credential-Liste. Die Datei erhält Modus `0600`; Backend und Nginx laufen im unterstützten Containerbetrieb unter derselben UID. Fehler beim Schreiben einer externen mTLS-CA werden weitergegeben.
 
 Neugenerierung nach Änderungen lädt `host_domains`, Zertifikate und komplette Zugriffsregeln. Auch beim Löschen der Liste bleibt dadurch die TLS-Zuordnung der Hosts erhalten. Expandierte Proxy-Hosts durchlaufen dieselbe Geheimnisbereinigung wie die Host-API; interne Aufrufe behalten die tatsächlichen Websitepfade. Authentik-URLs und OAuth2-Präfixe werden vor der Nginx-Ausgabe auf sichere Syntax geprüft.
+
+Öffentlich expandierte Proxy-Hosts und die Hostdetails in Erstellungs-/Änderungsantworten beachten zusätzlich die Proxy-Host-Berechtigung: `hidden` liefert keine Hosts, Sichtbarkeit `user` nur eigene aktive Hosts und `all` alle aktiven Zuordnungen. Die Listenübersicht erlaubt weiterhin keine Host-Expansion. Interne Konfigurationsabfragen sind ausdrücklich getrennt davon: Aktualisierung und Löschen einer Liste bearbeiten weiterhin alle betroffenen Hosts, auch wenn der Listenbesitzer sie nicht anzeigen darf. `host-expansion-permissions.spec.js` prüft diese Grenzen mit den tatsächlichen Berechtigungsschemata und SQLite.
 
 Tests: `access-list.spec.js` und `access-list-files.spec.js`, einschließlich echter temporärer Dateien und fehlgeschlagener Dateiersetzung.

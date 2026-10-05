@@ -6,11 +6,22 @@ vi.mock("../../db.js", () => ({ default: () => ({}) }));
 vi.mock("dockerode", () => ({ default: class {} }));
 vi.mock("../../models/proxy_host.js", () => ({
 	default: {
-		query: () => ({
-			where: () => ({ withGraphFetched: async () => mocks.hosts }),
-			insertGraphAndFetch: mocks.insert,
-			upsertGraphAndFetch: mocks.upsert,
-		}),
+		transaction: (callback) => callback({}),
+		query: () => {
+			let id;
+			const query = {
+				findById: (value) => {
+					id = value;
+					return query;
+				},
+				where: () => query,
+				withGraphFetched: async () => mocks.hosts,
+				forUpdate: async () => mocks.hosts.find((host) => host.id === id),
+				insertGraphAndFetch: mocks.insert,
+				upsertGraphAndFetch: mocks.upsert,
+			};
+			return query;
+		},
 	},
 }));
 vi.mock("../../internal/certificate.js", () => ({ default: {} }));

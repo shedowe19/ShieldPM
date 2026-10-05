@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import _ from "lodash";
 import tempWrite from "temp-write";
 import error from "../lib/error.js";
+import { restrictHostExpansions } from "../lib/host-expansions.js";
 import { sanitizeProxyHost } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import { debug, ssl as logger } from "../logger.js";
@@ -25,6 +26,12 @@ const omissions = () => {
 };
 
 const certificateOperations = new Set();
+const hostRelations = {
+	proxy_hosts: "proxy_hosts",
+	redirection_hosts: "redirection_hosts",
+	dead_hosts: "dead_hosts",
+	streams: "streams",
+};
 const withCertificateLock = async (id, operation) => {
 	if (certificateOperations.has(id)) {
 		throw new error.ValidationError("Another operation is running for this certificate. Please try again later.");
@@ -388,6 +395,7 @@ const internalCertificate = {
 
 		if (typeof thisData.expand !== "undefined" && thisData.expand !== null) {
 			query.withGraphFetched(`[${thisData.expand.join(", ")}]`);
+			await restrictHostExpansions(query, access, hostRelations);
 		}
 
 		const row = await query.then(/** @type {any} */ (utils.omitRow(omissions())));
@@ -590,6 +598,7 @@ const internalCertificate = {
 
 		if (typeof expand !== "undefined" && expand !== null) {
 			query.withGraphFetched(`[${expand.join(", ")}]`);
+			await restrictHostExpansions(query, access, hostRelations);
 		}
 
 		const r = await query.then(/** @type {any} */ (utils.omitRows(omissions())));

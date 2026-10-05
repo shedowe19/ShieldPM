@@ -2,6 +2,8 @@
 
 import os
 from pathlib import Path
+import re
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -16,6 +18,148 @@ class FourthInfrastructureTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         self.installer = (REPO / "scripts/install.sh").read_text()
+
+    def environment_helper(self, name, *arguments):
+        function = name + "() {" + self.installer.split(name + "() {", 1)[1].split("\n}\n", 1)[0] + "\n}\n"
+        return subprocess.run(["bash", "-eu", "-c", function +
+            f'ENV_FILE=$1; shift; {name} "$@"', "test", str(self.root / ".env"), *arguments],
+            env={"PATH": os.environ["PATH"]}, capture_output=True, text=True)
+
+    def validate_sourced_environment(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is required for the real startup validator")
+        validator = self.root / "validate-env.cjs"
+        validator.write_text((REPO / "backend/validate-env.cjs").read_text().replace(
+            "/data/", f"{self.root}/data/"))
+        # Use the actual envs.sh export/source phase without running services,
+        # downloading databases, or reading a host installation's /data.
+        source = (REPO / "rootfs/usr/local/bin/envs.sh").read_text()
+        phase = "set -a\n" + source.split("set -a\n", 1)[1].split("set +a", 1)[0] + "set +a\n"
+        phase = phase.replace(". /data/.env", '. "$1"')
+        return subprocess.run(["sh", "-eu", "-c", phase + 'exec "$2" "$3"',
+            "test", str(self.root / ".env"), node, str(validator)],
+            env={"PATH": os.environ["PATH"]}, capture_output=True, text=True)
+
+    def sourced_value(self, key):
+        self.assertRegex(key, r"^[A-Za-z_][A-Za-z0-9_]*$")
+        result = subprocess.run(["sh", "-eu", "-c", f'. "$1"; printf %s "${{{key}}}"',
+            "test", str(self.root / ".env"), key], env={"PATH": os.environ["PATH"]},
+            capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return result.stdout
+
+    def test_multiline_database_values_survive_every_provider_transition_and_real_validation(self):
+        env_file = self.root / ".env"
+        unrelated = "# Existing configuration\r\nTZ=UTC\nGEOIP_AUTO_UPDATE=false\n" + \
+            "SENTINEL='first\nDB_POSTGRES_HOST=inside-value\n# literal comment\nlast'\n"
+        original = unrelated + "  export DB_MYSQL_HOST=mysql.example # preserve inline comment\n" + \
+            "DB_MYSQL_PASSWORD='first\nsecond'\n" + \
+            '# export DB_POSTGRES_HOST=postgres.example\n# DB_POSTGRES_PASSWORD="one\n# two"\n' + \
+            "# DB_SQLITE_FILE='/data/old\n# path.sqlite'\n"
+        for previous in ("MYSQL", "POSTGRES", "SQLITE"):
+            for selected in ("MYSQL", "POSTGRES", "SQLITE"):
+                with self.subTest(previous=previous, selected=selected):
+                    env_file.write_bytes(original.encode())
+                    for provider in (previous, selected, previous, selected):
+                        result = self.environment_helper("configure_database_environment", provider)
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                        result = self.validate_sourced_environment()
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                        self.assertTrue(env_file.read_bytes().startswith(unrelated.encode()))
+                    if selected == "MYSQL":
+                        self.assertEqual(self.sourced_value("DB_MYSQL_PASSWORD"), "first\nsecond")
+                    elif selected == "POSTGRES":
+                        self.assertEqual(self.sourced_value("DB_POSTGRES_PASSWORD"), "one\ntwo")
+
+    def test_database_literal_quotes_escapes_and_continuations_round_trip(self):
+        env_file = self.root / ".env"
+        cases = [("'one\ntwo'", "one\ntwo"), ('"one\ntwo"', "one\ntwo"),
+                 (shlex.quote("apostrophe'\\\nlast"), "apostrophe'\\\nlast"),
+                 ('"escaped \\"quote\\" and \\$literal"', 'escaped "quote" and $literal'),
+                 ("first\\\nsecond", "firstsecond"), ("#literal", "#literal"),
+                 ("normal", "normal"), ("", "")]
+        for literal, expected in cases:
+            with self.subTest(literal=literal):
+                env_file.write_text("TZ=UTC\nGEOIP_AUTO_UPDATE=false\n  export DB_MYSQL_HOST=mysql.example\n" +
+                    "  export DB_MYSQL_PASSWORD=" + literal + " # retained comment\n")
+                for provider in ("SQLITE", "MYSQL"):
+                    result = self.environment_helper("configure_database_environment", provider)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    result = self.validate_sourced_environment()
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(self.sourced_value("DB_MYSQL_PASSWORD"), expected)
+
+    def test_set_environment_value_replaces_complete_active_and_commented_spans(self):
+        env_file = self.root / ".env"
+        unrelated = "# retained CRLF comment\r\nTZ=UTC\nGEOIP_AUTO_UPDATE=false\n" + \
+            "DB_MYSQL_HOST=mysql.example\nSENTINEL='DB_MYSQL_PASSWORD=inside\nsecond'\n"
+        old_values = ["DB_MYSQL_PASSWORD=old\n", "export DB_MYSQL_PASSWORD='old\nvalue'\n",
+                      '# DB_MYSQL_PASSWORD="old\n# value"\n',
+                      "  # export DB_MYSQL_PASSWORD='old'\\''\n  # value'\n"]
+        for old in old_values:
+            for value in ("normal", "first\nDB_POSTGRES_HOST=literal\nlast'\\\"$`", ""):
+                with self.subTest(old=old, multiline="\n" in value):
+                    env_file.write_bytes((unrelated + old).encode())
+                    result = self.environment_helper("set_env_value", "DB_MYSQL_PASSWORD", value)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertTrue(env_file.read_bytes().startswith(unrelated.encode()))
+                    result = self.validate_sourced_environment()
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(self.sourced_value("DB_MYSQL_PASSWORD"), value)
+                    self.assertEqual(env_file.stat().st_mode & 0o777, 0o600)
+                    # A newly quoted multiline value must remain editable by
+                    # subsequent setters and reversible provider changes.
+                    result = self.environment_helper("set_env_value", "GEOIP_AUTO_UPDATE", "false")
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    for provider in ("SQLITE", "MYSQL"):
+                        result = self.environment_helper("configure_database_environment", provider)
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                    result = self.validate_sourced_environment()
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(self.sourced_value("DB_MYSQL_PASSWORD"), value)
+
+    def test_unsupported_or_unbalanced_environment_never_changes_file(self):
+        env_file = self.root / ".env"
+        cases = ["DB_MYSQL_PASSWORD='unfinished\n", 'DB_MYSQL_PASSWORD="unfinished\n',
+                 "SENTINEL='unfinished\nDB_MYSQL_PASSWORD=value\n", "DB_MYSQL_PASSWORD=first\\\n",
+                 "DB_MYSQL_PASSWORD=one second\n", "DB_MYSQL_PASSWORD=one \\ second\n",
+                 "export DB_MYSQL_PASSWORD=value OTHER=value\n", "DB_MYSQL_PASSWORD=$(false)\n",
+                 'SENTINEL="$HOME"\n', "DB_MYSQL_PASSWORD=`false`\n", "DB_MYSQL_PASSWORD=value; false\n",
+                 "DB_MYSQL_PASSWORD = value\n", "false\n",
+                 "# DB_MYSQL_PASSWORD='first\nsecond'\n", "# DB_MYSQL_PASSWORD='unfinished\n"]
+        for content in cases:
+            for name, arguments in [("set_env_value", ("DB_MYSQL_PASSWORD", "replacement")),
+                                    ("configure_database_environment", ("SQLITE",))]:
+                with self.subTest(content=content, helper=name):
+                    original = ("TZ=UTC\n" + content).encode()
+                    env_file.write_bytes(original)
+                    before = env_file.stat()
+                    result = self.environment_helper(name, *arguments)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertEqual(env_file.read_bytes(), original)
+                    self.assertEqual(env_file.stat().st_ino, before.st_ino)
+                    self.assertEqual(list(self.root.glob(".shieldpm-env-*")), [])
+
+    def test_provider_edit_preserves_unrelated_bytes_and_missing_final_newline(self):
+        env_file = self.root / ".env"
+        prefix = "# untouched\r\nTZ=UTC\nGEOIP_AUTO_UPDATE=false\n"
+        suffix = "SENTINEL='unchanged'"
+        env_file.write_bytes((prefix + "DB_MYSQL_HOST=mysql.example\n" + suffix).encode())
+        result = self.environment_helper("configure_database_environment", "SQLITE")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(env_file.read_bytes(), (prefix + "# DB_MYSQL_HOST=mysql.example\n" + suffix).encode())
+        result = self.environment_helper("set_env_value", "DB_MYSQL_HOST", "mysql.example")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(env_file.read_bytes(), (prefix + suffix + "\nDB_MYSQL_HOST=mysql.example\n").encode())
+        result = self.validate_sourced_environment()
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_standalone_helpers_use_identical_literal_parser(self):
+        parsers = re.findall(r"# Keep this literal-only parser identical.*?(?=\nif |\nprovider =)",
+                            self.installer, re.DOTALL)
+        self.assertEqual(len(parsers), 2)
+        self.assertEqual(parsers[0], parsers[1])
 
     def test_optional_service_restart_loops_wait_after_process_exit(self):
         source = (REPO / "rootfs/usr/local/bin/launch.sh").read_text()
