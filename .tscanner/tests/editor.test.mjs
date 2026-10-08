@@ -137,14 +137,21 @@ test("unsupported platforms and missing binaries do not create settings", (conte
 	assert.equal(fs.existsSync(env.settings), false);
 });
 
-test("the actual installed native scanner reports its pinned version", () => {
+test("editor setup makes a fresh real native scanner executable with its pinned version", (context) => {
+	const env = fixture(context, process.platform, process.arch);
 	const binary = path.join(
 		repositoryRoot,
 		".tscanner/node_modules/@tscanner",
 		`cli-${process.platform}-${process.arch}`,
 		process.platform === "win32" ? "tscanner.exe" : "tscanner",
 	);
-	const result = spawnSync(binary, ["--version"], { encoding: "utf8", timeout: 10000 });
+	fs.copyFileSync(binary, env.binary);
+	if (process.platform !== "win32") {
+		fs.chmodSync(env.binary, 0o640);
+		assert.equal(fs.statSync(env.binary).mode & 0o111, 0);
+	}
+	const native = configureEditor({ root: env.root });
+	const result = spawnSync(path.join(env.root, native), ["--version"], { encoding: "utf8", timeout: 10000 });
 	assert.equal(result.status, 0, result.error?.message ?? result.stderr);
 	assert.match(result.stdout, /^tscanner 0\.1\.3\s*$/);
 });
