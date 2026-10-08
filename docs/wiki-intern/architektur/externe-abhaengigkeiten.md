@@ -95,6 +95,18 @@ Dokumentation aller wesentlichen externen Abhängigkeiten und deren Zweck.
 | `@electric-sql/pglite`   | 0.5.8; Backend-Tests mit eingebetteter PostgreSQL-Engine     |
 | `vite`                   | ^8.3.3 im Backend, 8.3.3 im Frontend; Build und Testumgebung |
 
+### Eigenständiges Scanner-Paket
+
+`.tscanner/package.json` ist ein separates privates Entwicklungspaket mit eigenem Yarn-1-Lockfile. Es pinnt
+`tscanner` auf 0.1.3 sowie `@babel/parser` und `@babel/traverse` auf 8.0.7. Die native optionale TScanner-Abhängigkeit
+stellt das Plattform-Binary bereit; Babel analysiert die lokalen Architekturregeln als AST. Die Installation verwendet
+Node 26, Yarn 1.22.22, `--frozen-lockfile --ignore-scripts --production=false`; CI prüft diese Abhängigkeiten zusätzlich
+mit `yarn audit --level high`.
+
+Diese Pakete werden weder den Anwendungsmanifesten hinzugefügt noch ins Produktionsimage kopiert. Lokale AI-Reviews
+benötigen eine separat installierte/authentifizierte Provider-CLI und keine Backend-Provider-Zugangsdaten. Konfiguration,
+Regeln, bewusste Baseline-Pflege und Upgrades stehen in der [TScanner-Anleitung](../../wiki/TScanner.md).
+
 ## Sicherheitsprüfung September 2026
 
 Der dokumentierte `yarn audit --json`-Lauf meldete nach der damaligen Korrektur keine bekannten Befunde: Backend 0 bei 536 erfassten Abhängigkeiten, Frontend 0 bei 610. Zuvor wurden im Backend 13 hohe und 4 mittlere Befunde gemeldet; mehrere davon betreffen dieselben Pakete über unterschiedliche Pfade. Diese Zahlen sind ein historischer Snapshot vor späteren Dependency-Updates und keine aktuelle Sicherheitszusage.

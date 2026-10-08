@@ -33,6 +33,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Setup-Interna](./entwicklung/setup-intern.md)
 - [Lokale Entwicklung](./entwicklung/lokale-entwicklung.md)
 - [Tests](./entwicklung/tests.md)
+- [TScanner-Projektregeln](../wiki/TScanner.md) — CLI, VSCode, CI-Berichte und manuelle lokale AI-Reviews.
 - [Build](./entwicklung/build.md)
 - [Deployment](./entwicklung/deployment.md)
 
@@ -187,7 +188,7 @@ Details und Dateipfade stehen in der [Modulübersicht](./module/README.md) und d
 
 ---
 
-_Zuletzt aktualisiert: 2026-10-05._
+_Zuletzt aktualisiert: 2026-10-08._
 
 ## Verwandte Seiten
 

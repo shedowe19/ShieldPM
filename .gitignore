@@ -2,7 +2,9 @@
 .idea
 .qodo
 ._*
-.vscode
+.vscode/*
+!.vscode/extensions.json
+!.vscode/tasks.json
 certbot-help.txt
 */node_modules
 package-lock.json
@@ -11,3 +13,7 @@ backend/analyze.js
 frontend/test-results/
 __pycache__/
 *.py[cod]
+.tscanner/node_modules/
+.tscanner/cache/
+.tscanner/.cache/
+.tscanner/reports/

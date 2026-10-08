@@ -63,6 +63,18 @@ Die isolierte HTTP/2-Prüfkonfiguration aktiviert das Protokoll mit `http2 on;`.
 
 Lokal verwendet `bash scripts/ci/docker-smoke.sh IMAGE` ausschließlich ein bereits geladenes Image derselben Architektur. `scripts/tests/test_docker_smoke.py` prüft Erfolg, Health-Timeout und Schreibfehler einschließlich Cleanup mit einem simulierten Docker-CLI; der Docker-Build-Job führt den tatsächlichen Docker-Lauf aus.
 
+### Eigenständige TScanner-CI
+
+`.github/workflows/tscanner.yml` installiert das private Scanner-Paket mit eingefrorenem Lockfile und deaktivierten
+Installationsskripten, prüft seine Dependencies mit `yarn audit --level high` und führt eigene Tests aus. Pushes prüfen
+den vollständigen Workspace; Pull Requests geänderte Zeilen seit dem Merge-Base. Der Workflow benötigt ausschließlich
+`contents: read`, startet keine AI-Provider und schreibt keine PR-Kommentare.
+
+JSON-Berichte und Markdown-Zusammenfassung liegen unter `.tscanner/reports/`; vorhandene Berichte werden auch im
+Fehlerfall als Artefakt für sieben Tage aufbewahrt. Neue Fehler sowie Scanner-Ausführungswarnungen/-fehler sind fatal.
+`.dockerignore` schließt `.tscanner/` und `.vscode/` aus: Scanner, Babel und Berichte gelangen nicht in das Image oder
+die daraus erstellten nativen Pakete. Details: [TScanner-Anleitung](../../wiki/TScanner.md).
+
 ## Frontend Build (standalone)
 
 ```bash

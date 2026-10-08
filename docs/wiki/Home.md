@@ -70,6 +70,7 @@
 - **[API Documentation](API-Docs)**: Developer reference for the REST API.
 - **[Troubleshooting](Troubleshooting)**: Common issues and solutions (FAQ).
 - **[Development](Development)**: How to build and test ShieldPM locally.
+- **[TScanner](./TScanner.md)**: Projektregeln, VSCode-Einrichtung, CI-Berichte und ausdrücklich gestartete lokale AI-Reviews.
 - **[CLI Reference](CLI-Reference)**: Documentation for internal scripts and `cscli` usage.
 
 ## 🤝 Community & Support

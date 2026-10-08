@@ -113,6 +113,17 @@ cd ../backend && yarn test --run
 cd ../frontend && yarn test --run && yarn build
 ```
 
+TScanner adds project-specific checks and a separate read-only CI job. From the repository root:
+
+```bash
+yarn --cwd .tscanner install --frozen-lockfile --ignore-scripts --production=false
+node scripts/ci/tscanner.mjs
+```
+
+The [TScanner setup guide](docs/wiki/TScanner.md) covers changed-line scans, the VSCode extension/tasks, visible
+existing baseline findings, reports, and optional local AI reviews. AI requires your own authenticated provider CLI
+and an explicit manual command; it does not run in CI.
+
 ---
 
 ## 🙏 Acknowledgments

@@ -4,7 +4,7 @@ const path = require("node:path");
 
 const HEADER = `# Third-Party Notices
 
-This project (ShieldPM) incorporates the following third-party components. The licenses are collected from installed package metadata and license files by license-checker. This list includes both production dependencies and development dependencies from the backend and frontend package.json files.
+This project (ShieldPM) incorporates the following third-party components. The licenses are collected from installed package metadata and license files by license-checker. This list includes both production dependencies and development dependencies from the backend and frontend package.json files, plus the separately identified development-only code-scanning tools.
 
 For verification, each entry links to the NPM package page (e.g., https://www.npmjs.com/package/<package>/v/<version>), where the license can be confirmed in the package metadata. Note: Transitive dependencies (dependencies of dependencies) are not included, as this focuses on direct dependencies.
 `;
@@ -20,6 +20,29 @@ function getLicenses(cwd, production) {
 	process.stdout.write(`Running in ${cwd}: license-checker ${args.join(" ")}\n`);
 	const output = execFileSync("license-checker", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 	return JSON.parse(output);
+}
+
+function getScannerDevelopmentLicenses(cwd) {
+	const manifest = JSON.parse(fs.readFileSync(path.join(cwd, "package.json"), "utf8"));
+	const dependencyNames = new Set(Object.keys(manifest.devDependencies || {}));
+	if (!dependencyNames.size) throw new Error("Code-scanning package must declare its development dependencies");
+	const scanned = getLicenses(cwd, false);
+	// Hoisted transitive packages may be returned even with --direct.
+	// Keep the tooling section scoped to its declared development dependencies.
+	const selected = {};
+	const found = new Set();
+	for (const [key, license] of Object.entries(scanned)) {
+		const name = key.substring(0, key.lastIndexOf("@"));
+		if (!dependencyNames.has(name)) continue;
+		if (!license.licenses || (Array.isArray(license.licenses) && !license.licenses.length)) {
+			throw new Error(`Missing installed license metadata for code-scanning dependency ${name}`);
+		}
+		selected[key] = license;
+		found.add(name);
+	}
+	const missing = [...dependencyNames].filter((name) => !found.has(name));
+	if (missing.length) throw new Error(`Missing installed code-scanning dependencies: ${missing.join(", ")}`);
+	return selected;
 }
 
 function formatDeps(deps) {
@@ -45,6 +68,7 @@ function formatDeps(deps) {
 function main() {
 	const backendPath = path.resolve(__dirname, "../backend");
 	const frontendPath = path.resolve(__dirname, "../frontend");
+	const scannerPath = path.resolve(__dirname, "../.tscanner");
 	// Non-NPM attributions must survive automated package-notice regeneration.
 	const extraNotices = fs.readFileSync(path.resolve(__dirname, "third-party-notices-extra.txt"), "utf8").trim();
 
@@ -57,6 +81,8 @@ function main() {
 	const frontProd = getLicenses(frontendPath, true);
 	process.stdout.write("Fetching Frontend Development...\n");
 	const frontDev = getLicenses(frontendPath, false);
+	process.stdout.write("Fetching Code-Scanning Development Tools...\n");
+	const scannerDev = getScannerDevelopmentLicenses(scannerPath);
 
 	let content = `${HEADER}\n${extraNotices}\n`;
 
@@ -71,6 +97,10 @@ function main() {
 	content += formatDeps(frontProd);
 	content += "\n\n### Development Dependencies\n";
 	content += formatDeps(frontDev);
+	content += "\n\n## Code-Scanning Development Dependencies (from .tscanner/package.json)\n\n";
+	content +=
+		"These tools run only during development and CI. They are not included in ShieldPM's production runtime.\n\n";
+	content += formatDeps(scannerDev);
 
 	content += `\n${FOOTER}`;
 

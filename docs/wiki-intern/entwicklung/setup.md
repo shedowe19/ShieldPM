@@ -90,6 +90,22 @@ npx biome check --write .
 Konfiguration: `backend/biome.json` und `frontend/biome.json`. Die jeweilige `$schema`-URL muss zur per Lockdatei
 installierten Biome-Version passen, damit der Linter keine Schema-Diagnose ausgibt.
 
+### TScanner-Projektregeln
+
+Das unabhängige private Paket `.tscanner/` ergänzt neun eingebaute Regeln und vier lokale AST-Prüfungen. Es benötigt
+Node 26 und Yarn Classic 1.22.22, ohne die Anwendungsabhängigkeiten zu installieren:
+
+```bash
+yarn --cwd .tscanner install --frozen-lockfile --ignore-scripts --production=false
+node scripts/ci/tscanner.mjs --validate
+node scripts/ci/tscanner.mjs
+```
+
+Die VSCode-Empfehlung und Aufgaben liegen unter `.vscode/`. Die drei AI-Reviews werden ausschließlich manuell lokal
+gestartet und benötigen eine separat installierte/authentifizierte Provider-CLI; Vorgabe ist Gemini. Git-Prüfmodi,
+Index-/Arbeitskopie-Schutz, sichtbare Bestands-Baseline und Berichte erklärt die
+[vollständige TScanner-Anleitung](../../wiki/TScanner.md).
+
 ## Verwandte Seiten
 
 - [Build](./build.md)

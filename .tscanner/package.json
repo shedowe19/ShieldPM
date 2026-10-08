@@ -1,0 +1,24 @@
+{
+  "name": "shieldpm-code-scanning",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "yarn@1.22.22",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "scan": "node ../scripts/ci/tscanner.mjs",
+    "scan:staged": "node ../scripts/ci/tscanner.mjs --staged",
+    "scan:uncommitted": "node ../scripts/ci/tscanner.mjs --uncommitted",
+    "scan:branch": "node ../scripts/ci/tscanner.mjs --branch origin/develop",
+    "scan:ai": "node ../scripts/ci/tscanner.mjs --only-ai",
+    "validate": "node ../scripts/ci/tscanner.mjs --validate",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "@babel/parser": "8.0.7",
+    "@babel/traverse": "8.0.7",
+    "tscanner": "0.1.3"
+  }
+}

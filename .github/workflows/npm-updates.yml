@@ -120,6 +120,10 @@ jobs:
         if: steps.check_changes.outputs.updates_found == 'true'
         run: node scripts/sync-verified-dependency-docs.js
 
+      - name: Install pinned scanner dependencies for license notices
+        if: steps.check_changes.outputs.updates_found == 'true'
+        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/.tscanner" install --frozen-lockfile --ignore-scripts --production=false
+
       - name: Generate Third-Party Notices
         if: steps.check_changes.outputs.updates_found == 'true'
         run: node scripts/generate-notices.js

@@ -143,6 +143,31 @@ yarn install
 yarn dev # Nodemon
 ```
 
+### TScanner project conventions
+
+The independent private `.tscanner/` package pins TScanner 0.1.3 and Babel parser/traverse 8.0.7. With Node 26+ and
+Yarn Classic 1.22.22, install it using `yarn --cwd .tscanner install --frozen-lockfile --ignore-scripts --production=false`.
+Run `node scripts/ci/tscanner.mjs` and `yarn --cwd .tscanner test` from the repository. Configuration lives in
+`.tscanner/config.jsonc`; the wrapper owns report validation, baseline evaluation, and Git-mode safeguards.
+
+- Nine built-in checks and four AST policies cover backend ESM, structured route/service errors, component API hooks,
+  and centralized Nginx reloads. Function length is 100 direct statements; the parameter limit is eight.
+- Full reports retain the reviewed existing-error baseline. Changed-line scans (`--branch REF`, `--staged`,
+  `--uncommitted`) never apply baseline allowances. New errors and scanner failures block; advisory findings remain visible.
+- Branch comparisons use the merge-base. Staged scans reject partially staged source; branch/uncommitted scans reject
+  untracked scannable source. Stage the intended complete changes or use a full scan.
+- `--update-baseline` is a deliberate reviewed exception update, not an automatic fix. Never absorb new errors merely
+  to make the gate pass.
+- Security, architecture, and performance AI prompts are read-only. `--only-ai`/`--include-ai` are explicit local
+  workspace-only operations, require the user's installed/authenticated provider CLI (Gemini by default), and cannot run
+  in CI or combine with Git modes. Do not invoke a real provider merely to verify the integration; its tests verify that CI refuses AI execution.
+- `.vscode/` recommends the extension and supplies tasks. CI uses `contents: read`, annotations/summary and report
+  artifacts retained for seven days, without PR comments, provider secrets, or schedules. Tooling is excluded from Docker.
+
+Use current code and tests to resolve stale policy prose: SQLite is supported, justified parameterized engine-specific
+SQL is legitimate, and the Nginx engine serializes changes without a mandatory global debounce. See the
+[complete scanner guide](./docs/wiki/TScanner.md).
+
 ## 5. Security Architecture & Integrations
 
 ### CrowdSec (IPS)

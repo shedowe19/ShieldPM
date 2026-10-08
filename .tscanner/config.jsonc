@@ -1,0 +1,251 @@
+{
+	"$schema": "https://unpkg.com/tscanner@0.1.3/schema.json",
+	"rules": {
+		"builtin": {
+			"max-function-length": {
+				"severity": "warning",
+				"include": [
+					"**/*.js",
+					"**/*.jsx",
+					"**/*.ts",
+					"**/*.tsx",
+					"**/*.mjs",
+					"**/*.cjs"
+				],
+				"maxLength": 100
+			},
+			"max-params": {
+				"severity": "warning",
+				"include": [
+					"**/*.js",
+					"**/*.jsx",
+					"**/*.ts",
+					"**/*.tsx",
+					"**/*.mjs",
+					"**/*.cjs"
+				],
+				"maxParams": 8
+			},
+			"no-unreachable-code": {
+				"severity": "error",
+				"include": [
+					"**/*.js",
+					"**/*.jsx",
+					"**/*.ts",
+					"**/*.tsx",
+					"**/*.mjs",
+					"**/*.cjs"
+				]
+			},
+			"no-constant-condition": {
+				"severity": "warning",
+				"include": [
+					"**/*.js",
+					"**/*.jsx",
+					"**/*.ts",
+					"**/*.tsx",
+					"**/*.mjs",
+					"**/*.cjs"
+				]
+			},
+			"no-useless-catch": {
+				"severity": "warning",
+				"include": [
+					"**/*.js",
+					"**/*.jsx",
+					"**/*.ts",
+					"**/*.tsx",
+					"**/*.mjs",
+					"**/*.cjs"
+				]
+			},
+			"no-empty-class": {
+				"severity": "warning",
+				"include": [
+					"**/*.js",
+					"**/*.jsx",
+					"**/*.ts",
+					"**/*.tsx",
+					"**/*.mjs",
+					"**/*.cjs"
+				]
+			},
+			"no-empty-interface": {
+				"severity": "warning",
+				"include": [
+					"**/*.js",
+					"**/*.jsx",
+					"**/*.ts",
+					"**/*.tsx",
+					"**/*.mjs",
+					"**/*.cjs"
+				]
+			},
+			"no-floating-promises": {
+				"severity": "warning",
+				"include": [
+					"frontend/src/**/*.ts",
+					"frontend/src/**/*.tsx"
+				]
+			},
+			"no-unnecessary-type-assertion": {
+				"severity": "warning",
+				"include": [
+					"frontend/src/**/*.ts",
+					"frontend/src/**/*.tsx"
+				]
+			}
+		},
+		"regex": {},
+		"script": {
+			"backend-esm": {
+				"command": "node script-rules/architecture.mjs",
+				"message": "Use ESM in backend production modules.",
+				"severity": "error",
+				"include": [
+					"backend/**/*.js",
+					"backend/**/*.mjs"
+				],
+				"timeout": 60,
+				"options": {
+					"policy": "backend-esm"
+				}
+			},
+			"structured-backend-errors": {
+				"command": "node script-rules/architecture.mjs",
+				"message": "Use the central error factory for backend service and route errors.",
+				"severity": "error",
+				"include": [
+					"backend/internal/**/*.js",
+					"backend/routes/**/*.js"
+				],
+				"timeout": 60,
+				"options": {
+					"policy": "structured-backend-errors"
+				}
+			},
+			"component-api-hooks": {
+				"command": "node script-rules/architecture.mjs",
+				"message": "Use API hooks for component network requests.",
+				"severity": "error",
+				"include": [
+					"frontend/src/components/**/*.ts",
+					"frontend/src/components/**/*.tsx",
+					"frontend/src/components/**/*.js",
+					"frontend/src/components/**/*.jsx",
+					"frontend/src/modals/**/*.ts",
+					"frontend/src/modals/**/*.tsx",
+					"frontend/src/modals/**/*.js",
+					"frontend/src/modals/**/*.jsx",
+					"frontend/src/pages/**/*.ts",
+					"frontend/src/pages/**/*.tsx",
+					"frontend/src/pages/**/*.js",
+					"frontend/src/pages/**/*.jsx"
+				],
+				"timeout": 60,
+				"options": {
+					"policy": "component-api-hooks"
+				}
+			},
+			"centralized-nginx-reload": {
+				"command": "node script-rules/architecture.mjs",
+				"message": "Route Nginx reloads through the central configuration service.",
+				"severity": "error",
+				"include": [
+					"backend/**/*.js",
+					"backend/**/*.mjs"
+				],
+				"timeout": 60,
+				"options": {
+					"policy": "centralized-nginx-reload"
+				}
+			}
+		}
+	},
+	"aiRules": {
+		"security-review": {
+			"prompt": "security.md",
+			"mode": "agentic",
+			"message": "ShieldPM security review finding",
+			"severity": "warning",
+			"include": [
+				"backend/**/*.js",
+				"frontend/src/**/*.ts",
+				"frontend/src/**/*.tsx",
+				"scripts/**/*.mjs",
+				"scripts/**/*.js"
+			],
+			"timeout": 180
+		},
+		"architecture-review": {
+			"prompt": "architecture.md",
+			"mode": "agentic",
+			"message": "ShieldPM architecture review finding",
+			"severity": "warning",
+			"include": [
+				"backend/**/*.js",
+				"frontend/src/**/*.ts",
+				"frontend/src/**/*.tsx",
+				"scripts/**/*.mjs",
+				"scripts/**/*.js"
+			],
+			"timeout": 180
+		},
+		"performance-review": {
+			"prompt": "performance.md",
+			"mode": "agentic",
+			"message": "ShieldPM performance review finding",
+			"severity": "info",
+			"include": [
+				"backend/**/*.js",
+				"frontend/src/**/*.ts",
+				"frontend/src/**/*.tsx",
+				"scripts/**/*.mjs",
+				"scripts/**/*.js"
+			],
+			"timeout": 180
+		}
+	},
+	"ai": {
+		"provider": "gemini"
+	},
+	"files": {
+		"include": [
+			"**/*.js",
+			"**/*.jsx",
+			"**/*.ts",
+			"**/*.tsx",
+			"**/*.mjs",
+			"**/*.cjs"
+		],
+		"exclude": [
+			"**/node_modules/**",
+			"**/dist/**",
+			"**/build/**",
+			"**/coverage/**",
+			"**/.git/**",
+			"**/.agent/**",
+			".tscanner/**",
+			"docs/**",
+			"data/**",
+			"rootfs/data/**",
+			"**/*.test.*",
+			"**/*.spec.*",
+			"**/test/**",
+			"**/tests/**",
+			"**/e2e/**",
+			"**/*.d.ts",
+			"**/*.min.js"
+		]
+	},
+	"codeEditor": {
+		"highlightErrors": true,
+		"highlightWarnings": true,
+		"highlightInfos": true,
+		"highlightHints": true,
+		"autoScanInterval": 0,
+		"autoAiScanInterval": 0,
+		"startupScan": "fresh",
+		"startupAiScan": "off"
+	}
+}

@@ -1,0 +1,85 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "TScanner: Install pinned dependencies",
+      "type": "process",
+      "command": "npx",
+      "windows": {
+        "command": "npx.cmd"
+      },
+      "args": [
+        "--yes",
+        "--package",
+        "yarn@1.22.22",
+        "yarn",
+        "--cwd",
+        ".tscanner",
+        "install",
+        "--frozen-lockfile",
+        "--ignore-scripts",
+        "--production=false"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "TScanner: Scan full project",
+      "type": "process",
+      "command": "node",
+      "args": ["scripts/ci/tscanner.mjs", "--report-dir", ".tscanner/reports"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "TScanner: Scan staged changes",
+      "type": "process",
+      "command": "node",
+      "args": [
+        "scripts/ci/tscanner.mjs",
+        "--staged",
+        "--report-dir",
+        ".tscanner/reports"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "TScanner: Scan uncommitted changes",
+      "type": "process",
+      "command": "node",
+      "args": [
+        "scripts/ci/tscanner.mjs",
+        "--uncommitted",
+        "--report-dir",
+        ".tscanner/reports"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "TScanner: Run local AI review",
+      "detail": "Explicit AI scan using your locally configured provider; requires its CLI and credentials.",
+      "type": "process",
+      "command": "node",
+      "args": [
+        "scripts/ci/tscanner.mjs",
+        "--include-ai",
+        "--report-dir",
+        ".tscanner/reports"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

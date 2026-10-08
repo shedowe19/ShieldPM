@@ -10,17 +10,26 @@ const noticeGenerator = join(repoRoot, "scripts/generate-notices.js");
 const extraNotices = join(repoRoot, "scripts/third-party-notices-extra.txt");
 const temporaryDirectories = [];
 
-const createFixture = (licenseCheckFails) => {
+const createFixture = (licenseCheckFails, { scannerScanFails = false, missingScannerLicense = false } = {}) => {
 	const root = fs.mkdtempSync(join(tmpdir(), "shieldpm-notices-"));
 	temporaryDirectories.push(root);
 	const scriptsDirectory = join(root, "scripts");
 	const binDirectory = join(root, "bin");
 	const noticesPath = join(root, "THIRD-PARTY-NOTICES.md");
+	const scanLogPath = join(root, "license-scans.jsonl");
 
 	fs.mkdirSync(scriptsDirectory, { recursive: true });
 	fs.mkdirSync(binDirectory, { recursive: true });
 	fs.mkdirSync(join(root, "backend"));
 	fs.mkdirSync(join(root, "frontend"));
+	fs.mkdirSync(join(root, ".tscanner"));
+	fs.writeFileSync(
+		join(root, ".tscanner/package.json"),
+		JSON.stringify({
+			private: true,
+			devDependencies: { "@babel/parser": "8.0.7", "@babel/traverse": "8.0.7", tscanner: "0.1.3" },
+		}),
+	);
 	fs.copyFileSync(noticeGenerator, join(scriptsDirectory, "generate-notices.js"));
 	fs.copyFileSync(extraNotices, join(scriptsDirectory, "third-party-notices-extra.txt"));
 	fs.writeFileSync(noticesPath, "# Existing notices\n\nDo not overwrite this on a failed scan.\n");
@@ -28,16 +37,22 @@ const createFixture = (licenseCheckFails) => {
 		join(binDirectory, "license-checker"),
 		[
 			`#!${process.execPath}`,
-			`if (${licenseCheckFails}) {`,
+			'const fs = require("node:fs");',
+			'const path = require("node:path");',
+			`fs.appendFileSync(${JSON.stringify(scanLogPath)}, JSON.stringify({ cwd: process.cwd(), args: process.argv.slice(2) }) + "\\n");`,
+			'const scanner = path.basename(process.cwd()) === ".tscanner";',
+			`if (${licenseCheckFails} || (scanner && ${scannerScanFails})) {`,
 			'	process.stderr.write("license-checker failed\\n");',
 			"	process.exit(17);",
 			"}",
-			'process.stdout.write(JSON.stringify({ "fixture-package@1.2.3": { licenses: "MIT" } }));',
+			'const licenses = scanner ? { "@babel/parser@8.0.7": { licenses: "MIT" }, "@babel/traverse@8.0.7": { licenses: "MIT" }, "tscanner@0.1.3": { licenses: "MIT" }, "transitive-fixture@9.0.0": { licenses: "BSD-2-Clause" }, "shieldpm-code-scanning@1.0.0": { licenses: "UNLICENSED", private: true } } : { "fixture-package@1.2.3": { licenses: "MIT" } };',
+			`if (scanner && ${missingScannerLicense}) delete licenses["tscanner@0.1.3"];`,
+			"process.stdout.write(JSON.stringify(licenses));",
 		].join("\n"),
 	);
 	fs.chmodSync(join(binDirectory, "license-checker"), 0o755);
 
-	return { binDirectory, noticesPath, root };
+	return { binDirectory, noticesPath, root, scanLogPath };
 };
 
 const executeGenerator = (fixture) =>
@@ -71,6 +86,62 @@ describe("third-party notice generator", () => {
 		expect(result.status).toBe(0);
 		expect(fs.readFileSync(fixture.noticesPath, "utf8")).toContain(
 			"[fixture-package@1.2.3](https://www.npmjs.com/package/fixture-package/v/1.2.3) - MIT",
+		);
+	});
+	it("scans code-scanning tools as development dependencies after the four application scans", () => {
+		const fixture = createFixture(false);
+		expect(executeGenerator(fixture).status).toBe(0);
+		const scans = fs.readFileSync(fixture.scanLogPath, "utf8").trim().split("\n").map(JSON.parse);
+		expect(scans.map(({ cwd }) => cwd)).toEqual([
+			join(fixture.root, "backend"),
+			join(fixture.root, "backend"),
+			join(fixture.root, "frontend"),
+			join(fixture.root, "frontend"),
+			join(fixture.root, ".tscanner"),
+		]);
+		expect(scans.map(({ args }) => args)).toEqual([
+			["--start", ".", "--json", "--direct", "--production"],
+			["--start", ".", "--json", "--direct", "--development"],
+			["--start", ".", "--json", "--direct", "--production"],
+			["--start", ".", "--json", "--direct", "--development"],
+			["--start", ".", "--json", "--direct", "--development"],
+		]);
+	});
+	it("keeps direct scanner dependencies in a separate development-only section", () => {
+		const fixture = createFixture(false);
+		expect(executeGenerator(fixture).status).toBe(0);
+		const generated = fs.readFileSync(fixture.noticesPath, "utf8");
+		const [applicationNotices, scannerNotices] = generated.split(
+			"## Code-Scanning Development Dependencies (from .tscanner/package.json)",
+		);
+		expect(applicationNotices).not.toContain("tscanner@0.1.3");
+		expect(applicationNotices).not.toContain("@babel/parser@8.0.7");
+		expect(scannerNotices).toContain("They are not included in ShieldPM's production runtime.");
+		expect(scannerNotices).toContain(
+			"[@babel/parser@8.0.7](https://www.npmjs.com/package/@babel/parser/v/8.0.7) - MIT",
+		);
+		expect(scannerNotices).toContain(
+			"[@babel/traverse@8.0.7](https://www.npmjs.com/package/@babel/traverse/v/8.0.7) - MIT",
+		);
+		expect(scannerNotices).toContain("[tscanner@0.1.3](https://www.npmjs.com/package/tscanner/v/0.1.3) - MIT");
+		expect(scannerNotices).not.toContain("transitive-fixture");
+		expect(scannerNotices).not.toContain("shieldpm-code-scanning@");
+	});
+	it("preserves existing notices when the fifth scan fails", () => {
+		const fixture = createFixture(false, { scannerScanFails: true });
+		expect(executeGenerator(fixture).status).not.toBe(0);
+		expect(fs.readFileSync(fixture.scanLogPath, "utf8").trim().split("\n")).toHaveLength(5);
+		expect(fs.readFileSync(fixture.noticesPath, "utf8")).toBe(
+			"# Existing notices\n\nDo not overwrite this on a failed scan.\n",
+		);
+	});
+	it("preserves existing notices if a declared scanner dependency is missing", () => {
+		const fixture = createFixture(false, { missingScannerLicense: true });
+		const result = executeGenerator(fixture);
+		expect(result.status).not.toBe(0);
+		expect(result.stderr).toContain("Missing installed code-scanning dependencies: tscanner");
+		expect(fs.readFileSync(fixture.noticesPath, "utf8")).toBe(
+			"# Existing notices\n\nDo not overwrite this on a failed scan.\n",
 		);
 	});
 	it("retains the feed and fixture attributions without duplication on repeated regeneration", () => {

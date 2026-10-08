@@ -75,6 +75,26 @@ The project uses **Vitest** for unit and integration testing. Run these commands
 (cd frontend && yarn test --run)
 ```
 
+### TScanner-Projektregeln
+
+TScanner ergänzt neun eingebaute Regeln, vier lokale AST-Prüfungen, Editor-Unterstützung und eine eigenständige
+CI-Prüfung mit Leserechten. Das private Entwicklungspaket gelangt nicht ins Produktionsimage. Im Repository-Root:
+
+```bash
+yarn --cwd .tscanner install --frozen-lockfile --ignore-scripts --production=false
+node scripts/ci/tscanner.mjs --validate
+node scripts/ci/tscanner.mjs
+yarn --cwd .tscanner test
+```
+
+`--branch origin/develop`, `--staged` und `--uncommitted` prüfen geänderte Zeilen. Bestehende Baseline-Fehler bleiben
+im vollständigen Bericht sichtbar; auf geänderten Zeilen gelten keine Baseline-Ausnahmen. Neue Fehler und
+Scanner-Ausführungsfehler blockieren den Lauf, Hinweise bleiben sichtbar. Die empfohlene VSCode-Extension und Aufgaben
+verwenden dasselbe Setup. Die drei lokalen AI-Reviews benötigen eine separat authentifizierte Provider-CLI und einen
+ausdrücklichen manuellen Start; sie sind in CI gesperrt und nicht mit Git-Prüfmodi kombinierbar. Die
+[vollständige TScanner-Anleitung](./TScanner.md) beschreibt Index-/Arbeitskopie-Schutz, Berichte, Baseline-Review und
+die lokale AI-Einrichtung.
+
 ## 🐳 Building the Docker Image
 
 To build the full image locally:

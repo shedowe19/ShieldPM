@@ -92,6 +92,22 @@ npx biome check .           # Prüfen
 npx biome check --write .   # Auto-Fix
 ```
 
+### TScanner-Regressionen
+
+```bash
+yarn --cwd .tscanner test
+```
+
+Die eigenen Node-Tests unter `.tscanner/tests/` prüfen AST-Regeln einschließlich Alias-/Scope-Ausnahmen und
+stdin-Protokoll, Bericht-/Baseline-Validierung sowie Index-/Arbeitskopie-Grenzen. Reale native Scannerläufe mit
+temporären Git-Repositories sichern vollständige und geänderte-Zeilen-Scans, neue Fehler trotz sichtbarer Altbefunde,
+fehlgeschlagene Skriptregeln und ungültige Quellen. Ein echter AI-Provider wird nicht aufgerufen; der Test prüft die
+Ablehnung von AI in CI vor einer Provider-Ausführung.
+
+Neue Fehler und Scanner-Ausführungswarnungen/-fehler blockieren den Wrapper. Die Bestands-Baseline gilt nur im
+vollständigen Scan, niemals auf geänderten Zeilen; normale Warnungsbefunde bleiben beratend. Die
+[TScanner-Anleitung](../../wiki/TScanner.md) beschreibt Befehle, Regelumfang und Validierungsgrenzen.
+
 ## Historische Prüfläufe des Code-Audits 2026-09
 
 Die folgenden Zahlen dokumentieren die damaligen Audit-Prüfläufe und sind keine fortlaufend aktualisierte Testinventur. Für aktuelle Zahlen die oben genannten Testbefehle ausführen und die CI-Ergebnisse des betreffenden Commits prüfen. Historischer Kontext: [Prüfbericht](./code-audit-2026-09.md).

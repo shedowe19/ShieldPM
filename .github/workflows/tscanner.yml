@@ -1,0 +1,61 @@
+name: TScanner
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Scan project conventions
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+
+      - name: Install pinned scanner dependencies
+        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/.tscanner" install --frozen-lockfile --ignore-scripts --production=false
+
+      - name: Audit scanner dependencies
+        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/.tscanner" audit --level high
+
+      - name: Test scanner integration
+        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/.tscanner" test
+
+      - name: Scan project conventions
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          args=(--report-dir .tscanner/reports)
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            if [[ ! "$PR_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+              printf 'Invalid pull request comparison commit\n' >&2
+              exit 1
+            fi
+            git cat-file -e "$PR_BASE_SHA^{commit}"
+            args+=(--branch "$PR_BASE_SHA")
+          fi
+          node scripts/ci/tscanner.mjs "${args[@]}"
+
+      - name: Preserve scanner reports
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: tscanner-reports
+          path: .tscanner/reports/**
+          if-no-files-found: ignore
+          retention-days: 7

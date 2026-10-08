@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-This project (ShieldPM) incorporates the following third-party components. The licenses are collected from installed package metadata and license files by license-checker. This list includes both production dependencies and development dependencies from the backend and frontend package.json files.
+This project (ShieldPM) incorporates the following third-party components. The licenses are collected from installed package metadata and license files by license-checker. This list includes both production dependencies and development dependencies from the backend and frontend package.json files, plus the separately identified development-only code-scanning tools.
 
 For verification, each entry links to the NPM package page (e.g., https://www.npmjs.com/package/<package>/v/<version>), where the license can be confirmed in the package metadata. Note: Transitive dependencies (dependencies of dependencies) are not included, as this focuses on direct dependencies.
 
@@ -965,5 +965,13 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [whatwg-mimetype@3.0.0](https://www.npmjs.com/package/whatwg-mimetype/v/3.0.0) - MIT
 - [why-is-node-running@3.2.1](https://www.npmjs.com/package/why-is-node-running/v/3.2.1) - MIT
 - [ws@8.21.1](https://www.npmjs.com/package/ws/v/8.21.1) - MIT
+
+## Code-Scanning Development Dependencies (from .tscanner/package.json)
+
+These tools run only during development and CI. They are not included in ShieldPM's production runtime.
+
+- [@babel/parser@8.0.7](https://www.npmjs.com/package/@babel/parser/v/8.0.7) - MIT
+- [@babel/traverse@8.0.7](https://www.npmjs.com/package/@babel/traverse/v/8.0.7) - MIT
+- [tscanner@0.1.3](https://www.npmjs.com/package/tscanner/v/0.1.3) - MIT
 
 The above information reflects the installed packages as of October 8, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.

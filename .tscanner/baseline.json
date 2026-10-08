@@ -1,0 +1,415 @@
+{
+	"version": 1,
+	"sourceCommit": "2b147ef8359b4b0ccb9ee96da0b902ea484e9315",
+	"reason": "Visible existing findings at scanner introduction; review changes to this file explicitly. Changed-line scans never apply baseline allowances.",
+	"entries": [
+		{
+			"fingerprint": "04bc37c213ea0b02570f1d92e9cbd75cf6c6fe8c784090f25aa9f9fe9484035a",
+			"count": 1,
+			"file": "backend/internal/ai.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(`Failed to fetch Local models: ${err.message}`);"
+		},
+		{
+			"fingerprint": "5808dc90019d16a479b39366ea0bdacf4827900fa49a02fe27478c10c257f07c",
+			"count": 1,
+			"file": "backend/internal/ai.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "if (!res.ok) throw new Error(`Gemini Error: ${res.status} ${res.statusText}`);"
+		},
+		{
+			"fingerprint": "7e3bea4f72a4b344d3954b23616ed1a509c3389a19e26b6c83af62515204b6a3",
+			"count": 1,
+			"file": "backend/internal/ai.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "if (!config.api_key) throw new Error(\"API Key is required\");"
+		},
+		{
+			"fingerprint": "a5b855020a371dd718f9b622e06c66bc88deb991c930f5444f32a69d1b2bf264",
+			"count": 1,
+			"file": "backend/internal/ai.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"Only HTTP/HTTPS protocols are allowed for base_url\");"
+		},
+		{
+			"fingerprint": "a9d424ddc2bdd4878180b154deca3644885d5c2a4075cd829056a4f6a5487f70",
+			"count": 1,
+			"file": "backend/internal/ai.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(`Failed to fetch Gemini models: ${err.message}`);"
+		},
+		{
+			"fingerprint": "bf4f41866c55249cf9d1bddb06ac56f6c4800f8a6bad22ceff40a5ee4a2ff727",
+			"count": 1,
+			"file": "backend/internal/ai.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "if (!res.ok) throw new Error(`Local Provider Error: ${res.status} ${res.statusText}`);"
+		},
+		{
+			"fingerprint": "d46034dfdcfee0c4484a54181c22f955f895cf4923fbadde390110efc510384f",
+			"count": 1,
+			"file": "backend/internal/ai.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(`Invalid base_url: ${err.message}`);"
+		},
+		{
+			"fingerprint": "e2413cd9619fab0b98b7715ea86ebd4ff802e4a484017206564d3d3417e4c82f",
+			"count": 1,
+			"file": "backend/internal/ai.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"AI Agent is disabled.\");"
+		},
+		{
+			"fingerprint": "0ce9175744efd896db63089f343946f02e19d962cf9796dbb62955951894331f",
+			"count": 2,
+			"file": "backend/internal/ai/executor.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "if (isDemoMode()) throw new Error(\"Tor Onion Services are disabled in Demo Mode\");"
+		},
+		{
+			"fingerprint": "1e1e73782bdb47a0985ba3a4e8a732d715f83895ac858ace134e315e96e22612",
+			"count": 1,
+			"file": "backend/internal/ai/executor.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "if (isDemoMode()) throw new Error(\"Log reading is disabled in Demo Mode.\");"
+		},
+		{
+			"fingerprint": "579afa5ec0f1e0b72c0377b760cc83ffd23fb493293179ddf0e3ff24e5b88a92",
+			"count": 1,
+			"file": "backend/internal/ai/executor.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"Cloudflare Tunnel management is disabled in Demo Mode.\");"
+		},
+		{
+			"fingerprint": "5d8a5bac7eb36cf860901836799ad6cf88b868204277c357b783d411f3c89e92",
+			"count": 1,
+			"file": "backend/internal/ai/executor.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error("
+		},
+		{
+			"fingerprint": "6d7c4651aef638dbb3d71b5dd6d0db77ad7692f8136a3ae805e24000dae35e2d",
+			"count": 1,
+			"file": "backend/internal/ai/executor.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(`Forwarding to ${range} IP (${data.forward_host}) is disabled in Demo Mode.`);"
+		},
+		{
+			"fingerprint": "7f1c91b7a342002491fdd29502c456c63e322b87b32e17a915dea72b6a0b10b5",
+			"count": 1,
+			"file": "backend/internal/ai/executor.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"Advanced Nginx Configuration is disabled in Demo Mode.\");"
+		},
+		{
+			"fingerprint": "8843c98ce215362b05939e0d65a1b2dd50f1515fc91966e858f19b9eabc6cf2d",
+			"count": 1,
+			"file": "backend/internal/ai/executor.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "if (isDemoMode()) throw new Error(\"Audit Log is disabled in Demo Mode.\");"
+		},
+		{
+			"fingerprint": "9f9675c1d6c1e0bd8f7f6f6557029dc94fddbef1f353abe04d901ac0d9065124",
+			"count": 2,
+			"file": "backend/internal/ai/executor.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"User management is disabled in Demo Mode.\");"
+		},
+		{
+			"fingerprint": "a17c033cf3a9e35ff86b0ecbd53167d00fe6027c3aa83f3d2484f92b42fb5738",
+			"count": 1,
+			"file": "backend/internal/ai/executor.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"Forwarding to internal services (localhost/db/local) is disabled in Demo Mode.\");"
+		},
+		{
+			"fingerprint": "e12bfefbc953f45d755d94c574899bcc01010b9ca1ccb801edc5ea49000692fc",
+			"count": 1,
+			"file": "backend/internal/ai/executor.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "if (isDemoMode()) throw new Error(\"User listing is disabled in Demo Mode.\");"
+		},
+		{
+			"fingerprint": "fe1a3f3d0b44259595c03e731914403c14c3d9bbe07f97e1c38c92ee31749687",
+			"count": 1,
+			"file": "backend/internal/ai/executor.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"Local Path forwarding is disabled in Demo Mode.\");"
+		},
+		{
+			"fingerprint": "221327e82ac977c5188ba931779e1f398dc971a5e5cd1e955fc38e153c5bb23c",
+			"count": 1,
+			"file": "backend/internal/ai/providers.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(`Local LLM Error: ${res.status} - ${err}`);"
+		},
+		{
+			"fingerprint": "4e266a780223670502617fe75979aca2433b91e26cd38a6e743e744a09ce16c2",
+			"count": 1,
+			"file": "backend/internal/ai/providers.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "if (!config.api_key) throw new Error(\"Gemini API Key is missing\");"
+		},
+		{
+			"fingerprint": "8c7b8d6594fdf72e89501f03ae47ace1cdcc1505096eabad02adfde5bf4222d4",
+			"count": 1,
+			"file": "backend/internal/ai/providers.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(`Local LLM Result Error: ${res.status} - ${err}`);"
+		},
+		{
+			"fingerprint": "ae3032e14dec6287cd298c1a52ce33c93bd7a441c582a1d23c6e83d9b3a20f37",
+			"count": 2,
+			"file": "backend/internal/ai/providers.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(`Invalid base_url: ${err.message}`);"
+		},
+		{
+			"fingerprint": "bffd0cc987266bc4ab1c9a2303f582a9bed2d62c8e4ce41eff524986628501da",
+			"count": 1,
+			"file": "backend/internal/ai/providers.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"Only HTTP/HTTPS protocols are allowed for base_url\");"
+		},
+		{
+			"fingerprint": "2d8553c4bde4534a80735f68df7e3db46a8f353266987d6ab935b0f816612a74",
+			"count": 1,
+			"file": "backend/internal/ddns.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "if (!token) throw new Error(\"Missing DuckDNS Token\");"
+		},
+		{
+			"fingerprint": "3a4b5b298a10168510342963e048ec34c7a28b41629d55c620ba5d2c2eaea5d3",
+			"count": 1,
+			"file": "backend/internal/ddns.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(`SSRF: Only HTTP(S) protocols allowed, got ${parsed.protocol}`);"
+		},
+		{
+			"fingerprint": "750c5c183b119ded650e2ce962f5b462b4675de8cc4bbdce3309a20b2f39154b",
+			"count": 1,
+			"file": "backend/internal/ddns.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(`Cloudflare List Error for ${domain} (${type}): ${JSON.stringify(listData.errors)}`);"
+		},
+		{
+			"fingerprint": "753dc8d232389a5c2fab78e8a054196ca042c7d3d29f94b20c6002be075fe424",
+			"count": 1,
+			"file": "backend/internal/ddns.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "if (!handler) throw new Error(`Unknown provider: ${provider.provider}`);"
+		},
+		{
+			"fingerprint": "7d6d6d0ce651763ea9b3a2d9a3deafdc66492653f86b25686e129e0894fc8cc5",
+			"count": 1,
+			"file": "backend/internal/ddns.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"No WAN IP available for the selected IP version\");"
+		},
+		{
+			"fingerprint": "825e9b105302a8bc380f1235bd7841e6cab42395f3775889cacc04f5a6bfc7dd",
+			"count": 1,
+			"file": "backend/internal/ddns.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(`DuckDNS Error: ${text}`);"
+		},
+		{
+			"fingerprint": "906de4e419e4ccb1213bbb7020037dacb5f0efa6c3f7f6f15328e7597560f5c8",
+			"count": 1,
+			"file": "backend/internal/ddns.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "if (!url) throw new Error(\"Missing Custom URL\");"
+		},
+		{
+			"fingerprint": "93c1bb8b89f65d1cfbc645c1c8c99766d6a6f404aa8a3a71b9787b93e3ba7994",
+			"count": 1,
+			"file": "backend/internal/ddns.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "if (!token || !zone_id) throw new Error(\"Missing Cloudflare Token or Zone ID\");"
+		},
+		{
+			"fingerprint": "965b13b475225eafff0fc13d49af5d82b9de6d4364480007cfafc162bd82f61e",
+			"count": 1,
+			"file": "backend/internal/ddns.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"SSRF: Private or reserved IP addresses are not allowed\");"
+		},
+		{
+			"fingerprint": "d7f49350ac36c5f48159bbca2239e721ebd17ac8b4c664c70d86623840160fea",
+			"count": 1,
+			"file": "backend/internal/ddns.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(`Cloudflare Update Error for ${domain} (${type}): ${JSON.stringify(updateData.errors)}`);"
+		},
+		{
+			"fingerprint": "e2d06b2d516c8f58375dfcd4bba8a3b0f90f3e7c97340a962c9f3f1a4e67e5d4",
+			"count": 1,
+			"file": "backend/internal/ddns.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"SSRF: Cloud metadata URLs are not allowed\");"
+		},
+		{
+			"fingerprint": "f76e22292045918fc5749bf07f4630cb3dd62cf9ec50bfb01b0369de9607dd57",
+			"count": 1,
+			"file": "backend/internal/ddns.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"SSRF: Localhost URLs are not allowed\");"
+		},
+		{
+			"fingerprint": "7bee4efbdc506960b42e9c3d044a39d22f2381505b64cea2ef7409b2af8afd36",
+			"count": 1,
+			"file": "backend/internal/docker.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"Invalid Docker bandwidth limit\");"
+		},
+		{
+			"fingerprint": "8f0264796922518bd9d33940bf0d7244641cf61df7769680602f73ada5ffb12d",
+			"count": 1,
+			"file": "backend/internal/docker.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"Invalid Docker forwarding scheme\");"
+		},
+		{
+			"fingerprint": "b50796a02c014f93a66ee1cab6d53c02ebff223ae8204b45dd43c9cc690dbf45",
+			"count": 1,
+			"file": "backend/internal/docker.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "if (forwardQuery && /[\"\\\\\\r\\n\\0]/.test(forwardQuery)) throw new Error(\"Invalid Docker forward query\");"
+		},
+		{
+			"fingerprint": "b988bb8df55a7d112de1bf3db286ba5d6e648abc499929e0a257085592691040",
+			"count": 1,
+			"file": "backend/internal/docker.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"Invalid Docker rate limit unit\");"
+		},
+		{
+			"fingerprint": "d0f97514ee9f222fb97432617283028bb84c737e07741cd8268cae47d218a928",
+			"count": 1,
+			"file": "backend/internal/docker.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"Invalid Docker forwarding port\");"
+		},
+		{
+			"fingerprint": "fbabaab6375cc38a097cd6bb9ab373aced4abbcf73c8909e9c8d6a4c347b19c5",
+			"count": 1,
+			"file": "backend/internal/docker.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"Invalid Docker numeric label\");"
+		},
+		{
+			"fingerprint": "0cf70f76487098a67cfca58ed6cc48a992a9ee430f2b5b9dad41046170bfe6da",
+			"count": 1,
+			"file": "backend/internal/tor.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"Tor refused to stop the onion service\");"
+		},
+		{
+			"fingerprint": "2ea4c22c723f03a971e29842dcb82da42ddf9e9b6ad250550129c54c2ef5bab6",
+			"count": 1,
+			"file": "backend/internal/tor.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"Invalid private_key: malformed ED25519-V3 key.\");"
+		},
+		{
+			"fingerprint": "adc992c50f4ff40212d7b2ba03411eba8213cb98390b9efc16a0238cd031e21f",
+			"count": 1,
+			"file": "backend/internal/tor.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"Tor control password file not found\");"
+		},
+		{
+			"fingerprint": "b57bc380b6303debbb254d29353fea780d9a84aa6a707ee761db649e6c418718",
+			"count": 1,
+			"file": "backend/internal/tor.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"Invalid private_key: control characters not allowed.\");"
+		},
+		{
+			"fingerprint": "6451e59266a8e3ec67066ad37c67cd0862547b1418e373842407fad4ea8fd20e",
+			"count": 1,
+			"file": "backend/internal/upload-relay.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw TypeError in backend services and routes.",
+			"lineText": "if (typeof fetchImpl !== \"function\") throw new TypeError(\"Upload relay needs a fetch implementation\");"
+		},
+		{
+			"fingerprint": "5ad085f42e360a56d6410a3a328d739c09bd636f7612674904f365912b01c0d6",
+			"count": 1,
+			"file": "backend/internal/wireguard.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"WireGuard is not available on this system\");"
+		},
+		{
+			"fingerprint": "a6375449e35895c4f14741a1147720ab3f09e792d760f1856f6cb15e6c7f92c2",
+			"count": 1,
+			"file": "backend/internal/wireguard.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"No available IPs in WireGuard subnet\");"
+		},
+		{
+			"fingerprint": "b773b5e8103535e2d0a75a32c0b17b89230cabf4daf91c6cc2698e58dba23000",
+			"count": 4,
+			"file": "backend/internal/wireguard.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"Peer not found\");"
+		},
+		{
+			"fingerprint": "df4aa02cedbed4b03de153c09e82536d5c77345d167d94e8c1f528907e837205",
+			"count": 1,
+			"file": "backend/internal/wireguard.js",
+			"rule": "structured-backend-errors",
+			"message": "Use the errs factory instead of throwing raw Error in backend services and routes.",
+			"lineText": "throw new Error(\"QR code generation is not available. Ensure the 'qrcode' npm package is installed.\");"
+		}
+	]
+}
