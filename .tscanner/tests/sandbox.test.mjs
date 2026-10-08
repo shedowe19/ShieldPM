@@ -4,6 +4,7 @@ import fs from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import { buildRunnerConfig, verifyRunnerSandbox } from "../providers/codex.mjs";
 
 function fixture(context) {
@@ -90,7 +91,7 @@ test("missing authentication and unsupported profiles fail before a review witho
 
 test("sandbox verification CLI hides provider output and refuses unrelated command arguments", (context) => {
 	const f = fixture(context);
-	const adapter = path.resolve(".tscanner/providers/codex.mjs");
+	const adapter = fileURLToPath(new URL("../providers/codex.mjs", import.meta.url));
 	const run = (args, changes = {}) =>
 		spawnSync(process.execPath, [adapter, ...args], {
 			cwd: f.root,
