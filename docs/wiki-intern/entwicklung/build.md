@@ -49,6 +49,8 @@ Vom Docker-Workflow erfasste Pushes auf `develop` veröffentlichen nach erfolgre
 
 Vor dem isolierten Anwendungstest ruft der Docker-Workflow in beiden Architektur-Jobs `scripts/ci/geoip-update-smoke.sh` auf. Dieser separate Test führt den echten GeoIP-Helfer des gebauten Images mit Netzwerkzugriff zweimal auf demselben temporären Datenvolume aus: zunächst für alle drei fehlenden Datenbanken, danach für eine erneute Latest-Release-Prüfung. Bei unverändertem Release müssen SHA-256, Größe, Inode und Änderungszeit erhalten bleiben und erneute Asset-Downloads ausbleiben; ein inzwischen geänderter Release-Snapshot darf entsprechend aktualisierte Dateien liefern. Dabei werden keine Anwendungsdienste gestartet.
 
+Der Online-Smoke erhält den vorhandenen Workflow-Token als `GEOIP_GITHUB_TOKEN` ausschließlich für die Release-Metadatenanfrage; das Skript übergibt Docker nur den Variablennamen. Dadurch nutzt dieser Check nicht die anonyme GitHub-API-Quote der gemeinsam genutzten Runner-IP. Asset-Downloads bleiben öffentlich. Ein gültiger Altbestand nach einem Anbieterfehler reicht für diesen Check weiterhin nicht: Beide Durchläufe müssen die Latest-Metadaten erfolgreich prüfen. Ein HTTP 403 beim zweiten x86_64-Durchlauf von PR #150 ließ am 8. Oktober 2026 den Image-Build bestehen, aber den Smoke mit dieser Prüfung korrekt scheitern; die damaligen Logs enthielten keine Response-Header und belegen die genaue Ursache des 403 nicht.
+
 Anschließend führt `scripts/ci/docker-smoke.sh` in beiden Architektur-Jobs einen echten Containerstart mit PUID/PGID `0` und `1000` aus: Bei Pull Requests aus dem lokal geladenen Image, bei Pushes aus dem veröffentlichten Architekturbild. Die Runner `ubuntu-latest` und `ubuntu-24.04-arm` passen nativ zu ihren Images; QEMU ist dafür nicht erforderlich. Jeder Container erhält ein eigenes temporäres Datenvolume und `--network none`. `TZ=UTC`, deaktiviertes IPv6, `SKIP_IP_RANGES=true` und der ausdrückliche GeoIP-Opt-out `GEOIP_AUTO_UPDATE=false` halten diesen Anwendungstest unabhängig von externen Diensten.
 
 Ein ausdrücklich als Testfixture gekennzeichneter Marker im ACME-Account-Verzeichnis überspringt ausschließlich die sonst vor dem Dienststart versuchte Registrierung. Er enthält keine Zugangsdaten und ist kein nutzbarer ACME-Account. Die Prüfung wartet höchstens 180 Sekunden pro Container auf den vorhandenen Healthcheck. Anschließend prüft sie als jeweilige Service-UID den Backend-Socket, schreibt in die generierte Standardkonfiguration und das Certbot-Plugin-Verzeichnis, führt `nginx -tq`, Reload und Healthcheck aus und kontrolliert, dass `/run`, `/tmp` und `/usr/local` weiterhin Root gehören. Bei Fehlern werden Status und begrenzte Containerlogs ausgegeben; Container, Volumes und lokale Fixtures werden auch im Fehlerfall entfernt. Der Workflow-Schritt ist zusätzlich auf zehn Minuten begrenzt.
@@ -94,6 +96,13 @@ erweiterte Build mit 1.275.682 Byte gemessen: 29.439 Byte beziehungsweise rund 2
 JavaScript-Assets. Das Gesamtbudget wurde deshalb von 1.255.000 auf 1.285.000 Byte angepasst. Die Grenzwerte für
 den größten JavaScript-Chunk und die Stylesheets blieben unverändert; die gemessenen 284.537 beziehungsweise
 16.310 Byte liegen weiterhin innerhalb dieser Grenzen.
+
+Das Dependency-Update in PR #150 wurde gegen den abschließenden `develop`-Stand von PR #149 gemessen:
+1.284.756 Byte vor und 1.285.712 Byte nach dem Update, also 956 Byte beziehungsweise rund 0,074 % zusätzliche
+komprimierte JavaScript-Assets. Beide Quality-Läufe des Update-Commits bestätigten die neue Baseline. Das bisherige
+Gesamtbudget hatte vor dem Update nur 244 Byte Spielraum; es wird deshalb von 1.285.000 auf 1.290.000 Byte
+angepasst. Der neue Grenzwert lässt 4.288 Byte Spielraum über der verifizierten Baseline. Der größte
+JavaScript-Chunk (284.601 Byte) und die Stylesheets (16.325 Byte) bleiben innerhalb ihrer unveränderten Limits.
 
 ## Native / LXC Build
 

@@ -51,6 +51,8 @@ Built-in analytics are enabled by default. GoAccess is **off** by default (`GOA=
 
 ShieldPM prepares `GeoLite2-Country.mmdb`, `GeoLite2-City.mmdb`, and `GeoLite2-ASN.mmdb` in `/data/nginx` automatically before services start. The default `GEOIP_AUTO_UPDATE=true` checks the [latest GeoLite.mmdb release](https://github.com/shedowe19/GeoLite.mmdb/releases/latest) on the first start and every later start. This needs no MaxMind account, license key, or separate updater container.
 
+If a shared public IP reaches GitHub's anonymous API rate limit, an optional `GEOIP_GITHUB_TOKEN` authenticates only the exact latest-release metadata request. It is never forwarded to redirects or database assets. Leave it unset for the default public download; keep any configured token private.
+
 Files already matching the release's size, SHA-256 digest, and database validation are reused. New files are staged and all three databases verified before replacement: the native MMDB reader must open each file with the expected database type and format. If downloading or verification fails, a complete valid previous cache permits startup with a warning; without that cache, startup stops before services run. Unsafe destination paths, another running updater, or incomplete recovery also stop startup. Automatic updates run during startup.
 
 Downloading the files is independent of module activation. To use country statistics and the firewall's country/ASN lookups, enable the GeoIP2 module.

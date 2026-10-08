@@ -55,8 +55,12 @@ describe("Dependabot security resolutions", () => {
 		assertPatched("backend/yarn.lock", "@grpc/grpc-js", "1.14.5");
 		assertPatched("backend/yarn.lock", "ip-address", "10.7.3");
 		assertPatched("backend/yarn.lock", "qs", "6.16.0");
+		assertPatched("backend/yarn.lock", "proxy-addr", "2.0.8");
+		assertPatched("backend/yarn.lock", "source-map-js", "1.2.2");
 		assertPatched("backend/yarn.lock", "nanoid", "3.3.18");
 		assertPatched("backend/yarn.lock", "js-yaml", "4.3.2");
 		assertPatched("frontend/yarn.lock", "d3-color", "3.1.0");
+		assertPatched("frontend/yarn.lock", "source-map-js", "1.2.2");
+		assertPatched("frontend/yarn.lock", "seroval", "1.6.3");
 	});
 });

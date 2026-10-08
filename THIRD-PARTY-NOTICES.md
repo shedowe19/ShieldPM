@@ -293,7 +293,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [postgres-interval@1.2.0](https://www.npmjs.com/package/postgres-interval/v/1.2.0) - MIT
 - [process@0.11.10](https://www.npmjs.com/package/process/v/0.11.10) - MIT
 - [protobufjs@7.6.5](https://www.npmjs.com/package/protobufjs/v/7.6.5) - BSD-3-Clause
-- [proxy-addr@2.0.7](https://www.npmjs.com/package/proxy-addr/v/2.0.7) - MIT
+- [proxy-addr@2.0.8](https://www.npmjs.com/package/proxy-addr/v/2.0.8) - MIT
 - [proxy-agent-negotiate@1.1.0](https://www.npmjs.com/package/proxy-agent-negotiate/v/1.1.0) - MIT
 - [proxy-agent@8.0.2](https://www.npmjs.com/package/proxy-agent/v/8.0.2) - MIT
 - [proxy-from-env@2.1.0](https://www.npmjs.com/package/proxy-from-env/v/2.1.0) - MIT
@@ -438,7 +438,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [rolldown@1.2.13](https://www.npmjs.com/package/rolldown/v/1.2.13) - MIT
 - [set-blocking@2.0.0](https://www.npmjs.com/package/set-blocking/v/2.0.0) - ISC
 - [shieldpm@4.4.1](https://www.npmjs.com/package/shieldpm/v/4.4.1) - UNLICENSED
-- [source-map-js@1.2.1](https://www.npmjs.com/package/source-map-js/v/1.2.1) - BSD-3-Clause
+- [source-map-js@1.2.2](https://www.npmjs.com/package/source-map-js/v/1.2.2) - BSD-3-Clause
 - [std-env@4.2.0](https://www.npmjs.com/package/std-env/v/4.2.0) - MIT
 - [tinybench@6.2.0](https://www.npmjs.com/package/tinybench/v/6.2.0) - MIT
 - [tinyexec@1.3.1](https://www.npmjs.com/package/tinyexec/v/1.3.1) - MIT
@@ -940,7 +940,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [rolldown@1.2.13](https://www.npmjs.com/package/rolldown/v/1.2.13) - MIT
 - [sass@1.105.1](https://www.npmjs.com/package/sass/v/1.105.1) - MIT
 - [seroval-plugins@1.5.6](https://www.npmjs.com/package/seroval-plugins/v/1.5.6) - MIT
-- [seroval@1.5.6](https://www.npmjs.com/package/seroval/v/1.5.6) - MIT
+- [seroval@1.6.3](https://www.npmjs.com/package/seroval/v/1.6.3) - MIT
 - [shieldpm@4.4.1](https://www.npmjs.com/package/shieldpm/v/4.4.1) - UNLICENSED
 - [signal-exit@3.0.7](https://www.npmjs.com/package/signal-exit/v/3.0.7) - ISC
 - [solid-js@1.9.15](https://www.npmjs.com/package/solid-js/v/1.9.15) - MIT

@@ -27,9 +27,38 @@ const namedStep = (name) => {
 };
 
 describe("npm dependency update workflow", () => {
+	it("skips the updater before installing tools when its dependency proposal is already open", () => {
+		const guardJob = workflow.split("  check-open-pr:\n")[1].split("  update-dependencies:\n")[0];
+		const updaterJob = workflow.split("  update-dependencies:\n")[1];
+
+		expect(guardJob).toContain("pull-requests: read");
+		expect(guardJob).toContain("can_update: $" + "{{ steps.guard.outputs.can_update }}");
+		expect(guardJob).toContain("run: bash scripts/ci/dependency-update-guard.sh");
+		expect(guardJob).not.toContain("yarn install");
+		expect(updaterJob).toContain("needs: check-open-pr");
+		expect(updaterJob).toContain("if: needs.check-open-pr.outputs.can_update == 'true'");
+		expect(workflow).toMatch(/concurrency:\s+group: npm-dependency-updates\s+cancel-in-progress: false/);
+	});
+
+	it("rechecks open proposals after verification and gates both the PR body and branch publication", () => {
+		const guard = namedStep("Recheck dependency pull request before publication");
+		const publicationCondition =
+			"if: steps.check_changes.outputs.updates_found == 'true' && steps.publish_guard.outputs.can_update == 'true'";
+
+		expect(guard).toContain("id: publish_guard");
+		expect(guard).toContain("GH_TOKEN: $" + "{{ github.token }}");
+		expect(guard).toContain("run: bash scripts/ci/dependency-update-guard.sh");
+		expect(workflow.indexOf("      - name: Recheck dependency pull request before publication\n")).toBeGreaterThan(
+			workflow.indexOf("      - name: Run dependency verification\n"),
+		);
+		expect(namedStep("Prepare PR Body")).toContain(publicationCondition);
+		expect(namedStep("Create Pull Request")).toContain(publicationCondition);
+	});
+
 	it("requires full Git history before running the verification suite", () => {
 		const checkout = workflow.split("      - name: Checkout Repository\n")[1].split("      - name:")[0];
 
+		expect(checkout).toContain("ref: develop");
 		expect(checkout).toContain("fetch-depth: 0");
 	});
 

@@ -191,6 +191,7 @@ jobs:
         timeout-minutes: 10
         env:
           SMOKE_IMAGE: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
+          GEOIP_GITHUB_TOKEN: ${{ github.token }}
         run: |
           docker image inspect "$SMOKE_IMAGE" >/dev/null 2>&1 || docker pull "$SMOKE_IMAGE"
           bash scripts/ci/geoip-update-smoke.sh "$SMOKE_IMAGE"

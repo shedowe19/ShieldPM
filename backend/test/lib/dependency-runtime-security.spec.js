@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { createRequire } from "node:module";
 import { createServer } from "node:net";
@@ -7,6 +8,11 @@ import { describe, expect, it } from "vitest";
 
 const requireFromTest = createRequire(import.meta.url);
 const uri = createRequire(requireFromTest.resolve("ajv"))("fast-uri");
+const proxyAddresses = createRequire(requireFromTest.resolve("express"))("proxy-addr");
+const requireFromVite = createRequire(requireFromTest.resolve("vite"));
+const requireFromPostcss = createRequire(requireFromVite.resolve("postcss"));
+const sourceMapPath = requireFromPostcss.resolve("source-map-js");
+const { SourceMapConsumer, SourceMapGenerator } = requireFromPostcss("source-map-js");
 const addressConsumers = ["express-rate-limit", "socks-proxy-agent"].map((consumer) => ({
 	consumer,
 	addresses: createRequire(requireFromTest.resolve(consumer))("ip-address"),
@@ -101,6 +107,137 @@ async function readText(stream) {
 }
 
 describe("resolved dependency runtime contracts", () => {
+	describe("Express's resolved proxy trust", () => {
+		// GHSA-jqcg-44mw-7w3h: IPv4 peers must not inherit trust from native IPv6 ranges.
+		it.each([["::/1"], ["2001:db8::/32", "::/1"]])(
+			"rejects IPv4 peers for native IPv6 trust policies %j",
+			(...subnets) => {
+				const trust = proxyAddresses.compile(subnets);
+				expect(trust("10.0.0.1")).toBe(false);
+				expect(trust("::ffff:10.0.0.1")).toBe(false);
+				expect(trust("::1")).toBe(true);
+			},
+		);
+
+		it("retains IPv4, native IPv6, and explicit IPv4-mapped subnet trust", () => {
+			for (const subnets of [["10.0.0.0/8"], ["::ffff:10.0.0.0/104"], ["2001:db8::/32", "10.0.0.0/8"]]) {
+				const trust = proxyAddresses.compile(subnets);
+				expect(trust("10.2.3.4")).toBe(true);
+				expect(trust("::ffff:10.2.3.4")).toBe(true);
+				expect(trust("192.0.2.9")).toBe(false);
+				expect(trust("::ffff:192.0.2.9")).toBe(false);
+				expect(trust("::1")).toBe(false);
+			}
+			const trustIpv6 = proxyAddresses.compile(["2001:db8::/32"]);
+			expect(trustIpv6("2001:db8::1234")).toBe(true);
+			expect(trustIpv6("2001:db9::1234")).toBe(false);
+			const shortMappedRange = proxyAddresses.compile(["::ffff:10.0.0.0/8"]);
+			expect(shortMappedRange("::1")).toBe(false);
+			expect(shortMappedRange("10.2.3.4")).toBe(false);
+			expect(shortMappedRange("::ffff:10.2.3.4")).toBe(false);
+		});
+
+		it("ignores forwarded headers from cross-family peers and stops at the first untrusted hop", () => {
+			const untrusted = {
+				socket: { remoteAddress: "::ffff:192.0.2.9" },
+				headers: { "x-forwarded-for": "203.0.113.6" },
+			};
+			const trustIpv6 = proxyAddresses.compile(["::/1"]);
+			expect(proxyAddresses(untrusted, trustIpv6)).toBe("::ffff:192.0.2.9");
+			expect(proxyAddresses.all(untrusted, trustIpv6)).toEqual(["::ffff:192.0.2.9"]);
+
+			const trusted = {
+				socket: { remoteAddress: "::ffff:10.1.1.1" },
+				headers: { "x-forwarded-for": "203.0.113.6, 198.51.100.7, 10.2.3.4" },
+			};
+			const trustIpv4 = proxyAddresses.compile(["10.0.0.0/8"]);
+			expect(proxyAddresses(trusted, trustIpv4)).toBe("198.51.100.7");
+			expect(proxyAddresses.all(trusted, trustIpv4)).toEqual(["::ffff:10.1.1.1", "10.2.3.4", "198.51.100.7"]);
+		});
+	});
+
+	describe("Vite/PostCSS's resolved source maps", () => {
+		const flatMap = () => ({
+			version: 3,
+			sources: ["fixture.css"],
+			sourcesContent: [".card { color: blue; }"],
+			names: [],
+			mappings: "AAAA",
+		});
+		const indexedMap = (map, line, column = 0) => ({
+			version: 3,
+			sections: [{ offset: { line, column }, map }],
+		});
+
+		it("round-trips ordinary generated mappings and preserves indexed offsets and source content", () => {
+			const generator = new SourceMapGenerator({ file: "compiled.css" });
+			generator.addMapping({
+				generated: { line: 2, column: 4 },
+				original: { line: 5, column: 2 },
+				source: "fixture.css",
+				name: "color",
+			});
+			generator.setSourceContent("fixture.css", ".card { color: blue; }");
+			const consumer = new SourceMapConsumer(generator.toString());
+			expect(consumer.originalPositionFor({ line: 2, column: 4 })).toEqual({
+				source: "fixture.css",
+				line: 5,
+				column: 2,
+				name: "color",
+			});
+			expect(SourceMapGenerator.fromSourceMap(consumer).toJSON().mappings).toBe(generator.toJSON().mappings);
+			expect(consumer.sourceContentFor("fixture.css")).toBe(".card { color: blue; }");
+
+			const indexed = new SourceMapConsumer(indexedMap(flatMap(), 12));
+			expect(indexed.originalPositionFor({ line: 13, column: 1 })).toEqual({
+				source: "fixture.css",
+				line: 1,
+				column: 0,
+				name: null,
+			});
+			expect(indexed.sourceContentFor("fixture.css")).toBe(".card { color: blue; }");
+		});
+
+		// GHSA-68fv-2mgg-jv7q: reject amplification before flattening can allocate huge output.
+		it("rejects excessive direct/nested offsets and non-integer section coordinates", () => {
+			expect(() => new SourceMapConsumer(indexedMap(flatMap(), 2 ** 31))).toThrow(/must not exceed/);
+			const nested = indexedMap(indexedMap(indexedMap(flatMap(), 4_000_000), 4_000_000), 4_000_000);
+			expect(() => new SourceMapConsumer(nested)).toThrow(/including offsets of nested sections/);
+			for (const invalid of [Number.POSITIVE_INFINITY, -1, 0.5, "2"]) {
+				expect(() => new SourceMapConsumer(indexedMap(flatMap(), invalid))).toThrow();
+				expect(() => new SourceMapConsumer(indexedMap(flatMap(), 0, invalid))).toThrow();
+			}
+		});
+
+		it("reads deeply nested source lists within a bounded subprocess", () => {
+			const probe = spawnSync(
+				process.execPath,
+				[
+					"--max-old-space-size=64",
+					"--input-type=commonjs",
+					"-e",
+					[
+						'const assert = require("node:assert/strict");',
+						"const { SourceMapConsumer } = require(process.argv[1]);",
+						`let map = ${JSON.stringify(flatMap())};`,
+						"for (let depth = 0; depth < 40; depth++) {",
+						"map = { version: 3, sections: [{ offset: { line: 1, column: 0 }, map }] };",
+						"}",
+						"const consumer = new SourceMapConsumer(map);",
+						'assert.deepEqual(consumer.sources, ["fixture.css"]);',
+						'assert.equal(consumer.sourceContentFor("fixture.css"), ".card { color: blue; }");',
+						'process.stdout.write("nested map resolved");',
+					].join("\n"),
+					sourceMapPath,
+				],
+				{ encoding: "utf8", timeout: 3_000, maxBuffer: 64 * 1024 },
+			);
+			expect(probe.error, probe.stderr).toBeUndefined();
+			expect(probe.status, probe.stderr).toBe(0);
+			expect(probe.stdout).toBe("nested map resolved");
+		});
+	});
+
 	it("downloads FTP data with decoded credentials/path, MDTM, and EPSV-to-PASV fallback", async () => {
 		const ftp = await localFtp();
 		try {

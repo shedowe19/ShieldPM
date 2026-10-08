@@ -132,6 +132,16 @@ tatsächlichen SARIF-Ergebnisse geprüft. Die Artefaktsicherung verändert keine
 
 Der frühere `dependency-updates.yml`-Workflow wurde entfernt: Er bearbeitete ausschließlich die nicht mehr vorhandenen Dockerfile-Argumente `CSNB_VER` und `CRS_VER`. Diese Bestandteile kommen aus dem separaten Nginx-Basisimage beziehungsweise dem nativen `nginx-binaries`-Release. Der Caddy-Build meldet sich ausschließlich bei seiner Zielregistry GHCR an und benötigt keine DockerHub-Zugangsdaten.
 
+Der npm-Updater erzeugt neue Vorschläge aus `develop` und lässt eine bereits offene PR mit dem Branch
+`update-all-deps` vollständig unverändert. Ein vorgeschalteter Job mit Leserechten prüft den PR-Status über
+`scripts/ci/dependency-update-guard.sh`, bevor Update-Werkzeuge installiert oder Abhängigkeiten geändert werden.
+Eine zweite Prüfung unmittelbar vor der Veröffentlichung schützt auch Vorschläge, die während der Tests
+geöffnet wurden; sowohl die erzeugte PR-Beschreibung als auch die Branch-Veröffentlichung sind daran gebunden.
+Bei API-Fehlern oder unlesbaren Antworten bricht die Prüfung ab. Eine gemeinsame Warteschlange serialisiert
+geplante und manuelle Updater-Läufe. Nach Merge oder Schließen der bestehenden PR darf der nächste Lauf wieder
+einen neuen Vorschlag erzeugen. Manuelle Kompatibilitäts-, Sicherheits- und Dokumentationskorrekturen sowie eine
+ergänzte PR-Beschreibung bleiben dadurch während der laufenden Review erhalten.
+
 ## Hilfs-Skripte
 
 Docker-Publikationen derselben Git-Referenz laufen nacheinander; alle manuellen Latest-Publikationen teilen ebenfalls eine Warteschlange. So kann ein anderer Lauf die Architektur-Tags nicht während der Manifest-Erstellung ersetzen.

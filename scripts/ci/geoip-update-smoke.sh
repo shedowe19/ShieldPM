@@ -3,6 +3,11 @@
 set -Eeuo pipefail
 
 image=${1:?Usage: geoip-update-smoke.sh IMAGE}
+container_environment=()
+if [[ -n "${GEOIP_GITHUB_TOKEN:-}" ]]; then
+    # Pass only the variable name so credentials never appear in CLI arguments.
+    container_environment+=(--env GEOIP_GITHUB_TOKEN)
+fi
 docker_cmd() { timeout 30s docker "$@"; }
 image_arch=$(docker_cmd image inspect --format '{{.Architecture}}' "$image")
 case "$(uname -m):$image_arch" in
@@ -103,6 +108,7 @@ for boot in 1 2; do
     container="shieldpm-geoip-${temporary##*/}-$boot"
     containers+=("$container")
     docker_cmd create --name "$container" --pull never --network bridge \
+        "${container_environment[@]}" \
         --mount "type=volume,source=$volume,target=/data" \
         --entrypoint bash "$image" -Eeuo pipefail -c "$bootstrap" smoke "$boot" >/dev/null
     # The helper's total network budget is 240s; allow 30s for validation/snapshot work.

@@ -44,6 +44,9 @@ elif args[0] == 'start':
     if mode == 'attach-failure' and boot == 1:
         print('Simulated Docker attach failure', file=sys.stderr)
         sys.exit(43)
+    if mode == 'cached-provider-failure' and boot == 2:
+        print('[GeoIP] WARNING: GitHub download returned HTTP 403; using the complete validated cached databases')
+        sys.exit(0)
     counts = '3 updated, 0 unchanged' if boot == 1 else '0 updated, 3 unchanged'
     if (mode == 'wrong-first-counts' and boot == 1) or (mode == 'wrong-second-counts' and boot == 2):
         counts = '2 updated, 1 unchanged'
@@ -77,10 +80,11 @@ elif args[0] == 'rm' and mode == 'cleanup-failure':
 ''')
         docker.chmod(0o700)
 
-    def run_smoke(self, mode):
+    def run_smoke(self, mode, token=""):
         result = subprocess.run(
             ["bash", str(SCRIPT), "shieldpm:geoip-ci-fixture"],
             env={**os.environ, "PATH": f"{self.root}:{os.environ['PATH']}",
+                 "GEOIP_GITHUB_TOKEN": token,
                  "TMPDIR": str(self.smoke_temporaries), "DOCKER_CALLS": str(self.calls), "DOCKER_MODE": mode},
             capture_output=True, text=True, timeout=10,
         )
@@ -128,6 +132,7 @@ elif args[0] == 'rm' and mode == 'cleanup-failure':
         creates = [call for call in calls if call[0] == "create"]
         volume = next(call[-1] for call in calls if call[:2] == ["volume", "create"])
         for boot, call in enumerate(creates, 1):
+            self.assertNotIn("--env", call)
             self.assertEqual(call[call.index("--network") + 1], "bridge")
             self.assertEqual(call[call.index("--pull") + 1], "never")
             self.assertEqual(call[call.index("--entrypoint") + 1], "bash")
@@ -150,6 +155,18 @@ elif args[0] == 'rm' and mode == 'cleanup-failure':
         self.assertFalse(any(call[0] == "logs" for call in calls))
         self.assert_cleaned(calls, 2)
 
+    def test_optional_metadata_token_is_forwarded_by_name_for_both_boots(self):
+        token = "fixture_github_token"
+        result, calls = self.run_smoke("success", token=token)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        creates = [call for call in calls if call[0] == "create"]
+        self.assertEqual(len(creates), 2)
+        for call in creates:
+            self.assertEqual(call[call.index("--env") + 1], "GEOIP_GITHUB_TOKEN")
+            self.assertNotIn(token, json.dumps(call))
+        self.assertNotIn(token, result.stdout + result.stderr)
+        self.assert_cleaned(calls, 2)
+
     def test_first_container_failure_is_rejected_even_with_success_log_markers(self):
         result, _ = self.assert_failed_boot("first-failure", 1)
         self.assertIn(FIRST_MARKER, result.stdout)
@@ -164,6 +181,11 @@ elif args[0] == 'rm' and mode == 'cleanup-failure':
         result, _ = self.assert_failed_boot("attach-failure", 1)
         self.assertEqual(result.returncode, 43)
         self.assertIn("Simulated Docker attach failure", result.stdout)
+
+    def test_cached_provider_failure_still_rejects_unchecked_latest_metadata(self):
+        result, _ = self.assert_failed_boot("cached-provider-failure", 2)
+        self.assertIn("GitHub download returned HTTP 403", result.stdout)
+        self.assertNotIn(SECOND_MARKER, result.stdout)
 
     def test_incomplete_first_download_counts_stop_before_second_boot(self):
         self.assert_failed_boot("wrong-first-counts", 1)

@@ -14,8 +14,8 @@ Dokumentation aller wesentlichen externen Abhängigkeiten und deren Zweck.
 | `objection`      | 3.1.5   | ORM                               |
 | `knex`           | 3.3.0   | SQL-Query-Builder und Migrationen |
 | `better-sqlite3` | ^13.0.3 | SQLite-Treiber                    |
-| `mysql2`         | ^3.24.4 | MySQL/MariaDB-Treiber             |
-| `pg`             | ^8.23.0 | PostgreSQL-Treiber                |
+| `mysql2`         | ^3.24.5 | MySQL/MariaDB-Treiber             |
+| `pg`             | ^8.23.1 | PostgreSQL-Treiber                |
 
 ### Sicherheit
 
@@ -25,7 +25,7 @@ Dokumentation aller wesentlichen externen Abhängigkeiten und deren Zweck.
 | `bcryptjs`                   | 3.0.3   | Passwort-Hashing               |
 | `helmet`                     | 8.3.0   | HTTP-Security-Header           |
 | `csrf-csrf`                  | ^4.0.3  | CSRF-Schutz                    |
-| `express-rate-limit`         | 8.7.0   | Rate-Limiting                  |
+| `express-rate-limit`         | 8.7.1   | Rate-Limiting                  |
 | `otplib`                     | ^13.5.0 | TOTP (2FA)                     |
 | `@simplewebauthn/server`     | ^14.0.3 | WebAuthn/Passkey               |
 | `@duosecurity/duo_universal` | ^3.1.0  | Duo Security 2FA               |
@@ -38,10 +38,10 @@ Dokumentation aller wesentlichen externen Abhängigkeiten und deren Zweck.
 | `@google/generative-ai` | ^0.24.1  | Google Gemini AI             |
 | `telegraf`              | ^4.16.3  | Telegram Bot                 |
 | `dockerode`             | ^5.0.1   | Docker API                   |
-| `isomorphic-git`        | ^1.42.3  | Git-Operationen              |
+| `isomorphic-git`        | ^1.43.1  | Git-Operationen              |
 | `ssh2`                  | ^1.17.0  | SSH-Verbindungen (Terminal)  |
 | `ws`                    | ^8.22.0  | WebSocket-Server             |
-| `systeminformation`     | ^5.33.14 | System-Info (CPU, RAM, etc.) |
+| `systeminformation`     | ^5.33.15 | System-Info (CPU, RAM, etc.) |
 
 ### Hilfsbibliotheken
 
@@ -50,9 +50,9 @@ Dokumentation aller wesentlichen externen Abhängigkeiten und deren Zweck.
 | `ajv`           | ^8.20.0 | JSON-Schema-Validierung          |
 | `lodash`        | ^4.18.1 | Utility-Funktionen               |
 | `dayjs`         | 1.11.23 | Datums-Verarbeitung              |
-| `liquidjs`      | 10.29.0 | Template-Engine (Nginx-Configs)  |
+| `liquidjs`      | 10.30.0 | Template-Engine (Nginx-Configs)  |
 | `archiver`      | ^8.0.0  | ZIP-Archivierung (GitOps Export) |
-| `js-yaml`       | ^5.4.2  | YAML-Verarbeitung                |
+| `js-yaml`       | ^5.4.3  | YAML-Verarbeitung                |
 | `cookie-parser` | ^1.4.7  | Cookie-Parsing                   |
 | `punycode.js`   | 2.3.1   | Internationalisierte Domainnamen |
 | `signale`       | 1.4.0   | Logger                           |
@@ -63,17 +63,17 @@ Dokumentation aller wesentlichen externen Abhängigkeiten und deren Zweck.
 | --------------------------- | ------------------ | ------------------------------------------------ |
 | `react` / `react-dom`       | ^19.3.0            | UI-Framework                                     |
 | `react-router-dom`          | ^7.18.4            | Routing                                          |
-| `@tanstack/react-query`     | ^5.104.0           | Server-State                                     |
-| `@tanstack/react-table`     | 9.2.4              | Tabellen                                         |
+| `@tanstack/react-query`     | ^5.104.1           | Server-State                                     |
+| `@tanstack/react-table`     | 9.2.6              | Tabellen                                         |
 | `tailwindcss`               | ^4.3.3             | CSS-Framework                                    |
 | `@radix-ui/*`               | diverse            | Accessible UI-Primitives                         |
-| `i18next` / `react-i18next` | ^26.4.2 / ^17.0.15 | i18n                                             |
-| `react-intl`                | ^12.1.3            | ICU-Formatierung für Oberflächentexte            |
+| `i18next` / `react-i18next` | ^26.4.2 / ^17.0.16 | i18n                                             |
+| `react-intl`                | ^12.1.4            | ICU-Formatierung für Oberflächentexte            |
 | `@simplewebauthn/browser`   | ^14.0.0            | WebAuthn/Passkey im Browser                      |
-| `framer-motion`             | ^13.4.5            | Animationen                                      |
+| `framer-motion`             | ^14.0.0            | Animationen                                      |
 | `recharts`                  | ^3.10.1            | Charts (Analytics)                               |
 | `@xterm/xterm`              | ^6.0.0             | Terminal-Emulator                                |
-| `lucide-react`              | ^1.48.0            | Icons                                            |
+| `lucide-react`              | ^1.52.0            | Icons                                            |
 | `zod`                       | ^4.6.5             | Schema-Validierung                               |
 | `react-hook-form`           | ^7.89.0            | Formulare                                        |
 | `react-markdown`            | ^10.1.0            | Markdown-Rendering (AI Chat)                     |
@@ -85,12 +85,12 @@ Dokumentation aller wesentlichen externen Abhängigkeiten und deren Zweck.
 
 | Paket                    | Version / Einsatz                                            |
 | ------------------------ | ------------------------------------------------------------ |
-| `@biomejs/biome`         | ^2.5.14, JS/TS-Lint und Formatierung                         |
-| `vitest`                 | Backend ^5.0.2, Frontend 5.0.2; Tests                        |
+| `@biomejs/biome`         | ^2.5.15, JS/TS-Lint und Formatierung                         |
+| `vitest`                 | Backend ^5.0.3, Frontend 5.0.3; Tests                        |
 | `@testing-library/react` | ^16.3.3 im Frontend; Komponententests                        |
 | `typescript`             | ^7.0.2 im Backend, 7.0.2 im Frontend; Typsicherheit          |
 | `@electric-sql/pglite`   | 0.5.8; Backend-Tests mit eingebetteter PostgreSQL-Engine     |
-| `vite`                   | ^8.3.1 im Backend, 8.3.1 im Frontend; Build und Testumgebung |
+| `vite`                   | ^8.3.3 im Backend, 8.3.3 im Frontend; Build und Testumgebung |
 
 ## Sicherheitsprüfung September 2026
 
@@ -117,6 +117,29 @@ Die Axios-Version bringt zugleich ihre reguläre `form-data`-Abhängigkeit 4.0.6
 Der frische lokale Audit nach den Korrekturen meldet bei 522 Backend-Abhängigkeiten nur noch den genannten einen hohen FTP-Befund (keine niedrigen, mittleren oder kritischen Meldungen); das Frontend meldet bei 629 Abhängigkeiten keine bekannten Befunde. Zuvor waren es 39 Backend-Meldungen.
 
 Der jeweilige Paket-Audit-Snapshot und die abschließenden CI-Ergebnisse stehen im [Oktober-Prüfnachweis](../entwicklung/code-audit-coverage-2026-10.json) und in [PR #149](https://github.com/shedowe19/ShieldPM/pull/149). Diese Zahlen beschreiben den geprüften Zeitpunkt und sind keine dauerhafte Sicherheitszusage.
+
+## Nachprüfung des Dependency-Updates in PR #150
+
+Der frische Backend-Audit vom 7. Oktober 2026 meldete zusätzlich zum bekannten FTP-Befund zwei weitere Advisories:
+`proxy-addr` 2.0.7 (kritisch) und `source-map-js` 1.2.1 (hoch). Die gezielten Auflösungen
+`express/proxy-addr` auf 2.0.8 und `vite/postcss/source-map-js` auf 1.2.2 halten die Korrekturen auf den betroffenen
+Backend-Abhängigkeitspfaden. Das Frontend verwendet bereits `source-map-js` 1.2.2.
+
+Die [Proxy-Addr-Herstellerwarnung](https://github.com/jshttp/proxy-addr/security/advisories/GHSA-jqcg-44mw-7w3h)
+betrifft die Zuordnung von IPv4-Adressen zu IPv6-Subnetzen bei vertrauenswürdigen Proxys. Das
+[Source-Map-JS-Release 1.2.2](https://github.com/7rulnik/source-map-js/releases/tag/v1.2.2) korrigiert die
+Offset-Verarbeitung indizierter Source Maps. Die bestehenden Lockfile-Untergrenzen werden um beide Pakete ergänzt;
+Laufzeitproben prüfen zusätzlich die tatsächliche Proxy-Vertrauensprüfung und Source-Map-Verarbeitung.
+
+Der Frontend-Audit meldete außerdem zwei Advisories für `seroval` 1.5.6 in den React-Query-Entwicklerwerkzeugen
+(ein kritischer und ein hoher Befund). Die Auflösung `@tanstack/react-query-devtools/**/seroval` auf 1.6.3
+korrigiert beide. Sie überschreibt bewusst Solids Versionsbereich `~1.5.4`; die verwendeten Exporte und die
+JSON-Verarbeitung einschließlich des URL-Plugins werden gegen die tatsächlich aufgelöste Bibliothek geprüft.
+`seroval-plugins` 1.5.6 bleibt kompatibel, da dessen Peer-Abhängigkeit `seroval` mit `^1.0` zulässt.
+
+Die anschließenden Audits melden bei 522 Backend-Abhängigkeiten nur noch den bekannten hohen FTP-Befund
+(keine kritischen, mittleren oder niedrigen Meldungen) und bei 629 Frontend-Abhängigkeiten keine bekannten Befunde.
+Diese Zahlen sind ein Snapshot vom 7. Oktober 2026; die historischen Prüfungen oben bleiben unverändert.
 
 ## Verwandte Seiten
 
