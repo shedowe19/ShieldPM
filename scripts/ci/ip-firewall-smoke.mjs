@@ -1100,12 +1100,25 @@ async function checkIpv6Upstreams({
 		path.join(directory, "acme-auth/certificate.pem"),
 	);
 	const upstreams = [
-		["http", http.createServer((req, res) => res.end(`http:${req.url}`))],
+		[
+			"http",
+			http.createServer((req, res) => {
+				res.writeHead(200, {
+					"Content-Type": "text/plain; charset=utf-8",
+					"X-Content-Type-Options": "nosniff",
+				});
+				res.end(`http:${req.url}`);
+			}),
+		],
 		[
 			"https",
-			https.createServer({ key, cert }, (req, res) =>
-				res.end(`https:${req.url}`),
-			),
+			https.createServer({ key, cert }, (req, res) => {
+				res.writeHead(200, {
+					"Content-Type": "text/plain; charset=utf-8",
+					"X-Content-Type-Options": "nosniff",
+				});
+				res.end(`https:${req.url}`);
+			}),
 		],
 	];
 	let child;
@@ -1188,6 +1201,16 @@ http {
 			for (const uri of ["/", "/custom/probe?a=1"]) {
 				const response = await request(port, { host, uri });
 				assert.equal(response.status, 200, `${host} ${uri}: ${output}`);
+				assert.equal(
+					response.headers["content-type"],
+					"text/plain; charset=utf-8",
+					`${host} must serve the echoed URI as plain text`,
+				);
+				assert.equal(
+					response.headers["x-content-type-options"],
+					"nosniff",
+					`${host} must prevent content sniffing`,
+				);
 				assert.equal(
 					response.body,
 					`${scheme}:${uri}`,
