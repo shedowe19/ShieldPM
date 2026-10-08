@@ -20,4 +20,4 @@ jobs:
           check_filenames: true
           check_hidden: true
           skip: yarn.lock,package-lock.json,./frontend/src/locale/lang,./frontend/src/locale/HelpDoc,./.agent,REFACTOR_ROADMAP.md,./docs/wiki-intern,./agent.md,./scripts/lib,./scripts/wiki-graph.py,./backend/schema/components/firewall-country-code.json
-          ignore_words_list: afterAll,alog,nd,devlop,trough,hastable,elease,eleases,ublish,Paket,paket,statics,ist,vor,unter,alle,Methode,Funktion,als,oder,deine,lokal,lokale,separat,sie,aktive,rekursive,manuell,alternativ,tage,normale
+          ignore_words_list: afterAll,alog,nd,devlop,trough,hastable,elease,eleases,ublish,Paket,paket,statics,ist,vor,unter,alle,Methode,Funktion,als,oder,deine,lokal,lokale,separat,sie,aktive,rekursive,manuell,alternativ,tage,normale,Modell,modell,startet
