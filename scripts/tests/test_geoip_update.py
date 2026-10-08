@@ -378,6 +378,74 @@ class CurlProcessTests(unittest.TestCase):
         self.curl.write_text(f"#!{sys.executable}\n" + program)
         self.curl.chmod(0o755)
 
+    def recording_transport(self):
+        self.requests = self.root / "requests.jsonl"
+        self.executable('''import json, os, sys
+from pathlib import Path
+args = sys.argv[1:]
+url = args[args.index('--url') + 1]
+assert 'GEOIP_GITHUB_TOKEN' not in os.environ
+values = [args[index + 1] for index, value in enumerate(args) if value == '--header']
+authorization = [Path(value[1:]).read_text() for value in values if value.startswith('@')]
+with open(os.environ['CURL_REQUESTS'], 'a') as output:
+    output.write(json.dumps({'url': url, 'argv': args, 'authorization': authorization}) + '\\n')
+location = os.environ.get('CURL_METADATA_REDIRECT')
+if location and url.endswith('/releases/latest'):
+    response = 'HTTP/2 302\\r\\nLocation: ' + location + '\\r\\n\\r\\n'
+else:
+    response = 'HTTP/2 200\\r\\n\\r\\n'
+Path(args[args.index('--dump-header') + 1]).write_bytes(response.encode())
+os.write(1, b'fixture')
+''')
+        return {"PATH": str(self.root) + os.pathsep + os.environ["PATH"],
+                "CURL_REQUESTS": str(self.requests), "CURL_METADATA_REDIRECT": ""}
+
+    def test_token_authenticates_only_exact_metadata_without_argv_or_environment_exposure(self):
+        environment = self.recording_transport()
+        token = "fixture_github_token"
+        urls = (updater.LATEST_URL,
+                "https://github.com/shedowe19/GeoLite.mmdb/releases/download/2026.10.07/GeoLite2-ASN.mmdb",
+                "https://release-assets.githubusercontent.com/fixture.mmdb",
+                "https://api.github.com/repos/shedowe19/GeoLite.mmdb/releases/123")
+        with patch.dict(os.environ, {**environment, "GEOIP_GITHUB_TOKEN": token}):
+            for url in urls:
+                self.assertEqual(updater.curl_once(url, io.BytesIO(), 100, 2), (200, None))
+        requests = [json.loads(line) for line in self.requests.read_text().splitlines()]
+        self.assertEqual(requests[0]["authorization"], [f"Authorization: Bearer {token}\n"])
+        self.assertEqual([request["authorization"] for request in requests[1:]], [[], [], []])
+        for request in requests:
+            self.assertNotIn(token, " ".join(request["argv"]))
+
+    def test_metadata_redirect_to_same_api_host_does_not_forward_token(self):
+        environment = self.recording_transport()
+        redirected = "https://api.github.com/repos/shedowe19/GeoLite.mmdb/releases/123"
+        with patch.dict(os.environ, {**environment, "GEOIP_GITHUB_TOKEN": "fixture_github_token",
+                                    "CURL_METADATA_REDIRECT": redirected}):
+            output = io.BytesIO()
+            updater.download(updater.LATEST_URL, output, 100, time.monotonic() + 10)
+        requests = [json.loads(line) for line in self.requests.read_text().splitlines()]
+        self.assertEqual([request["url"] for request in requests], [updater.LATEST_URL, redirected])
+        self.assertEqual(len(requests[0]["authorization"]), 1)
+        self.assertEqual(requests[1]["authorization"], [])
+        self.assertEqual(output.getvalue(), b"fixture")
+
+    def test_public_metadata_request_still_works_without_token(self):
+        environment = self.recording_transport()
+        with patch.dict(os.environ, {**environment, "GEOIP_GITHUB_TOKEN": ""}):
+            self.assertEqual(updater.curl_once(updater.LATEST_URL, io.BytesIO(), 100, 2), (200, None))
+        request = json.loads(self.requests.read_text())
+        self.assertEqual(request["authorization"], [])
+        self.assertIn("Accept: application/json", request["argv"])
+
+    def test_invalid_token_cannot_inject_headers_and_is_not_reported(self):
+        for token in ("fixture\r\nInjected: value", "fixture token", "fixture\u00e9", "x" * 4097):
+            with self.subTest(token_length=len(token)), patch.dict(os.environ, {"GEOIP_GITHUB_TOKEN": token}):
+                with patch.object(updater.subprocess, "Popen") as spawn:
+                    with self.assertRaises(updater.UpdateError) as error:
+                        updater.curl_once(updater.LATEST_URL, io.BytesIO(), 100, 2)
+                spawn.assert_not_called()
+                self.assertNotIn(token, str(error.exception))
+
     def test_real_child_watchdog_terminates_silent_hanging_download(self):
         self.executable("import time\ntime.sleep(20)\n")
         started = time.monotonic()

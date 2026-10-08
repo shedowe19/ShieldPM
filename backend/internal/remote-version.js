@@ -1,6 +1,6 @@
 import https from "node:https";
-import { ProxyAgent } from "proxy-agent";
 import errs from "../lib/error.js";
+import { ProxyAgent } from "../lib/proxy-agent.js";
 import { remoteVersion as logger } from "../logger.js";
 import pjson from "../package.json" with { type: "json" };
 

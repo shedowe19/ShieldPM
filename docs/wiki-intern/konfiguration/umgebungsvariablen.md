@@ -131,9 +131,10 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 
 Der GeoIP-Boot-Updater bereitet standardmäßig Country-, City- und ASN-Daten vor, unabhängig vom Laden des Nginx-Moduls. `GEOIP_AUTO_UPDATE=false` deaktiviert Veröffentlichungskontrolle und Downloads für Offline- oder eigene MaxMind-Daten; `NGINX_LOAD_GEOIP2_MODULE=true` bleibt für die tatsächlichen Länder-/ASN-Lookups erforderlich. Ablauf und Fehlerverhalten: [Deployment](../entwicklung/deployment.md).
 
-| Variable            | Standard | Beschreibung                                                                                                                            |
-| ------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `GEOIP_AUTO_UPDATE` | `true`   | Prüft bei jedem Docker-/Native-Start die neueste GeoLite.mmdb-Veröffentlichung und bereitet alle drei Datenbanken vor den Diensten vor. |
+| Variable             | Standard | Beschreibung                                                                                                                                                  |
+| -------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GEOIP_AUTO_UPDATE`  | `true`   | Prüft bei jedem Docker-/Native-Start die neueste GeoLite.mmdb-Veröffentlichung und bereitet alle drei Datenbanken vor den Diensten vor.                       |
+| `GEOIP_GITHUB_TOKEN` | —        | Optionaler GitHub-API-Token ausschließlich für die exakte Latest-Metadatenanfrage; keine Weitergabe an Assets oder Weiterleitungen. Wert nicht dokumentieren. |
 
 | Variable                                  | Beschreibung                                                                                                                                  |
 | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |

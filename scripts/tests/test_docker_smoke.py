@@ -43,6 +43,7 @@ elif args[0] == 'cp':
     assert (fixture / 'grpc-smoke.mjs').is_file()
     assert (fixture / 'ip-firewall-smoke.mjs').is_file()
     assert (fixture / 'nginx-smoke-modules.mjs').is_file()
+    assert (fixture / 'nginx-smoke-endpoints.mjs').is_file()
     assert (fixture / 'mmdb-oracle.py').is_file()
     retained_log = (fixture / 'logs/ip_firewall_ci.log').read_text()
     assert retained_log.splitlines()[0] == 'CI retained firewall log marker'

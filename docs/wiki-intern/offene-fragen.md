@@ -22,6 +22,7 @@
 
 ### Aktuelle Session
 
+- ~~FTP-PAC-Listing-Befunde und unbehandelte Transferablehnungen~~ → `basic-ftp` 6.2.2 ist direkt gepinnt und für `get-uri` gezielt aufgelöst. Der eigene FTP-Handler propagiert Transferfehler an den Stream und schließt den Client; der gemeinsame ProxyAgent-Wrapper bindet ihn in den produktiven PAC-Pfad ein. Lokale FTP-Tests prüfen Metadaten-Fallback, Cache, Abbrüche, manipulierte Antworten und den erhaltenen Transferhost-Schutz. Der Backend-Audit meldet danach 0 bekannte Befunde bei 522 Abhängigkeiten. Dokumentiert unter [FTP-Korrektur](./architektur/externe-abhaengigkeiten.md#ftp-korrektur-in-pr-150) und [Tests](./entwicklung/tests.md).
 - ~~Provider-Matrix für OAuth2-Proxy~~ → `google` (Default), `github`, `oidc`, `gitlab`, `azure`, `keycloak-oidc` (verdrahtet in `frontend/src/modals/AccessListModal.tsx`); Authentik separat als Auth-Typ `AUTHENTIK_PROXY`. Dokumentiert in [oauth2-proxy.md](./module/oauth2-proxy.md).
 - ~~ML-KEM-Modi je `shieldpm-nginx`-Build~~ → Dieses Repo setzt für Hosts mit interner CA nur das Flag `host.use_ml_kem` in `nginx.js`. Die tatsächliche Hybrid-Kex-Liste (X25519MLKEM768 etc.) liegt im separaten `shieldpm-nginx`-Repository. Dokumentiert in [pki.md](./module/pki.md).
 - ~~Update-Intervall der Cloudflare-IP-Ranges~~ → `interval_timeout = 6h × IPRT` (Umgebungsvariable, Standard-Multiplikator 1). Manueller Trigger über AI-Tool `renew_ip_ranges`. Dokumentiert in [ip-ranges.md](./module/ip-ranges.md).

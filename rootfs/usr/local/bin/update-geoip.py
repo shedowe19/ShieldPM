@@ -149,15 +149,30 @@ def response_headers(raw):
 
 def curl_once(url, output, limit, timeout):
     """Stream curl output to a staged file with a hard byte limit and watchdog."""
-    with tempfile.TemporaryFile() as headers, tempfile.TemporaryFile() as errors:
+    with (tempfile.TemporaryFile() as headers, tempfile.TemporaryFile() as errors,
+          tempfile.TemporaryFile() as authentication):
         command = ["curl", "-q", "--silent", "--show-error", "--proto", "=https", "--proto-redir", "=https",
                    "--connect-timeout", str(min(10, timeout)), "--max-time", str(timeout),
                    "--max-filesize", str(limit), "--dump-header", f"/proc/self/fd/{headers.fileno()}",
                    "--user-agent", "ShieldPM-GeoIP-Updater", "--header", "Accept: application/json" if url == LATEST_URL
                    else "Accept: application/octet-stream", "--url", url]
+        inherited = (headers.fileno(),)
+        # Shared CI runner IPs can exhaust GitHub's anonymous API quota. Scope
+        # optional credentials to the exact metadata request, never redirects or
+        # database assets. The token stays out of argv and curl's environment.
+        token = os.environ.get("GEOIP_GITHUB_TOKEN", "") if url == LATEST_URL else ""
+        if token:
+            if len(token) > 4096 or any(ord(char) < 33 or ord(char) > 126 for char in token):
+                raise UpdateError("GEOIP_GITHUB_TOKEN must be a single nonempty ASCII token")
+            authentication.write(f"Authorization: Bearer {token}\n".encode("ascii"))
+            authentication.flush()
+            command.extend(("--header", f"@/proc/self/fd/{authentication.fileno()}"))
+            inherited += (authentication.fileno(),)
+        environment = os.environ.copy()
+        environment.pop("GEOIP_GITHUB_TOKEN", None)
         # A Python watchdog also bounds DNS resolution and any stalled stdout read.
         with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=errors,
-                              pass_fds=(headers.fileno(),)) as process:
+                              pass_fds=inherited, env=environment) as process:
             watchdog = threading.Timer(timeout, process.kill)
             watchdog.daemon = True
             watchdog.start()
