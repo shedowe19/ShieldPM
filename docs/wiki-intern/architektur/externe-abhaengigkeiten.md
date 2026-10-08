@@ -104,8 +104,11 @@ Node 26, Yarn 1.22.22, `--frozen-lockfile --ignore-scripts --production=false`; 
 mit `yarn audit --level high`.
 
 Diese Pakete werden weder den Anwendungsmanifesten hinzugefügt noch ins Produktionsimage kopiert. Lokale AI-Reviews
-benötigen eine separat installierte/authentifizierte Provider-CLI und keine Backend-Provider-Zugangsdaten. Konfiguration,
-Regeln, bewusste Baseline-Pflege und Upgrades stehen in der [TScanner-Anleitung](../../wiki/TScanner.md).
+verwenden standardmäßig einen `custom`-Adapter für die separat installierte und authentifizierte offizielle Codex-CLI
+(`npm install -g @openai/codex`, `codex login`). Die CLI ist keine zusätzliche Paket- oder Produktionsabhängigkeit von
+ShieldPM; Backend-Provider-Zugangsdaten werden nicht verwendet. Der Adapter startet `codex exec` mit dem lokal
+konfigurierten Modell, `read-only`-Sandbox und deaktivierten Genehmigungsdialogen. Konfiguration, Plattformhinweise,
+bewusste Baseline-Pflege und Upgrades stehen in der [TScanner-Anleitung](../../wiki/TScanner.md).
 
 ## Sicherheitsprüfung September 2026
 

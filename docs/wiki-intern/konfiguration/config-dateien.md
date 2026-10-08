@@ -57,6 +57,20 @@ Die Schlüsseldatei `shieldpm/keys.json` wird vollständig in eine private tempo
 | `THIRD-PARTY-NOTICES.md` | Auto-generierte Lizenzen (von `scripts/generate-notices.js`)    |
 | `pentest_crowdsec.py`    | Hilfsskript zum Testen von CrowdSec-Bouncern (manueller Lauf)   |
 
+## TScanner-Entwicklungswerkzeuge
+
+`.tscanner/config.jsonc` definiert deterministische Regeln, lokale AI-Regeln, Dateimuster und Editor-Verhalten.
+AI verwendet `provider: "custom"` und `command: "./.tscanner/providers/codex"`; dieser Launcher startet den lokalen
+Codex-Adapter. Für natives Windows ist stattdessen `./.tscanner/providers/codex.cmd` einzutragen. Der Adapter verwendet
+das lokal konfigurierte Codex-Modell und erwartet das native Prompt-Format der gepinnten Version für `agentic`-Regeln.
+`SHIELDPM_TSCANNER_CODEX_CLI` kann den ausführbaren Clientnamen oder Pfad
+vorgeben, jedoch keine Shell-Befehlszeile mit Argumenten.
+
+`.tscanner/baseline.json` hält geprüfte Altbefunde fest; `.tscanner/package.json` und `.tscanner/yarn.lock` pinnen das
+private Scanner-Paket. Provider-Anmeldung und Codex-Konfiguration bleiben auf dem eigenen Rechner. AI wird nur
+ausdrücklich lokal gestartet, ohne Repository-Secrets oder geplante Läufe. Setup, Windows-Hinweise und
+Validierungsgrenzen beschreibt die [TScanner-Anleitung](../../wiki/TScanner.md).
+
 ## Caddy-Sidecar
 
 | Datei              | Zweck                                                                    |

@@ -1,0 +1,43 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["issues"],
+	"properties": {
+		"issues": {
+			"type": "array",
+			"description": "At most eight high-confidence findings, ordered by practical impact. Use an empty array only after completing the review.",
+			"maxItems": 8,
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": ["file", "line", "column", "message"],
+				"properties": {
+					"file": {
+						"type": "string",
+						"description": "Exact listed repository-relative POSIX path, without absolute paths, backslashes, empty segments, dot segments, or traversal.",
+						"minLength": 1,
+						"maxLength": 180
+					},
+					"line": {
+						"type": "integer",
+						"description": "Valid one-based source line.",
+						"minimum": 1,
+						"maximum": 2147483647
+					},
+					"column": {
+						"type": "integer",
+						"description": "One-based source column; use 1 if unknown.",
+						"minimum": 1,
+						"maximum": 2147483647
+					},
+					"message": {
+						"type": "string",
+						"description": "Concise triggering condition, proven consequence, and corrective action. Never reproduce secrets or control characters.",
+						"minLength": 1,
+						"maxLength": 240
+					}
+				}
+			}
+		}
+	}
+}

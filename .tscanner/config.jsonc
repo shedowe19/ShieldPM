@@ -207,7 +207,8 @@
 		}
 	},
 	"ai": {
-		"provider": "gemini"
+		"provider": "custom",
+		"command": "./.tscanner/providers/codex"
 	},
 	"files": {
 		"include": [

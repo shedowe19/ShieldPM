@@ -103,8 +103,12 @@ node scripts/ci/tscanner.mjs
 ```
 
 Die VSCode-Empfehlung und Aufgaben liegen unter `.vscode/`. Die drei AI-Reviews werden ausschließlich manuell lokal
-gestartet und benötigen eine separat installierte/authentifizierte Provider-CLI; Vorgabe ist Gemini. Git-Prüfmodi,
-Index-/Arbeitskopie-Schutz, sichtbare Bestands-Baseline und Berichte erklärt die
+gestartet; Vorgabe ist der lokale Codex-Adapter. Auf dem eigenen Rechner `npm install -g @openai/codex` und
+`codex login` ausführen, anschließend `node scripts/ci/tscanner.mjs --only-ai` für die drei AI-Regeln starten.
+Der Adapter verwendet das lokal konfigurierte Codex-Modell und eine `read-only`-Sandbox ohne Genehmigungsdialoge.
+Bei einer abweichenden Installation bezeichnet `SHIELDPM_TSCANNER_CODEX_CLI` den ausführbaren Client, keine
+Shell-Befehlszeile. Windows-Hinweise, Git-Prüfmodi, Index-/Arbeitskopie-Schutz, sichtbare Bestands-Baseline und
+Berichte erklärt die
 [vollständige TScanner-Anleitung](../../wiki/TScanner.md).
 
 ## Verwandte Seiten

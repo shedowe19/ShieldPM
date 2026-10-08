@@ -79,7 +79,7 @@
     },
     {
       "label": "TScanner: Run local AI review",
-      "detail": "Explicit AI scan using your locally configured provider; requires its CLI and credentials.",
+      "detail": "Explicit read-only Codex review; requires the local Codex CLI and an existing Codex login.",
       "type": "process",
       "command": "node",
       "args": [

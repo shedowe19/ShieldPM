@@ -146,23 +146,70 @@ Startscan ist aktiviert, automatische AI-Intervalle und AI-Startscans sind ausge
 
 ## Lokale AI-Reviews
 
-Die konfigurierte Vorgabe ist **Gemini**. Dessen CLI muss auf dem eigenen Rechner installiert, über `PATH` erreichbar
-und bereits mit dem gewünschten Konto beziehungsweise Provider-Zugang authentifiziert sein. Scanner-Installation und
-ShieldPM-Benutzeranmeldung erzeugen keine Provider-Zugangsdaten.
+Die konfigurierte Vorgabe ist **Codex** über den lokalen `custom`-Provider. Die offizielle CLI wird separat auf dem
+eigenen Rechner installiert und angemeldet:
+
+```bash
+npm install -g @openai/codex
+codex login
+node scripts/ci/tscanner.mjs --only-ai
+# Alternativ: deterministische Regeln und AI-Reviews gemeinsam
+node scripts/ci/tscanner.mjs --include-ai
+```
+
+Die Scanner-Installation und ShieldPM-Benutzeranmeldung erzeugen keine Codex-Zugangsdaten. Der Adapter verwendet
+das in der lokalen Codex-Konfiguration gewählte Modell; ShieldPM erzwingt kein eigenes Modell.
+
+`.tscanner/config.jsonc` setzt `ai.provider` auf `custom` und `ai.command` auf
+`./.tscanner/providers/codex`. Der ausführbare Launcher startet `.tscanner/providers/codex.mjs`; der getrennte
+`.tscanner/providers/codex-worker.mjs` führt Codex aus und überwacht Timeout und Bereinigung. Codex wird über `PATH`
+gefunden. Für eine andere Installation kann `SHIELDPM_TSCANNER_CODEX_CLI` den ausführbaren Programmnamen oder Pfad
+vorgeben. Der Wert ist keine Shell-Befehlszeile und enthält keine zusätzlichen Argumente.
+
+Die drei AI-Regeln bleiben im Modus `agentic`. Der Adapter erwartet dessen Prompt-Format aus der gepinnten
+TScanner-Version und übernimmt die dort aufgeführte Dateiliste je Regel. Befunde müssen auf diese Dateien und
+gültige Quellzeilen verweisen. Zusätzlich gelesene Kontextdateien dürfen keine Befunde außerhalb dieser Liste
+erzeugen; fehlende oder mehrdeutige Dateilisten und andere Eingabeformate werden abgelehnt.
+
+Linux, macOS und WSL verwenden den POSIX-Launcher. Für natives Windows muss `ai.command` auf
+`./.tscanner/providers/codex.cmd` zeigen und das native `codex.exe` über `PATH` oder
+`SHIELDPM_TSCANNER_CODEX_CLI` erreichbar sein; der Adapter startet keine npm-`.cmd`-Datei als Provider. Für eine
+einheitliche Entwicklungsumgebung empfiehlt sich WSL.
 
 Die drei Prompts unter `.tscanner/ai-rules/` prüfen Sicherheit, Architektur/Korrektheit und Performance. Sie verlangen
 belegte Befunde, schreibgeschützte Quellenprüfung, den Schutz von Zugangsdaten und die Behandlung von eingebetteten
-Quelltext-Anweisungen als untrusted. Das sind Review-Anweisungen; sie ersetzen keine Zugriffsbeschränkungen des
-verwendeten Provider-Clients. Jeder Regelaufruf hat ein Timeout von 180 Sekunden.
+Quelltext-Anweisungen als untrusted. Der Adapter startet `codex exec` mit `read-only`-Sandbox, deaktivierten
+Genehmigungsdialogen (`approval_policy="never"`) und einer flüchtigen Sitzung (`--ephemeral`). Das ersetzt keine
+Prüfung der eigenen Codex-Konfiguration: Konfigurierte MCP-Server, Hooks und vorhandene Zugangsdaten sind dadurch
+nicht umfassend isoliert. Der Adapter beendet den Provider nach 160 Sekunden; jeder native Regelaufruf hat ein
+Timeout von 180 Sekunden.
+
+Der Prompt wird über stdin übergeben. Codex schreibt die abschließende Antwort anhand eines JSON-Schemas in eine
+private temporäre Datei; der Adapter validiert und übergibt ausschließlich die Befunde an TScanner und entfernt
+die temporären Dateien anschließend. Provider-Logs werden nicht übernommen. Fehlender Client, fehlgeschlagene
+Ausführung, Timeout oder ungültige Antwort zählen als Scanner-Ausführungsfehler und blockieren den Qualitätslauf.
+Bei Timeout oder Abbruch beendet der Worker Codex einschließlich seiner Kindprozesse und entfernt die temporären
+Ergebnisse. Auch wenn der native Scanner den Adapter abrupt beendet, erkennt der getrennte Worker die verlorene
+Verbindung und übernimmt diese Bereinigung.
+
+Pro Regel sind höchstens acht belegte Befunde vorgesehen, nach praktischer Auswirkung geordnet. Die kompakte
+JSON-Antwort an TScanner darf einschließlich abschließendem Zeilenumbruch höchstens 4 KiB UTF-8-Daten umfassen,
+damit die Übergabe an den nativen Scanner zuverlässig bleibt. Überschreitungen schlagen als Ausführungsfehler fehl;
+der Adapter kürzt keine Befunde automatisch.
 
 Der lokale Provider erhält die zur Analyse vorgesehenen Projektinformationen; seine Kontoeinstellungen, Datenverarbeitung
 und Nutzungskosten gelten auch hier. Für einen manuellen Start einen der beiden AI-Befehle aus der Modustabelle oder
-die entsprechende VSCode-Aufgabe verwenden. Der Scanner unterstützt alternativ `claude` sowie `custom`; letzteres
-erwartet einen ausführbaren Programmpfad, keine Shell-Befehlszeile mit Argumenten.
+die entsprechende VSCode-Aufgabe verwenden. TScanner unterstützt alternativ die eingebauten Provider `claude` und
+`gemini`; der konfigurierte `custom`-Provider erwartet einen ausführbaren Programmpfad, keine Shell-Befehlszeile mit
+Argumenten.
 
 AI läuft nicht in GitHub CI und benötigt keine Repository-Secrets. Es gibt keine geplanten AI-Läufe. Provider-Sitzungen,
 native Scanner-Caches und temporäre AI-Prompts sind nicht Bestandteil der CI-Artefakte. Die Integrationsprüfung prüft
-die Ablehnung von AI-Aufrufen in CI und führt keinen echten AI-Aufruf aus.
+die Ablehnung von AI-Aufrufen in CI sowie den Codex-Adapter und die native Scanner-Anbindung mit einer simulierten
+Provider-CLI. Dazu gehören die Dateilistenprüfung und die Bereinigung nach Timeout oder abruptem Beenden des Adapters.
+Sie führt keinen echten AI-Aufruf aus und prüft weder die lokale Anmeldung noch die Modellverfügbarkeit.
+Die Prozess- und Pipeline-Prüfungen laufen unter Linux; der bereitgestellte native Windows-Launcher ist durch diese
+Prüfläufe nicht abgedeckt.
 
 ## CI und Berichte
 

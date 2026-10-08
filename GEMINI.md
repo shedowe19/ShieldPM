@@ -160,8 +160,20 @@ Run `node scripts/ci/tscanner.mjs` and `yarn --cwd .tscanner test` from the repo
 - `--update-baseline` is a deliberate reviewed exception update, not an automatic fix. Never absorb new errors merely
   to make the gate pass.
 - Security, architecture, and performance AI prompts are read-only. `--only-ai`/`--include-ai` are explicit local
-  workspace-only operations, require the user's installed/authenticated provider CLI (Gemini by default), and cannot run
-  in CI or combine with Git modes. Do not invoke a real provider merely to verify the integration; its tests verify that CI refuses AI execution.
+  workspace-only operations and cannot run in CI or combine with Git modes. The default `custom` provider uses
+  `.tscanner/providers/codex` and the user's installed/authenticated Codex CLI (`npm install -g @openai/codex`,
+  `codex login`). `SHIELDPM_TSCANNER_CODEX_CLI` selects an executable name/path, not a shell argument string.
+  The adapter runs `codex exec` with the user's configured model, read-only sandbox, no approval prompts, ephemeral
+  session, and validated JSON output. This does not isolate all configured MCP servers, hooks, or credentials.
+  Keep AI rules in `agentic` mode: the adapter validates the pinned native prompt's per-rule file list and accepts
+  findings only for listed files and valid source lines. `.tscanner/providers/codex-worker.mjs` owns provider cleanup,
+  including its descendants and private results when the adapter parent is abruptly terminated.
+  Each rule returns at most eight evidence-backed findings; compact provider output is capped at 4 KiB UTF-8.
+  Excess output fails the scan instead of silently truncating findings.
+  Do not invoke a real provider merely to verify integration; tests use a simulated CLI, real native scanner pipeline,
+  scope validation, parent-termination cleanup, and CI refusal. Local login/model availability are outside those tests.
+  Native Windows requires the `.cmd` launcher and native `codex.exe`; the Linux process/pipeline tests do not cover it.
+  See the scanner guide for details.
 - `.vscode/` recommends the extension and supplies tasks. CI uses `contents: read`, annotations/summary and report
   artifacts retained for seven days, without PR comments, provider secrets, or schedules. Tooling is excluded from Docker.
 
