@@ -56,14 +56,15 @@ printf '%s\n' 'CI retained firewall log marker' > "$fixture/logs/ip_firewall_ci.
 # against a local HTTP/2 echo service. The separate Nginx process cannot affect app listeners.
 cat > "$fixture/grpc-smoke.mjs" <<'GRPC_SMOKE'
 import assert from "node:assert/strict";
-import { execFileSync, spawn, spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import http from "node:http";
 import dgram from "node:dgram";
 import { once } from "node:events";
 import fs from "node:fs/promises";
 import http2 from "node:http2";
 import net from "node:net";
-import { setTimeout as delay } from "node:timers/promises";
+import { SmokePortReservations, remapSmokeListeners, withSmokeEndpointRetries,
+    startSmokeNginx, stopSmokeNginx } from "./nginx-smoke-endpoints.mjs";
 import utils from "/app/lib/utils.js";
 import apiValidator from "/app/lib/validator/api.js";
 import { getCompiledSchema, getValidationSchema } from "/app/schema/index.js";
@@ -105,10 +106,9 @@ const tcpUpstream = net.createServer((connection) => connection.on("data", (data
 const udpUpstream = dgram.createSocket(ipv6Host === "::1" ? "udp6" : "udp4");
 udpUpstream.on("message", (data, remote) => udpUpstream.send(data, remote.port, remote.address));
 
-let nginx;
-let exited;
+const reservations = new SmokePortReservations();
+let running;
 let client;
-let nginxError;
 try {
     await fs.mkdir(directory, { recursive: true });
     execFileSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1",
@@ -157,12 +157,7 @@ try {
         ["127.0.0.1", ipv6Host, `[${ipv6Host}]`].map((address) => ({ protocol, address })));
     const streams = [];
     for (const item of streamCases) {
-        const reservation = item.protocol === "tcp" ? net.createServer() : dgram.createSocket("udp4");
-        if (item.protocol === "tcp") reservation.listen(0, "127.0.0.1");
-        else reservation.bind(0, "127.0.0.1");
-        await once(reservation, "listening");
-        item.port = reservation.address().port;
-        await new Promise((resolve) => reservation.close(resolve));
+        item.port = await reservations.reserve(item.protocol);
         const payload = { incoming_port: String(item.port), forwarding_host: item.address,
             forwarding_port: String((item.protocol === "tcp" ? tcpUpstream : udpUpstream).address().port),
             tcp_forwarding: item.protocol === "tcp", udp_forwarding: item.protocol === "udp" };
@@ -199,11 +194,7 @@ try {
         Object.assign(process.env, { DISABLE_HTTP: "false", IPV4_BINDING: "127.0.0.1",
             DISABLE_IPV6: "true", LISTEN_PROXY_PROTOCOL: "false", DEMO_MODE: "false" });
         for (const [index, item] of rootCases.entries()) {
-            const reservation = net.createServer();
-            reservation.listen(0, "127.0.0.1");
-            await once(reservation, "listening");
-            item.port = reservation.address().port;
-            await new Promise((resolve) => reservation.close(resolve));
+            item.port = await reservations.reserve();
             process.env.HTTP_PORT = String(item.port);
             const payload = { domain_names: ["root-smoke.test"], forward_scheme: "http",
                 forward_host: "127.0.0.1", forward_port: httpUpstream.address().port,
@@ -223,11 +214,7 @@ try {
                 clients: [{ directive: item.directive, address: item.address },
                     ...(item.directive === "deny" ? [{ directive: "allow", address: "all" }] : [])], meta: {} };
             await apiValidator(getValidationSchema("/nginx/access-lists", "post"), list);
-            const reservation = net.createServer();
-            reservation.listen(0, "127.0.0.1");
-            await once(reservation, "listening");
-            item.port = reservation.address().port;
-            await new Promise((resolve) => reservation.close(resolve));
+            item.port = await reservations.reserve();
             process.env.HTTP_PORT = String(item.port);
             const rendered = await internalNginx.renderConfig("proxy_host", { id: 70300 + index, enabled: true,
                 domain_names: ["acl-smoke.test"], forward_scheme: "http", forward_host: "127.0.0.1",
@@ -258,14 +245,10 @@ try {
     }
     let internalPort;
     if (tcpInternal) {
-        const reservation = net.createServer();
-        reservation.listen(0, "127.0.0.1");
-        await once(reservation, "listening");
-        internalPort = reservation.address().port;
-        await new Promise((resolve) => reservation.close(resolve));
+        internalPort = await reservations.reserve();
     }
     const config = `${directory}/nginx.conf`;
-    await fs.writeFile(config, `
+    let configuration = `
 ${streamModule ? `load_module ${streamModule};` : ""}
 ${process.getuid?.() === 0 ? "user root;" : ""}
 master_process off;
@@ -282,27 +265,27 @@ http {
     ${rootServers.join("\n")}
 }
 stream { ${streams.join("\n")} }
-`);
+`;
+    await fs.writeFile(config, configuration);
     execFileSync(nginxBin, ["-tq", "-c", config, "-p", `${directory}/`], { stdio: "inherit" });
-    nginx = spawn(nginxBin, ["-c", config, "-p", `${directory}/`, "-g", "daemon off;"], { stdio: "inherit" });
-    nginx.on("error", (error) => { nginxError = error; });
-    exited = once(nginx, "exit").catch(() => {});
-    const deadline = Date.now() + 5000;
-    const listenerReady = async () => tcpInternal
-        ? new Promise((resolve) => {
-            const probe = net.connect(internalPort, "127.0.0.1");
-            probe.once("connect", () => { probe.destroy(); resolve(true); });
-            probe.once("error", () => resolve(false));
-        }) : (await fs.stat(socket).catch(() => null))?.isSocket();
-    while (!(await listenerReady())) {
-        if (nginxError) throw nginxError;
-        assert.equal(nginx.exitCode, null, "isolated Nginx exited before opening its socket");
-        assert.ok(Date.now() < deadline, "isolated Nginx socket did not become ready");
-        await delay(25);
-    }
-    client = http2.connect("http://localhost", { createConnection: () => tcpInternal
-        ? net.connect(internalPort, "127.0.0.1") : net.connect(socket) });
-    client.on("error", () => {});
+    running = await withSmokeEndpointRetries({ reservations,
+        remap: async (replacements) => {
+            for (const item of [...streamCases, ...rootCases, ...aclCases]) {
+                item.port = replacements.get(`${item.protocol || "tcp"}:${item.port}`);
+            }
+            if (internalPort) internalPort = replacements.get(`tcp:${internalPort}`);
+            configuration = remapSmokeListeners(configuration, replacements);
+            await fs.writeFile(config, configuration);
+            // Re-check every replacement; genuine template errors never get retried.
+            execFileSync(nginxBin, ["-tq", "-c", config, "-p", `${directory}/`], { stdio: "inherit" });
+            console.error("Retrying isolated Nginx after a confirmed IPv4 listener collision");
+        },
+        run: async () => {
+            await fs.rm(socket, { force: true });
+            return startSmokeNginx({ nginxBin, config, directory, socket, internalPort });
+        },
+    });
+    client = running.client;
     const payload = frame(Buffer.from("smoke request"));
     for (const item of cases) {
         const query = "?probe=a%26b";
@@ -387,14 +370,8 @@ stream { ${streams.join("\n")} }
 } finally {
     client?.destroy();
     for (const session of sessions) session.destroy();
-    if (nginx && nginx.exitCode === null && !nginxError) {
-        nginx.kill("SIGQUIT");
-        await Promise.race([exited, delay(3000)]);
-        if (nginx.exitCode === null && nginx.signalCode === null) {
-            nginx.kill("SIGKILL");
-            await exited;
-        }
-    }
+    if (running) await stopSmokeNginx(running);
+    await reservations.release();
     await new Promise((resolve) => upstream.close(resolve));
     if (secureUpstream) await new Promise((resolve) => secureUpstream.close(resolve));
     await new Promise((resolve) => tcpUpstream.close(resolve));
@@ -409,6 +386,7 @@ GRPC_SMOKE
 # Use the image's implementation and templates for IP/country/ASN runtime checks.
 sed 's|../../backend/|/app/|g' "$(dirname "$0")/ip-firewall-smoke.mjs" > "$fixture/ip-firewall-smoke.mjs"
 cp "$(dirname "$0")/nginx-smoke-modules.mjs" "$fixture/nginx-smoke-modules.mjs"
+cp "$(dirname "$0")/nginx-smoke-endpoints.mjs" "$fixture/nginx-smoke-endpoints.mjs"
 cp "$(dirname "$0")/mmdb-oracle.py" "$fixture/mmdb-oracle.py"
 cp "$(dirname "$0")/fixtures/GeoIP2-Country-Test.mmdb" "$fixture/GeoIP2-Country-Test.mmdb"
 cp "$(dirname "$0")/fixtures/GeoLite2-ASN-Test.mmdb" "$fixture/GeoLite2-ASN-Test.mmdb"
