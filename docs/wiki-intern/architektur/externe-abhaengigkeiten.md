@@ -45,17 +45,20 @@ Dokumentation aller wesentlichen externen Abhängigkeiten und deren Zweck.
 
 ### Hilfsbibliotheken
 
-| Paket           | Version | Zweck                            |
-| --------------- | ------- | -------------------------------- |
-| `ajv`           | ^8.20.0 | JSON-Schema-Validierung          |
-| `lodash`        | ^4.18.1 | Utility-Funktionen               |
-| `dayjs`         | 1.11.23 | Datums-Verarbeitung              |
-| `liquidjs`      | 10.30.0 | Template-Engine (Nginx-Configs)  |
-| `archiver`      | ^8.0.0  | ZIP-Archivierung (GitOps Export) |
-| `js-yaml`       | ^5.4.3  | YAML-Verarbeitung                |
-| `cookie-parser` | ^1.4.7  | Cookie-Parsing                   |
-| `punycode.js`   | 2.3.1   | Internationalisierte Domainnamen |
-| `signale`       | 1.4.0   | Logger                           |
+| Paket           | Version | Zweck                                       |
+| --------------- | ------- | ------------------------------------------- |
+| `ajv`           | ^8.20.0 | JSON-Schema-Validierung                     |
+| `lodash`        | ^4.18.1 | Utility-Funktionen                          |
+| `dayjs`         | 1.11.23 | Datums-Verarbeitung                         |
+| `liquidjs`      | 10.30.0 | Template-Engine (Nginx-Configs)             |
+| `archiver`      | ^8.0.0  | ZIP-Archivierung (GitOps Export)            |
+| `js-yaml`       | ^5.4.3  | YAML-Verarbeitung                           |
+| `cookie-parser` | ^1.4.7  | Cookie-Parsing                              |
+| `proxy-agent`   | 8.0.2   | Umgebungsbasierte ausgehende Proxys und PAC |
+| `get-uri`       | 8.0.1   | PAC-Quellen und Protokoll-Registry          |
+| `basic-ftp`     | 6.2.2   | FTP-PAC mit eigenem Stream-Handler          |
+| `punycode.js`   | 2.3.1   | Internationalisierte Domainnamen            |
+| `signale`       | 1.4.0   | Logger                                      |
 
 ## Frontend-Abhängigkeiten (Auswahl)
 
@@ -112,7 +115,7 @@ Die erneute Prüfung von PR #149 beginnt mit 39 Backend-Meldungen zu 25 untersch
 
 Die Axios-Version bringt zugleich ihre reguläre `form-data`-Abhängigkeit 4.0.6 mit. Lockfile-Untergrenzen und tatsächliche URI-/IP-/FTP-Kompatibilitätsproben ergänzen die Anwendungssuiten. [Fast URI 3.1.8](https://github.com/fastify/fast-uri/releases/tag/v3.1.8) korrigiert zusätzlich zur vorherigen 3.1.7 die Hostnormalisierung; die ältere Empfehlung 3.1.7 reicht daher für die aktuelle Prüfung nicht. Die [gRPC-Herstellerwarnung](https://github.com/grpc/grpc-node/security/advisories/GHSA-m9gg-hp2v-232j) nennt 1.14.5 als korrigierte Version der vorhandenen 1.14-Linie. Ein Paketbefund beweist für sich allein keinen über ShieldPM erreichbaren Angriffspfad.
 
-`basic-ftp` bleibt vorerst bei 5.3.1 im transitiven Pfad `proxy-agent → pac-proxy-agent → get-uri`. Die [Hersteller-Releases](https://github.com/patrickjuchli/basic-ftp/releases) korrigieren die bekannte Listing-Schwachstelle in 6.2.1; 6.2.2 enthält weitere Listing-/PASV-Korrekturen. Die bisherige Splitserver-Gegenprobe zeigt ein Hindernis für einen bloßen Major-Override: `get-uri` 8.0.1 behandelt eine Ablehnung von `downloadTo(...).then(...)` nicht, während FTP v6 passive Datenverbindungen standardmäßig an die Adresse der Kontrollverbindung bindet. Nach Rückgabe des Streams beendet die unbehandelte Promise-Ablehnung den isolierten Node-Prozess ohne anwendungseigenen Handler. ShieldPMs `backend/index.js` registriert dagegen einen Handler, der solche Ablehnungen loggt. Das ist eine Kombination aus strengerem Sicherheitsstandard und vorhandener Fehlerbehandlungslücke im Aufrufer; die Gegenprobe belegt weder einen allgemeinen Bruch der öffentlichen FTP-API noch einen garantierten Produktionsabbruch. Die vertiefte Nachprüfung steht im folgenden Abschnitt. Eingebundener Vendorcode wird nicht gepatcht und die Warnung nicht unterdrückt.
+Beim damaligen Prüflauf blieb `basic-ftp` bei 5.3.1 im transitiven Pfad `proxy-agent → pac-proxy-agent → get-uri`. Die [Hersteller-Releases](https://github.com/patrickjuchli/basic-ftp/releases) korrigieren die bekannte Listing-Schwachstelle in 6.2.1; 6.2.2 enthält weitere Listing-/PASV-Korrekturen. Die Splitserver-Gegenprobe zeigte ein Hindernis für einen bloßen Major-Override: `get-uri` 8.0.1 behandelt eine Ablehnung von `downloadTo(...).then(...)` nicht, während FTP v6 passive Datenverbindungen standardmäßig an die Adresse der Kontrollverbindung bindet. Nach Rückgabe des Streams beendet die unbehandelte Promise-Ablehnung den isolierten Node-Prozess ohne anwendungseigenen Handler. ShieldPMs `backend/index.js` registriert dagegen einen Handler, der solche Ablehnungen loggt. Das ist eine Kombination aus strengerem Sicherheitsstandard und vorhandener Fehlerbehandlungslücke im Aufrufer; die Gegenprobe belegt weder einen allgemeinen Bruch der öffentlichen FTP-API noch einen garantierten Produktionsabbruch. Die vertiefte Nachprüfung und die anschließende Korrektur stehen unten. Eingebundener Vendorcode wird nicht gepatcht und die Warnung nicht unterdrückt.
 
 Der frische lokale Audit nach den Korrekturen meldet bei 522 Backend-Abhängigkeiten nur noch den genannten einen hohen FTP-Befund (keine niedrigen, mittleren oder kritischen Meldungen); das Frontend meldet bei 629 Abhängigkeiten keine bekannten Befunde. Zuvor waren es 39 Backend-Meldungen.
 
@@ -143,15 +146,15 @@ Diese Zahlen sind ein Snapshot vom 7. Oktober 2026; die historischen Prüfungen 
 
 ## FTP-Nachprüfung vom 8. Oktober 2026
 
-Der erneute Backend-Audit auf PR #150 meldet weiterhin einen hohen Befund bei 522 Abhängigkeiten:
+Der erneute Backend-Audit auf PR #150 vor der FTP-Korrektur meldete einen hohen Befund bei 522 Abhängigkeiten:
 [GHSA-c475-qrg2-pj4r](https://github.com/patrickjuchli/basic-ftp/security/advisories/GHSA-c475-qrg2-pj4r)
 (CVE-2026-102990). Eine manipulierte Unix-Verzeichniszeile verursacht quadratische CPU-Arbeit und kann den
 Node.js-Eventloop blockieren. Die Herstellerkorrektur beginnt bei 6.2.1.
 
 Die aktuelle Herstellerfassung 6.2.2 korrigiert außerdem
 [GHSA-5rfr-xx34-2xxv](https://github.com/patrickjuchli/basic-ftp/security/advisories/GHSA-5rfr-xx34-2xxv)
-(mittel, MLSD-Erkennung und PASV-Antwortparser). Dieser Befund erscheint im aktuellen Yarn-Audit noch nicht.
-Die betroffenen regulären Ausdrücke sind auch in der installierten 5.3.1 vorhanden; für eine vollständige
+(mittel, MLSD-Erkennung und PASV-Antwortparser). Dieser Befund erschien im damaligen Yarn-Audit noch nicht.
+Die betroffenen regulären Ausdrücke sind auch in der damals installierten 5.3.1 vorhanden; für eine vollständige
 Korrektur ist daher 6.2.2 maßgeblich. Die 40-MiB-Grenze für Listings begrenzt deren Größe, verhindert aber
 keine übermäßige CPU-Arbeit beim Parsen.
 
@@ -184,8 +187,8 @@ jedoch nicht setzen. Auch der Cloudflare-Start-/Timer-Abruf kann dieselbe Betrie
 
 Die veröffentlichten Consumer bleiben `proxy-agent` 8.0.2 → `pac-proxy-agent` 9.1.0 → `get-uri` 8.0.1
 mit `basic-ftp ^5.3.1`; eine reguläre Aktualisierung wählt deshalb noch keine korrigierte FTP-Version.
-Die bestehende Laufzeitsuite besteht erneut mit 17 Tests, prüft aber keinen `MDTM`-zu-`LIST`-Fallback und
-keine abgebrochene Übertragung. Für einen sicheren Versionswechsel müssen die Fehler der asynchronen
+Die damalige Laufzeitsuite bestand erneut mit 17 Tests, prüfte aber keinen `MDTM`-zu-`LIST`-Fallback und
+keine abgebrochene Übertragung. Für einen sicheren Versionswechsel mussten die Fehler der asynchronen
 Übertragung an den zurückgegebenen Stream weitergeleitet und der Client zuverlässig geschlossen werden.
 Frische isolierte FTP-Gegenproben bestätigen: reguläre Downloads funktionieren mit beiden Versionen;
 eine mit 450 abgebrochene Übertragung beendet den isolierten Node-Prozess ohne anwendungseigenen Handler
@@ -194,8 +197,45 @@ diese Ablehnung; der zurückgegebene Stream erhält dennoch keinen verlässliche
 Ein getrennt auf `127.0.0.2` lauschender passiver Datenserver funktioniert mit 5.3.1,
 während 6.2.2 die Kontrolladresse `127.0.0.1` verwendet und dadurch ebenfalls diese Fehlerbehandlungslücke
 auslöst. `allowSeparateTransferHost` an `getUri()` durchzureichen konfiguriert den Client-Konstruktor nicht.
-Der strengere Transferhost-Schutz darf dafür nicht pauschal abgeschaltet werden. Der weitere Korrekturpunkt
-steht unter [Offene Fragen](../offene-fragen.md).
+Der strengere Transferhost-Schutz darf dafür nicht pauschal abgeschaltet werden.
+
+## FTP-Korrektur in PR #150
+
+Das Backend bindet `basic-ftp` 6.2.2 direkt und exakt ein. Die begrenzte Resolution
+`**/get-uri/basic-ftp` setzt auch den FTP-Consumer in der PAC-Kette auf diese Version;
+`get-uri` 8.0.1 ist für die verwendete öffentliche Protokoll-Registry ebenfalls direkt deklariert.
+Damit werden sowohl die Unix-Listing-Korrektur als auch die MLSD-/PASV-Korrekturen verwendet.
+
+`backend/lib/ftp-uri.js` implementiert `getFtpUri()` mit dem Cache-/Stream-Vertrag von `get-uri`:
+URL-Zugangsdaten und Pfad werden dekodiert, die Änderungszeit kommt von `MDTM` oder dem
+Verzeichnis-Fallback, und unveränderte beziehungsweise fehlende Dateien behalten `ENOTMODIFIED`
+beziehungsweise `ENOTFOUND`. Nach der Stream-Rückgabe besitzt der Handler die Übertragung selbst.
+Er beendet den Stream erst nach erfolgreicher abschließender FTP-Antwort, leitet Transferfehler
+an den Stream weiter und schließt den FTP-Client auch bei Fehlern oder vorzeitig geschlossenem Stream.
+Der separate Schreibstream verhindert, dass `basic-ftp` den an den PAC-Consumer zurückgegebenen
+Stream vor der endgültigen FTP-Antwort beendet. `new Client()` behält den standardmäßigen Schutz,
+der passive Datenverbindungen an die Adresse der Kontrollverbindung bindet.
+
+`backend/lib/proxy-agent.js` setzt bei der Modulinitialisierung dauerhaft `protocols.ftp = getFtpUri`
+und exportiert denselben `ProxyAgent` wie das Herstellerpaket. Die drei produktiven Aufrufer
+`remote-version.js`, `ip_ranges.js` und `certbot.js` importieren diesen Wrapper. Die anderen
+PAC-Protokolle behalten ihre Hersteller-Handler; FTP-PAC bleibt verfügbar.
+
+Die Registry wird einmal initialisiert und nicht für einzelne Requests vorübergehend umgeschaltet.
+`get-uri` liest den Handler bei jedem Abruf aus seinem exportierten Registry-Objekt; auch ein bereits
+importierter `PacProxyAgent` verwendet deshalb den neuen Handler. Eine eigene `PacProxyAgent`-Subklasse
+würde dessen als privat deklarierte Methode `loadPacFile()` und zusätzlich das Routing von `ProxyAgent`
+berühren. Das verbleibende Integrationsrisiko ist eine künftig separat installierte `get-uri`-Kopie
+unter `pac-proxy-agent`; eine Prüfung des vollständigen Wrapper-zu-FTP-PAC-Pfades muss deshalb nach
+Dependency-Änderungen erhalten bleiben.
+Die neue Suite prüft diesen Pfad auch im strikten Unterprozess: Nach vollständigen PAC-Daten lehnt eine
+abschließende FTP-Antwort 450 den ProxyAgent-Aufruf ab, ohne den HTTP-Zielserver aufzurufen oder eine
+unbehandelte Promise-Ablehnung zu erzeugen.
+
+Der anschließende lokale Backend-Audit meldet bei 522 erfassten Abhängigkeiten keine bekannten Befunde
+in allen Schweregraden. Das ist der Snapshot nach der FTP-Korrektur vom 8. Oktober 2026; die Audit-Zahlen
+vor der Korrektur bleiben als historische Nachweise erhalten. Die gezielten FTP-Tests und ihre Grenzen
+stehen unter [Tests](../entwicklung/tests.md).
 
 ## Verwandte Seiten
 

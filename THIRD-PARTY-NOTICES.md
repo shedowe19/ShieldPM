@@ -87,7 +87,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [bare-stream@2.13.3](https://www.npmjs.com/package/bare-stream/v/2.13.3) - Apache-2.0
 - [bare-url@2.4.6](https://www.npmjs.com/package/bare-url/v/2.4.6) - Apache-2.0
 - [base64-js@1.5.1](https://www.npmjs.com/package/base64-js/v/1.5.1) - MIT
-- [basic-ftp@5.3.1](https://www.npmjs.com/package/basic-ftp/v/5.3.1) - MIT
+- [basic-ftp@6.2.2](https://www.npmjs.com/package/basic-ftp/v/6.2.2) - MIT
 - [batchflow@0.4.0](https://www.npmjs.com/package/batchflow/v/0.4.0) - MIT
 - [bcrypt-pbkdf@1.0.2](https://www.npmjs.com/package/bcrypt-pbkdf/v/1.0.2) - BSD-3-Clause
 - [bcryptjs@3.0.3](https://www.npmjs.com/package/bcryptjs/v/3.0.3) - BSD-3-Clause
