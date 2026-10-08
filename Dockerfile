@@ -14,7 +14,7 @@ RUN bash /usr/local/bin/setup-node-apt.sh && \
     node --version | grep -E '^v26\.' && \
     rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY frontend/package.json frontend/yarn.lock ./
+COPY frontend/package.json frontend/yarn.lock frontend/.yarnrc ./
 RUN yarn install --frozen-lockfile --production=false
 COPY frontend /app
 # The host editor previews the same block-page template used by the backend.

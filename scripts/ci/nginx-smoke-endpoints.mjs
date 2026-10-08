@@ -113,7 +113,7 @@ export async function startSmokeNginx({
 }) {
 	const nginx = spawnProcess(
 		nginxBin,
-		["-c", config, "-p", `${directory}/`, "-g", "daemon off;"],
+		["-e", "stderr", "-c", config, "-p", `${directory}/`, "-g", "daemon off;"],
 		{ stdio: ["ignore", "inherit", "pipe"] },
 	);
 	const exited = once(nginx, "exit").catch(() => {});

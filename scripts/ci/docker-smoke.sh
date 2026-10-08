@@ -259,7 +259,8 @@ http {
     access_log off;
     ${["client_body", "proxy", "fastcgi", "uwsgi", "scgi"].map((name) => `${name}_temp_path ${directory}/${name};`).join("\n")}
     server {
-        listen ${tcpInternal ? `127.0.0.1:${internalPort}` : `unix:${socket}`} http2;
+        listen ${tcpInternal ? `127.0.0.1:${internalPort}` : `unix:${socket}`};
+        http2 on;
         ${locations.join("\n")}
     }
     ${rootServers.join("\n")}
@@ -267,7 +268,7 @@ http {
 stream { ${streams.join("\n")} }
 `;
     await fs.writeFile(config, configuration);
-    execFileSync(nginxBin, ["-tq", "-c", config, "-p", `${directory}/`], { stdio: "inherit" });
+    execFileSync(nginxBin, ["-e", "stderr", "-tq", "-c", config, "-p", `${directory}/`], { stdio: "inherit" });
     running = await withSmokeEndpointRetries({ reservations,
         remap: async (replacements) => {
             for (const item of [...streamCases, ...rootCases, ...aclCases]) {
@@ -277,7 +278,7 @@ stream { ${streams.join("\n")} }
             configuration = remapSmokeListeners(configuration, replacements);
             await fs.writeFile(config, configuration);
             // Re-check every replacement; genuine template errors never get retried.
-            execFileSync(nginxBin, ["-tq", "-c", config, "-p", `${directory}/`], { stdio: "inherit" });
+            execFileSync(nginxBin, ["-e", "stderr", "-tq", "-c", config, "-p", `${directory}/`], { stdio: "inherit" });
             console.error("Retrying isolated Nginx after a confirmed IPv4 listener collision");
         },
         run: async () => {
@@ -461,8 +462,8 @@ for service_uid in 0 1000; do
         for directory in /run /tmp /usr/local; do
             test "$(stat -c %u "$directory")" = 0
         done
-        nginx -tq
-        nginx -s reload
+        nginx -e stderr -tq
+        nginx -e stderr -s reload
         healthcheck.sh
         node /data/grpc-smoke.mjs
         # Reuse the image module paths and require the actual ModSecurity directive.

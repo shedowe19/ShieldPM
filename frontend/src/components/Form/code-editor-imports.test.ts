@@ -31,7 +31,7 @@ describe("code editor form dependencies", () => {
 		if (!existsSync(lazyCodeEditorPath)) return;
 
 		expect(readSource("src/components/LazyCodeEditor.tsx")).toContain(
-			'lazy(() => import("@uiw/react-textarea-code-editor"))',
+			'lazy(() => import("./ConfiguredCodeEditor"))',
 		);
 
 		for (const file of [

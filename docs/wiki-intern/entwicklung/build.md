@@ -45,6 +45,8 @@ Pull Requests aus demselben Repository melden sich mit dem vorhandenen `GITHUB_T
 
 PR-Builds laden das fertige Image nur in den lokalen Docker-Daemon des Runners (`load: true`, `push: false`); Registry-Push, Multiarch-Veröffentlichung und Releases bleiben auf Ereignisse außerhalb von Pull Requests begrenzt. Fork-PRs erhalten über den Login-Schritt keine Registry-Zugangsdaten und benötigen ein anonym zugängliches Basisimage für den vollständigen Build.
 
+Die vorbereitenden Frontend- und Backend-Builds verwenden ausdrücklich `outputs: type=cacheonly`: Sie erzeugen den Build-Cache für die finale Stage und exportieren kein eigenes Image. Damit ist die bestehende Cache-Verwendung für Buildx eindeutig konfiguriert.
+
 Vom Docker-Workflow erfasste Pushes auf `develop` veröffentlichen nach erfolgreichen Builds beider Architekturen das Multiarch-Image `ghcr.io/shedowe19/shieldpm:develop` und erstellen für eine noch unveröffentlichte `.version` ein GitHub-Release mit den nativen Installern und LXC-Templates. Der Workflow besitzt für Branch-Pushes einen Pfadfilter; reine Wiki-Änderungen lösen diesen Build nicht aus. Ein Push des passenden `v<version>`-Tags kann dasselbe Release auslösen; ein manueller Workflow-Start erstellt kein Release. Der erste Release-Lauf legt einen fehlenden Versions-Tag auf dem tatsächlich gebauten Commit an. Ein bereits vorhandenes Release bleibt bei weiteren Builds derselben Version unverändert; ein vorhandener Tag auf einem anderen Commit verhindert die Veröffentlichung, bis `.version` erhöht ist.
 
 Vor dem isolierten Anwendungstest ruft der Docker-Workflow in beiden Architektur-Jobs `scripts/ci/geoip-update-smoke.sh` auf. Dieser separate Test führt den echten GeoIP-Helfer des gebauten Images mit Netzwerkzugriff zweimal auf demselben temporären Datenvolume aus: zunächst für alle drei fehlenden Datenbanken, danach für eine erneute Latest-Release-Prüfung. Bei unverändertem Release müssen SHA-256, Größe, Inode und Änderungszeit erhalten bleiben und erneute Asset-Downloads ausbleiben; ein inzwischen geänderter Release-Snapshot darf entsprechend aktualisierte Dateien liefern. Dabei werden keine Anwendungsdienste gestartet.
@@ -56,6 +58,8 @@ Anschließend führt `scripts/ci/docker-smoke.sh` in beiden Architektur-Jobs ein
 Ein ausdrücklich als Testfixture gekennzeichneter Marker im ACME-Account-Verzeichnis überspringt ausschließlich die sonst vor dem Dienststart versuchte Registrierung. Er enthält keine Zugangsdaten und ist kein nutzbarer ACME-Account. Die Prüfung wartet höchstens 180 Sekunden pro Container auf den vorhandenen Healthcheck. Anschließend prüft sie als jeweilige Service-UID den Backend-Socket, schreibt in die generierte Standardkonfiguration und das Certbot-Plugin-Verzeichnis, führt `nginx -tq`, Reload und Healthcheck aus und kontrolliert, dass `/run`, `/tmp` und `/usr/local` weiterhin Root gehören. Bei Fehlern werden Status und begrenzte Containerlogs ausgegeben; Container, Volumes und lokale Fixtures werden auch im Fehlerfall entfernt. Der Workflow-Schritt ist zusätzlich auf zehn Minuten begrenzt.
 
 Die isolierte gRPC-/Stream-/HTTP-Vorlagenprüfung reserviert alle IPv4-TCP-/UDP-Listener bis nach Konfigurationserzeugung und `nginx -t`, damit spätere Portzuteilungen ihre eigenen früheren Listener nicht wiederverwenden. TCP-Reservierungen schließen versehentliche Verbindungen sofort. `nginx-smoke-endpoints.mjs` gibt die Reservierungen erst unmittelbar vor dem Start frei und verlangt anschließend einen echten HTTP/2-Settings-Austausch als Bereitschaftsnachweis. Nur die konkrete Nginx-Meldung `bind() ... (98: Address already in use)` an einem IPv4-Testlistener erlaubt neue Ports mit erneuter Syntaxprüfung; insgesamt gibt es höchstens drei Startversuche. Upstream-Adressen und -Ports bleiben bei diesem Wechsel erhalten. Syntaxfehler, andere Startfehler, Bereitschafts-Timeouts und fehlerhafte Antworten bleiben fatal. Lokale Regressionstests verwenden echte TCP-/UDP-Sockets und Kindprozesse; der tatsächliche Image-/Nginx-Nachweis läuft weiterhin im Docker-Job.
+
+Die isolierte HTTP/2-Prüfkonfiguration aktiviert das Protokoll mit `http2 on;`. Nginx-Prüfung, Reload und dieser Teststart verwenden `-e stderr`, ebenso die Master-Konfigurationsabfragen der Firewall-Prüfung: Diagnosen bleiben sichtbar, ohne vor dem Einlesen der Testkonfiguration das kompilierte Standard-Logverzeichnis öffnen zu müssen. Das verhindert fehlende beziehungsweise für UID 1000 unzugängliche Bootstrap-Logs; die konfigurierten Laufzeitlogs und ihre Schreibprüfungen bleiben erhalten.
 
 Lokal verwendet `bash scripts/ci/docker-smoke.sh IMAGE` ausschließlich ein bereits geladenes Image derselben Architektur. `scripts/tests/test_docker_smoke.py` prüft Erfolg, Health-Timeout und Schreibfehler einschließlich Cleanup mit einem simulierten Docker-CLI; der Docker-Build-Job führt den tatsächlichen Docker-Lauf aus.
 
@@ -106,9 +110,17 @@ Gesamtbudget hatte vor dem Update nur 244 Byte Spielraum; es wird deshalb von 1.
 angepasst. Der neue Grenzwert lässt 4.288 Byte Spielraum über der verifizierten Baseline. Der größte
 JavaScript-Chunk (284.601 Byte) und die Stylesheets (16.325 Byte) bleiben innerhalb ihrer unveränderten Limits.
 
+Die Warnungsbereinigung vom 8. Oktober 2026 ergänzt 1.287 sprachspezifische Firewall-/Audit-Texte und beschränkt
+den bedarfsabhängigen Editor auf die tatsächlich benötigten Syntaxgrammatiken. Der gemessene Build enthält
+1.117.112 Byte komprimierte JavaScript-Assets statt zuvor 1.285.712 Byte. Der größte Chunk liegt bei 106.547 Byte,
+die Stylesheets unverändert bei 16.325 Byte. Alle drei bestehenden Budgets bleiben unverändert; auch Vites
+Standardgrenze für unkomprimierte Chunks wird eingehalten.
+
 ## Native / LXC Build
 
 Vor dem Export des LXC-Rootfs entfernt der Workflow SSH-Hostkeys und leert die Maschinen-ID. Ein aktivierter Systemd-Dienst erzeugt fehlende SSH-Hostkeys vor dem SSH-Start pro Instanz. Bereinigungs-Globs werden innerhalb des Builder-Containers ausgewertet, damit sie dessen Dateisystem erfassen.
+
+Beim Installieren der LXC-Systempakete erstellt der Workflow das benötigte Manpage-Verzeichnis und lässt ausschließlich `/usr/share/man/man8/idmapwb.8.gz` trotz des Manpage-Ausschlusses im Debian-Slim-Basisimage zu. Die Datei stammt aus dem ohnehin benötigten `cifs-utils` und ist das Ziel der zugehörigen `update-alternatives`-Verknüpfung. Die übrigen Dokumentationsfilter bleiben bestehen; ein zusätzliches Paket ist dafür nicht nötig.
 
 Der Installer erwartet das entpackte native Release-Paket mit `app/`, `html/`, `usr/` und `rootfs/`. Dieses Paket enthält die zuvor gebauten Anwendungsdateien und Nginx-Binaries; der Installer klont das Repository nicht. Ein Aufruf der einzelnen `scripts/install.sh` aus einem normalen Checkout ersetzt das native Paket nicht.
 

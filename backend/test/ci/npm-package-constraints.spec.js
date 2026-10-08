@@ -22,9 +22,7 @@ describe("npm and Yarn dependency constraints", () => {
 			"vitest/vite/postcss/nanoid": "3.3.18",
 			"vite/postcss/source-map-js": "1.2.2",
 		});
-		expect(readManifest("frontend").resolutions).toEqual({
-			"@tanstack/react-query-devtools/**/seroval": "1.6.3",
-		});
+		expect(readManifest("frontend")).not.toHaveProperty("resolutions");
 	});
 
 	it("does not use broad overrides that could hide incompatible major upgrades", () => {

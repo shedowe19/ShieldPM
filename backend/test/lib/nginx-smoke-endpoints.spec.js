@@ -129,6 +129,7 @@ describe("isolated Nginx smoke endpoints", () => {
 		const internalPort = await reservations.reserve();
 		await reservations.release();
 		let running;
+		let nginxArguments;
 		try {
 			running = await startSmokeNginx({
 				nginxBin: "fixture",
@@ -137,17 +138,20 @@ describe("isolated Nginx smoke endpoints", () => {
 				internalPort,
 				timeout: 2000,
 				report: () => {},
-				spawnProcess: (_command, _arguments, options) =>
-					spawn(
+				spawnProcess: (_command, arguments_, options) => {
+					nginxArguments = arguments_;
+					return spawn(
 						process.execPath,
 						[
 							"-e",
 							`const server = require('node:http2').createServer(); setTimeout(() => server.listen(${internalPort}, '127.0.0.1'), 100);`,
 						],
 						options,
-					),
+					);
+				},
 			});
 			expect(running.client.remoteSettings).toBeDefined();
+			expect(nginxArguments.slice(0, 2)).toEqual(["-e", "stderr"]);
 		} finally {
 			if (running) await stopSmokeNginx(running);
 			await reservations.release();

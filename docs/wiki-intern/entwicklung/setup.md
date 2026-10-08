@@ -10,6 +10,23 @@ Anleitung zur Einrichtung der lokalen Entwicklungsumgebung.
 - npm / yarn
 - Git
 
+Die Paketverwaltung bleibt bei Yarn Classic 1.22.22. `frontend/.yarnrc` deaktiviert dessen ungenutzte
+Workspace-Verarbeitung; beide Anwendungspakete sind eigenständige Projekte. Das Dockerfile kopiert diese
+Konfiguration bereits vor der Dependency-Installation. `csstype` ist im Frontend ein direkter Dev-Peer für
+Goober; das Backend deklariert `@types/node` für seine Node-JSDoc-Typen und den TypeScript-Check. Mysql2s
+verpflichtender Peer kann diese Typdefinitionen unter Yarn Classic auch in die Produktionsinstallation ziehen.
+
+Die verbleibenden Backend-Resolution-Warnungen für Axios und Basic FTP stammen aus den noch älteren
+Versionsanforderungen von Duo beziehungsweise `get-uri`. Die Sicherheits-Pins bleiben bei Axios 1.20.0 und
+Basic FTP 6.2.2; der FTP-Kompatibilitätsadapter ist im [Deployment-Vertrag](./deployment.md) beschrieben.
+Warnungen über `bare`, `bun`, `deno` oder `pnpm` als unbekannte Engines betreffen Metadaten von Drittpaketen:
+Yarn Classic kennt diese Engine-Namen nicht. Die unterstützten Node-Versionen werden weiterhin geprüft;
+`--ignore-engines` wird dafür nicht verwendet.
+
+Der Solid-Lockeintrag verwendet 1.9.16 mit den von Upstream gemeinsam angeforderten Seroval- und
+Plugin-Versionen 1.6.8. Der frühere Seroval-Override ist deshalb entfallen. Certbot verwendet für IDN-Domains
+wie Nginx bereits die direkte Bibliothek `punycode.js`, damit Node 26 das veraltete eingebaute Modul nicht lädt.
+
 ## Frontend starten
 
 ```bash

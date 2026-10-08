@@ -78,6 +78,8 @@
     "react-router-dom": "^7.18.4",
     "react-select": "5.10.2",
     "recharts": "^3.10.1",
+    "refractor": "4.9.0",
+    "rehype-prism-plus": "2.0.0",
     "remark-gfm": "^4.0.1",
     "rooks": "9.9.0",
     "tailwind-merge": "^3.7.0",
@@ -86,9 +88,6 @@
     "ua-parser-js": "^2.0.10",
     "world-atlas": "^2.0.2",
     "zod": "^4.6.5"
-  },
-  "resolutions": {
-    "@tanstack/react-query-devtools/**/seroval": "1.6.3"
   },
   "devDependencies": {
     "@babel/runtime": "^8.0.7",
@@ -109,6 +108,7 @@
     "@vitejs/plugin-react": "^6.1.2",
     "autoprefixer": "^10.6.1",
     "axe-core": "^4.14.0",
+    "csstype": "^3.2.3",
     "happy-dom": "^20.14.5",
     "postcss": "^8.5.29",
     "postcss-simple-vars": "7.0.1",

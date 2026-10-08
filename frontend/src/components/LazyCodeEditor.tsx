@@ -1,7 +1,7 @@
 import type { TextareaCodeEditorProps } from "@uiw/react-textarea-code-editor";
 import { lazy, Suspense } from "react";
 
-const CodeEditor = lazy(() => import("@uiw/react-textarea-code-editor"));
+const CodeEditor = lazy(() => import("./ConfiguredCodeEditor"));
 
 export function LazyCodeEditor({ minHeight = 160, ...props }: TextareaCodeEditorProps) {
 	return (

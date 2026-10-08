@@ -2143,7 +2143,7 @@ if (
 		process.env.NGINX_SMOKE_DISCOVER_MODULES === "true"
 			? await resolveNginxSmokeModules({
 					version: await utils.execFile(nginx, ["-V"]),
-					configuration: await utils.execFile(nginx, ["-T"], {
+					configuration: await utils.execFile(nginx, ["-e", "stderr", "-T"], {
 						maxBuffer: 8 * 1024 * 1024,
 					}),
 				})
@@ -2160,7 +2160,7 @@ if (
 			true,
 			"startup must install the ASN lookup",
 		);
-		const configuration = await utils.execFile(nginx, ["-T"], {
+		const configuration = await utils.execFile(nginx, ["-e", "stderr", "-T"], {
 			maxBuffer: 8 * 1024 * 1024,
 		});
 		assert.equal(

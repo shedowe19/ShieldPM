@@ -60,7 +60,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [@simplewebauthn/server@14.0.3](https://www.npmjs.com/package/@simplewebauthn/server/v/14.0.3) - MIT
 - [@telegraf/types@7.1.0](https://www.npmjs.com/package/@telegraf/types/v/7.1.0) - MIT
 - [@types/json-schema@7.0.15](https://www.npmjs.com/package/@types/json-schema/v/7.0.15) - MIT
-- [@types/node@26.1.1](https://www.npmjs.com/package/@types/node/v/26.1.1) - MIT
+- [@types/node@26.6.4](https://www.npmjs.com/package/@types/node/v/26.6.4) - MIT
 - [abort-controller@3.0.0](https://www.npmjs.com/package/abort-controller/v/3.0.0) - MIT
 - [accepts@2.0.0](https://www.npmjs.com/package/accepts/v/2.0.0) - MIT
 - [agent-base@9.0.0](https://www.npmjs.com/package/agent-base/v/9.0.0) - MIT
@@ -371,7 +371,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [tweetnacl@0.14.5](https://www.npmjs.com/package/tweetnacl/v/0.14.5) - Unlicense
 - [type-is@2.1.0](https://www.npmjs.com/package/type-is/v/2.1.0) - MIT
 - [typed-array-buffer@1.0.3](https://www.npmjs.com/package/typed-array-buffer/v/1.0.3) - MIT
-- [undici-types@8.3.0](https://www.npmjs.com/package/undici-types/v/8.3.0) - MIT
+- [undici-types@8.9.0](https://www.npmjs.com/package/undici-types/v/8.9.0) - MIT
 - [undici@8.11.2](https://www.npmjs.com/package/undici/v/8.11.2) - MIT
 - [unpipe@1.0.0](https://www.npmjs.com/package/unpipe/v/1.0.0) - MIT
 - [util@0.10.4](https://www.npmjs.com/package/util/v/0.10.4) - MIT
@@ -939,11 +939,11 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [retry@0.12.0](https://www.npmjs.com/package/retry/v/0.12.0) - MIT
 - [rolldown@1.2.13](https://www.npmjs.com/package/rolldown/v/1.2.13) - MIT
 - [sass@1.105.1](https://www.npmjs.com/package/sass/v/1.105.1) - MIT
-- [seroval-plugins@1.5.6](https://www.npmjs.com/package/seroval-plugins/v/1.5.6) - MIT
-- [seroval@1.6.3](https://www.npmjs.com/package/seroval/v/1.6.3) - MIT
+- [seroval-plugins@1.6.8](https://www.npmjs.com/package/seroval-plugins/v/1.6.8) - MIT
+- [seroval@1.6.8](https://www.npmjs.com/package/seroval/v/1.6.8) - MIT
 - [shieldpm@4.4.1](https://www.npmjs.com/package/shieldpm/v/4.4.1) - UNLICENSED
 - [signal-exit@3.0.7](https://www.npmjs.com/package/signal-exit/v/3.0.7) - ISC
-- [solid-js@1.9.15](https://www.npmjs.com/package/solid-js/v/1.9.15) - MIT
+- [solid-js@1.9.16](https://www.npmjs.com/package/solid-js/v/1.9.16) - MIT
 - [solid-presence@0.2.0](https://www.npmjs.com/package/solid-presence/v/0.2.0) - MIT
 - [solid-prevent-scroll@0.1.11](https://www.npmjs.com/package/solid-prevent-scroll/v/0.1.11) - MIT
 - [solid-transition-group@0.2.3](https://www.npmjs.com/package/solid-transition-group/v/0.2.3) - MIT

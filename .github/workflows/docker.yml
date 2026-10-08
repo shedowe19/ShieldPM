@@ -153,6 +153,7 @@ jobs:
           file: ./Dockerfile
           target: frontend
           push: false
+          outputs: type=cacheonly
           build-args: |
             ${{ matrix.flags }}
           cache-from: type=gha,scope=${{ matrix.arch }}-frontend
@@ -165,6 +166,7 @@ jobs:
           file: ./Dockerfile
           target: backend
           push: false
+          outputs: type=cacheonly
           build-args: |
             ${{ matrix.flags }}
           cache-from: type=gha,scope=${{ matrix.arch }}-backend
@@ -289,7 +291,10 @@ jobs:
           # 3. PATCH: Install Systemd & Networking (Required for LXC)
           echo "Installing Systemd & Networking tools..."
           docker exec "$CONTAINER_NAME" apt-get update
+          # Debian slim excludes man pages; retain the CIFS alternative's real target.
+          docker exec "$CONTAINER_NAME" install -d -m 0755 /usr/share/man/man8
           docker exec "$CONTAINER_NAME" apt-get install -y --no-install-recommends \
+            -o Dpkg::Options::="--path-include=/usr/share/man/man8/idmapwb.8.gz" \
             systemd-sysv \
             ifupdown \
             net-tools \

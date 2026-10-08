@@ -8,7 +8,7 @@ const requireFromSolid = createRequire(requireFromQueryDevtools.resolve("solid-j
 const requireFromPlugins = createRequire(requireFromSolid.resolve("seroval-plugins/web"));
 const seroval = requireFromSolid("seroval");
 
-// The security resolution overrides Solid's ~1.5.4 range; exercise its actual consumers.
+// Exercise the patched serializer through its actual Query Devtools and Solid consumers.
 describe("Seroval compatibility through Query Devtools and Solid", () => {
 	it("retains Solid's serializer exports and ordinary value round-trips", () => {
 		expect(typeof seroval.Serializer).toBe("function");

@@ -6,7 +6,7 @@
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import https from "node:https";
-import punycode from "node:punycode";
+import punycode from "punycode.js";
 import dnsPlugins from "../certbot/dns-plugins.json" with { type: "json" };
 import { installPlugin } from "../lib/certbot.js";
 import errs from "../lib/error.js";

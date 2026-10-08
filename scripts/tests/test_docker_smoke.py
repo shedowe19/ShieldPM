@@ -103,6 +103,7 @@ elif args[0] == 'logs':
         executions = [call for call in calls if call[0] == "exec"]
         self.assertEqual([call[call.index("--user") + 1] for call in executions], ["0:0", "1000:1000"])
         for call in executions:
+            self.assertTrue(any("nginx -e stderr -tq" in arg and "nginx -e stderr -s reload" in arg for arg in call))
             self.assertTrue(any("NGINX_GEOIP_DATABASE=/data/GeoIP2-Country-Test.mmdb" in arg for arg in call))
             self.assertTrue(any("NGINX_ASN_DATABASE=/data/GeoLite2-ASN-Test.mmdb" in arg and "NGINX_REQUIRE_ASN_STARTUP=true" in arg for arg in call))
             self.assertTrue(any("NGINX_SMOKE_DISCOVER_MODULES=true" in arg and "NGINX_REQUIRE_MODSECURITY=true" in arg for arg in call))
