@@ -97,6 +97,7 @@ Node 26 und Yarn Classic 1.22.22, ohne die Anwendungsabhängigkeiten zu installi
 
 ```bash
 yarn --cwd .tscanner install --frozen-lockfile --ignore-scripts --production=false
+node .tscanner/scripts/editor.mjs
 node scripts/ci/tscanner.mjs --validate
 node scripts/ci/tscanner.mjs
 ```

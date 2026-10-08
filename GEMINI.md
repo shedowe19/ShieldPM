@@ -147,6 +147,7 @@ yarn dev # Nodemon
 
 The independent private `.tscanner/` package pins TScanner 0.1.3 and Babel parser/traverse 8.0.7. With Node 26+ and
 Yarn Classic 1.22.22, install it using `yarn --cwd .tscanner install --frozen-lockfile --ignore-scripts --production=false`.
+For VSCode, run `node .tscanner/scripts/editor.mjs` to set the pinned native binary in ignored local settings, preserving other settings.
 Run `node scripts/ci/tscanner.mjs` and `yarn --cwd .tscanner test` from the repository. Configuration lives in
 `.tscanner/config.jsonc`; the wrapper owns report validation, baseline evaluation, and Git-mode safeguards.
 

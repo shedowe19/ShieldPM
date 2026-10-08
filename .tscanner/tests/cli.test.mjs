@@ -110,8 +110,8 @@ function scannerFixture(context) {
 	write(".tscanner/baseline.json", JSON.stringify(baseline));
 	const wrapper = (args = [], extraEnvironment = {}) =>
 		subprocess(path.join(root, "scripts/ci/tscanner.mjs"), args, extraEnvironment);
-	const nativeValidate = () =>
-		subprocess(path.join(root, ".tscanner/node_modules/tscanner/dist/main.js"), ["validate"]);
+	const nativeValidate = (extraEnvironment = {}) =>
+		subprocess(path.join(root, ".tscanner/node_modules/tscanner/dist/main.js"), ["validate"], extraEnvironment);
 	const gate = () => JSON.parse(fs.readFileSync(path.join(root, ".tscanner/reports/gate-results.json"), "utf8"));
 	const report = () =>
 		JSON.parse(fs.readFileSync(path.join(root, ".tscanner/reports/tscanner-results.json"), "utf8"));
@@ -232,13 +232,20 @@ test("configuration fields silently ignored by native validation make wrapper va
 	const config = JSON.parse(fs.readFileSync(path.join(fixture.root, ".tscanner/config.jsonc"), "utf8"));
 	config.rules.builtin["max-params"] = { options: { maxParams: 8 } };
 	fixture.write(".tscanner/config.jsonc", JSON.stringify(config));
-	const native = fixture.nativeValidate();
-	assert.equal(native.status, 0, native.stderr || native.stdout);
-	assert.match(native.stdout, /Warnings:/);
-	const wrapped = fixture.wrapper(["--validate"]);
-	assert.equal(wrapped.status, 1, wrapped.stderr || wrapped.stdout);
-	assert.match(wrapped.stderr, /Scanner configuration is invalid/);
-	assert.match(wrapped.stderr, /Warnings:/);
+	for (const forceColor of ["0", "1"]) {
+		const environment = { CLICOLOR_FORCE: forceColor };
+		const native = fixture.nativeValidate(environment);
+		assert.equal(native.status, 0, native.stderr || native.stdout);
+		assert.match(native.stdout, /Warnings:/);
+		if (forceColor === "1") {
+			assert.ok(native.stdout.includes(String.fromCharCode(27)));
+			assert.match(native.stdout, /\[[0-9;]*mWarnings:/);
+		}
+		const wrapped = fixture.wrapper(["--validate"], environment);
+		assert.equal(wrapped.status, 1, wrapped.stderr || wrapped.stdout);
+		assert.match(wrapped.stderr, /Scanner configuration is invalid/);
+		assert.match(wrapped.stderr, /Warnings:/);
+	}
 	assert.equal(fs.existsSync(path.join(fixture.root, ".tscanner/reports/tscanner-results.json")), false);
 });
 

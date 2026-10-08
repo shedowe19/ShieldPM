@@ -16,6 +16,7 @@ ShieldPM-Repository ausgeführt:
 
 ```bash
 yarn --cwd .tscanner install --frozen-lockfile --ignore-scripts --production=false
+node .tscanner/scripts/editor.mjs
 node scripts/ci/tscanner.mjs --validate
 node scripts/ci/tscanner.mjs
 ```
@@ -116,11 +117,28 @@ Scanner-Ausführungsfehler können keine neue Baseline erzeugen.
 
 `.vscode/extensions.json` empfiehlt **`lucasvtiradentes.tscanner-vscode`**. Die Extension benötigt VSCode 1.93 oder
 neuer. ShieldPM im Repository-Root öffnen, die Scanner-Dependencies installieren und die empfohlene Extension
-installieren. Der native Scanner wird lokal erkannt; `tscanner.lsp.bin` dient bei Bedarf als explizite Pfadangabe.
+installieren. Upstream sucht lokale Pakete ausgehend vom Workspace-Root; das eigenständige Paket unter `.tscanner/`
+benötigt deshalb eine explizite Binärzuordnung:
 
-Über **Tasks: Run Task** stehen Aufgaben für Installation, vollständigen Scan, Staged-Scan, Uncommitted-Scan und
-einen manuell ausgelösten lokalen AI-Review bereit. Die Installationsaufgabe verwendet ebenfalls Yarn 1.22.22 mit
-eingefrorenem Lockfile und deaktivierten Installationsskripten.
+```bash
+node .tscanner/scripts/editor.mjs
+# Alternativ:
+yarn --cwd .tscanner editor:setup
+```
+
+Der Helper ermittelt das installierte native Plattform-Binary der gepinnten Version und trägt seinen Pfad als
+`tscanner.lsp.bin` in die lokale `.vscode/settings.json` ein. Bestehende JSONC-Kommentare und andere Einstellungen
+bleiben erhalten; ungültige oder mehrdeutige Konfigurationen sowie Symlink-Ziele werden abgelehnt. Die Settings-Datei
+bleibt privat und Git-ignoriert; Extension-Empfehlung und Aufgaben sind versioniert. So verwendet die Extension den
+Scanner aus `.tscanner/` statt einer zufällig vorhandenen globalen Version.
+
+Über **Tasks: Run Task** führt **TScanner: Set up local editor** zunächst die Installation der gepinnten Dependencies
+und danach den Helper aus. Weitere Aufgaben starten vollständigen Scan, Staged-Scan, Uncommitted-Scan und einen
+manuell ausgelösten lokalen AI-Review. Die Installationsaufgabe verwendet ebenfalls Yarn 1.22.22 mit eingefrorenem
+Lockfile und deaktivierten Installationsskripten.
+
+Die Helper-Tests prüfen die echte native Binärversion und die sichere JSONC-Bearbeitung. Die tatsächliche
+VSCode-Oberfläche wird durch diese CLI-Tests nicht abgedeckt.
 
 Die Extension zeigt native Befunde, einschließlich bestehender Fehler. Die Baseline-Entscheidung des ShieldPM-Gates
 findet im Wrapper statt; dessen Aufgaben und CI-Berichte sind deshalb maßgeblich für den Gate-Status. Der reguläre

@@ -117,6 +117,7 @@ TScanner adds project-specific checks and a separate read-only CI job. From the 
 
 ```bash
 yarn --cwd .tscanner install --frozen-lockfile --ignore-scripts --production=false
+node .tscanner/scripts/editor.mjs
 node scripts/ci/tscanner.mjs
 ```
 

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { stripVTControlCharacters } from "node:util";
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const configDirectory = path.join(workspaceRoot, ".tscanner");
@@ -309,7 +310,7 @@ export function main(args = process.argv.slice(2)) {
 	const reportDirectory = path.resolve(workspaceRoot, options.reportDirectory);
 	fs.mkdirSync(reportDirectory, { recursive: true });
 	const nativeValidation = runNative(["validate"]);
-	if (nativeValidation.status !== 0 || /(?:^|\n)\s*Warnings:/.test(nativeValidation.stdout))
+	if (nativeValidation.status !== 0 || /(?:^|\n)\s*Warnings:/.test(stripVTControlCharacters(nativeValidation.stdout)))
 		throw new Error(`Scanner configuration is invalid: ${nativeValidation.stdout}\n${nativeValidation.stderr}`);
 	if (options.validate) {
 		process.stdout.write(nativeValidation.stdout);
