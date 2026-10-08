@@ -112,7 +112,7 @@ Die erneute Prüfung von PR #149 beginnt mit 39 Backend-Meldungen zu 25 untersch
 
 Die Axios-Version bringt zugleich ihre reguläre `form-data`-Abhängigkeit 4.0.6 mit. Lockfile-Untergrenzen und tatsächliche URI-/IP-/FTP-Kompatibilitätsproben ergänzen die Anwendungssuiten. [Fast URI 3.1.8](https://github.com/fastify/fast-uri/releases/tag/v3.1.8) korrigiert zusätzlich zur vorherigen 3.1.7 die Hostnormalisierung; die ältere Empfehlung 3.1.7 reicht daher für die aktuelle Prüfung nicht. Die [gRPC-Herstellerwarnung](https://github.com/grpc/grpc-node/security/advisories/GHSA-m9gg-hp2v-232j) nennt 1.14.5 als korrigierte Version der vorhandenen 1.14-Linie. Ein Paketbefund beweist für sich allein keinen über ShieldPM erreichbaren Angriffspfad.
 
-`basic-ftp` bleibt vorerst bei 5.3.1 im transitiven Pfad `proxy-agent → pac-proxy-agent → get-uri`. Die [Hersteller-Releases](https://github.com/patrickjuchli/basic-ftp/releases) korrigieren die bekannte Listing-Schwachstelle erst in 6.2.1; 6.2.2 enthält eine weitere Listing-/PASV-Korrektur. Ein bloßer Major-Override ist mit dem vorhandenen `get-uri` 8.0.1 jedoch nicht kompatibel: Dessen `downloadTo(...).then(...)` hat keinen Rejectionhandler, während FTP v6 getrennte passive Transferhosts standardmäßig ablehnt. Die isolierte Gegenprobe prüft denselben lokalen Splitserver: Mit 5.3.1 gelingt der Download; mit 6.2.2 entsteht nach Rückgabe des Streams eine unbehandelte Promise-Ablehnung und Prozessabbruch. Eine normale FTP-Verbindung auf demselben Host gelingt mit beiden Versionen. Der offene FTP-Befund wird deshalb ausdrücklich erhalten, bis die aufrufende Kette sicher aktualisiert werden kann; eingebundener Vendorcode wird nicht gepatcht oder die Warnung unterdrückt.
+`basic-ftp` bleibt vorerst bei 5.3.1 im transitiven Pfad `proxy-agent → pac-proxy-agent → get-uri`. Die [Hersteller-Releases](https://github.com/patrickjuchli/basic-ftp/releases) korrigieren die bekannte Listing-Schwachstelle in 6.2.1; 6.2.2 enthält weitere Listing-/PASV-Korrekturen. Die bisherige Splitserver-Gegenprobe zeigt ein Hindernis für einen bloßen Major-Override: `get-uri` 8.0.1 behandelt eine Ablehnung von `downloadTo(...).then(...)` nicht, während FTP v6 passive Datenverbindungen standardmäßig an die Adresse der Kontrollverbindung bindet. Nach Rückgabe des Streams beendet die unbehandelte Promise-Ablehnung den isolierten Node-Prozess ohne anwendungseigenen Handler. ShieldPMs `backend/index.js` registriert dagegen einen Handler, der solche Ablehnungen loggt. Das ist eine Kombination aus strengerem Sicherheitsstandard und vorhandener Fehlerbehandlungslücke im Aufrufer; die Gegenprobe belegt weder einen allgemeinen Bruch der öffentlichen FTP-API noch einen garantierten Produktionsabbruch. Die vertiefte Nachprüfung steht im folgenden Abschnitt. Eingebundener Vendorcode wird nicht gepatcht und die Warnung nicht unterdrückt.
 
 Der frische lokale Audit nach den Korrekturen meldet bei 522 Backend-Abhängigkeiten nur noch den genannten einen hohen FTP-Befund (keine niedrigen, mittleren oder kritischen Meldungen); das Frontend meldet bei 629 Abhängigkeiten keine bekannten Befunde. Zuvor waren es 39 Backend-Meldungen.
 
@@ -140,6 +140,62 @@ JSON-Verarbeitung einschließlich des URL-Plugins werden gegen die tatsächlich 
 Die anschließenden Audits melden bei 522 Backend-Abhängigkeiten nur noch den bekannten hohen FTP-Befund
 (keine kritischen, mittleren oder niedrigen Meldungen) und bei 629 Frontend-Abhängigkeiten keine bekannten Befunde.
 Diese Zahlen sind ein Snapshot vom 7. Oktober 2026; die historischen Prüfungen oben bleiben unverändert.
+
+## FTP-Nachprüfung vom 8. Oktober 2026
+
+Der erneute Backend-Audit auf PR #150 meldet weiterhin einen hohen Befund bei 522 Abhängigkeiten:
+[GHSA-c475-qrg2-pj4r](https://github.com/patrickjuchli/basic-ftp/security/advisories/GHSA-c475-qrg2-pj4r)
+(CVE-2026-102990). Eine manipulierte Unix-Verzeichniszeile verursacht quadratische CPU-Arbeit und kann den
+Node.js-Eventloop blockieren. Die Herstellerkorrektur beginnt bei 6.2.1.
+
+Die aktuelle Herstellerfassung 6.2.2 korrigiert außerdem
+[GHSA-5rfr-xx34-2xxv](https://github.com/patrickjuchli/basic-ftp/security/advisories/GHSA-5rfr-xx34-2xxv)
+(mittel, MLSD-Erkennung und PASV-Antwortparser). Dieser Befund erscheint im aktuellen Yarn-Audit noch nicht.
+Die betroffenen regulären Ausdrücke sind auch in der installierten 5.3.1 vorhanden; für eine vollständige
+Korrektur ist daher 6.2.2 maßgeblich. Die 40-MiB-Grenze für Listings begrenzt deren Größe, verhindert aber
+keine übermäßige CPU-Arbeit beim Parsen.
+
+Isolierte Parser-Gegenproben unter Node 26.10.0 bestätigen die Korrektur mit den tatsächlichen npm-Paketen:
+Eine ungültige Unix-Zeile mit 32.782 Bytes benötigt in 5.3.1 rund 1,2 Sekunden, in 6.2.2 rund 1,3 Millisekunden.
+MLSD- und PASV-Eingaben überschreiten mit 5.3.1 die jeweilige 2,5-Sekunden-Prozessgrenze, während 6.2.2 in
+weniger als einer Millisekunde zurückkehrt. Das sind lokale Parser-Messungen, keine garantierten Laufzeiten;
+die PASV-Probe bleibt mit 60.004 Bytes unter der Kontrollantwortgrenze.
+
+Der tatsächliche Anwendungspfad ist an die Betriebskonfiguration gebunden:
+
+- `backend/internal/remote-version.js`, `ip_ranges.js` und `certbot.js` erzeugen jeweils `new ProxyAgent()`.
+- `HTTPS_PROXY`/`https_proxy` oder ersatzweise `ALL_PROXY`/`all_proxy` mit `pac+ftp://…` lässt diesen Agenten
+  eine PAC-Datei per FTP laden; `NO_PROXY`/`no_proxy` kann den jeweiligen HTTPS-Aufruf ausnehmen.
+- `pac-proxy-agent` lädt die Datei über `get-uri`. Wenn `MDTM` keine Änderungszeit liefert und nicht mit
+  550 antwortet, ruft `get-uri` tatsächlich `Client.list()` auf. Eine lokale Gegenprobe mit regulärer
+  Unix-Verzeichniszeile und `MDTM 500` bestätigt diesen Aufruf über die installierte Kette.
+- Ohne FTP-PAC-Konfiguration wird dieser FTP-Pfad von den drei Aufrufern nicht verwendet. Die mitgelieferten
+  Compose-/Umgebungsvorlagen setzen keine FTP-PAC-Konfiguration. Ein gewöhnlicher Proxy-Host oder eine
+  HTTP(S)-PAC-Datei aktiviert diesen Pfad nicht.
+
+Der Befund ist damit kein Fehlalarm; der nachgewiesene Angriffspfad erfordert einen konfigurierten FTP-PAC-Server,
+der manipulierte Antworten liefert. Über die geprüften Aufrufer wurde kein davon unabhängiger Angriffspfad
+eines gewöhnlichen Webbesuchers festgestellt. Das ist eine Aussage zur Code-Erreichbarkeit, keine Prüfung
+der tatsächlichen Umgebung einer installierten Instanz.
+
+Der Versionscheck (`/api/version/check`) benötigt keinen Login und kann bei ungefülltem oder abgelaufenem
+Cache die bereits konfigurierte PAC-Quelle laden. Ein Aufrufer dieser Route kann die FTP-PAC-Adresse
+jedoch nicht setzen. Auch der Cloudflare-Start-/Timer-Abruf kann dieselbe Betriebskonfiguration verwenden.
+
+Die veröffentlichten Consumer bleiben `proxy-agent` 8.0.2 → `pac-proxy-agent` 9.1.0 → `get-uri` 8.0.1
+mit `basic-ftp ^5.3.1`; eine reguläre Aktualisierung wählt deshalb noch keine korrigierte FTP-Version.
+Die bestehende Laufzeitsuite besteht erneut mit 17 Tests, prüft aber keinen `MDTM`-zu-`LIST`-Fallback und
+keine abgebrochene Übertragung. Für einen sicheren Versionswechsel müssen die Fehler der asynchronen
+Übertragung an den zurückgegebenen Stream weitergeleitet und der Client zuverlässig geschlossen werden.
+Frische isolierte FTP-Gegenproben bestätigen: reguläre Downloads funktionieren mit beiden Versionen;
+eine mit 450 abgebrochene Übertragung beendet den isolierten Node-Prozess ohne anwendungseigenen Handler
+wegen der unbehandelten Ablehnung bereits mit 5.3.1 und auch mit 6.2.2. ShieldPMs globaler Handler loggt
+diese Ablehnung; der zurückgegebene Stream erhält dennoch keinen verlässlichen Transferfehler.
+Ein getrennt auf `127.0.0.2` lauschender passiver Datenserver funktioniert mit 5.3.1,
+während 6.2.2 die Kontrolladresse `127.0.0.1` verwendet und dadurch ebenfalls diese Fehlerbehandlungslücke
+auslöst. `allowSeparateTransferHost` an `getUri()` durchzureichen konfiguriert den Client-Konstruktor nicht.
+Der strengere Transferhost-Schutz darf dafür nicht pauschal abgeschaltet werden. Der weitere Korrekturpunkt
+steht unter [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 
