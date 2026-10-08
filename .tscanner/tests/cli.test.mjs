@@ -50,6 +50,10 @@ function scannerFixture(context) {
 	};
 	write("scripts/ci/tscanner.mjs", fs.readFileSync(path.join(projectRoot, "scripts/ci/tscanner.mjs"), "utf8"));
 	write(
+		"scripts/ci/tscanner-runner.mjs",
+		fs.readFileSync(path.join(projectRoot, "scripts/ci/tscanner-runner.mjs"), "utf8"),
+	);
+	write(
 		".tscanner/script-rules/architecture.mjs",
 		fs.readFileSync(path.join(projectRoot, ".tscanner/script-rules/architecture.mjs"), "utf8"),
 	);

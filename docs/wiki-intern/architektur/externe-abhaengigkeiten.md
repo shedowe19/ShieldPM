@@ -103,12 +103,25 @@ stellt das Plattform-Binary bereit; Babel analysiert die lokalen Architekturrege
 Node 26, Yarn 1.22.22, `--frozen-lockfile --ignore-scripts --production=false`; CI prüft diese Abhängigkeiten zusätzlich
 mit `yarn audit --level high`.
 
-Diese Pakete werden weder den Anwendungsmanifesten hinzugefügt noch ins Produktionsimage kopiert. Lokale AI-Reviews
+Diese Pakete werden weder den Anwendungsmanifesten hinzugefügt noch ins Produktionsimage kopiert. AI-Reviews
 verwenden standardmäßig einen `custom`-Adapter für die separat installierte und authentifizierte offizielle Codex-CLI
 (`npm install -g @openai/codex`, `codex login`). Die CLI ist keine zusätzliche Paket- oder Produktionsabhängigkeit von
-ShieldPM; Backend-Provider-Zugangsdaten werden nicht verwendet. Der Adapter startet `codex exec` mit dem lokal
-konfigurierten Modell, `read-only`-Sandbox und deaktivierten Genehmigungsdialogen. Konfiguration, Plattformhinweise,
-bewusste Baseline-Pflege und Upgrades stehen in der [TScanner-Anleitung](../../wiki/TScanner.md).
+ShieldPM; Backend-Provider-Zugangsdaten werden nicht verwendet. Lokale Aufrufe starten `codex exec` mit dem lokal
+konfigurierten Modell, `read-only`-Sandbox und deaktivierten Genehmigungsdialogen.
+
+Der gesonderte Workflow `tscanner-codex.yml` verwendet nach ausdrücklicher Freischaltung die auf dem eigenen
+Linux-Runner vorhandene CLI **0.161.0** (`npm install -g @openai/codex@0.161.0`) und den dort privat gespeicherten
+ChatGPT-Anmeldecache. Er ignoriert Benutzerkonfiguration
+und zusätzliche CLI-Regeln, erzwingt ChatGPT-Anmeldung/OpenAI-Provider und verwendet das CLI-Standardmodell. Eine
+API-Anmeldung oder ein automatischer Wechsel auf API-Abrechnung ist ausgeschlossen; die Codex-Nutzungsgrenzen des
+Kontos gelten. Die drei Regeln und sämtliche Jobs mit diesem Cache laufen nacheinander. Die CLI wird außerhalb des
+Review-Jobs gewartet; vor jeder Verwendung prüft ein direkter `codex sandbox`-Aufruf die verpflichtende
+Zugriffssperre auf den Anmeldecache. Diese Integration verifiziert ihre Protokollgrenzen mit einer simulierten CLI, nicht die echte
+Kontoverbindung oder den Serverbetrieb.
+
+OpenAIs CI-Anleitung rät für die Kontoanmeldung ausdrücklich von öffentlichen/Open-Source-Repositories ab. Die
+vom Betreiber gewählte Einrichtung für ShieldPM ist deshalb nicht als offiziell empfohlene öffentliche CI-Nutzung
+zu verstehen. Voraussetzungen, Anmeldung und Quellen stehen in der [TScanner-Anleitung](../../wiki/TScanner.md).
 
 ## Sicherheitsprüfung September 2026
 

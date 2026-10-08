@@ -159,8 +159,9 @@ Run `node scripts/ci/tscanner.mjs` and `yarn --cwd .tscanner test` from the repo
   untracked scannable source. Stage the intended complete changes or use a full scan.
 - `--update-baseline` is a deliberate reviewed exception update, not an automatic fix. Never absorb new errors merely
   to make the gate pass.
-- Security, architecture, and performance AI prompts are read-only. `--only-ai`/`--include-ai` are explicit local
-  workspace-only operations and cannot run in CI or combine with Git modes. The default `custom` provider uses
+- Security, architecture, and performance AI prompts are read-only. `--only-ai`/`--include-ai` are full-workspace
+  operations and cannot combine with Git modes. Ordinary CI refuses AI; the only CI exception is the explicitly
+  enabled self-hosted Linux Codex workflow described below. The default `custom` provider uses
   `.tscanner/providers/codex` and the user's installed/authenticated Codex CLI (`npm install -g @openai/codex`,
   `codex login`). `SHIELDPM_TSCANNER_CODEX_CLI` selects an executable name/path, not a shell argument string.
   The adapter runs `codex exec` with the user's configured model, read-only sandbox, no approval prompts, ephemeral
@@ -171,11 +172,33 @@ Run `node scripts/ci/tscanner.mjs` and `yarn --cwd .tscanner test` from the repo
   Each rule returns at most eight evidence-backed findings; compact provider output is capped at 4 KiB UTF-8.
   Excess output fails the scan instead of silently truncating findings.
   Do not invoke a real provider merely to verify integration; tests use a simulated CLI, real native scanner pipeline,
-  scope validation, parent-termination cleanup, and CI refusal. Local login/model availability are outside those tests.
+  scope validation, parent-termination cleanup, ordinary CI refusal, and the scoped runner guard. Actual account login,
+  model availability, subscription limits, and operation on the owner's server are outside those tests.
   Native Windows requires the `.cmd` launcher and native `codex.exe`; the Linux process/pipeline tests do not cover it.
   See the scanner guide for details.
 - `.vscode/` recommends the extension and supplies tasks. CI uses `contents: read`, annotations/summary and report
   artifacts retained for seven days, without PR comments, provider secrets, or schedules. Tooling is excluded from Docker.
+- `.github/workflows/tscanner-codex.yml` is opt-in via repository variable `SHIELDPM_CODEX_RUNNER_ENABLED=true`.
+  It only runs on the original `shedowe19/ShieldPM` repository's `develop` push/manual events by `shedowe19`, using labels
+  `self-hosted`, `linux`, `shieldpm-codex`; it has no PR/fork/scheduled trigger. The owner provisions Node 26+ and
+  Codex CLI 0.161.0 (`npm install -g @openai/codex@0.161.0`), registers the runner, and signs in as the same dedicated
+  non-root service user. The workflow supplies Node 26 and pinned Yarn 1.22.22. Persistent
+  `CODEX_HOME` defaults to `/var/lib/shieldpm-codex`; optional repository variable `SHIELDPM_CODEX_HOME` overrides it.
+  Home/auth ownership and private permissions are validated; both live outside checkout and are never uploaded.
+  Runner calls require file-backed ChatGPT credentials, refuse API credentials/fallback, ignore user configuration
+  and additional CLI rules, and force ChatGPT authentication/OpenAI provider. Therefore runner calls use the CLI's
+  default model; local calls still preserve configured models. Repository/ancestor `.codex/config.toml` and
+  `/etc/codex/config.toml` / `/etc/codex/managed_config.toml` are refused.
+  Runner mode uses the `shieldpm-review` permission profile: read-only checkout, denied `CODEX_HOME`, disabled
+  shell network, hooks, apps and web search, and a clean shell environment. Preflight verifies actual credential
+  sandbox denial before AI use using direct `codex sandbox -P shieldpm-review`; runner calls select
+  `default_permissions` without a legacy `--sandbox` override. This restricts agent commands; the authenticated provider process still needs
+  networking and is not a complete operating-system isolation boundary.
+  Workflow concurrency and `RAYON_NUM_THREADS=1` serialize use of the cached login and all three AI rules.
+  OpenAI's advanced account-auth CI guide explicitly advises against public/open-source repositories; the owner
+  selected this path for their trusted runner despite that documented restriction. Do not claim officially
+  recommended public CI use or unlimited subscription usage. Never run untrusted PR workloads on that credentials
+  machine, share its auth cache across concurrent machines, or reuse production ShieldPM/root/Docker access.
 
 Use current code and tests to resolve stale policy prose: SQLite is supported, justified parameterized engine-specific
 SQL is legitimate, and the Nginx engine serializes changes without a mandatory global debounce. See the

@@ -23,6 +23,9 @@ const messages = Object.freeze({
 	report: "Codex returned an invalid review report.",
 	output: "Codex review report exceeds the safe provider output limit.",
 	temporary: "Codex review could not prepare its private output file.",
+	authentication: "Codex runner review requires ChatGPT sign-in without API credentials or endpoint overrides.",
+	sandbox:
+		"Codex runner sandbox verification failed. Use the documented CLI and a host supporting restricted profiles.",
 });
 
 class ReviewError extends Error {
@@ -32,15 +35,53 @@ class ReviewError extends Error {
 	}
 }
 
-/** Preserve the user's configured model while restricting this invocation to a read-only review. */
-export function buildCodexArgs({ outputPath, schemaPath = defaultSchema } = {}) {
+/** Runner restrictions use subscription auth and deny sandboxed commands access outside the source checkout. */
+export function buildRunnerConfig({ workspaceRoot, codexHome }) {
+	if (!path.isAbsolute(workspaceRoot || "") || !path.isAbsolute(codexHome || "")) {
+		throw new ReviewError("authentication");
+	}
+	const permissions =
+		`permissions={ shieldpm-review={ filesystem={ ":root"="deny", ":minimal"="read", ` +
+		`${JSON.stringify(codexHome)}="deny", ":workspace_roots"={ "."="read" } }, network={ enabled=false } } }`;
+	return [
+		'forced_login_method="chatgpt"',
+		'model_provider="openai"',
+		'cli_auth_credentials_store="file"',
+		"features.hooks=false",
+		"features.apps=false",
+		'web_search="disabled"',
+		"project_doc_max_bytes=0",
+		'shell_environment_policy.inherit="none"',
+		'shell_environment_policy.set={ PATH="/usr/bin:/bin" }',
+		"shell_environment_policy.experimental_use_profile=false",
+		`projects={ ${JSON.stringify(workspaceRoot)}={ trust_level="untrusted" } }`,
+		'default_permissions="shieldpm-review"',
+		permissions,
+	];
+}
+
+/** Local reviews preserve configured models; runner reviews use a restricted profile and CLI defaults. */
+export function buildCodexArgs({
+	outputPath,
+	schemaPath = defaultSchema,
+	subscriptionRunner = false,
+	workspaceRoot = process.cwd(),
+	codexHome,
+} = {}) {
 	if (typeof outputPath !== "string" || !outputPath || typeof schemaPath !== "string" || !schemaPath) {
 		throw new ReviewError("temporary");
 	}
+	const runnerArgs = subscriptionRunner
+		? [
+				"--strict-config",
+				"--ignore-user-config",
+				"--ignore-rules",
+				...buildRunnerConfig({ workspaceRoot, codexHome }).flatMap((value) => ["--config", value]),
+			]
+		: [];
 	return [
 		"exec",
-		"--sandbox",
-		"read-only",
+		...(subscriptionRunner ? [] : ["--sandbox", "read-only"]),
 		"--config",
 		'approval_policy="never"',
 		"--ephemeral",
@@ -50,8 +91,57 @@ export function buildCodexArgs({ outputPath, schemaPath = defaultSchema } = {}) 
 		schemaPath,
 		"--output-last-message",
 		outputPath,
+		...runnerArgs,
 		"-",
 	];
+}
+
+/** This runs only a fixed local sandbox probe, never a model request or a repository script. */
+export function verifyRunnerSandbox({ workspaceRoot = process.cwd(), env = process.env } = {}) {
+	const cli = env.SHIELDPM_TSCANNER_CODEX_CLI || "codex";
+	let temporary;
+	try {
+		if (env.SHIELDPM_TSCANNER_RUNNER_AI !== "chatgpt") throw new ReviewError("sandbox");
+		const root = fs.realpathSync(workspaceRoot);
+		const home = fs.realpathSync(env.CODEX_HOME);
+		const configuration = buildRunnerConfig({
+			workspaceRoot: root,
+			codexHome: home,
+		});
+		temporary = fs.mkdtempSync(path.join(root, ".tscanner/.sandbox-check-"));
+		const source = path.join(root, ".tscanner/config.jsonc");
+		const authentication = path.join(home, "auth.json");
+		// Verify that the target is readable outside the sandbox; otherwise a missing file would fake a denial.
+		const descriptor = fs.openSync(authentication, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+		fs.closeSync(descriptor);
+		const probe =
+			'/usr/bin/head -c 0 "$1" >/dev/null 2>&1 || exit 41; ' +
+			'if /usr/bin/head -c 0 "$2" >/dev/null 2>&1; then exit 42; fi; ' +
+			'if (printf x > "$3") 2>/dev/null; then exit 43; fi';
+		const result = spawnSync(
+			cli,
+			[
+				"sandbox",
+				"--permission-profile",
+				"shieldpm-review",
+				...configuration.flatMap((value) => ["--config", value]),
+				"--",
+				"/bin/sh",
+				"-c",
+				probe,
+				"shieldpm-sandbox-check",
+				source,
+				authentication,
+				path.join(temporary, "write-must-be-denied"),
+			],
+			{ cwd: root, env, stdio: "ignore", timeout: 10_000 },
+		);
+		if (result.error || result.signal || result.status !== 0) throw new ReviewError("sandbox");
+	} catch {
+		throw new ReviewError("sandbox");
+	} finally {
+		if (temporary) fs.rmSync(temporary, { recursive: true, force: true });
+	}
 }
 
 function exactKeys(object, expected) {
@@ -288,6 +378,20 @@ export async function executeCodexReview(
 	let result;
 	let failure;
 	const allowedFiles = parseScopedFiles(prompt, { platform });
+	const subscriptionRunner = env.SHIELDPM_TSCANNER_RUNNER_AI === "chatgpt";
+	if (
+		subscriptionRunner &&
+		[
+			"OPENAI_API_KEY",
+			"CODEX_API_KEY",
+			"CODEX_ACCESS_TOKEN",
+			"OPENAI_BASE_URL",
+			"CODEX_BASE_URL",
+			"CHATGPT_BASE_URL",
+		].some((name) => Boolean(env[name]))
+	) {
+		throw new ReviewError("authentication");
+	}
 	try {
 		temporary = fs.mkdtempSync(path.join(tempDirectory, "shieldpm-tscanner-codex-"));
 		if (platform !== "win32") fs.chmodSync(temporary, 0o700);
@@ -295,7 +399,12 @@ export async function executeCodexReview(
 		fs.writeFileSync(outputPath, "", { mode: 0o600, flag: "wx" });
 		await executeCodex(prompt, {
 			cli,
-			args: buildCodexArgs({ outputPath }),
+			args: buildCodexArgs({
+				outputPath,
+				subscriptionRunner,
+				workspaceRoot: fs.realpathSync(workspaceRoot),
+				codexHome: env.CODEX_HOME,
+			}),
 			workspaceRoot,
 			env,
 			timeoutMs,
@@ -303,7 +412,10 @@ export async function executeCodexReview(
 			platform,
 		});
 		try {
-			result = validateCodexOutput(readFinalMessage(outputPath), { workspaceRoot, allowedFiles });
+			result = validateCodexOutput(readFinalMessage(outputPath), {
+				workspaceRoot,
+				allowedFiles,
+			});
 		} catch (error) {
 			if (error instanceof ReviewError) throw error;
 			throw new ReviewError("report");
@@ -387,7 +499,10 @@ export async function runCodexReview(
 		worker.on("message", (message) => {
 			if (message?.ok === true && result === undefined) {
 				try {
-					result = validateCodexOutput(JSON.stringify(message.report), { workspaceRoot, allowedFiles });
+					result = validateCodexOutput(JSON.stringify(message.report), {
+						workspaceRoot,
+						allowedFiles,
+					});
 				} catch (error) {
 					failure ??= error instanceof ReviewError ? error : new ReviewError("report");
 				}
@@ -404,7 +519,11 @@ export async function runCodexReview(
 		process.once("SIGINT", cancel);
 		process.once("SIGTERM", cancel);
 		worker.send(
-			{ type: "review", prompt, options: { workspaceRoot, cli, timeoutMs, tempDirectory, platform } },
+			{
+				type: "review",
+				prompt,
+				options: { workspaceRoot, cli, timeoutMs, tempDirectory, platform },
+			},
 			() => {},
 		);
 	});
@@ -440,5 +559,17 @@ export async function main({
 }
 
 if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
-	process.exitCode = await main();
+	if (process.argv.length === 3 && process.argv[2] === "--verify-runner-sandbox") {
+		try {
+			verifyRunnerSandbox();
+		} catch {
+			process.stderr.write(`${messages.sandbox}\n`);
+			process.exitCode = 1;
+		}
+	} else if (process.argv.length === 2) {
+		process.exitCode = await main();
+	} else {
+		process.stderr.write(`${messages.input}\n`);
+		process.exitCode = 1;
+	}
 }

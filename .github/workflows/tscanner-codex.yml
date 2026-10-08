@@ -1,0 +1,60 @@
+name: TScanner Codex
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One subscription authentication directory must never be refreshed by concurrent jobs.
+concurrency:
+  group: shieldpm-codex-chatgpt-account
+  cancel-in-progress: false
+
+jobs:
+  review:
+    name: Review source with Codex subscription
+    if: >-
+      github.repository == 'shedowe19/ShieldPM' &&
+      github.ref == 'refs/heads/develop' &&
+      github.actor == 'shedowe19' &&
+      vars.SHIELDPM_CODEX_RUNNER_ENABLED == 'true'
+    runs-on: [self-hosted, linux, shieldpm-codex]
+    timeout-minutes: 20
+    env:
+      CODEX_HOME: ${{ vars.SHIELDPM_CODEX_HOME || '/var/lib/shieldpm-codex' }}
+      SHIELDPM_CODEX_RUNNER_ENABLED: ${{ vars.SHIELDPM_CODEX_RUNNER_ENABLED }}
+      SHIELDPM_TSCANNER_RUNNER_AI: chatgpt
+      RAYON_NUM_THREADS: "1"
+    steps:
+      - name: Checkout trusted develop source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+
+      - name: Verify private subscription login
+        run: node scripts/ci/tscanner-runner.mjs
+
+      - name: Install pinned scanner dependencies
+        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/.tscanner" install --frozen-lockfile --ignore-scripts --production=false
+
+      - name: Review project source
+        id: review
+        run: node scripts/ci/tscanner.mjs --only-ai --report-dir .tscanner/reports-codex
+
+      - name: Preserve review reports
+        if: always() && (steps.review.outcome == 'success' || steps.review.outcome == 'failure')
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: tscanner-codex-reports
+          path: .tscanner/reports-codex/**
+          if-no-files-found: ignore
+          retention-days: 7

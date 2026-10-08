@@ -123,7 +123,10 @@ async function invokeMain(input, options) {
 }
 
 test("Codex arguments enforce read-only noninteractive execution with schema output and stdin", () => {
-	const args = buildCodexArgs({ outputPath: "/private/result.json", schemaPath: "/provider/schema.json" });
+	const args = buildCodexArgs({
+		outputPath: "/private/result.json",
+		schemaPath: "/provider/schema.json",
+	});
 	const value = (flag) => args[args.indexOf(flag) + 1];
 	assert.equal(args[0], "exec");
 	assert.equal(value("--sandbox"), "read-only");
@@ -132,15 +135,83 @@ test("Codex arguments enforce read-only noninteractive execution with schema out
 	assert.equal(value("--output-schema"), "/provider/schema.json");
 	assert.equal(value("--output-last-message"), "/private/result.json");
 	assert.ok(args.includes("--ephemeral"));
+	assert.ok(!args.includes("--ignore-user-config"), "Local reviews retain the user's model configuration");
 	assert.equal(args.at(-1), "-");
 	assert.ok(!args.some((arg) => /full-auto|yolo|dangerously-bypass/.test(arg)));
 });
 
+test("subscription runner worker restricts login, provider, configuration and shell environment", async (context) => {
+	const f = fixture(context);
+	const options = f.options();
+	options.env.SHIELDPM_TSCANNER_RUNNER_AI = "chatgpt";
+	options.env.CODEX_HOME = "/private/subscription-auth";
+	for (const name of [
+		"OPENAI_API_KEY",
+		"CODEX_API_KEY",
+		"CODEX_ACCESS_TOKEN",
+		"OPENAI_BASE_URL",
+		"CODEX_BASE_URL",
+		"CHATGPT_BASE_URL",
+	]) {
+		delete options.env[name];
+	}
+	const result = await invokeMain(prompt, options);
+	assert.equal(result.status, 0, result.stderr);
+	const { args } = JSON.parse(fs.readFileSync(f.capture, "utf8"));
+	const configuration = args.flatMap((value, index) => (value === "--config" ? [args[index + 1]] : []));
+	assert.ok(args.includes("--ignore-user-config"));
+	assert.ok(args.includes("--ignore-rules"));
+	assert.ok(!args.includes("--sandbox"), "Named permissions must not fall back to the legacy sandbox");
+	for (const expected of [
+		'forced_login_method="chatgpt"',
+		'model_provider="openai"',
+		'cli_auth_credentials_store="file"',
+		"features.hooks=false",
+		"features.apps=false",
+		'web_search="disabled"',
+		'default_permissions="shieldpm-review"',
+		'shell_environment_policy.inherit="none"',
+		"shell_environment_policy.experimental_use_profile=false",
+		`projects={ ${JSON.stringify(fs.realpathSync(f.root))}={ trust_level="untrusted" } }`,
+	]) {
+		assert.ok(configuration.includes(expected), `Missing runner restriction: ${expected}`);
+	}
+});
+
+test("subscription runner rejects API credentials before starting the CLI and never exposes their values", async (context) => {
+	const f = fixture(context);
+	for (const name of [
+		"OPENAI_API_KEY",
+		"CODEX_API_KEY",
+		"CODEX_ACCESS_TOKEN",
+		"OPENAI_BASE_URL",
+		"CODEX_BASE_URL",
+		"CHATGPT_BASE_URL",
+	]) {
+		const options = f.options();
+		options.env.SHIELDPM_TSCANNER_RUNNER_AI = "chatgpt";
+		options.env.CODEX_HOME = "/private/subscription-auth";
+		options.env[name] = "PRIVATE_API_CREDENTIAL_SENTINEL";
+		const result = await invokeMain(prompt, options);
+		assert.equal(result.status, 1);
+		assert.equal(result.stdout, "");
+		assert.match(result.stderr, /requires ChatGPT sign-in without API credentials/);
+		assert.ok(!result.stderr.includes("PRIVATE_API_CREDENTIAL_SENTINEL"));
+		assert.equal(fs.existsSync(f.capture), false);
+		assert.deepEqual(fs.readdirSync(f.privateDirectory), []);
+	}
+});
+
 test("valid Codex output retains one-based source locations and permits an empty issue list", (context) => {
 	const f = fixture(context);
-	assert.deepEqual(validateCodexOutput(JSON.stringify({ issues: [goodIssue] }), { workspaceRoot: f.root }), {
-		issues: [goodIssue],
-	});
+	assert.deepEqual(
+		validateCodexOutput(JSON.stringify({ issues: [goodIssue] }), {
+			workspaceRoot: f.root,
+		}),
+		{
+			issues: [goodIssue],
+		},
+	);
 	assert.deepEqual(validateCodexOutput('{"issues":[]}', { workspaceRoot: f.root }), { issues: [] });
 });
 
@@ -149,10 +220,15 @@ test("native agentic scope is required, unambiguous and kept separate from explo
 	assert.deepEqual([...parseScopedFiles(prompt)], [sourcePath]);
 	f.write("backend/lib/related.js", "export const value = 1;\n");
 	assert.throws(() =>
-		validateCodexOutput(JSON.stringify({ issues: [{ ...goodIssue, file: "backend/lib/related.js" }] }), {
-			workspaceRoot: f.root,
-			allowedFiles: parseScopedFiles(prompt),
-		}),
+		validateCodexOutput(
+			JSON.stringify({
+				issues: [{ ...goodIssue, file: "backend/lib/related.js" }],
+			}),
+			{
+				workspaceRoot: f.root,
+				allowedFiles: parseScopedFiles(prompt),
+			},
+		),
 	);
 	for (const invalid of [
 		"Review this source",
@@ -234,9 +310,14 @@ test("Codex output rejects symlink sources and paths escaping through a symlinke
 	fs.writeFileSync(path.join(outside, "outside.js"), "export const value = 1;\n");
 	fs.symlinkSync(outside, path.join(f.root, "outside"), process.platform === "win32" ? "junction" : "dir");
 	assert.throws(() =>
-		validateCodexOutput(JSON.stringify({ issues: [{ ...goodIssue, file: "outside/outside.js" }] }), {
-			workspaceRoot: f.root,
-		}),
+		validateCodexOutput(
+			JSON.stringify({
+				issues: [{ ...goodIssue, file: "outside/outside.js" }],
+			}),
+			{
+				workspaceRoot: f.root,
+			},
+		),
 	);
 });
 
@@ -244,9 +325,16 @@ test("Codex output limits findings and UTF-8 response size rather than accepting
 	const f = fixture(context);
 	for (const issues of [
 		Array.from({ length: 9 }, () => goodIssue),
-		Array.from({ length: 8 }, () => ({ ...goodIssue, message: "😀".repeat(120) })),
+		Array.from({ length: 8 }, () => ({
+			...goodIssue,
+			message: "😀".repeat(120),
+		})),
 	]) {
-		assert.throws(() => validateCodexOutput(JSON.stringify({ issues }), { workspaceRoot: f.root }));
+		assert.throws(() =>
+			validateCodexOutput(JSON.stringify({ issues }), {
+				workspaceRoot: f.root,
+			}),
+		);
 	}
 	assert.throws(() =>
 		validateCodexOutput(JSON.stringify({ issues: [{ ...goodIssue, message: "x".repeat(241) }] }), {
@@ -259,7 +347,9 @@ test("the actual fake executable receives the prompt on stdin and private schema
 	skip: process.platform === "win32",
 }, async (context) => {
 	const f = fixture(context);
-	assert.deepEqual(await runCodexReview(prompt, f.options()), { issues: [goodIssue] });
+	assert.deepEqual(await runCodexReview(prompt, f.options()), {
+		issues: [goodIssue],
+	});
 	const capture = JSON.parse(fs.readFileSync(f.capture, "utf8"));
 	assert.equal(capture.stdin, prompt);
 	assert.equal(capture.cwd, f.root);
@@ -303,7 +393,10 @@ test("malformed, missing, empty, oversized and failed CLI results fail without l
 
 test("a missing Codex executable produces a fixed diagnostic and cleans private temporary output", async (context) => {
 	const f = fixture(context);
-	const result = await invokeMain(prompt, { ...f.options(), cli: path.join(f.root, "PRIVATE_MISSING_CLI_SENTINEL") });
+	const result = await invokeMain(prompt, {
+		...f.options(),
+		cli: path.join(f.root, "PRIVATE_MISSING_CLI_SENTINEL"),
+	});
 	assert.equal(result.status, 1);
 	assert.equal(result.stdout, "");
 	assert.ok(result.stderr.length > 0 && result.stderr.length < 500);
@@ -346,7 +439,10 @@ test("an already cancelled review does not launch a provider", async (context) =
 	const f = fixture(context);
 	const controller = new AbortController();
 	controller.abort();
-	const result = await invokeMain(prompt, { ...f.options(), signal: controller.signal });
+	const result = await invokeMain(prompt, {
+		...f.options(),
+		signal: controller.signal,
+	});
 	assert.equal(result.status, 1);
 	assert.equal(result.stdout, "");
 	assert.equal(fs.existsSync(f.capture), false);
@@ -360,7 +456,11 @@ test("killing the adapter parent still terminates Codex descendants and removes 
 	const adapter = spawn(process.execPath, [path.join(projectRoot, ".tscanner/providers/codex.mjs")], {
 		cwd: f.root,
 		stdio: ["pipe", "ignore", "ignore"],
-		env: { ...f.options("timeout").env, SHIELDPM_TSCANNER_CODEX_CLI: f.fakeCli, TMPDIR: f.privateDirectory },
+		env: {
+			...f.options("timeout").env,
+			SHIELDPM_TSCANNER_CODEX_CLI: f.fakeCli,
+			TMPDIR: f.privateDirectory,
+		},
 	});
 	context.after(() => adapter.kill("SIGKILL"));
 	adapter.stdin.end(prompt);
@@ -389,13 +489,19 @@ test("native TScanner uses the relative executable custom provider and wrapper p
 	const f = fixture(context);
 	const providers = path.join(projectRoot, ".tscanner/providers");
 	assert.ok(fs.statSync(path.join(providers, "codex")).mode & 0o111, "Tracked POSIX provider must be executable");
-	fs.cpSync(providers, path.join(f.root, ".tscanner/providers"), { recursive: true });
+	fs.cpSync(providers, path.join(f.root, ".tscanner/providers"), {
+		recursive: true,
+	});
 	fs.symlinkSync(
 		path.join(projectRoot, ".tscanner/node_modules"),
 		path.join(f.root, ".tscanner/node_modules"),
 		"dir",
 	);
 	f.write("scripts/ci/tscanner.mjs", fs.readFileSync(path.join(projectRoot, "scripts/ci/tscanner.mjs"), "utf8"));
+	f.write(
+		"scripts/ci/tscanner-runner.mjs",
+		fs.readFileSync(path.join(projectRoot, "scripts/ci/tscanner-runner.mjs"), "utf8"),
+	);
 	f.write(".tscanner/ai-rules/review.md", "Review these files for a concrete security problem:\n\n{{FILES}}\n");
 	f.write("backend/lib/unscoped.js", "export const value = 1;\n");
 	f.write(
@@ -413,7 +519,10 @@ test("native TScanner uses the relative executable custom provider and wrapper p
 				},
 			},
 			ai: { provider: "custom", command: "./.tscanner/providers/codex" },
-			files: { include: ["backend/internal/**/*.js"], exclude: ["**/node_modules/**", ".tscanner/**"] },
+			files: {
+				include: ["backend/internal/**/*.js"],
+				exclude: ["**/node_modules/**", ".tscanner/**"],
+			},
 		}),
 	);
 	const hooksDirectory = path.join(f.root, "empty-hooks");

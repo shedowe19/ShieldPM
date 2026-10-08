@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { stripVTControlCharacters } from "node:util";
+import { assertTrustedAiRunner } from "./tscanner-runner.mjs";
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const configDirectory = path.join(workspaceRoot, ".tscanner");
@@ -230,7 +231,7 @@ export function summaryMarkdown(report, evaluation, mode) {
 		"",
 		`Files: ${report.summary.total_files}. New errors: ${evaluation.newErrors.length}. Existing baseline errors: ${evaluation.legacy.length}. Advisory findings: ${evaluation.issues.length - evaluation.newErrors.length - evaluation.legacy.length}. Scanner failures: ${evaluation.infrastructureErrors.length}.`,
 		"",
-		"The artifact contains every finding, including the existing baseline. AI review runs only when explicitly requested locally.",
+		"The artifact contains every finding, including the existing baseline. AI review is opt-in locally or on the trusted subscription runner.",
 	];
 	for (const issue of [
 		...evaluation.newErrors,
@@ -287,7 +288,7 @@ export function validateDiffScope(
 	}
 }
 
-function runNative(args, timeout = 300_000) {
+function runNative(args, timeout = 300_000, serialAi = false) {
 	if (!fs.existsSync(cliPath))
 		throw new Error(
 			"Scanner dependencies are missing. Run yarn --cwd .tscanner install --frozen-lockfile --ignore-scripts --production=false.",
@@ -297,6 +298,7 @@ function runNative(args, timeout = 300_000) {
 		encoding: "utf8",
 		timeout,
 		maxBuffer: 32 * 1024 * 1024,
+		env: serialAi ? { ...process.env, RAYON_NUM_THREADS: "1" } : process.env,
 	});
 	if (result.error || result.signal)
 		throw new Error(`Scanner execution failed: ${result.error?.message ?? result.signal}`);
@@ -307,7 +309,22 @@ export function main(args = process.argv.slice(2)) {
 	const options = parseArguments(args);
 	if (Number(process.versions.node.split(".")[0]) < 26)
 		throw new Error("ShieldPM scanning requires Node.js 26 or newer.");
+	const aiRequested = options["only-ai"] || options["include-ai"];
+	const runnerAi = Boolean(aiRequested && (process.env.CI || process.env.GITHUB_ACTIONS));
+	if (runnerAi) assertTrustedAiRunner();
 	const reportDirectory = path.resolve(workspaceRoot, options.reportDirectory);
+	if (runnerAi) {
+		if (reportDirectory !== path.join(configDirectory, "reports-codex")) {
+			throw new Error("Runner AI reports must use .tscanner/reports-codex.");
+		}
+		for (const directory of [configDirectory, reportDirectory]) {
+			if (fs.existsSync(directory) && fs.lstatSync(directory).isSymbolicLink()) {
+				throw new Error("Runner AI report directories cannot be symbolic links.");
+			}
+		}
+		// Remove stale output and child links before writing fresh artifacts; never follow links into authentication.
+		fs.rmSync(reportDirectory, { recursive: true, force: true });
+	}
 	fs.mkdirSync(reportDirectory, { recursive: true });
 	const nativeValidation = runNative(["validate"]);
 	if (nativeValidation.status !== 0 || /(?:^|\n)\s*Warnings:/.test(stripVTControlCharacters(nativeValidation.stdout)))
@@ -340,11 +357,10 @@ export function main(args = process.argv.slice(2)) {
 		mode = selected;
 	}
 	if (options["only-ai"] || options["include-ai"]) {
-		if (process.env.CI || process.env.GITHUB_ACTIONS)
-			throw new Error("AI scans are local opt-in operations and cannot run in CI.");
 		nativeArgs.push(options["only-ai"] ? "--only-ai" : "--include-ai");
+		mode = runnerAi ? "trusted runner AI workspace review" : "local AI workspace review";
 	}
-	const native = runNative(nativeArgs, options["only-ai"] || options["include-ai"] ? 600_000 : 300_000);
+	const native = runNative(nativeArgs, aiRequested ? 600_000 : 300_000, runnerAi);
 	if (native.status !== 0 || !fs.existsSync(rawReportPath))
 		throw new Error(`Scanner failed to produce a valid report: ${native.stderr || native.stdout}`);
 	const report = JSON.parse(fs.readFileSync(rawReportPath, "utf8"));
