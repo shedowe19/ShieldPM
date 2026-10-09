@@ -142,34 +142,17 @@ geplante und manuelle Updater-Läufe. Nach Merge oder Schließen der bestehenden
 einen neuen Vorschlag erzeugen. Manuelle Kompatibilitäts-, Sicherheits- und Dokumentationskorrekturen sowie eine
 ergänzte PR-Beschreibung bleiben dadurch während der laufenden Review erhalten.
 
-### TScanner und eigener Codex-Runner
+### TScanner
 
 `.github/workflows/tscanner.yml` führt bei Pushes, Pull Requests und manuellem Start die deterministischen
-Scanner-Regeln auf einem GitHub-Runner aus. Der zusätzliche Workflow `.github/workflows/tscanner-codex.yml`
-ist ohne die Repository-Variable `SHIELDPM_CODEX_RUNNER_ENABLED=true` ausgeschaltet. Er läuft ausschließlich
-im ursprünglichen Repository `shedowe19/ShieldPM` auf `develop`, nach einem Push oder manuell durch `shedowe19`.
-Pushes von Bots und anderen Mitwirkenden starten den AI-Job nicht. Er verwendet
-die Labels `self-hosted`, `linux`, `shieldpm-codex`; Pull Requests, Forks und geplante Aufrufe sind ausgeschlossen.
+Scanner-Regeln auf einem GitHub-Runner aus. Pushes prüfen den vollständigen Workspace; Pull Requests die geänderten
+Zeilen seit dem gemeinsamen Git-Vorfahren. Der Workflow stellt Node 26 bereit, installiert das unabhängige
+Scanner-Paket mit Yarn 1.22.22 und eingefrorenem Lockfile ohne Installationsskripte, prüft dessen Abhängigkeiten und
+führt die Scanner-Tests aus.
 
-Der Betreiber installiert die für den Runner geprüfte CLI mit `npm install -g @openai/codex@0.161.0` unter Node 26+
-auf dem eigenen Server, registriert den Runner
-mit dem Label `shieldpm-codex` und meldet die CLI als denselben Benutzer ohne Root-Rechte an. Die Anmeldung liegt
-dauerhaft außerhalb des Checkouts in einem privaten `CODEX_HOME`, standardmäßig `/var/lib/shieldpm-codex`;
-die optionale Repository-Variable `SHIELDPM_CODEX_HOME` ersetzt diesen Pfad. Provider-Anmeldung und API-Keys
-werden nicht als GitHub-Secrets bereitgestellt. Eine vorhandene API-Anmeldung wird abgelehnt; der Job verwendet
-das ChatGPT-/Codex-Konto mit dessen Nutzungsgrenzen, ohne API-Fallback. Der Workflow stellt Node 26 bereit und
-installiert die Scanner-Dependencies mit Yarn 1.22.22. Die Freischaltung erfolgt erst nach diesem Setup.
-
-Der Workflow führt vollständige Workspace-AI-Reviews aus, keine geänderten-Zeilen-Reviews. Eine gemeinsame
-Warteschlange ohne Abbruch des laufenden Jobs und `RAYON_NUM_THREADS=1` serialisieren Jobs und AI-Regeln.
-Der Job hat ausschließlich `contents: read`; Befunde erscheinen als Annotationen, Summary und Berichtsartefakt
-mit sieben Tagen Aufbewahrung. Anmeldung, Provider-Sitzungen, Prompts und native Caches bleiben außerhalb der Artefakte.
-
-OpenAIs Anleitung zur Kontoanmeldung in CI rät ausdrücklich von öffentlichen/Open-Source-Repositories ab; der
-Betreiber hat diesen Weg für seinen eigenen vertrauenswürdigen Runner gewählt. Auf der Anmeldemaschine dürfen
-keine nicht vertrauenswürdigen PR-Workflows ausgeführt werden. Der Runner ist von der produktiven ShieldPM-Instanz
-und deren Zugangsrechten zu trennen. Die [TScanner-Anleitung](../../wiki/TScanner.md#codex-auf-einem-eigenen-github-actions-runner)
-enthält die genauen Setup-Schritte, die offiziellen Quellen und die Grenzen der Quellen-Sandbox.
+Der Job hat ausschließlich `contents: read`. Befunde erscheinen als Annotationen, Summary und Berichtsartefakt
+mit sieben Tagen Aufbewahrung. Ein eigener Runner oder zusätzliche Provider-Zugangsdaten sind nicht erforderlich.
+Die [TScanner-Anleitung](../../wiki/TScanner.md) beschreibt Regeln, Git-Modi, Baseline und Berichte.
 
 ## Hilfs-Skripte
 

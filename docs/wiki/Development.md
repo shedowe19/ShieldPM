@@ -90,10 +90,9 @@ yarn --cwd .tscanner test
 `--branch origin/develop`, `--staged` und `--uncommitted` prüfen geänderte Zeilen. Bestehende Baseline-Fehler bleiben
 im vollständigen Bericht sichtbar; auf geänderten Zeilen gelten keine Baseline-Ausnahmen. Neue Fehler und
 Scanner-Ausführungsfehler blockieren den Lauf, Hinweise bleiben sichtbar. Die empfohlene VSCode-Extension und Aufgaben
-verwenden dasselbe Setup. Die drei lokalen AI-Reviews benötigen eine separat authentifizierte Provider-CLI und einen
-ausdrücklichen manuellen Start; sie sind in CI gesperrt und nicht mit Git-Prüfmodi kombinierbar. Die
+verwenden dasselbe Setup und dieselben deterministischen Regeln. Die
 [vollständige TScanner-Anleitung](./TScanner.md) beschreibt Index-/Arbeitskopie-Schutz, Berichte, Baseline-Review und
-die lokale AI-Einrichtung.
+die lokale Editor-Einrichtung.
 
 ## 🐳 Building the Docker Image
 

@@ -102,35 +102,11 @@ node scripts/ci/tscanner.mjs --validate
 node scripts/ci/tscanner.mjs
 ```
 
-Die VSCode-Empfehlung und Aufgaben liegen unter `.vscode/`. Vorgabe der drei AI-Reviews ist der Codex-Adapter.
-Für lokale Aufrufe auf dem eigenen Rechner `npm install -g @openai/codex` und
-`codex login` ausführen, anschließend `node scripts/ci/tscanner.mjs --only-ai` für die drei AI-Regeln starten.
-Der Adapter verwendet das lokal konfigurierte Codex-Modell und eine `read-only`-Sandbox ohne Genehmigungsdialoge.
-Bei einer abweichenden Installation bezeichnet `SHIELDPM_TSCANNER_CODEX_CLI` den ausführbaren Client, keine
-Shell-Befehlszeile.
-
-Der gesonderte Workflow `.github/workflows/tscanner-codex.yml` unterstützt nach ausdrücklicher Freischaltung einen
-eigenen Linux-Runner mit den Labels `self-hosted`, `linux`, `shieldpm-codex`. Für diesen Runner die geprüfte CLI mit
-`npm install -g @openai/codex@0.161.0` einmalig auf dem Server installieren; der Workflow installiert sie nicht.
-Die verpflichtende Vorprüfung testet das Berechtigungsprofil mit `codex sandbox`, ohne einen AI-Aufruf. Systemweite
-Codex-Dateien `/etc/codex/config.toml` und `/etc/codex/managed_config.toml` sind in dieser Umgebung unzulässig.
-Anmeldung und Runner-Dienst müssen denselben Benutzer ohne
-Root-Rechte verwenden. Ein privates persistentes `CODEX_HOME` außerhalb des Checkouts, standardmäßig
-`/var/lib/shieldpm-codex`, besitzt Modus `0700`, seine `auth.json` Modus `0600`. Der Betreiber meldet sich dort mit
-`codex -c 'cli_auth_credentials_store="file"' login --device-auth` an, nachdem er diesen Pfad als `CODEX_HOME`
-exportiert hat. Es werden keine API-Keys oder Anmeldecaches an GitHub übertragen. Die Abo-Nutzungsgrenzen gelten.
-
-Erst nach Registrierung, Anmeldung und Prüfung des Dienstbenutzers setzt der Betreiber die Repository-Variable
-`SHIELDPM_CODEX_RUNNER_ENABLED=true`; `SHIELDPM_CODEX_HOME` kann den Standardpfad ersetzen. Der Job läuft nur für
-`develop` im ursprünglichen Repository, nach einem Push oder manuell durch `shedowe19`, ohne PR-/Fork- oder
-Zeitplan-Ausführung. Bots und andere Mitwirkende starten diesen AI-Job nicht.
-Er ignoriert die Codex-Benutzerkonfiguration und zusätzliche CLI-Regeln, erzwingt ChatGPT-/OpenAI-Anmeldung und
-verwendet das CLI-Standardmodell. Dieses Verhalten gilt nur für den freigeschalteten Runner-Modus.
-
-OpenAIs Anleitung zur Kontoanmeldung in CI rät ausdrücklich von öffentlichen/Open-Source-Repositories ab; der
-Betreiber hat diesen Weg für seinen eigenen vertrauenswürdigen Runner gewählt. Setup-Befehle, die konkrete
-Dokumentationseinschränkung, Runner-Abgrenzung, Windows-Hinweise, Git-Modi und Berichte stehen in der
-[vollständigen TScanner-Anleitung](../../wiki/TScanner.md#codex-auf-einem-eigenen-github-actions-runner).
+Die VSCode-Empfehlung und Aufgaben liegen unter `.vscode/`. Die Einrichtung verwendet ausschließlich
+lokale deterministische Regeln; eine Provider-CLI, Kontoanmeldung oder ein eigener Runner ist nicht erforderlich.
+Der reguläre Workflow `.github/workflows/tscanner.yml` führt dieselben Regeln auf GitHub-Runnern aus.
+Git-Modi, Bestands-Baseline, Editor-Einrichtung und Berichte beschreibt die
+[vollständige TScanner-Anleitung](../../wiki/TScanner.md).
 
 ## Verwandte Seiten
 

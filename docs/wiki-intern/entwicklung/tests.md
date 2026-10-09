@@ -101,16 +101,8 @@ yarn --cwd .tscanner test
 Die eigenen Node-Tests unter `.tscanner/tests/` prüfen AST-Regeln einschließlich Alias-/Scope-Ausnahmen und
 stdin-Protokoll, Bericht-/Baseline-Validierung sowie Index-/Arbeitskopie-Grenzen. Reale native Scannerläufe mit
 temporären Git-Repositories sichern vollständige und geänderte-Zeilen-Scans, neue Fehler trotz sichtbarer Altbefunde,
-fehlgeschlagene Skriptregeln und ungültige Quellen. Die Codex-Adapter-Prüfungen und seine native Scanner-Anbindung
-verwenden eine simulierte CLI; sie prüfen das Provider-Protokoll, Ausführungsfehler, Antwortvalidierung und die
-Dateiliste je `agentic`-Regel. Timeout- und Abbruchprüfungen sichern das Beenden von Provider-Kindprozessen und die
-Bereinigung temporärer Ergebnisse, einschließlich abruptem Beenden des Adapter-Elternprozesses. Ein echter
-AI-Provider wird nicht aufgerufen. Weitere Tests prüfen die Ablehnung gewöhnlicher CI-Aufrufe und die eng begrenzte
-Ausnahme des ausdrücklich freigeschalteten eigenen Linux-Runners: ursprüngliches Repository, `develop`, erlaubter
-Auslöser, privater Anmeldecache und Ausschluss von API-Anmeldung. Workflow-Vertrag und Runner-Aufruf werden ohne echte
-Zugangsdaten geprüft. Codex-Anmeldung, Modellverfügbarkeit, Abo-Kontingent und tatsächlicher Betrieb auf dem Server
-des Betreibers sind nicht Bestandteil dieser Regressionen.
-Die Provider-Prozess- und Pipeline-Prüfungen laufen unter Linux; natives Windows wird dabei nicht geprüft.
+fehlgeschlagene Skriptregeln und ungültige Quellen. Editor-Tests prüfen das gepinnte native Plattform-Binary und die
+sichere Bearbeitung lokaler JSONC-Einstellungen; die tatsächliche VSCode-Oberfläche wird dabei nicht geprüft.
 
 Neue Fehler und Scanner-Ausführungswarnungen/-fehler blockieren den Wrapper. Die Bestands-Baseline gilt nur im
 vollständigen Scan, niemals auf geänderten Zeilen; normale Warnungsbefunde bleiben beratend. Die

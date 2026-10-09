@@ -33,7 +33,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Setup-Interna](./entwicklung/setup-intern.md)
 - [Lokale Entwicklung](./entwicklung/lokale-entwicklung.md)
 - [Tests](./entwicklung/tests.md)
-- [TScanner-Projektregeln](../wiki/TScanner.md) — CLI, VSCode, CI-Berichte und manuelle lokale AI-Reviews.
+- [TScanner-Projektregeln](../wiki/TScanner.md) — Deterministische Regeln, CLI, VSCode und CI-Berichte.
 - [Build](./entwicklung/build.md)
 - [Deployment](./entwicklung/deployment.md)
 

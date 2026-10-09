@@ -59,30 +59,15 @@ Die Schlüsseldatei `shieldpm/keys.json` wird vollständig in eine private tempo
 
 ## TScanner-Entwicklungswerkzeuge
 
-`.tscanner/config.jsonc` definiert deterministische Regeln, AI-Regeln, Dateimuster und Editor-Verhalten.
-AI verwendet `provider: "custom"` und `command: "./.tscanner/providers/codex"`; dieser Launcher startet den lokalen
-Codex-Adapter. Für natives Windows ist stattdessen `./.tscanner/providers/codex.cmd` einzutragen. Der Adapter verwendet
-das lokal konfigurierte Codex-Modell und erwartet das native Prompt-Format der gepinnten Version für `agentic`-Regeln.
-`SHIELDPM_TSCANNER_CODEX_CLI` kann den ausführbaren Clientnamen oder Pfad
-vorgeben, jedoch keine Shell-Befehlszeile mit Argumenten.
-
+`.tscanner/config.jsonc` definiert neun eingebaute Regeln, vier lokale AST-Regeln, Dateimuster und Editor-Verhalten.
+Das vom gepinnten Schema verlangte Feld `aiRules` ist leer; automatische KI-Scans sind ausgeschaltet.
 `.tscanner/baseline.json` hält geprüfte Altbefunde fest; `.tscanner/package.json` und `.tscanner/yarn.lock` pinnen das
-private Scanner-Paket. Provider-Anmeldung und Codex-Konfiguration bleiben auf dem eigenen Rechner beziehungsweise
-dem eigenen Runner. `.github/workflows/tscanner.yml` verwendet ausschließlich deterministische Prüfungen.
-`.github/workflows/tscanner-codex.yml` ergänzt den ausdrücklich freigeschalteten eigenen Linux-Runner ohne
-Repository-Secrets, API-Fallback oder geplante Läufe.
+private Scanner-Paket. `.github/workflows/tscanner.yml` führt die deterministischen Prüfungen auf GitHub-Runnern aus.
+Die VSCode-Empfehlung und Aufgaben liegen unter `.vscode/`; der Editor-Helper trägt den Pfad des gepinnten nativen
+Binaries in die ignorierte lokale `.vscode/settings.json` ein und erhält bestehende Einstellungen.
 
-| Variable                        | Bedeutung                                                                         |
-| ------------------------------- | --------------------------------------------------------------------------------- |
-| `SHIELDPM_CODEX_RUNNER_ENABLED` | Repository-Variable; nur der exakte Wert `true` schaltet den eigenen AI-Job frei. |
-| `SHIELDPM_CODEX_HOME`           | Optionaler absoluter Codex-Pfad; Standard `/var/lib/shieldpm-codex`.              |
-| `CODEX_HOME`                    | Im Job der gewählte persistente Pfad außerhalb des Checkouts.                     |
-
-`CODEX_HOME` muss dem Runner-Benutzer gehören, privat sein und eine dateibasierte ChatGPT-Anmeldung enthalten.
-Der Runner-Modus ignoriert Codex-Benutzerkonfiguration und zusätzliche CLI-Regeln; lokale Aufrufe behalten das
-konfigurierte Modell. Codex-Konfiguration in Repository-/Elternverzeichnissen sowie `/etc/codex/config.toml` und
-`/etc/codex/managed_config.toml` wird für diesen Modus abgelehnt. Setup, Modus-/Besitzprüfungen, Windows-Hinweise und die Einschränkung der offiziellen
-Anleitung für öffentliche Repositories beschreibt die [TScanner-Anleitung](../../wiki/TScanner.md).
+Die Scanner-Einrichtung benötigt keine Provider-Konfiguration oder zusätzliche Zugangsdaten. Installation, Git-Modi,
+Baseline und Berichte beschreibt die [TScanner-Anleitung](../../wiki/TScanner.md).
 
 ## Caddy-Sidecar
 

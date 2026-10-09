@@ -122,8 +122,8 @@ node scripts/ci/tscanner.mjs
 ```
 
 The [TScanner setup guide](docs/wiki/TScanner.md) covers changed-line scans, the VSCode extension/tasks, visible
-existing baseline findings, reports, and optional local AI reviews. AI requires your own authenticated provider CLI
-and an explicit manual command; it does not run in CI.
+existing baseline findings, and reports. Checks use built-in rules and local AST policies without additional
+provider credentials.
 
 ---
 

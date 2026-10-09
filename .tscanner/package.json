@@ -12,7 +12,6 @@
     "scan:staged": "node ../scripts/ci/tscanner.mjs --staged",
     "scan:uncommitted": "node ../scripts/ci/tscanner.mjs --uncommitted",
     "scan:branch": "node ../scripts/ci/tscanner.mjs --branch origin/develop",
-    "scan:ai": "node ../scripts/ci/tscanner.mjs --only-ai",
     "validate": "node ../scripts/ci/tscanner.mjs --validate",
     "test": "node --test tests/*.test.mjs",
     "editor:setup": "node scripts/editor.mjs"

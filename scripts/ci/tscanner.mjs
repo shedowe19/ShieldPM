@@ -4,7 +4,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { stripVTControlCharacters } from "node:util";
-import { assertTrustedAiRunner } from "./tscanner-runner.mjs";
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const configDirectory = path.join(workspaceRoot, ".tscanner");
@@ -20,11 +19,7 @@ export function parseArguments(args) {
 			const value = args[++index];
 			if (!value || value.startsWith("--")) throw new Error(`Missing value for ${argument}`);
 			options[argument === "--branch" ? "branch" : "reportDirectory"] = value;
-		} else if (
-			["--staged", "--uncommitted", "--only-ai", "--include-ai", "--validate", "--update-baseline"].includes(
-				argument,
-			)
-		) {
+		} else if (["--staged", "--uncommitted", "--validate", "--update-baseline"].includes(argument)) {
 			options[argument.slice(2)] = true;
 		} else {
 			throw new Error(`Unknown scanner option: ${argument}`);
@@ -33,14 +28,7 @@ export function parseArguments(args) {
 	if ([options.branch, options.staged, options.uncommitted].filter(Boolean).length > 1) {
 		throw new Error("Choose one of --branch, --staged or --uncommitted.");
 	}
-	if (options["only-ai"] && options["include-ai"]) throw new Error("Choose one AI scan mode.");
-	if ((options["only-ai"] || options["include-ai"]) && (options.branch || options.staged || options.uncommitted)) {
-		throw new Error("AI scans review the full workspace and cannot be combined with changed-line modes.");
-	}
-	if (
-		options["update-baseline"] &&
-		(options.branch || options.staged || options.uncommitted || options["only-ai"] || options["include-ai"])
-	) {
+	if (options["update-baseline"] && (options.branch || options.staged || options.uncommitted)) {
 		throw new Error("Baseline updates require a full deterministic scan.");
 	}
 	if (options.validate && Object.keys(options).length > 2)
@@ -231,7 +219,7 @@ export function summaryMarkdown(report, evaluation, mode) {
 		"",
 		`Files: ${report.summary.total_files}. New errors: ${evaluation.newErrors.length}. Existing baseline errors: ${evaluation.legacy.length}. Advisory findings: ${evaluation.issues.length - evaluation.newErrors.length - evaluation.legacy.length}. Scanner failures: ${evaluation.infrastructureErrors.length}.`,
 		"",
-		"The artifact contains every finding, including the existing baseline. AI review is opt-in locally or on the trusted subscription runner.",
+		"The artifact contains every finding, including the existing baseline.",
 	];
 	for (const issue of [
 		...evaluation.newErrors,
@@ -288,7 +276,7 @@ export function validateDiffScope(
 	}
 }
 
-function runNative(args, timeout = 300_000, serialAi = false) {
+function runNative(args) {
 	if (!fs.existsSync(cliPath))
 		throw new Error(
 			"Scanner dependencies are missing. Run yarn --cwd .tscanner install --frozen-lockfile --ignore-scripts --production=false.",
@@ -296,9 +284,8 @@ function runNative(args, timeout = 300_000, serialAi = false) {
 	const result = spawnSync(process.execPath, [cliPath, ...args], {
 		cwd: workspaceRoot,
 		encoding: "utf8",
-		timeout,
+		timeout: 300_000,
 		maxBuffer: 32 * 1024 * 1024,
-		env: serialAi ? { ...process.env, RAYON_NUM_THREADS: "1" } : process.env,
 	});
 	if (result.error || result.signal)
 		throw new Error(`Scanner execution failed: ${result.error?.message ?? result.signal}`);
@@ -309,22 +296,7 @@ export function main(args = process.argv.slice(2)) {
 	const options = parseArguments(args);
 	if (Number(process.versions.node.split(".")[0]) < 26)
 		throw new Error("ShieldPM scanning requires Node.js 26 or newer.");
-	const aiRequested = options["only-ai"] || options["include-ai"];
-	const runnerAi = Boolean(aiRequested && (process.env.CI || process.env.GITHUB_ACTIONS));
-	if (runnerAi) assertTrustedAiRunner();
 	const reportDirectory = path.resolve(workspaceRoot, options.reportDirectory);
-	if (runnerAi) {
-		if (reportDirectory !== path.join(configDirectory, "reports-codex")) {
-			throw new Error("Runner AI reports must use .tscanner/reports-codex.");
-		}
-		for (const directory of [configDirectory, reportDirectory]) {
-			if (fs.existsSync(directory) && fs.lstatSync(directory).isSymbolicLink()) {
-				throw new Error("Runner AI report directories cannot be symbolic links.");
-			}
-		}
-		// Remove stale output and child links before writing fresh artifacts; never follow links into authentication.
-		fs.rmSync(reportDirectory, { recursive: true, force: true });
-	}
 	fs.mkdirSync(reportDirectory, { recursive: true });
 	const nativeValidation = runNative(["validate"]);
 	if (nativeValidation.status !== 0 || /(?:^|\n)\s*Warnings:/.test(stripVTControlCharacters(nativeValidation.stdout)))
@@ -356,11 +328,7 @@ export function main(args = process.argv.slice(2)) {
 		nativeArgs.push(`--${selected}`);
 		mode = selected;
 	}
-	if (options["only-ai"] || options["include-ai"]) {
-		nativeArgs.push(options["only-ai"] ? "--only-ai" : "--include-ai");
-		mode = runnerAi ? "trusted runner AI workspace review" : "local AI workspace review";
-	}
-	const native = runNative(nativeArgs, aiRequested ? 600_000 : 300_000, runnerAi);
+	const native = runNative(nativeArgs);
 	if (native.status !== 0 || !fs.existsSync(rawReportPath))
 		throw new Error(`Scanner failed to produce a valid report: ${native.stderr || native.stdout}`);
 	const report = JSON.parse(fs.readFileSync(rawReportPath, "utf8"));

@@ -50,10 +50,6 @@ function scannerFixture(context) {
 	};
 	write("scripts/ci/tscanner.mjs", fs.readFileSync(path.join(projectRoot, "scripts/ci/tscanner.mjs"), "utf8"));
 	write(
-		"scripts/ci/tscanner-runner.mjs",
-		fs.readFileSync(path.join(projectRoot, "scripts/ci/tscanner-runner.mjs"), "utf8"),
-	);
-	write(
 		".tscanner/script-rules/architecture.mjs",
 		fs.readFileSync(path.join(projectRoot, ".tscanner/script-rules/architecture.mjs"), "utf8"),
 	);
@@ -253,12 +249,14 @@ test("configuration fields silently ignored by native validation make wrapper va
 	assert.equal(fs.existsSync(path.join(fixture.root, ".tscanner/reports/tscanner-results.json")), false);
 });
 
-test("CI refuses explicit AI review before any provider execution", (context) => {
+test("removed AI scan options fail before creating reports locally and in CI", (context) => {
 	const fixture = scannerFixture(context);
-	for (const mode of ["--include-ai", "--only-ai"]) {
-		const result = fixture.wrapper([mode], { CI: "true", GITHUB_ACTIONS: "true" });
-		assert.equal(result.status, 1, result.stderr || result.stdout);
-		assert.match(result.stderr, /AI scans are local opt-in operations and cannot run in CI/);
-		assert.equal(fs.existsSync(path.join(fixture.root, ".tscanner/reports/tscanner-results.json")), false);
+	for (const environment of [{}, { CI: "true", GITHUB_ACTIONS: "true" }]) {
+		for (const mode of ["--include-ai", "--only-ai"]) {
+			const result = fixture.wrapper([mode], environment);
+			assert.equal(result.status, 1, result.stderr || result.stdout);
+			assert.ok(result.stderr.includes(`Unknown scanner option: ${mode}`));
+			assert.equal(fs.existsSync(path.join(fixture.root, ".tscanner/reports")), false);
+		}
 	}
 });

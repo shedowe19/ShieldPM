@@ -173,8 +173,6 @@ test("argument parsing provides full-scan defaults and preserves explicit compar
 	});
 	assert.equal(parseArguments(["--staged"]).staged, true);
 	assert.equal(parseArguments(["--uncommitted"]).uncommitted, true);
-	assert.equal(parseArguments(["--only-ai"])["only-ai"], true);
-	assert.equal(parseArguments(["--include-ai"])["include-ai"], true);
 });
 
 test("argument parsing rejects conflicting diff modes and missing or unknown arguments", () => {
@@ -182,20 +180,11 @@ test("argument parsing rejects conflicting diff modes and missing or unknown arg
 		["--branch", "develop", "--staged"],
 		["--branch", "develop", "--uncommitted"],
 		["--staged", "--uncommitted"],
-		["--only-ai", "--include-ai"],
 		["--branch"],
 		["--report-dir", "--staged"],
 		["--unknown"],
 	]) {
 		assert.throws(() => parseArguments(args), Error, args.join(" "));
-	}
-});
-
-test("AI review cannot promise staged or changed-line scope when upstream scans the full workspace", () => {
-	for (const aiMode of ["--include-ai", "--only-ai"]) {
-		for (const scope of [["--branch", "origin/develop"], ["--staged"], ["--uncommitted"]]) {
-			assert.throws(() => parseArguments([aiMode, ...scope]), /AI scans review the full workspace/);
-		}
 	}
 });
 
@@ -206,10 +195,7 @@ test("baseline updates require a full deterministic scan and validation cannot l
 		["--update-baseline", "--branch", "develop"],
 		["--update-baseline", "--staged"],
 		["--update-baseline", "--uncommitted"],
-		["--update-baseline", "--only-ai"],
-		["--update-baseline", "--include-ai"],
 		["--validate", "--staged"],
-		["--validate", "--only-ai"],
 		["--validate", "--update-baseline"],
 	]) {
 		assert.throws(() => parseArguments(args), Error, args.join(" "));

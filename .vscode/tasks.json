@@ -76,22 +76,6 @@
         "cwd": "${workspaceFolder}"
       },
       "problemMatcher": []
-    },
-    {
-      "label": "TScanner: Run local AI review",
-      "detail": "Explicit read-only Codex review; requires the local Codex CLI and an existing Codex login.",
-      "type": "process",
-      "command": "node",
-      "args": [
-        "scripts/ci/tscanner.mjs",
-        "--include-ai",
-        "--report-dir",
-        ".tscanner/reports"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": []
     }
   ]
 }

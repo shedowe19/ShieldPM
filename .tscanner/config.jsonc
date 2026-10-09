@@ -162,54 +162,7 @@
 			}
 		}
 	},
-	"aiRules": {
-		"security-review": {
-			"prompt": "security.md",
-			"mode": "agentic",
-			"message": "ShieldPM security review finding",
-			"severity": "warning",
-			"include": [
-				"backend/**/*.js",
-				"frontend/src/**/*.ts",
-				"frontend/src/**/*.tsx",
-				"scripts/**/*.mjs",
-				"scripts/**/*.js"
-			],
-			"timeout": 180
-		},
-		"architecture-review": {
-			"prompt": "architecture.md",
-			"mode": "agentic",
-			"message": "ShieldPM architecture review finding",
-			"severity": "warning",
-			"include": [
-				"backend/**/*.js",
-				"frontend/src/**/*.ts",
-				"frontend/src/**/*.tsx",
-				"scripts/**/*.mjs",
-				"scripts/**/*.js"
-			],
-			"timeout": 180
-		},
-		"performance-review": {
-			"prompt": "performance.md",
-			"mode": "agentic",
-			"message": "ShieldPM performance review finding",
-			"severity": "info",
-			"include": [
-				"backend/**/*.js",
-				"frontend/src/**/*.ts",
-				"frontend/src/**/*.tsx",
-				"scripts/**/*.mjs",
-				"scripts/**/*.js"
-			],
-			"timeout": 180
-		}
-	},
-	"ai": {
-		"provider": "custom",
-		"command": "./.tscanner/providers/codex"
-	},
+	"aiRules": {},
 	"files": {
 		"include": [
 			"**/*.js",
