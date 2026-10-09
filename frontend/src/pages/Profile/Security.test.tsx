@@ -37,10 +37,11 @@ vi.mock("@simplewebauthn/browser", () => ({
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-const makeWrapper = () => {
-	const client = new QueryClient({
+const makeWrapper = (
+	client = new QueryClient({
 		defaultOptions: { queries: { retry: false } },
-	});
+	}),
+) => {
 	const Wrapper = ({ children }: { children: React.ReactNode }) => (
 		<QueryClientProvider client={client}>{children}</QueryClientProvider>
 	);
@@ -183,6 +184,81 @@ describe("SecuritySettings", () => {
 			expect(screen.getByText("CODE1")).toBeInTheDocument();
 		});
 	});
+
+	it("keeps recovery-code actions pending until their status refresh completes", async () => {
+		mockGet2fa.mockResolvedValue({
+			methods: [{ id: 1, type: "totp", label: "App", isVerified: true }],
+			backupCodesRemaining: 5,
+		});
+		mockRegenerate2faBackupCodes.mockResolvedValue({ backupCodes: ["fresh-recovery"] });
+		const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+		let finishRefresh!: () => void;
+		vi.spyOn(client, "invalidateQueries").mockReturnValueOnce(
+			new Promise((resolve) => {
+				finishRefresh = resolve;
+			}),
+		);
+		render(<SecuritySettings />, { wrapper: makeWrapper(client) });
+		fireEvent.click(await screen.findByText("Regenerate Backup Codes"));
+		expect(await screen.findByText("fresh-recovery")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Regenerate Backup Codes" })).toBeDisabled();
+		expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+		await act(async () => finishRefresh());
+		await waitFor(() => expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled());
+	});
+
+	it("shows a setup status-refresh rejection without losing the returned recovery codes", async () => {
+		mockAdd2faYubikey.mockResolvedValue({ id: 8, backupCodes: ["saved-recovery"] });
+		const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+		vi.spyOn(client, "invalidateQueries").mockRejectedValueOnce(new Error("Status refresh failed"));
+		render(<SecuritySettings />, { wrapper: makeWrapper(client) });
+		fireEvent.click(await screen.findByText("YubiKey"));
+		const input = screen.getAllByRole("textbox")[1];
+		fireEvent.change(input, { target: { value: "c".repeat(44) } });
+		fireEvent.keyDown(input, { key: "Enter" });
+		expect(await screen.findByText("Status refresh failed")).toBeInTheDocument();
+		expect(screen.getByText("saved-recovery")).toBeInTheDocument();
+		expect(mockAdd2faYubikey).toHaveBeenCalledOnce();
+	});
+
+	it("shows a recovery-code status-refresh failure without repeating code regeneration", async () => {
+		mockGet2fa.mockResolvedValue({
+			methods: [{ id: 1, type: "totp", label: "App", isVerified: true }],
+			backupCodesRemaining: 5,
+		});
+		mockRegenerate2faBackupCodes.mockResolvedValue({ backupCodes: ["saved-recovery"] });
+		const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+		vi.spyOn(client, "invalidateQueries").mockRejectedValueOnce(new Error("Status refresh failed"));
+		render(<SecuritySettings />, { wrapper: makeWrapper(client) });
+		fireEvent.click(await screen.findByText("Regenerate Backup Codes"));
+		expect(await screen.findByText("Status refresh failed")).toBeInTheDocument();
+		expect(screen.getByText("saved-recovery")).toBeInTheDocument();
+		expect(mockRegenerate2faBackupCodes).toHaveBeenCalledOnce();
+	});
+
+	it.each(["keyboard", "button"])(
+		"handles rejected TOTP activation from the %s without submitting the profile form",
+		async (trigger) => {
+			mockSetup2faTotp.mockResolvedValue({ qrDataUrl: "data:image/png;base64,fake" });
+			mockEnable2faTotp.mockRejectedValueOnce(new Error("Invalid verification code"));
+			const onSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
+			render(
+				<form onSubmit={onSubmit}>
+					<SecuritySettings />
+				</form>,
+				{ wrapper: makeWrapper() },
+			);
+			fireEvent.click(await screen.findByText("Authenticator App"));
+			const input = await screen.findByPlaceholderText("123456");
+			fireEvent.change(input, { target: { value: "123456" } });
+			if (trigger === "keyboard") fireEvent.keyDown(input, { key: "Enter" });
+			else fireEvent.click(screen.getByText("Verify & Enable"));
+			expect(await screen.findByText("Invalid verification code")).toBeInTheDocument();
+			expect(screen.getByText("Verify & Enable")).toBeEnabled();
+			expect(onSubmit).not.toHaveBeenCalled();
+			expect(mockEnable2faTotp).toHaveBeenCalledOnce();
+		},
+	);
 
 	it("surfaces an initial status failure without offering an empty setup state", async () => {
 		mockGet2fa.mockRejectedValue(new Error("Security status unavailable"));

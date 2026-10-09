@@ -44,6 +44,8 @@ Ein Reverse Proxy kann eine beliebige einzelne Browser-Formularanfrage nicht tra
 
 ## Verhalten bei Fehlern
 
+- Eine ungültige intern übergebene Fetch-Implementierung ist ein privater `InternalError` (HTTP-Statuszuordnung 500),
+  kein öffentlicher Eingabefehler des Upload-Clients.
 - HTTP-Status und Fehler des privaten Upstreams gehen direkt an den Client zurück.
 - Ein Chunking-fähiger Upstream entscheidet selbst über Wiederaufnahme, Integritätsprüfung und Aufräumen.
 - Ohne erklärbaren Zielhinweis bleibt der Request transparent; es wird nie auf einen geratenen Pfad geschrieben.

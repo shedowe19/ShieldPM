@@ -29,6 +29,10 @@ Dokumentation des Test-Setups und der Test-Strategien.
 - `frontend/src/components/SiteFooter.test.tsx` — SiteFooter-Komponente
 - `frontend/src/locale/Utils.test.tsx` — Locale-Utilities
 - `frontend/src/components/Analytics/AnalyticsChart.test.ts` — normalisiert Tooltip-Labels ausschließlich als numerische Unix-Sekunden und verwirft andere React-Labelwerte, damit Dependency-Updates mit strengeren Chart-Typen den Produktionsbuild nicht brechen.
+- `frontend/src/modals/DeleteConfirmModal.test.tsx` — wartet auf alle Cache-Invalidierungen, behandelt Lösch- und
+  Aktualisierungsfehler getrennt und verhindert eine erneute Löschung nach bereits erfolgreicher Bestätigung.
+- `frontend/src/pages/Profile/Security.test.tsx` — prüft neben den 2FA-Lebensdauergrenzen auch verzögerte und
+  fehlgeschlagene Status-Invalidierungen sowie den Erhalt bereits ausgegebener Wiederherstellungscodes.
 
 ### Mocking-Hygiene
 
@@ -62,6 +66,19 @@ Dokumentation des Test-Setups und der Test-Strategien.
 - Pfad: `backend/test/`
 - Enthalten Unit-Tests für `backend/lib/` (z.B. helpers, user-id-from-me) und `backend/internal/` (z.B. 2fa-service, ai, auth-session-service, certificate, ddns, tokens-2fa).
 - Führen Tests über Vitest aus.
+- Analytics-Response-Fixtures setzen ihre Zeitzone ausdrücklich auf UTC und stellen die Umgebung danach wieder her;
+  Workflow-Vergleichstests verwenden vollständige temporäre Git-Repositories mit lokalem Bare-Origin, einschließlich
+  divergierter Zweige und eines gleichnamigen Tags beim Branch-Fetch.
+- `backend/test/internal/ai-error-contracts.spec.js` prüft öffentliche Konfigurationsfehler, private Providerdiagnosen,
+  erhaltene Fehlerursachen und die Autorisierungsgrenze vor einem Provider-Aufruf. Die AI-Tool-Regressionen prüfen
+  zusätzlich, dass interne und unbekannte Fehler nur als `Internal Error` an das Modell gelangen.
+- Die DDNS-, Docker-, Tor-, WireGuard- und Upload-Relay-Suites prüfen ihre strukturierten Fehlerverträge. DDNS darf
+  keine beliebigen Providerantworten oder Zugangsdaten aus Transportfehlern in `last_error` übernehmen; WireGuard
+  darf keine Schlüssel oder Unterprozessdiagnosen öffentlich ausgeben.
+- `backend/test/routes/wireguard-error-contracts.spec.js` prüft anhand der erfassten Route-Handler, dass die fünf
+  Status-, Einstellungs-, Konfigurations- und QR-Code-Fehlerpfade öffentliche, private und unbekannte Fehler
+  unverändert an die zentrale Fehlerbehandlung weiterreichen. Die HTTP-Formatierung durch die echte Middleware
+  ist nicht Teil dieses isolierten Router-Tests.
 - Quelltextbasierte Regressionstests verwenden `backend/test/helpers/source-path.js`. Der Helper leitet das Backend-Verzeichnis über `import.meta.url` und `fileURLToPath()` ab, damit Tests in beliebigen Worktrees ohne fest verdrahtete lokale Pfade laufen.
 - Tests, die ausschließlich GitOps-Patch-Payloads prüfen, stubben `internalGitOps.initRepo()` gezielt. Dadurch bleibt die Patch-Logik real getestet, ohne dass die CI-Schreibrechte für den Produktionspfad `/data/gitops` benötigt werden.
 - `backend/test/ci/js-yaml-esm-compatibility.spec.js` sichert, dass die Anubis- und GitOps-Module unter Node 26 ausschließlich die benannten ESM-Exporte von `js-yaml` verwenden; `dump()` und `load()` werden dabei gegen den tatsächlich exportierten Namespace geprüft. Der Test kontrolliert die gezielte 4.3.2-Resolution im Manifest, ohne eine bestimmte Gruppierung der Yarn-Lockfile-Selektoren zu verlangen; die tatsächlich aufgelösten Paketversionen prüft `dependabot-security-resolutions.spec.js`.
@@ -104,8 +121,9 @@ temporären Git-Repositories sichern vollständige und geänderte-Zeilen-Scans, 
 fehlgeschlagene Skriptregeln und ungültige Quellen. Editor-Tests prüfen das gepinnte native Plattform-Binary und die
 sichere Bearbeitung lokaler JSONC-Einstellungen; die tatsächliche VSCode-Oberfläche wird dabei nicht geprüft.
 
-Neue Fehler und Scanner-Ausführungswarnungen/-fehler blockieren den Wrapper. Die Bestands-Baseline gilt nur im
-vollständigen Scan, niemals auf geänderten Zeilen; normale Warnungsbefunde bleiben beratend. Die
+Neue Fehler und Scanner-Ausführungswarnungen/-fehler blockieren den Wrapper. Die Baseline-Mechanik gilt nur im
+vollständigen Scan, niemals auf geänderten Zeilen; die versionierte Baseline enthält nach der Behebung der
+ursprünglichen 57 Befunde keine Ausnahmen mehr. Normale Warnungsbefunde bleiben beratend. Die
 [TScanner-Anleitung](../../wiki/TScanner.md) beschreibt Befehle, Regelumfang und Validierungsgrenzen.
 
 ## Historische Prüfläufe des Code-Audits 2026-09

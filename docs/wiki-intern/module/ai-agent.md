@@ -128,6 +128,18 @@ Der Executor prüft für Stream-Weiterleitungen das tatsächliche Feld `forwardi
 
 Meldet der Tor-Service bei Erstellung oder Start `null` beziehungsweise `false`, erhält das Modell ein Fehlerergebnis. Der Executor erzeugt dafür keinen Audit-Eintrag mit angeblichem Erfolg.
 
+### Strukturierte Fehler und vertrauliche Diagnosen
+
+Fehlende API-Schlüssel, ungültige Provider-URLs und ein deaktivierter Assistent verwenden öffentliche
+`ConfigurationError`-Fehler (HTTP 400) mit lokal festgelegten Meldungen. Demo-Sperren verwenden `PermissionError`
+(HTTP 403). Explizit behandelte Provider-Ausfälle verwenden private `InternalError`-Fehler (HTTP 500). Die
+zugehörigen HTTP-Antworttexte, Transportursachen und weiteren Diagnosen bleiben in `previous` für die interne
+Auswertung erhalten und werden nicht als öffentliche API-Meldung ausgegeben.
+
+Der Tool-Executor gibt ausschließlich ausdrücklich öffentliche Fehlermeldungen an das Modell weiter. Interne und
+unbekannte Fehler erscheinen als `Internal Error`, einschließlich fehlgeschlagener Nginx-Tests. Die Zuordnung zur
+Tool-Call-ID bleibt erhalten, ohne private Prozessausgaben oder Provider-Antworten in die Folgerunde zu übernehmen.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

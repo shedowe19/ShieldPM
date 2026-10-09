@@ -61,8 +61,9 @@ Die Schlüsseldatei `shieldpm/keys.json` wird vollständig in eine private tempo
 
 `.tscanner/config.jsonc` definiert neun eingebaute Regeln, vier lokale AST-Regeln, Dateimuster und Editor-Verhalten.
 Das vom gepinnten Schema verlangte Feld `aiRules` ist leer; automatische KI-Scans sind ausgeschaltet.
-`.tscanner/baseline.json` hält geprüfte Altbefunde fest; `.tscanner/package.json` und `.tscanner/yarn.lock` pinnen das
-private Scanner-Paket. `.github/workflows/tscanner.yml` führt die deterministischen Prüfungen auf GitHub-Runnern aus.
+`.tscanner/baseline.json` enthält nach der Behebung der ursprünglichen 57 Befunde keine Altbefund-Ausnahmen mehr;
+künftige Ausnahmen benötigen weiterhin eine ausdrückliche Prüfung. `.tscanner/package.json` und `.tscanner/yarn.lock`
+pinnen das private Scanner-Paket. `.github/workflows/tscanner.yml` führt die deterministischen Prüfungen auf GitHub-Runnern aus.
 Die VSCode-Empfehlung und Aufgaben liegen unter `.vscode/`; der Editor-Helper trägt den Pfad des gepinnten nativen
 Binaries in die ignorierte lokale `.vscode/settings.json` ein und erhält bestehende Einstellungen.
 

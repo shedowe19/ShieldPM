@@ -237,9 +237,9 @@ const exec = (cmd, silent = false) => {
 		return execSync(cmd, { encoding: "utf-8", timeout: 10000 }).trim();
 	} catch (err) {
 		if (!silent) {
-			logger.error(`WireGuard exec failed: ${cmd}`, err.message);
+			logger.error(`WireGuard exec failed: ${cmd}`);
 		}
-		throw err;
+		throw new errs.InternalError("WireGuard command failed", err);
 	}
 };
 /**
@@ -254,31 +254,34 @@ const execStdin = (command, stdinData, silent = false) => {
 	return new Promise((resolve, reject) => {
 		const [cmd, ...args] = command.split(" ");
 		const child = spawn(cmd, args, { stdio: ["pipe", "pipe", "pipe"], timeout: 10000 });
-		child.stdin.on("error", reject);
+		child.stdin.on("error", (err) => reject(new errs.InternalError("WireGuard command input failed", err)));
 		let stdout = "";
-		let stderr = "";
 
 		child.stdout.on("data", (data) => {
 			stdout += data.toString();
 		});
-		child.stderr.on("data", (data) => {
-			stderr += data.toString();
-		});
+		// Drain diagnostics without logging output that may echo private key input.
+		child.stderr.on("data", () => {});
 		child.on("close", (code) => {
 			if (code === 0) {
 				resolve(stdout.trim());
 			} else {
 				if (!silent) {
-					logger.error(`WireGuard execStdin failed: ${command}`, stderr || "non-zero exit");
+					logger.error(`WireGuard execStdin failed: ${command}`, code);
 				}
-				reject(new Error(`execStdin failed: ${command}`));
+				reject(
+					new errs.InternalError(
+						"WireGuard command failed",
+						new errs.CommandError("WireGuard command exited unsuccessfully", code),
+					),
+				);
 			}
 		});
 		child.on("error", (err) => {
 			if (!silent) {
-				logger.error(`WireGuard execStdin error: ${command}`, err.message);
+				logger.error(`WireGuard execStdin error: ${command}`);
 			}
-			reject(err);
+			reject(new errs.InternalError("WireGuard command failed", err));
 		});
 
 		child.stdin.write(stdinData);
@@ -335,7 +338,7 @@ const getNextAvailableIP = async (subnet, serverAddress) => {
 			return `${ip}/32`;
 		}
 	}
-	throw new Error("No available IPs in WireGuard subnet");
+	throw new errs.ConfigurationError("No available IPs in WireGuard subnet");
 };
 
 /**
@@ -398,6 +401,9 @@ const ensureServerKeys = async () => {
 	})();
 	try {
 		await serverKeyInitialization;
+	} catch (err) {
+		if (err instanceof errs.InternalError) throw err;
+		throw new errs.InternalError("WireGuard server key initialization failed", err);
 	} finally {
 		serverKeyInitialization = null;
 	}
@@ -408,7 +414,11 @@ const ensureServerKeys = async () => {
  * @returns {string}
  */
 const getServerPrivateKey = () => {
-	return fs.readFileSync(serverKeyFile, "utf-8").trim();
+	try {
+		return fs.readFileSync(serverKeyFile, "utf-8").trim();
+	} catch (err) {
+		throw new errs.InternalError("WireGuard server key could not be read", err);
+	}
 };
 
 /**
@@ -417,7 +427,11 @@ const getServerPrivateKey = () => {
  */
 const getServerPublicKey = async () => {
 	await ensureServerKeys();
-	return fs.readFileSync(serverPubKeyFile, "utf-8").trim();
+	try {
+		return fs.readFileSync(serverPubKeyFile, "utf-8").trim();
+	} catch (err) {
+		throw new errs.InternalError("WireGuard server public key could not be read", err);
+	}
 };
 
 /**
@@ -454,7 +468,11 @@ AllowedIPs = ${peer.client_address}
 `;
 	}
 
-	fs.writeFileSync(wgConfFile, config, { mode: 0o600 });
+	try {
+		fs.writeFileSync(wgConfFile, config, { mode: 0o600 });
+	} catch (err) {
+		throw new errs.InternalError("WireGuard configuration could not be written", err);
+	}
 	logger.info("WireGuard: Config file written");
 };
 
@@ -699,7 +717,7 @@ const internalWireguard = {
 		serializeConfigurationChange(async () => {
 			validatePeerSettings(data);
 			if (!isWgAvailable()) {
-				throw new Error("WireGuard is not available on this system");
+				throw new errs.ConfigurationError("WireGuard is not available on this system");
 			}
 
 			await ensureServerKeys();
@@ -755,7 +773,7 @@ const internalWireguard = {
 			validatePeerSettings(data);
 			const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
 			if (!peer) {
-				throw new Error("Peer not found");
+				throw new errs.ItemNotFoundError(peerId);
 			}
 
 			const updateData = {};
@@ -806,7 +824,7 @@ const internalWireguard = {
 		serializeConfigurationChange(async () => {
 			const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
 			if (!peer) {
-				throw new Error("Peer not found");
+				throw new errs.ItemNotFoundError(peerId);
 			}
 
 			await peer.$query().patch({ status: 2 });
@@ -827,7 +845,7 @@ const internalWireguard = {
 		serializeConfigurationChange(async () => {
 			const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
 			if (!peer) {
-				throw new Error("Peer not found");
+				throw new errs.ItemNotFoundError(peerId);
 			}
 
 			await peer.$query().patch({ status: 0 });
@@ -847,7 +865,7 @@ const internalWireguard = {
 	generateClientConfig: async (peerId) => {
 		const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
 		if (!peer) {
-			throw new Error("Peer not found");
+			throw new errs.ItemNotFoundError(peerId);
 		}
 		validatePeerSettings(peer);
 
@@ -889,8 +907,11 @@ PersistentKeepalive = ${peer.persistent_keepalive}
 			});
 			return dataUrl;
 		} catch (err) {
-			logger.error("WireGuard: QR code generation failed:", err.message);
-			throw new Error("QR code generation is not available. Ensure the 'qrcode' npm package is installed.");
+			logger.error("WireGuard: QR code generation failed");
+			throw new errs.InternalError(
+				"QR code generation is not available. Ensure the 'qrcode' npm package is installed.",
+				err,
+			);
 		}
 	},
 

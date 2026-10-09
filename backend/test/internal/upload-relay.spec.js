@@ -4,6 +4,7 @@ import { basename, join } from "node:path";
 import { Readable } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createUploadRelay, relayConfigForHost, validateRelayConfigForHost } from "../../internal/upload-relay.js";
+import errs from "../../lib/error.js";
 
 const temporaryDirectories = [];
 
@@ -42,6 +43,21 @@ afterEach(() => {
 });
 
 describe("Upload relay", () => {
+	it("treats a missing fetch implementation as a private server configuration failure", () => {
+		let error;
+		try {
+			createUploadRelay({ fetchImpl: null, root: createTempRoot() });
+		} catch (failure) {
+			error = failure;
+		}
+		expect(error).toBeInstanceOf(errs.InternalError);
+		expect(error).toMatchObject({
+			message: "Upload relay needs a fetch implementation",
+			public: false,
+			status: 500,
+		});
+	});
+
 	it("queues the completed upload for direct origin forwarding", async () => {
 		const fetchImpl = vi.fn(async (_url, init) => {
 			expect(await readBody(init.body)).toBe("abcdef");

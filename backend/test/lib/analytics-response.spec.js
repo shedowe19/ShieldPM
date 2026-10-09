@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { serializeAnalyticsSeries, serializeAnalyticsSummary } from "../../lib/analytics-response.js";
 
 describe("analytics API response serialization", () => {
+	beforeEach(() => vi.stubEnv("TZ", "UTC"));
+	afterEach(() => vi.unstubAllEnvs());
+
 	it("maps database-shaped summary fields to the frontend contract", () => {
 		expect(
 			serializeAnalyticsSummary({

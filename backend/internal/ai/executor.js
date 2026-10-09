@@ -38,12 +38,12 @@ const validateDemoModeHost = (data) => {
 
 	// Block Advanced Config
 	if (data.advanced_config && data.advanced_config.trim().length > 0) {
-		throw new Error("Advanced Nginx Configuration is disabled in Demo Mode.");
+		throw new errs.PermissionError("Advanced Nginx Configuration is disabled in Demo Mode.");
 	}
 
 	// Block Path forwarding
 	if (data.forward_scheme === "path") {
-		throw new Error("Local Path forwarding is disabled in Demo Mode.");
+		throw new errs.PermissionError("Local Path forwarding is disabled in Demo Mode.");
 	}
 
 	// Block Internal Hostnames
@@ -55,7 +55,9 @@ const validateDemoModeHost = (data) => {
 			.replace(/^\[|\]$/g, "")
 			.replace(/\.$/, "");
 		if (forbiddenHosts.includes(host) || host.endsWith(".local")) {
-			throw new Error("Forwarding to internal services (localhost/db/local) is disabled in Demo Mode.");
+			throw new errs.PermissionError(
+				"Forwarding to internal services (localhost/db/local) is disabled in Demo Mode.",
+			);
 		}
 
 		// Block Private IPs
@@ -76,21 +78,23 @@ const validateDemoModeHost = (data) => {
 				];
 
 				if (blockedRanges.includes(range)) {
-					throw new Error(`Forwarding to ${range} IP (${data.forward_host}) is disabled in Demo Mode.`);
+					throw new errs.PermissionError(
+						`Forwarding to ${range} IP (${data.forward_host}) is disabled in Demo Mode.`,
+					);
 				}
 
 				// IPv4-mapped IPv6 addresses
 				if (addr.kind() === "ipv6" && /** @type {any} */ (addr).isIPv4MappedAddress()) {
 					const v4 = /** @type {any} */ (addr).toIPv4Address();
 					if (blockedRanges.includes(v4.range())) {
-						throw new Error(
+						throw new errs.PermissionError(
 							`Forwarding to mapped ${v4.range()} IP (${data.forward_host}) is disabled in Demo Mode.`,
 						);
 					}
 				}
 			}
 		} catch (err) {
-			if (err.message.includes("Demo Mode")) throw err;
+			if (err instanceof errs.PermissionError) throw err;
 			// Not a valid IP, ignore
 		}
 	}
@@ -513,7 +517,7 @@ export const executeTools = async (access, toolCalls) => {
 				case "delete_user": {
 					// Demo Mode: Block user management
 					if (isDemoMode()) {
-						throw new Error("User management is disabled in Demo Mode.");
+						throw new errs.PermissionError("User management is disabled in Demo Mode.");
 					}
 					await internalUser.delete(access, { id: call.args.id });
 					result = `Deleted User ID: ${call.args.id}`;
@@ -522,7 +526,7 @@ export const executeTools = async (access, toolCalls) => {
 				case "update_user": {
 					// Demo Mode: Block user management
 					if (isDemoMode()) {
-						throw new Error("User management is disabled in Demo Mode.");
+						throw new errs.PermissionError("User management is disabled in Demo Mode.");
 					}
 					await internalUser.update(access, { id: call.args.id, ...call.args });
 					result = `Updated User ID: ${call.args.id}`;
@@ -531,7 +535,7 @@ export const executeTools = async (access, toolCalls) => {
 				case "delete_cloudflared_tunnel": {
 					// Demo Mode: Block tunnel management
 					if (isDemoMode()) {
-						throw new Error("Cloudflare Tunnel management is disabled in Demo Mode.");
+						throw new errs.PermissionError("Cloudflare Tunnel management is disabled in Demo Mode.");
 					}
 					const tunnel = await getCloudflaredTunnel(access, "cloudflared_tunnels:delete", call.args.id);
 					await internalCloudflared.delete(tunnel.id);
@@ -640,7 +644,7 @@ export const executeTools = async (access, toolCalls) => {
 						await internalNginx.test();
 						result = "Nginx configuration is valid.";
 					} catch (err) {
-						result = `Nginx Test Failed: ${err.message}`;
+						result = `Nginx Test Failed: ${err.public ? err.message : "Internal Error"}`;
 					}
 					break;
 				}
@@ -703,7 +707,7 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				// Users
 				case "get_users": {
-					if (isDemoMode()) throw new Error("User listing is disabled in Demo Mode.");
+					if (isDemoMode()) throw new errs.PermissionError("User listing is disabled in Demo Mode.");
 					const users = await internalUser.getAll(access);
 					result = JSON.stringify(
 						users.map((u) => ({
@@ -718,7 +722,7 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				// Logs
 				case "read_nginx_logs": {
-					if (isDemoMode()) throw new Error("Log reading is disabled in Demo Mode.");
+					if (isDemoMode()) throw new errs.PermissionError("Log reading is disabled in Demo Mode.");
 					const logType = call.args.log_type || "error";
 					const lines = call.args.lines || 50;
 					const logs = await internalNginx.getLogs(access, logType);
@@ -958,7 +962,7 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "create_tor_onion_service": {
-					if (isDemoMode()) throw new Error("Tor Onion Services are disabled in Demo Mode");
+					if (isDemoMode()) throw new errs.PermissionError("Tor Onion Services are disabled in Demo Mode");
 
 					const payload = {
 						name: call.args.name,
@@ -990,7 +994,7 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "update_tor_onion_service": {
-					if (isDemoMode()) throw new Error("Tor Onion Services are disabled in Demo Mode");
+					if (isDemoMode()) throw new errs.PermissionError("Tor Onion Services are disabled in Demo Mode");
 
 					const service = await getTorOnionService(access, "tor_onions:update", call.args.id);
 					const targetHostId =
@@ -1070,7 +1074,7 @@ export const executeTools = async (access, toolCalls) => {
 				// Grep said get_audit_log was at 909. Was it earlier?
 				// Grep output 1683: get_audit_log only at 909. So I must KEEP it.
 				case "get_audit_log": {
-					if (isDemoMode()) throw new Error("Audit Log is disabled in Demo Mode.");
+					if (isDemoMode()) throw new errs.PermissionError("Audit Log is disabled in Demo Mode.");
 					await access.can("auditlog:list");
 					const logs = await internalAuditLog.getAll(access, ["user"]);
 					result = JSON.stringify(
@@ -1092,7 +1096,11 @@ export const executeTools = async (access, toolCalls) => {
 			toolResults.push({ name: call.name, toolCallId: call.id, result });
 		} catch (err) {
 			console.error(`[AI Executor] Error processing tool ${call.name}:`, err);
-			toolResults.push({ name: call.name, toolCallId: call.id, result: `Error: ${err.message}` });
+			toolResults.push({
+				name: call.name,
+				toolCallId: call.id,
+				result: `Error: ${err.public ? err.message : "Internal Error"}`,
+			});
 		}
 	}
 

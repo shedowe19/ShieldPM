@@ -34,6 +34,12 @@ Benutzerdefinierte URLs dürfen ausschließlich öffentliche HTTP(S)-Ziele errei
 
 Ohne WAN-Adresse der gewählten IP-Version wird kein Provider-Update versendet. `updateProvider()` liefert zusätzlich zum persistierten Fehlerstatus ein strukturiertes Erfolg-/Fehlerergebnis. Die Testfunktion übernimmt diesen Status und meldet fehlgeschlagene Updates nicht mehr als Erfolg.
 
+Fehlende Provider-Einstellungen und unzulässige benutzerdefinierte URLs verwenden `ConfigurationError` (HTTP 400);
+operative Fehler verwenden private `InternalError`-Fehler (HTTP 500). Der gespeicherte `last_error` und das
+Fehlerergebnis enthalten ausschließlich lokal formulierte Statusmeldungen. Beliebige Provider-Antworttexte oder
+Transportmeldungen mit möglichen Token und Zugangsdaten aus URLs werden nicht darin übernommen; ursprüngliche
+Diagnosen bleiben gegebenenfalls intern in `previous` erhalten.
+
 ### GitOps-Geheimnisse
 
 `internal/gitops.js` exportiert DDNS-Einträge einschließlich `config` nach `ddns-providers/*.yaml`. Bei Cloudflare und DuckDNS enthält dieses Objekt API-Token im Klartext; eine benutzerdefinierte URL kann ebenfalls Zugangsdaten enthalten. Die private Repository-Freigabe und der Schutz von Backups sind erforderlich. `sanitizeForExport()` entfernt nur ausdrücklich angegebene Felder und verschlüsselt diese Werte nicht.

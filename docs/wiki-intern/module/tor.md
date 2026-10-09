@@ -58,6 +58,16 @@ REST-Antworten für Liste, Detail, Erstellung, Änderung, Start und Stop entfern
 
 Nach einer Host-Neuzuordnung wird auch der erste Aufruf der verzögerten Anubis-Policy-Erzeugung korrekt behandelt: `lodash.debounce` kann zunächst `undefined` zurückgeben. Dies darf eine bereits erfolgreich abgeschlossene Datenbank- und Nginx-Änderung nicht nachträglich als Fehler melden.
 
+### Strukturierte interne Fehler
+
+Ungültige gespeicherte private Onion-Schlüssel führen zu privaten `InternalValidationError`-Fehlern (Statuszuordnung 400).
+Fehlende oder unlesbare Control-Passwörter, Socketfehler, Zeitüberschreitungen und abgelehnte Stopp-Kommandos
+verwenden private `InternalError`-Fehler (Statuszuordnung 500). Ursachen bleiben für die interne Auswertung erhalten; die
+öffentliche Fehlerbehandlung gibt weder Schlüssel noch Control-Passwörter oder rohe Socketdiagnosen aus.
+Die bestehenden Start-/Stopp-Verträge mit Erfolgswert beziehungsweise `false` im behandelten Fehlerfall bleiben
+erhalten; ein interner Fehler wird dadurch nicht als erfolgreich gestarteter oder gestoppter Service protokolliert.
+Eine abgelehnte `ADD_ONION`-Antwort bleibt bei Erstellung beziehungsweise Start ein `null`-/`false`-Ergebnis.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

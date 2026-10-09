@@ -153,8 +153,9 @@ Run `node scripts/ci/tscanner.mjs` and `yarn --cwd .tscanner test` from the repo
 
 - Nine built-in checks and four AST policies cover backend ESM, structured route/service errors, component API hooks,
   and centralized Nginx reloads. Function length is 100 direct statements; the parameter limit is eight.
-- Full reports retain the reviewed existing-error baseline. Changed-line scans (`--branch REF`, `--staged`,
-  `--uncommitted`) never apply baseline allowances. New errors and scanner failures block; advisory findings remain visible.
+- The original 57 raw-backend-error findings are corrected; the versioned baseline contains no existing-error
+  allowances. Changed-line scans (`--branch REF`, `--staged`, `--uncommitted`) never apply baseline allowances.
+  New errors and scanner failures block; advisory findings remain visible.
 - Branch comparisons use the merge-base. Staged scans reject partially staged source; branch/uncommitted scans reject
   untracked scannable source. Stage the intended complete changes or use a full scan.
 - `--update-baseline` is a deliberate reviewed exception update, not an automatic fix. Never absorb new errors merely
@@ -220,7 +221,12 @@ The October repository rescan, confirmed fixes, and validation limits for PR #14
 
 ### 6.2 AI Core (`backend/internal/ai/`)
 
-- **Orchestrator**: `executor.js` manages the chat loop.
+- **Orchestrator**: `ai.js` manages the chat loop; `executor.js` dispatches structured tool calls.
+
+- **Error contract**: Configuration failures use public `ConfigurationError` (400); demo restrictions use
+  `PermissionError` (403). Explicit provider failures retain private diagnostics in `InternalError.previous` (500).
+  Tool results expose only public error messages; internal and unknown errors become `Internal Error` before
+  returning to the model.
 
 * **Providers**: `providers.js` supports:
   - **Google Gemini**: via `@google/generative-ai`.

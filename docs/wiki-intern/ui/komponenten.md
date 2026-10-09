@@ -89,6 +89,15 @@ erhalten durch dieses Feature keine eigene Spaltenauswahl. Siehe [Screens & Page
   Peerwechsel oder Schließen werden verspätete Kopierantworten ignoriert und der Bestätigungstimer entfernt;
   Clipboard-Fehler nutzen die bestehende Toast-Fehlermeldung. Die Dialogtests prüfen Ablehnung, Peerwechsel und Cleanup.
 
+## Löschbestätigung und Cache-Aktualisierung
+
+`modals/DeleteConfirmModal.tsx` wartet nach erfolgreicher Löschung auf alle angeforderten Query-Invalidierungen,
+bevor es den Dialog schließt. Währenddessen bleiben die Aktionen und das Schließen gesperrt. Eine fehlgeschlagene
+Löschung kann erneut versucht werden. Scheitert dagegen erst die Cache-Aktualisierung, zeigt der Dialog den Fehler
+und erlaubt das Schließen, ohne dieselbe bereits erfolgreiche Löschung erneut auszuführen.
+`DeleteConfirmModal.test.tsx` prüft verzögerte Aktualisierungen, beide Fehlerphasen und nicht als `Error` übergebene
+Ablehnungen.
+
 ## Fehler beim Laden von Oberflächen
 
 `RouteErrorBoundary.tsx` zeigt einen lokalisierten Fehler mit Neuladen-Aktion und fokussiert die Fehlerüberschrift.

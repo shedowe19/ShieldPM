@@ -9,6 +9,7 @@ vi.mock("../../models/ddns_provider.js", () => ({ default: {} }));
 vi.mock("../../logger.js", () => ({ global: {} }));
 
 import { requestPublicUrl } from "../../internal/ddns.js";
+import errs from "../../lib/error.js";
 
 describe("custom DDNS SSRF protection", () => {
 	beforeEach(() => vi.clearAllMocks());
@@ -22,6 +23,7 @@ describe("custom DDNS SSRF protection", () => {
 		"file:///etc/passwd",
 	])("rejects nonpublic literal URL %s", (url) => {
 		expect(() => requestPublicUrl(url)).toThrow(/SSRF/);
+		expect(() => requestPublicUrl(url)).toThrow(errs.ConfigurationError);
 		expect(mocks.get).not.toHaveBeenCalled();
 	});
 	it("checks DNS at connection time, rejecting mixed public/private records", async () => {
@@ -36,7 +38,12 @@ describe("custom DDNS SSRF protection", () => {
 			queueMicrotask(() => options.lookup("updates.example", {}, (error) => request.emit("error", error)));
 			return request;
 		});
-		await expect(requestPublicUrl("https://updates.example/update")).rejects.toThrow("DNS resolved to a private");
+		await expect(requestPublicUrl("https://updates.example/update")).rejects.toMatchObject({
+			name: "ConfigurationError",
+			public: true,
+			status: 400,
+			message: "SSRF: DNS resolved to a private or reserved IP address",
+		});
 	});
 	it("passes validated DNS addresses directly to the connection and rejects redirects", async () => {
 		mocks.lookup.mockImplementation((_host, _options, callback) =>
@@ -60,7 +67,12 @@ describe("custom DDNS SSRF protection", () => {
 			);
 			return request;
 		});
-		await expect(requestPublicUrl("https://updates.example/update")).rejects.toThrow("Custom URL Error: 302");
+		await expect(requestPublicUrl("https://updates.example/update")).rejects.toMatchObject({
+			name: "InternalError",
+			public: false,
+			status: 500,
+			message: "Custom URL Error: 302",
+		});
 		expect(mocks.get).toHaveBeenCalledTimes(1);
 	});
 });

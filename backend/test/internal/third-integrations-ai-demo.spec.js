@@ -36,6 +36,7 @@ vi.mock("../../internal/tor.js", () => ({ default: { create: mocks.torCreate, st
 vi.mock("../../internal/user.js", () => ({ default: {} }));
 
 import { executeTools } from "../../internal/ai/executor.js";
+import errs from "../../lib/error.js";
 
 const access = { can: vi.fn().mockResolvedValue(true), token: { getUserId: () => 7 } };
 
@@ -81,6 +82,30 @@ describe("AI Demo route parity", () => {
 			(await executeTools(access, [{ name: "create_stream", args: { forwarding_host: "127.0.0.1" } }]))[0].result,
 		).toBe("Created Stream ID: 3");
 		expect(mocks.mutate).toHaveBeenCalledTimes(2);
+	});
+	it.each([
+		new errs.InternalError("Database password=private-service-secret"),
+		new Error("Database password=private-service-secret"),
+	])("hides private or unclassified service diagnostics from tool results: %s", async (error) => {
+		mocks.demo = false;
+		mocks.mutate.mockRejectedValue(error);
+		const result = await executeTools(access, [
+			{ id: "failed-stream", name: "create_stream", args: { forwarding_host: "1.1.1.1" } },
+		]);
+		expect(result).toEqual([
+			{ name: "create_stream", toolCallId: "failed-stream", result: "Error: Internal Error" },
+		]);
+	});
+	it("keeps public validation errors actionable for tool callers", async () => {
+		mocks.demo = false;
+		mocks.mutate.mockRejectedValue(new errs.ValidationError("A forwarding port is required"));
+		const result = await executeTools(access, [
+			{ id: "invalid-stream", name: "create_stream", args: { forwarding_host: "1.1.1.1" } },
+		]);
+		expect(result[0]).toMatchObject({
+			toolCallId: "invalid-stream",
+			result: "Error: A forwarding port is required",
+		});
 	});
 	it.each(["create_tor_onion_service", "start_tor_onion_service"])(
 		"reports the failed %s tool without a success audit",

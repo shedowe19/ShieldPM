@@ -77,7 +77,7 @@ router.get("/", async (_req, res) => {
  * GET /api/nginx/wireguard/status
  * Returns live status of all peers
  */
-router.get("/status", async (_req, res) => {
+router.get("/status", async (_req, res, next) => {
 	const accessData = await res.locals.access.can("wireguard_peers:list");
 	const ownerUserId = accessData.permission_visibility === "all" ? null : res.locals.access.token.getUserId(1);
 
@@ -102,7 +102,7 @@ router.get("/status", async (_req, res) => {
 
 		res.status(200).send({ peers: sanitizedPeers });
 	} catch (err) {
-		res.status(500).send({ error: err.message });
+		next(err);
 	}
 });
 
@@ -110,14 +110,14 @@ router.get("/status", async (_req, res) => {
  * GET /api/nginx/wireguard/settings
  * Returns WireGuard server settings
  */
-router.get("/settings", async (_req, res) => {
+router.get("/settings", async (_req, res, next) => {
 	await res.locals.access.can("settings:get", "wireguard-config");
 
 	try {
 		const settings = await internalWireguard.getSettings();
 		res.status(200).send(settings);
 	} catch (err) {
-		res.status(500).send({ error: err.message });
+		next(err);
 	}
 });
 
@@ -125,7 +125,7 @@ router.get("/settings", async (_req, res) => {
  * PUT /api/nginx/wireguard/settings
  * Update WireGuard server settings
  */
-router.put("/settings", async (req, res) => {
+router.put("/settings", async (req, res, next) => {
 	await res.locals.access.can("settings:update", "wireguard-config");
 
 	try {
@@ -141,7 +141,7 @@ router.put("/settings", async (req, res) => {
 
 		res.status(200).send(updated);
 	} catch (err) {
-		res.status(err.status || 500).send({ error: err.message });
+		next(err);
 	}
 });
 
@@ -312,7 +312,7 @@ router.post("/:id/disable", async (req, res) => {
  * GET /api/nginx/wireguard/:id/config
  * Returns the WireGuard client configuration as text
  */
-router.get("/:id/config", async (req, res) => {
+router.get("/:id/config", async (req, res, next) => {
 	await res.locals.access.can("wireguard_peers:get", req.params.id);
 	const peer = await WireguardPeer.query()
 		.where("owner_user_id", res.locals.access.token.getUserId(1))
@@ -329,7 +329,7 @@ router.get("/:id/config", async (req, res) => {
 		const config = await internalWireguard.generateClientConfig(peer.id);
 		res.status(200).send({ config });
 	} catch (err) {
-		res.status(500).send({ error: err.message });
+		next(err);
 	}
 });
 
@@ -337,7 +337,7 @@ router.get("/:id/config", async (req, res) => {
  * GET /api/nginx/wireguard/:id/qrcode
  * Returns QR code as data URL
  */
-router.get("/:id/qrcode", async (req, res) => {
+router.get("/:id/qrcode", async (req, res, next) => {
 	await res.locals.access.can("wireguard_peers:get", req.params.id);
 	const peer = await WireguardPeer.query()
 		.where("owner_user_id", res.locals.access.token.getUserId(1))
@@ -354,7 +354,7 @@ router.get("/:id/qrcode", async (req, res) => {
 		const qrcode = await internalWireguard.generateQRCode(peer.id);
 		res.status(200).send({ qrcode });
 	} catch (err) {
-		res.status(500).send({ error: err.message });
+		next(err);
 	}
 });
 

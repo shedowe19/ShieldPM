@@ -16,9 +16,24 @@ const comparisonBaseScript = workflow
 
 const githubExpression = (expression) => ["$", "{", "{ ", expression, " }}"].join("");
 
-const resolveComparisonBase = (eventName, before, defaultBranch = "develop") => {
+const resolveComparisonBase = (eventName, before, { defaultBranch = "develop", removeDefaultRef = false } = {}) => {
 	const outputDirectory = fs.mkdtempSync(join(tmpdir(), "shieldpm-workflow-"));
 	const outputPath = join(outputDirectory, "github-output");
+	const fixtureRoot = join(outputDirectory, "workspace");
+	const origin = join(outputDirectory, "origin.git");
+	const environment = {
+		...process.env,
+		GIT_CONFIG_NOSYSTEM: "1",
+		GIT_CONFIG_GLOBAL: "/dev/null",
+		GIT_TERMINAL_PROMPT: "0",
+		GITHUB_OUTPUT: outputPath,
+	};
+	const git = (arguments_, cwd = fixtureRoot) => {
+		const result = spawnSync("git", arguments_, { cwd, encoding: "utf8", env: environment });
+		if (result.error) throw result.error;
+		if (result.status !== 0) throw new Error(result.stderr);
+		return result.stdout.trim();
+	};
 	const script = comparisonBaseScript
 		.replaceAll(githubExpression("github.event_name"), eventName)
 		.replaceAll(githubExpression("github.event.before"), before)
@@ -26,26 +41,39 @@ const resolveComparisonBase = (eventName, before, defaultBranch = "develop") => 
 		.replaceAll(githubExpression("github.event.repository.default_branch"), defaultBranch);
 
 	try {
+		// A complete local Git fixture avoids lazy object downloads and never contacts the developer's origin.
+		git(["init", "--bare", origin], outputDirectory);
+		git(["init", `--initial-branch=${defaultBranch}`, fixtureRoot], outputDirectory);
+		git(["config", "user.name", "Workflow test"]);
+		git(["config", "user.email", "workflow@example.test"]);
+		git(["remote", "add", "origin", origin]);
+		git(["commit", "--allow-empty", "-m", "Shared ancestor"]);
+		const expectedMergeBase = git(["rev-parse", "HEAD"]);
+		git(["commit", "--allow-empty", "-m", "Default branch advance"]);
+		git(["push", "origin", defaultBranch]);
+		git(["checkout", "-b", "feature", expectedMergeBase]);
+		git(["commit", "--allow-empty", "-m", "Feature branch advance"]);
+		if (removeDefaultRef) {
+			git(["update-ref", "-d", `refs/remotes/origin/${defaultBranch}`]);
+			git(["tag", defaultBranch]);
+		}
+
 		const result = spawnSync("bash", ["-e", "-c", script], {
-			cwd: repoRoot,
+			cwd: fixtureRoot,
 			encoding: "utf8",
-			env: { ...process.env, GITHUB_OUTPUT: outputPath },
+			env: environment,
 		});
 
+		if (result.error) throw result.error;
 		if (result.status !== 0) {
 			throw new Error(result.stderr);
 		}
 
-		return fs.readFileSync(outputPath, "utf8").trim().replace("sha=", "");
+		return { resolved: fs.readFileSync(outputPath, "utf8").trim().replace("sha=", ""), expectedMergeBase };
 	} finally {
 		fs.rmSync(outputDirectory, { force: true, recursive: true });
 	}
 };
-
-const defaultBranchMergeBase = spawnSync("git", ["merge-base", "HEAD", "origin/develop"], {
-	cwd: repoRoot,
-	encoding: "utf8",
-}).stdout.trim();
 
 describe("lint-and-format workflow", () => {
 	it("uses read-only repository permissions", () => {
@@ -65,11 +93,20 @@ describe("lint-and-format workflow", () => {
 	});
 
 	it("uses the default-branch merge base for a new branch push", () => {
-		expect(resolveComparisonBase("push", "0".repeat(40))).toBe(defaultBranchMergeBase);
+		const { resolved, expectedMergeBase } = resolveComparisonBase("push", "0".repeat(40));
+		expect(resolved).toBe(expectedMergeBase);
 	});
 
 	it("uses the default-branch merge base when a push comparison commit is unavailable", () => {
-		expect(resolveComparisonBase("push", "a".repeat(40))).toBe(defaultBranchMergeBase);
+		const { resolved, expectedMergeBase } = resolveComparisonBase("push", "a".repeat(40));
+		expect(resolved).toBe(expectedMergeBase);
+	});
+
+	it("fetches a missing default branch reference instead of the same-named local tag", () => {
+		const { resolved, expectedMergeBase } = resolveComparisonBase("push", "0".repeat(40), {
+			removeDefaultRef: true,
+		});
+		expect(resolved).toBe(expectedMergeBase);
 	});
 
 	it("does not mutate checked-out files or push commits", () => {

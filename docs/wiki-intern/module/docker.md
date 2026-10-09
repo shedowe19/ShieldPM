@@ -42,6 +42,10 @@ Die Direktivenliste für `shieldpm.advanced_config` akzeptiert pro Zeile genau e
 
 Auch der direkte Auto-Discovery-Schreibweg prüft Domains über die gemeinsame Host-Validierung. Scheme, Port, Bandbreite, Rate-Limit und Zeiteinheit werden vor Datenbank- und Nginx-Operationen auf zulässige Werte begrenzt; Query-Labels dürfen keine Zeichen zum Ausbrechen aus der Nginx-Zeichenkette enthalten.
 
+Ungültige Scheme-, Port-, Bandbreiten-, Query- und Rate-Limit-Labels werden als `ConfigurationError` klassifiziert
+(HTTP-Statuszuordnung 400). Die Discovery behandelt diese Fehler vor dem Speichern beziehungsweise Rendern;
+ein ungültiges Label erzeugt daher keinen teilweise konfigurierten Proxy-Host.
+
 Die Kollisionssuche berücksichtigt alle vorhandenen Hosts. Ein bereits passender Container-Host beendet die Prüfung nicht vorzeitig: Belegt ein manuell angelegter Host eine der angeforderten Domains, wird der automatische Eintrag nicht darübergeschrieben.
 
 Auto-Discovery sammelt geänderte Host-IDs während eines zweisekündlichen Debounce-Fensters. Nach Ablauf lädt es alle noch aktiven Hosts einmal, rendert und validiert sie als gemeinsamen atomaren Nginx-Batch und löst genau einen Reload aus. Erzeugt ein Label trotz zulässiger Direktive ungültige Nginx-Argumente, stellt der Batch jede gestagte Datei wieder her und markiert den fehlerhaften Host. `fourth-integrations-docker-config.spec.js` prüft die Coalescing-Grenze, einen Batch und einen Reload für wiederholte Ereignisse.

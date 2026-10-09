@@ -239,7 +239,7 @@ const createUploadRelay = ({
 	root = join(process.env.DATA_PATH || "/data", "upload-relay"),
 	schedule = setImmediate,
 } = {}) => {
-	if (typeof fetchImpl !== "function") throw new TypeError("Upload relay needs a fetch implementation");
+	if (typeof fetchImpl !== "function") throw new errs.InternalError("Upload relay needs a fetch implementation");
 	const storageRoot = resolve(root);
 	const safeHostId = (hostId) => {
 		if (!Number.isSafeInteger(hostId) || hostId < 1) throw new errs.ItemNotFoundError("upload relay");

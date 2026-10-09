@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ddnsService from "../../internal/ddns.js";
+import errs from "../../lib/error.js";
+import { global as logger } from "../../logger.js";
 import DdnsProvider from "../../models/ddns_provider.js";
 
 // Mock DB
@@ -28,6 +30,7 @@ global.fetch = fetchMock;
 describe("DDNS Service", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		fetchMock.mockReset();
 	});
 
 	describe("getWanIps", () => {
@@ -147,6 +150,76 @@ describe("DDNS Service", () => {
 				1,
 				expect.objectContaining({ last_error: "SSRF: Localhost URLs are not allowed" }),
 			);
+		});
+
+		it.each([
+			["cloudflare", {}, "Missing Cloudflare Token or Zone ID"],
+			["duckdns", {}, "Missing DuckDNS Token"],
+			["custom", {}, "Missing Custom URL"],
+			["custom", { url: "invalid-secret-url" }, "Custom DDNS URL is invalid"],
+			["unsupported", {}, "Unknown provider: unsupported"],
+		])("reports an actionable structured configuration error for %s", async (provider, config, message) => {
+			const patchAndFetchById = vi.fn().mockResolvedValue({});
+			DdnsProvider.query.mockReturnValue({ patchAndFetchById });
+			await expect(
+				ddnsService.updateProvider(
+					{ id: 1, name: "test", provider, config, domains: ["example.com"] },
+					{ ipv4: "1.1.1.1", ipv6: null },
+				),
+			).resolves.toEqual({ success: false, error: message });
+			expect(logger.error.mock.calls.at(-1)[1]).toBeInstanceOf(errs.ConfigurationError);
+			expect(logger.error.mock.calls.at(-1)[1]).toMatchObject({ public: true, status: 400 });
+			expect(patchAndFetchById).toHaveBeenCalledWith(1, { last_error: message });
+			expect(fetchMock).not.toHaveBeenCalled();
+		});
+
+		it.each(["duckdns", "cloudflare-list", "cloudflare-update"])(
+			"keeps external %s error details out of the returned and persisted status",
+			async (failure) => {
+				const secret = "provider-credential-canary";
+				const patchAndFetchById = vi.fn().mockResolvedValue({});
+				DdnsProvider.query.mockReturnValue({ patchAndFetchById });
+				if (failure === "duckdns") {
+					fetchMock.mockResolvedValue({ ok: false, text: async () => secret });
+				} else {
+					if (failure === "cloudflare-update") {
+						fetchMock.mockResolvedValueOnce({ json: async () => ({ success: true, result: [] }) });
+					}
+					fetchMock.mockResolvedValueOnce({
+						json: async () => ({ success: false, errors: [{ message: secret }] }),
+					});
+				}
+				const result = await ddnsService.updateProvider(
+					{
+						id: 1,
+						name: "test",
+						provider: failure === "duckdns" ? "duckdns" : "cloudflare",
+						config: { token: "test-token", zone_id: "zone" },
+						domains: ["example.com"],
+					},
+					{ ipv4: "1.1.1.1", ipv6: null },
+				);
+				expect(result.success).toBe(false);
+				expect(JSON.stringify(result)).not.toContain(secret);
+				expect(JSON.stringify(patchAndFetchById.mock.calls)).not.toContain(secret);
+				const loggedError = logger.error.mock.calls.at(-1)[1];
+				expect(loggedError).toBeInstanceOf(errs.InternalError);
+				expect(loggedError).toMatchObject({ public: false, status: 500 });
+				expect(JSON.stringify(loggedError.previous)).toContain(secret);
+			},
+		);
+
+		it("does not expose raw transport errors through provider status", async () => {
+			const patchAndFetchById = vi.fn().mockResolvedValue({});
+			DdnsProvider.query.mockReturnValue({ patchAndFetchById });
+			fetchMock.mockRejectedValue(new Error("request failed at https://example.com?token=credential-canary"));
+			await expect(
+				ddnsService.updateProvider(
+					{ id: 1, name: "test", provider: "duckdns", config: { token: "test-token" }, domains: ["example"] },
+					{ ipv4: "1.1.1.1", ipv6: null },
+				),
+			).resolves.toEqual({ success: false, error: "DDNS update failed" });
+			expect(patchAndFetchById).toHaveBeenCalledWith(1, { last_error: "DDNS update failed" });
 		});
 
 		it("should update Cloudflare", async () => {

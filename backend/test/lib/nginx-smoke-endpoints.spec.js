@@ -21,6 +21,15 @@ const listen = async (server, port) => {
 const close = (server) => new Promise((resolve) => server.close(resolve));
 
 describe("isolated Nginx smoke endpoints", () => {
+	it("identifies retryable listener collisions without losing Error behavior", () => {
+		const error = new SmokePortCollisionError("occupied");
+		expect(error).toBeInstanceOf(Error);
+		expect(error).toBeInstanceOf(SmokePortCollisionError);
+		expect(error.name).toBe("SmokePortCollisionError");
+		expect(error.message).toBe("occupied");
+		expect(error.stack).toContain("SmokePortCollisionError: occupied");
+	});
+
 	it("holds distinct TCP and UDP listeners throughout configuration generation", async () => {
 		const reservations = new SmokePortReservations();
 		try {

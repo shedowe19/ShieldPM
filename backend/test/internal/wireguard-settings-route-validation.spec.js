@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import errs from "../../lib/error.js";
 
 const mocks = vi.hoisted(() => ({
 	addAuditLog: vi.fn(),
@@ -43,7 +44,7 @@ describe("WireGuard settings route validation", () => {
 	});
 
 	it("returns 400 without updating settings when API validation rejects PostUp injection", async () => {
-		const validationError = Object.assign(new Error("endpoint must not contain newlines"), { status: 400 });
+		const validationError = new errs.ValidationError("endpoint must not contain newlines");
 		mocks.apiValidator.mockRejectedValue(validationError);
 		const access = { can: vi.fn().mockResolvedValue(true) };
 		const req = { body: { endpoint: "vpn.example.com\nPostUp = iptables -F FORWARD" } };
@@ -53,12 +54,14 @@ describe("WireGuard settings route validation", () => {
 			status: vi.fn().mockReturnThis(),
 		};
 
-		await mocks.settingsHandler(req, res);
+		const next = vi.fn();
+		await mocks.settingsHandler(req, res, next);
 
 		expect(access.can).toHaveBeenCalledWith("settings:update", "wireguard-config");
 		expect(mocks.apiValidator).toHaveBeenCalledWith({ type: "object" }, req.body);
 		expect(mocks.updateSettings).not.toHaveBeenCalled();
-		expect(res.status).toHaveBeenCalledWith(400);
-		expect(res.send).toHaveBeenCalledWith({ error: validationError.message });
+		expect(next).toHaveBeenCalledWith(validationError);
+		expect(res.status).not.toHaveBeenCalled();
+		expect(res.send).not.toHaveBeenCalled();
 	});
 });

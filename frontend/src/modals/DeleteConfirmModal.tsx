@@ -22,7 +22,7 @@ interface ShowProps {
 	invalidations?: QueryKey[];
 }
 
-interface Props extends InnerModalProps, ShowProps {}
+type Props = InnerModalProps & ShowProps;
 
 const showDeleteConfirmModal = (props: ShowProps) => {
 	EasyModal.show(DeleteConfirmModal, props);
@@ -33,26 +33,26 @@ const DeleteConfirmModal = EasyModal.create(
 		const queryClient = useQueryClient();
 		const [error, setError] = useState<ReactNode | null>(null);
 		const [isSubmitting, setIsSubmitting] = useState(false);
+		const [confirmed, setConfirmed] = useState(false);
 
 		const onSubmit = async () => {
-			if (isSubmitting) return;
+			if (isSubmitting || confirmed) return;
 			setIsSubmitting(true);
 			setError(null);
 			try {
 				await onConfirm();
+				setConfirmed(true);
+				await Promise.all((invalidations ?? []).map((queryKey) => queryClient.invalidateQueries({ queryKey })));
 				remove();
-				// invalidate caches as requested
-				invalidations?.forEach((inv) => {
-					queryClient.invalidateQueries({ queryKey: inv });
-				});
 			} catch (err) {
-				if (err instanceof Error) setError(<T id={err.message} />);
+				setError(<T id={err instanceof Error ? err.message : "error.unknown"} />);
+			} finally {
+				setIsSubmitting(false);
 			}
-			setIsSubmitting(false);
 		};
 
 		return (
-			<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
+			<Dialog open={visible} onOpenChange={(open) => !open && !isSubmitting && remove()}>
 				<DialogContent className="sm:max-w-[425px]">
 					<DialogHeader>
 						<DialogTitle>{tTitle ? <T id={tTitle} /> : title ? title : null}</DialogTitle>
@@ -78,9 +78,9 @@ const DeleteConfirmModal = EasyModal.create(
 
 					<DialogFooter>
 						<Button variant="outline" onClick={remove} disabled={isSubmitting}>
-							<T id="cancel" />
+							<T id={confirmed ? "action.close" : "cancel"} />
 						</Button>
-						<Button variant="destructive" onClick={onSubmit} disabled={isSubmitting}>
+						<Button variant="destructive" onClick={onSubmit} disabled={isSubmitting || confirmed}>
 							{isSubmitting ? "..." : <T id="action.delete" />}
 						</Button>
 					</DialogFooter>

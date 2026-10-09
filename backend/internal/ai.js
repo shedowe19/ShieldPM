@@ -1,4 +1,5 @@
 import { decrypt, encrypt } from "../lib/encryption.js";
+import errs from "../lib/error.js";
 import { global as logger } from "../logger.js";
 import { executeTools } from "./ai/executor.js";
 import { getSystemPrompt } from "./ai/prompt.js";
@@ -145,11 +146,15 @@ const ai = {
 		await access.can("settings:list");
 
 		if (config.provider === "gemini") {
-			if (!config.api_key) throw new Error("API Key is required");
+			if (!config.api_key) throw new errs.ConfigurationError("API Key is required");
 			const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${config.api_key}`;
 			try {
 				const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
-				if (!res.ok) throw new Error(`Gemini Error: ${res.status} ${res.statusText}`);
+				if (!res.ok)
+					throw new errs.InternalError(`Gemini Error: ${res.status}`, {
+						status: res.status,
+						statusText: res.statusText,
+					});
 				const data = await res.json();
 				return (data.models || [])
 					.filter((m) => m.name.includes("gemini"))
@@ -159,7 +164,7 @@ const ai = {
 					}))
 					.sort((a, b) => b.id.localeCompare(a.id));
 			} catch (err) {
-				throw new Error(`Failed to fetch Gemini models: ${err.message}`);
+				throw new errs.InternalError("Failed to fetch Gemini models", err);
 			}
 		} else {
 			// Local / OpenAI
@@ -167,19 +172,11 @@ const ai = {
 
 			let targetUrl;
 			try {
-				// Parse and validate base URL
-				const parsedBase = new URL(baseUrl);
-
-				// Security check: Only allow HTTP/HTTPS
-				if (!["http:", "https:"].includes(parsedBase.protocol)) {
-					throw new Error("Only HTTP/HTTPS protocols are allowed for base_url");
-				}
-
 				// Safely construct the final URL using URL constructor
 				// This handles slash consistency and prevents some path traversal issues
-				targetUrl = aiProviders.getLocalEndpoint(parsedBase.toString(), "v1/models");
+				targetUrl = aiProviders.getLocalEndpoint(baseUrl, "v1/models");
 			} catch (err) {
-				throw new Error(`Invalid base_url: ${err.message}`);
+				throw new errs.ConfigurationError("Invalid base_url", err);
 			}
 
 			try {
@@ -190,7 +187,11 @@ const ai = {
 					headers: /** @type {any} */ (headers),
 					signal: AbortSignal.timeout(10000),
 				});
-				if (!res.ok) throw new Error(`Local Provider Error: ${res.status} ${res.statusText}`);
+				if (!res.ok)
+					throw new errs.InternalError(`Local Provider Error: ${res.status}`, {
+						status: res.status,
+						statusText: res.statusText,
+					});
 				const data = await res.json();
 				return (data.data || [])
 					.map((m) => ({
@@ -199,7 +200,7 @@ const ai = {
 					}))
 					.sort((a, b) => a.id.localeCompare(b.id));
 			} catch (err) {
-				throw new Error(`Failed to fetch Local models: ${err.message}`);
+				throw new errs.InternalError("Failed to fetch Local models", err);
 			}
 		}
 	},
@@ -214,7 +215,7 @@ const ai = {
 		// 1. Get Config (using internal method that doesn't require admin permission)
 		const config = await ai._getConfigForChat();
 		if (!config.enabled) {
-			throw new Error("AI Agent is disabled.");
+			throw new errs.ConfigurationError("AI Agent is disabled.");
 		}
 
 		logger.debug("[DEBUG] AI Chat Config:", {

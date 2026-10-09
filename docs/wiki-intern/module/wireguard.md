@@ -77,6 +77,14 @@ Gleichzeitige Erstaufrufe von Initialisierung, Serverstatus und Peer-Erstellung 
 
 Neue Schlüssel werden vollständig in eindeutige temporäre Dateien geschrieben und vor der Veröffentlichung synchronisiert. Ein atomarer harter Link veröffentlicht den privaten Schlüssel mit Modus `0600`, ohne eine bereits vorhandene Identität zu überschreiben. Der öffentliche Schlüssel wird durch atomare Umbenennung veröffentlicht. Schlägt ein Schreibvorgang fehl, bleibt keine unvollständige endgültige Schlüsseldatei zurück; temporäre Dateien werden anschließend entfernt. Fehlt der öffentliche Schlüssel, wird er innerhalb derselben gemeinsamen Initialisierung aus dem vorhandenen privaten Schlüssel abgeleitet. Ein erneuter Versuch nach einem Fehler beim öffentlichen Schlüssel ersetzt daher nicht die private Serveridentität. `fourth-integrations-wireguard-keys.spec.js` prüft parallele Initialisierung, Wiederherstellung, partielle Schreibfehler und den Erhalt einer während der Erzeugung hinzugekommenen privaten Identität.
 
+### Fehlervertrag
+
+Fehlende oder gelöschte Peers liefern `ItemNotFoundError` (HTTP 404). Eine fehlende WireGuard-Installation und ein
+erschöpftes Peer-Subnetz liefern öffentliche `ConfigurationError`-Meldungen (HTTP 400). Fehler bei Schlüsseln,
+Dateizugriffen, Unterprozessen und QR-Code-Erzeugung sind private `InternalError`-Fehler (HTTP 500); die HTTP-Routen
+reichen sie an die zentrale Fehlerbehandlung weiter. Private Schlüssel und mögliche vom Unterprozess wiederholte
+Eingaben werden nicht in öffentliche Fehlertexte oder QR-Code-Fehlermeldungen übernommen.
+
 ## Abhängigkeiten
 
 - `wireguard-tools` — WireGuard-CLI

@@ -56,7 +56,13 @@ const METHOD_ICONS: Record<string, React.ReactNode> = {
 // ---------------------------------------------------------------------------
 // TOTP Setup Dialog
 // ---------------------------------------------------------------------------
-function TotpSetup({ onComplete, onBusyChange }: { onComplete: () => void; onBusyChange: (busy: boolean) => void }) {
+function TotpSetup({
+	onComplete,
+	onBusyChange,
+}: {
+	onComplete: () => Promise<void>;
+	onBusyChange: (busy: boolean) => void;
+}) {
 	const [qr, setQr] = useState<string | null>(null);
 	const setupRequest = useRef<ReturnType<typeof setup2faTotp> | null>(null);
 	const [code, setCode] = useState("");
@@ -146,11 +152,11 @@ function TotpSetup({ onComplete, onBusyChange }: { onComplete: () => void; onBus
 							<Input
 								value={code}
 								onChange={(e) => setCode(e.target.value)}
-								onKeyDown={(e) => {
+								onKeyDown={async (e) => {
 									if (e.key === "Enter") {
 										e.preventDefault();
 										e.stopPropagation();
-										handleEnable();
+										await handleEnable();
 									}
 								}}
 								placeholder="123456"
@@ -162,10 +168,10 @@ function TotpSetup({ onComplete, onBusyChange }: { onComplete: () => void; onBus
 						</div>
 						<Button
 							type="button"
-							onClick={(e) => {
+							onClick={async (e) => {
 								e.preventDefault();
 								e.stopPropagation();
-								handleEnable();
+								await handleEnable();
 							}}
 							className="w-full"
 							disabled={loading || !/^\d{6}$/.test(code)}
@@ -187,7 +193,7 @@ function YubikeySetup({
 	onComplete,
 	onBusyChange,
 }: {
-	onComplete: (backupCodes?: string[] | null) => void;
+	onComplete: (backupCodes?: string[] | null) => Promise<void>;
 	onBusyChange: (busy: boolean) => void;
 }) {
 	const [otp, setOtp] = useState("");
@@ -214,7 +220,7 @@ function YubikeySetup({
 		setLoading(true);
 		try {
 			const result = await add2faYubikey("me", otp, label || intl.formatMessage({ id: "2fa.method.yubikey" }));
-			onComplete(result.backupCodes);
+			await onComplete(result.backupCodes);
 		} catch (err) {
 			if (err instanceof Error) setError(err.message);
 		} finally {
@@ -226,8 +232,8 @@ function YubikeySetup({
 		<div
 			className="space-y-4"
 			role="form"
-			onKeyDown={(e) => {
-				if (e.key === "Enter") handleAdd(e);
+			onKeyDown={async (e) => {
+				if (e.key === "Enter") await handleAdd(e);
 			}}
 		>
 			{error && (
@@ -277,7 +283,7 @@ function PasskeySetup({
 	onComplete,
 	onBusyChange,
 }: {
-	onComplete: (backupCodes: string[] | null) => void;
+	onComplete: (backupCodes: string[] | null) => Promise<void>;
 	onBusyChange: (busy: boolean) => void;
 }) {
 	const [label, setLabel] = useState("");
@@ -311,7 +317,7 @@ function PasskeySetup({
 				label || intl.formatMessage({ id: "2fa.method.passkey" }),
 			);
 			if (!mounted.current) return;
-			onComplete(result.backupCodes);
+			await onComplete(result.backupCodes);
 		} catch (err) {
 			if (mounted.current && err instanceof Error) setError(err.message);
 		} finally {
@@ -323,11 +329,11 @@ function PasskeySetup({
 		<div
 			className="space-y-4"
 			role="form"
-			onKeyDown={(event) => {
+			onKeyDown={async (event) => {
 				if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
 					event.preventDefault();
 					event.stopPropagation();
-					void handleRegister();
+					await handleRegister();
 				}
 			}}
 		>
@@ -365,7 +371,7 @@ function DuoSetup({
 	onComplete,
 	onBusyChange,
 }: {
-	onComplete: (backupCodes?: string[] | null) => void;
+	onComplete: (backupCodes?: string[] | null) => Promise<void>;
 	onBusyChange: (busy: boolean) => void;
 }) {
 	const [form, setForm] = useState({ clientId: "", clientSecret: "", apiHost: "", redirectUrl: "" });
@@ -382,7 +388,7 @@ function DuoSetup({
 		setLoading(true);
 		try {
 			const result = await setup2faDuo("me", form);
-			onComplete(result.backupCodes);
+			await onComplete(result.backupCodes);
 		} catch (err) {
 			if (err instanceof Error) setError(err.message);
 		} finally {
@@ -408,11 +414,11 @@ function DuoSetup({
 		<div
 			className="space-y-4"
 			role="form"
-			onKeyDown={(e) => {
+			onKeyDown={async (e) => {
 				if (e.key === "Enter") {
 					e.preventDefault();
 					e.stopPropagation();
-					handleSetup();
+					await handleSetup();
 				}
 			}}
 		>
@@ -441,10 +447,10 @@ function DuoSetup({
 			))}
 			<Button
 				type="button"
-				onClick={(e) => {
+				onClick={async (e) => {
 					e.preventDefault();
 					e.stopPropagation();
-					handleSetup();
+					await handleSetup();
 				}}
 				className="w-full"
 				disabled={loading || Object.values(form).some((value) => !value.trim())}
@@ -491,15 +497,19 @@ export default function SecuritySettings() {
 		mutationFn: () => regenerate2faBackupCodes("me"),
 		onSuccess: (result) => {
 			setBackupCodes(result.backupCodes);
-			queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+			return queryClient.invalidateQueries({ queryKey: QUERY_KEY });
 		},
 		onError: (err: Error) => setError(err.message),
 	});
 
-	const handleSetupComplete = (newBackupCodes?: string[] | null) => {
+	const handleSetupComplete = async (newBackupCodes?: string[] | null) => {
 		setSetupView(null);
 		if (newBackupCodes) setBackupCodes(newBackupCodes);
-		queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+		try {
+			await queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+		} catch (err) {
+			setError(err instanceof Error ? err.message : intl.formatMessage({ id: "error.unknown" }));
+		}
 	};
 
 	const activeMethods: TwoFaMethod[] = data?.methods?.filter((m) => m.isVerified) ?? [];

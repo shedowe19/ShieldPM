@@ -4,6 +4,7 @@ import https from "node:https";
 import { isIP } from "node:net";
 import dayjs from "dayjs";
 import ipaddr from "ipaddr.js";
+import errs from "../lib/error.js";
 import { global as logger } from "../logger.js";
 import DdnsProvider from "../models/ddns_provider.js";
 
@@ -16,29 +17,34 @@ const INTERVAL = 1000 * 60; // 60 seconds
 /**
  * Validate URL is publicly routable (SSRF protection)
  * @param {string} urlStr
- * @throws {Error} if URL points to private/internal resource
+ * @throws {ConfigurationError} if URL points to private/internal resource
  */
 const validatePublicUrl = (urlStr) => {
-	const parsed = new URL(urlStr);
+	let parsed;
+	try {
+		parsed = new URL(urlStr);
+	} catch (error) {
+		throw new errs.ConfigurationError("Custom DDNS URL is invalid", error);
+	}
 	const hostname = parsed.hostname.startsWith("[") ? parsed.hostname.slice(1, -1) : parsed.hostname;
 
 	// Only allow HTTP(S)
 	if (!["http:", "https:"].includes(parsed.protocol)) {
-		throw new Error(`SSRF: Only HTTP(S) protocols allowed, got ${parsed.protocol}`);
+		throw new errs.ConfigurationError(`SSRF: Only HTTP(S) protocols allowed, got ${parsed.protocol}`);
 	}
 
 	// Block localhost and loopback
 	if (["localhost", "127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(hostname)) {
-		throw new Error("SSRF: Localhost URLs are not allowed");
+		throw new errs.ConfigurationError("SSRF: Localhost URLs are not allowed");
 	}
 
 	// Block cloud metadata endpoints
 	if (hostname === "169.254.169.254" || hostname === "169.254.170.2" || hostname === "100.100.100.100") {
-		throw new Error("SSRF: Cloud metadata URLs are not allowed");
+		throw new errs.ConfigurationError("SSRF: Cloud metadata URLs are not allowed");
 	}
 
 	if (ipaddr.isValid(hostname) && ipaddr.process(hostname).range() !== "unicast") {
-		throw new Error("SSRF: Private or reserved IP addresses are not allowed");
+		throw new errs.ConfigurationError("SSRF: Private or reserved IP addresses are not allowed");
 	}
 };
 
@@ -64,13 +70,15 @@ export const requestPublicUrl = (url) => {
 							!addresses.length ||
 							addresses.some(({ address }) => ipaddr.process(address).range() !== "unicast")
 						) {
-							return callback(new Error("SSRF: DNS resolved to a private or reserved IP address"));
+							return callback(
+								new errs.ConfigurationError("SSRF: DNS resolved to a private or reserved IP address"),
+							);
 						}
 						const addressesForFamily = options.family
 							? addresses.filter(({ family }) => family === options.family)
 							: addresses;
 						if (!addressesForFamily.length)
-							return callback(new Error("No address for requested IP family"));
+							return callback(new errs.InternalError("No address for requested IP family"));
 						if (options.all) return callback(null, addressesForFamily);
 						callback(null, addressesForFamily[0].address, addressesForFamily[0].family);
 					});
@@ -81,7 +89,7 @@ export const requestPublicUrl = (url) => {
 				response.on("error", reject);
 				response.resume();
 				if (response.statusCode < 200 || response.statusCode >= 300) {
-					reject(new Error(`Custom URL Error: ${response.statusCode}`));
+					reject(new errs.InternalError(`Custom URL Error: ${response.statusCode}`));
 					return;
 				}
 				resolve(response.statusCode);
@@ -139,7 +147,7 @@ export const getWanIps = async () => {
 const providers = {
 	cloudflare: async (provider, ips) => {
 		const { token, zone_id } = provider.config;
-		if (!token || !zone_id) throw new Error("Missing Cloudflare Token or Zone ID");
+		if (!token || !zone_id) throw new errs.ConfigurationError("Missing Cloudflare Token or Zone ID");
 
 		const results = [];
 		const promises = [];
@@ -165,7 +173,7 @@ const providers = {
 
 	duckdns: async (provider, ips) => {
 		const { token } = provider.config;
-		if (!token) throw new Error("Missing DuckDNS Token");
+		if (!token) throw new errs.ConfigurationError("Missing DuckDNS Token");
 
 		// DuckDNS supports comma separated domains
 		const domainsStr = provider.domains.join(",");
@@ -178,14 +186,17 @@ const providers = {
 		const text = await res.text();
 
 		if (!res.ok || text.trim() !== "OK") {
-			throw new Error(`DuckDNS Error: ${text}`);
+			throw new errs.InternalError(
+				`DuckDNS Error: ${text.trim() === "KO" ? "KO" : "Update request rejected"}`,
+				text,
+			);
 		}
 		return "Updated OK";
 	},
 
 	custom: async (provider, ips) => {
 		const { url } = provider.config;
-		if (!url) throw new Error("Missing Custom URL");
+		if (!url) throw new errs.ConfigurationError("Missing Custom URL");
 
 		let finalUrl = url;
 		if (ips.ipv4) finalUrl = finalUrl.replace(/{IP}/g, ips.ipv4).replace(/{IPv4}/g, ips.ipv4);
@@ -222,7 +233,10 @@ async function updateCloudflareRecord(token, zone_id, domain, type, ip, results)
 	const listData = await listRes.json();
 
 	if (!listData.success) {
-		throw new Error(`Cloudflare List Error for ${domain} (${type}): ${JSON.stringify(listData.errors)}`);
+		throw new errs.InternalError(
+			`Cloudflare List Error for ${domain} (${type}): Request rejected`,
+			listData.errors,
+		);
 	}
 
 	let recordId = null;
@@ -257,7 +271,10 @@ async function updateCloudflareRecord(token, zone_id, domain, type, ip, results)
 
 	const updateData = await updateRes.json();
 	if (!updateData.success) {
-		throw new Error(`Cloudflare Update Error for ${domain} (${type}): ${JSON.stringify(updateData.errors)}`);
+		throw new errs.InternalError(
+			`Cloudflare Update Error for ${domain} (${type}): Request rejected`,
+			updateData.errors,
+		);
 	}
 	results.push(`${domain} (${type})`);
 }
@@ -270,7 +287,7 @@ async function updateCloudflareRecord(token, zone_id, domain, type, ip, results)
 export const updateProvider = async (provider, ips) => {
 	try {
 		const handler = providers[provider.provider];
-		if (!handler) throw new Error(`Unknown provider: ${provider.provider}`);
+		if (!handler) throw new errs.ConfigurationError(`Unknown provider: ${provider.provider}`);
 
 		// Filter IPs based on ip_ver preference
 		const filteredIps = {
@@ -279,7 +296,7 @@ export const updateProvider = async (provider, ips) => {
 		};
 
 		if (!filteredIps.ipv4 && !filteredIps.ipv6) {
-			throw new Error("No WAN IP available for the selected IP version");
+			throw new errs.InternalError("No WAN IP available for the selected IP version");
 		}
 
 		const result = await handler(provider, filteredIps);
@@ -294,11 +311,15 @@ export const updateProvider = async (provider, ips) => {
 		logger.info(`DDNS [${provider.name}]: Success - ${result}`);
 		return { success: true };
 	} catch (err) {
-		logger.error(`DDNS [${provider.name}]: Failed - ${err.message}`);
+		const errorMessage =
+			err instanceof errs.ConfigurationError || err instanceof errs.InternalError
+				? err.message
+				: "DDNS update failed";
+		logger.error(`DDNS [${provider.name}]: Failed - ${errorMessage}`, err);
 		await /** @type {any} */ (DdnsProvider).query().patchAndFetchById(provider.id, {
-			last_error: err.message,
+			last_error: errorMessage,
 		});
-		return { success: false, error: err.message };
+		return { success: false, error: errorMessage };
 	}
 };
 

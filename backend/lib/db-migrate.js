@@ -120,7 +120,8 @@ async function* readBatches(source, table) {
 	// Bound memory and bind parameters even for wide proxy hosts and large analytics histories.
 	const batchSize = Math.max(1, Math.min(200, Math.floor(900 / table.sourceColumns.length)));
 	let lastId;
-	while (true) {
+	let rows;
+	do {
 		const query = source(table.name)
 			.select(
 				table.sourceColumns.map((column) =>
@@ -133,11 +134,12 @@ async function* readBatches(source, table) {
 			.orderBy(`${table.name}.${table.primaryKey}`)
 			.limit(batchSize);
 		if (lastId !== undefined) query.where(`${table.name}.${table.primaryKey}`, ">", lastId);
-		const rows = await query;
-		if (rows.length === 0) return;
-		yield rows;
-		lastId = rows.at(-1)[table.primaryKey];
-	}
+		rows = await query;
+		if (rows.length > 0) {
+			yield rows;
+			lastId = rows.at(-1)[table.primaryKey];
+		}
+	} while (rows.length > 0);
 }
 
 const resetSequence = async (target, table) => {

@@ -63,6 +63,20 @@ describe("AiChat", () => {
 		expect(screen.queryByText("The configured AI provider is available.")).not.toBeInTheDocument();
 		expect(screen.getByText("How can I help you manage your proxy hosts today?")).toBeInTheDocument();
 	});
+
+	it("shows a rejected Enter submission in the conversation and allows another message", async () => {
+		mocks.sendAiChat.mockRejectedValueOnce(new Error("AI provider unavailable"));
+		render(<ControlledAiChat />);
+		const input = screen.getByRole("textbox");
+		fireEvent.change(input, { target: { value: "Check hosts" } });
+		expect(fireEvent.keyDown(input, { key: "Enter" })).toBe(false);
+		expect(await screen.findByText("Error: AI provider unavailable")).toBeInTheDocument();
+		expect(input).toBeEnabled();
+		fireEvent.change(input, { target: { value: "Retry host check" } });
+		fireEvent.keyDown(input, { key: "Enter" });
+		expect(await screen.findByText("The configured AI provider is available.")).toBeInTheDocument();
+		expect(mocks.sendAiChat).toHaveBeenCalledTimes(2);
+	});
 });
 
 it("does not bring back an in-flight response after the conversation is cleared", async () => {

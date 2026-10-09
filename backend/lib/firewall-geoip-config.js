@@ -380,13 +380,15 @@ const configurationChunks = async function* (fileSystem, filename) {
 		const buffer = Buffer.alloc(64 * 1024);
 		const decoder = new StringDecoder("utf8");
 		let bytes = 0;
-		while (true) {
-			const { bytesRead } = await handle.read(buffer, 0, buffer.length, null);
-			if (!bytesRead) break;
-			bytes += bytesRead;
-			if (bytes > MAX_FILE_BYTES) throw invalid();
-			yield decoder.write(buffer.subarray(0, bytesRead));
-		}
+		let bytesRead;
+		do {
+			({ bytesRead } = await handle.read(buffer, 0, buffer.length, null));
+			if (bytesRead > 0) {
+				bytes += bytesRead;
+				if (bytes > MAX_FILE_BYTES) throw invalid();
+				yield decoder.write(buffer.subarray(0, bytesRead));
+			}
+		} while (bytesRead > 0);
 		yield decoder.end();
 	} finally {
 		await handle.close();

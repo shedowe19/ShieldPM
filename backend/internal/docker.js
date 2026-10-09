@@ -1,5 +1,6 @@
 import Docker from "dockerode";
 import { SYSTEM_USER_ID } from "../lib/constants.js";
+import errs from "../lib/error.js";
 import { global as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
 import internalCertificate from "./certificate.js";
@@ -363,27 +364,28 @@ class DockerService {
 		try {
 			internalHost.validateDomainNames(domains);
 			if (!["http", "https", "grpc", "grpcs"].includes(scheme))
-				throw new Error("Invalid Docker forwarding scheme");
+				throw new errs.ConfigurationError("Invalid Docker forwarding scheme");
 			if (
 				!Number.isInteger(forwardPort) ||
 				forwardPort < 1 ||
 				forwardPort > 65535 ||
 				(portLabel && !/^\d+$/.test(portLabel))
 			) {
-				throw new Error("Invalid Docker forwarding port");
+				throw new errs.ConfigurationError("Invalid Docker forwarding port");
 			}
 			if (bandwidthLimit && !/^\d+(?:\.\d+)?[km]?$/i.test(bandwidthLimit))
-				throw new Error("Invalid Docker bandwidth limit");
-			if (forwardQuery && /["\\\r\n\0]/.test(forwardQuery)) throw new Error("Invalid Docker forward query");
+				throw new errs.ConfigurationError("Invalid Docker bandwidth limit");
+			if (forwardQuery && /["\\\r\n\0]/.test(forwardQuery))
+				throw new errs.ConfigurationError("Invalid Docker forward query");
 			if (limitUnit && !["s", "m", "second", "minute"].includes(limitUnit))
-				throw new Error("Invalid Docker rate limit unit");
+				throw new errs.ConfigurationError("Invalid Docker rate limit unit");
 			for (const [value, maximum] of [
 				[limitRate, 100000],
 				[limitBurst, 100000],
 				[accessListId, Number.MAX_SAFE_INTEGER],
 			]) {
 				if (value && (!/^\d+$/.test(value) || Number(value) > maximum))
-					throw new Error("Invalid Docker numeric label");
+					throw new errs.ConfigurationError("Invalid Docker numeric label");
 			}
 			const allHosts = await ProxyHost.query().where("is_deleted", 0).withGraphFetched("host_domains");
 			const existingHost =

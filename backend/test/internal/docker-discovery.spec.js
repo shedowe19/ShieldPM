@@ -30,6 +30,8 @@ vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: { resetHost: m
 vi.mock("../../logger.js", () => ({ global: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 import docker from "../../internal/docker.js";
+import errs from "../../lib/error.js";
+import { global as logger } from "../../logger.js";
 
 describe("Docker discovery", () => {
 	beforeEach(() => {
@@ -156,6 +158,9 @@ describe("Docker discovery", () => {
 		["shieldpm.forward_query", 'test"; include /tmp/config; #'],
 		["shieldpm.limit_unit", 'm"; unexpected(); --'],
 		["shieldpm.port", "80garbage"],
+		["shieldpm.limit_rate", "100001"],
+		["shieldpm.limit_burst", "1;injection"],
+		["shieldpm.access_list_id", "invalid"],
 	])("rejects unsafe scalar label %s before creating a host", async (label, value) => {
 		await docker.processContainer(
 			{ Id: "abc123", Labels: { "shieldpm.hostname": "example.com", [label]: value } },
@@ -163,5 +168,10 @@ describe("Docker discovery", () => {
 		);
 		expect(mocks.insert).not.toHaveBeenCalled();
 		expect(mocks.upsert).not.toHaveBeenCalled();
+		if (label !== "shieldpm.hostname") {
+			const error = logger.error.mock.calls.at(-1)[1];
+			expect(error).toBeInstanceOf(errs.ConfigurationError);
+			expect(error).toMatchObject({ public: true, status: 400 });
+		}
 	});
 });

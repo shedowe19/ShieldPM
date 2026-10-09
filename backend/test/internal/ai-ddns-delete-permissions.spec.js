@@ -31,6 +31,7 @@ vi.mock("../../internal/tor.js", () => ({ default: {} }));
 vi.mock("../../internal/user.js", () => ({ default: {} }));
 
 import { executeTools } from "../../internal/ai/executor.js";
+import errs from "../../lib/error.js";
 
 const makeAccess = (can) => ({
 	can,
@@ -62,7 +63,7 @@ describe("AI DDNS deletion authorization", () => {
 	});
 
 	it("does not delete a DDNS provider when the service rejects the capability", async () => {
-		const access = makeAccess(vi.fn().mockRejectedValue(new Error("Permission Denied")));
+		const access = makeAccess(vi.fn().mockRejectedValue(new errs.PermissionError("Permission Denied")));
 
 		const results = await executeTools(access, [{ name: "delete_ddns_provider", args: { id: 42 } }]);
 

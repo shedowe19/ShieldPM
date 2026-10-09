@@ -65,6 +65,7 @@ vi.mock("../../internal/user.js", () => ({ default: {} }));
 
 import { executeTools } from "../../internal/ai/executor.js";
 import { getToolDefinitions } from "../../internal/ai/tools.js";
+import errs from "../../lib/error.js";
 
 const cloudflaredToolNames = [
 	"get_cloudflared_tunnels",
@@ -229,7 +230,7 @@ describe("AI tunnel tool permissions", () => {
 	});
 
 	it("does not advertise Cloudflared or Tor tools when their capabilities are unavailable", async () => {
-		const access = { can: vi.fn().mockRejectedValue(new Error("Permission Denied")) };
+		const access = { can: vi.fn().mockRejectedValue(new errs.PermissionError("Permission Denied")) };
 
 		const toolNames = (await getToolDefinitions(access)).map((tool) => tool.function.name);
 
@@ -238,7 +239,7 @@ describe("AI tunnel tool permissions", () => {
 
 	it("rejects every Cloudflared and Tor operation before querying models when capability checks fail", async () => {
 		const access = {
-			can: vi.fn().mockRejectedValue(new Error("Permission Denied")),
+			can: vi.fn().mockRejectedValue(new errs.PermissionError("Permission Denied")),
 			token: { getUserId: vi.fn().mockReturnValue(7) },
 		};
 
@@ -283,7 +284,7 @@ describe("AI tunnel tool permissions", () => {
 			can: vi.fn().mockResolvedValue({ permission_visibility: "user" }),
 			token: { getUserId: vi.fn().mockReturnValue(7) },
 		};
-		mocks.getProxyHost.mockRejectedValue(new Error("Not Found - 99"));
+		mocks.getProxyHost.mockRejectedValue(new errs.ItemNotFoundError(99));
 
 		const results = await executeTools(access, [
 			{

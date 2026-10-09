@@ -53,6 +53,7 @@ vi.mock("../../internal/user.js", () => ({ default: {} }));
 
 import { executeTools } from "../../internal/ai/executor.js";
 import { getToolDefinitions } from "../../internal/ai/tools.js";
+import errs from "../../lib/error.js";
 
 const systemToolNames = ["test_nginx_config", "force_nginx_reload", "renew_ip_ranges"];
 const systemStatusToolName = "get_system_status";
@@ -87,8 +88,21 @@ describe("AI system tool permissions", () => {
 		mocks.createClientCertificate.mockResolvedValue("/tmp/client.p12");
 	});
 
+	it.each([
+		[new errs.InternalError("Nginx configuration password=private-nginx-secret"), "Internal Error"],
+		[new Error("Nginx configuration password=private-nginx-secret"), "Internal Error"],
+		[new errs.ValidationError("Invalid upstream port"), "Invalid upstream port"],
+	])("respects diagnostic visibility when the authorized Nginx test fails: %s", async (error, expected) => {
+		const access = { can: vi.fn().mockResolvedValue(true) };
+		mocks.testNginx.mockRejectedValue(error);
+		const results = await executeTools(access, [{ id: "nginx-test", name: "test_nginx_config", args: {} }]);
+		expect(results).toEqual([
+			{ name: "test_nginx_config", toolCallId: "nginx-test", result: `Nginx Test Failed: ${expected}` },
+		]);
+	});
+
 	it("does not advertise global Nginx or IP-range tools to users without settings:update", async () => {
-		const access = { can: vi.fn().mockRejectedValue(new Error("Not allowed")) };
+		const access = { can: vi.fn().mockRejectedValue(new errs.PermissionError("Not allowed")) };
 
 		const toolNames = namesOf(await getToolDefinitions(access));
 
@@ -108,7 +122,7 @@ describe("AI system tool permissions", () => {
 	it("does not advertise the system-status tool without analytics:list", async () => {
 		const access = {
 			can: vi.fn().mockImplementation((permission) => {
-				if (permission === "analytics:list") return Promise.reject(new Error("Not allowed"));
+				if (permission === "analytics:list") return Promise.reject(new errs.PermissionError("Not allowed"));
 				return Promise.resolve(true);
 			}),
 		};
@@ -119,7 +133,7 @@ describe("AI system tool permissions", () => {
 	});
 
 	it("does not execute system-status requests without analytics:list", async () => {
-		const access = { can: vi.fn().mockRejectedValue(new Error("Not allowed")) };
+		const access = { can: vi.fn().mockRejectedValue(new errs.PermissionError("Not allowed")) };
 
 		const results = await executeTools(access, [{ name: systemStatusToolName, args: {} }]);
 
@@ -129,7 +143,7 @@ describe("AI system tool permissions", () => {
 	it("does not advertise or read audit logs without auditlog:list", async () => {
 		const access = {
 			can: vi.fn().mockImplementation((permission) => {
-				if (permission === "auditlog:list") return Promise.reject(new Error("Not allowed"));
+				if (permission === "auditlog:list") return Promise.reject(new errs.PermissionError("Not allowed"));
 				return Promise.resolve(true);
 			}),
 		};
@@ -156,7 +170,7 @@ describe("AI system tool permissions", () => {
 	});
 
 	it("does not advertise or execute client certificate generation without certificates:create", async () => {
-		const access = { can: vi.fn().mockRejectedValue(new Error("Not allowed")) };
+		const access = { can: vi.fn().mockRejectedValue(new errs.PermissionError("Not allowed")) };
 
 		const toolNames = namesOf(await getToolDefinitions(access));
 		const results = await executeTools(access, [
@@ -190,7 +204,8 @@ describe("AI system tool permissions", () => {
 	it("does not advertise or start certificate renewal without certificates:update", async () => {
 		const access = {
 			can: vi.fn().mockImplementation((permission) => {
-				if (permission === "certificates:update") return Promise.reject(new Error("Not allowed"));
+				if (permission === "certificates:update")
+					return Promise.reject(new errs.PermissionError("Not allowed"));
 				return Promise.resolve(true);
 			}),
 		};
@@ -217,7 +232,7 @@ describe("AI system tool permissions", () => {
 	});
 
 	it("does not execute global Nginx or IP-range tools without settings:update", async () => {
-		const access = { can: vi.fn().mockRejectedValue(new Error("Not allowed")) };
+		const access = { can: vi.fn().mockRejectedValue(new errs.PermissionError("Not allowed")) };
 
 		const results = await executeTools(access, systemToolCalls);
 

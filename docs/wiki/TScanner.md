@@ -33,7 +33,7 @@ Scanner-Regeln und deren eigene Tests ausgeführt werden.
 
 | Befehl                                                 | Umfang                                                                                    |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| `node scripts/ci/tscanner.mjs`                         | Vollständiger deterministischer Quellscan mit sichtbarer Bestands-Baseline.               |
+| `node scripts/ci/tscanner.mjs`                         | Vollständiger deterministischer Quellscan.                                                |
 | `node scripts/ci/tscanner.mjs --branch origin/develop` | Geänderte Zeilen seit dem gemeinsamen Git-Vorfahren von `HEAD` und dem angegebenen Ref.   |
 | `node scripts/ci/tscanner.mjs --staged`                | Geänderte Zeilen der vollständig gestagten Quelldateien.                                  |
 | `node scripts/ci/tscanner.mjs --uncommitted`           | Geänderte Zeilen der getrackten, gestagten und ungestagten Arbeitskopie gegenüber `HEAD`. |
@@ -90,9 +90,10 @@ Neue Fehler blockieren den Lauf. Warnungen und Informationsbefunde bleiben sicht
 **Scanner-Warnungen** wie eine fehlgeschlagene Skriptregel als Ausführungsfehler: ungültige Berichte, Konfigurationen,
 Parser-/Skriptfehler und native Scannerfehler dürfen keinen erfolgreichen Qualitätslauf vortäuschen.
 
-Bei der Einführung wurden **57 vorhandene Befunde zu rohen Backend-Fehlern** in `.tscanner/baseline.json` erfasst.
-Das sind sichtbare Altbefunde, keine durch diese Einrichtung behobenen Fehler. Der vollständige JSON-Bericht enthält
-sie weiterhin; die Zusammenfassung trennt sie von neuen blockierenden Fehlern.
+Die bei der Einführung erfassten **57 Befunde zu rohen Backend-Fehlern** sind im Quellcode behoben.
+`.tscanner/baseline.json` enthält deshalb **keine Altbefund-Ausnahmen mehr**. Die Baseline-Mechanik bleibt für
+bewusst geprüfte künftige Ausnahmen erhalten; Berichte und Zusammenfassung unterscheiden solche Ausnahmen weiterhin
+von neuen blockierenden Fehlern.
 
 Die Baseline bindet Ausnahmen an Datei, Regel, Meldung und Quellzeile sowie die zulässige Anzahl. Sie erlaubt weder
 pauschal eine Datei noch unbegrenzt weitere gleiche Fehler. **Geänderte-Zeilen-Scans wenden die Baseline nicht an**:

@@ -121,6 +121,11 @@ Der Duo-Callback teilt seinen einmal gestarteten Request zwischen wiederholten E
 
 Regressionen mit verzögerten Antworten: `frontend/src/pages/Login/TwoFAStep.lifecycle.test.tsx`, `frontend/src/pages/DuoCallback/index.test.tsx` und `frontend/src/pages/Profile/Security.test.tsx`. Browser-WebAuthn und Duo-Antworten werden dabei simuliert.
 
+Im Sicherheitstab warten die Abschluss-Callbacks der Einrichtung und die Mutation zum Erzeugen neuer Backup-Codes
+auch auf die zugehörige Status-Invalidierung. Enter- und Klick-Aktionen behandeln die gestarteten Promises.
+Fehler beim anschließenden Aktualisieren werden angezeigt; bereits ausgegebene Wiederherstellungscodes bleiben
+verfügbar. Eine fehlgeschlagene Statusaktualisierung startet die erfolgreiche Code-Erzeugung nicht erneut.
+
 ## YubiKey-Antwortprüfung
 
 Der HTTPS-Aufruf akzeptiert nur HTTP 200, den Status `OK` und genau zur Anfrage passende OTP- und Nonce-Werte. Doppelte Antwortfelder, Antworten über 16 KiB und ausbleibende Netzwerkaktivität von zehn Sekunden werden zurückgewiesen. Ist `YUBICO_SECRET_KEY` gesetzt, werden außerdem die Anfrage signiert und die Antwortsignatur mit dem Base64-dekodierten API-Schlüssel geprüft. Das hierfür verwendete HMAC-SHA1 ist durch das [Yubico-Validierungsprotokoll](https://developers.yubico.com/OTP/Specifications/OTP_validation_protocol.html) vorgegeben. Ohne konfigurierten Schlüssel bleibt die bisherige HTTPS-Variante erhalten; eine zusätzliche HMAC-Prüfung findet dann nicht statt.

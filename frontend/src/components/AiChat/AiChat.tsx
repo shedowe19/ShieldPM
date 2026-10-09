@@ -71,10 +71,10 @@ export function AiChat({ open, onOpenChange }: AiChatProps) {
 		}
 	};
 
-	const handleKeyDown = (e: React.KeyboardEvent) => {
+	const handleKeyDown = async (e: React.KeyboardEvent) => {
 		if (e.key === "Enter" && !e.shiftKey) {
 			e.preventDefault();
-			handleSend();
+			await handleSend();
 		}
 	};
 

@@ -54,11 +54,11 @@ const validateServiceParams = (service) => {
 	// Validate private_key: no control characters allowed
 	if (service.private_key) {
 		if (/[\r\n\0]/.test(service.private_key)) {
-			throw new Error("Invalid private_key: control characters not allowed.");
+			throw new errs.InternalValidationError("Invalid private_key: control characters not allowed.");
 		}
 		// Basic format check for ED25519-V3 keys
 		if (!/^ED25519-V3:[A-Za-z0-9+/=]+$/.test(service.private_key)) {
-			throw new Error("Invalid private_key: malformed ED25519-V3 key.");
+			throw new errs.InternalValidationError("Invalid private_key: malformed ED25519-V3 key.");
 		}
 	}
 };
@@ -83,13 +83,13 @@ const sendCommand = (command) => {
 		});
 
 		socket.on("error", (err) => {
-			reject(err);
+			reject(new errs.InternalError("Tor control port connection failed", err));
 		});
 
 		// Timeout after 10 seconds
 		socket.setTimeout(10000, () => {
 			socket.destroy();
-			reject(new Error("Tor control port connection timeout"));
+			reject(new errs.InternalError("Tor control port connection timeout"));
 		});
 	});
 };
@@ -126,10 +126,15 @@ const authenticate = async () => {
  */
 const sendAuthenticatedCommand = async (command) => {
 	if (!fs.existsSync(torPasswordFile)) {
-		throw new Error("Tor control password file not found");
+		throw new errs.InternalError("Tor control password file not found");
 	}
 
-	const password = (await fs.promises.readFile(torPasswordFile, "utf-8")).trim();
+	let password;
+	try {
+		password = (await fs.promises.readFile(torPasswordFile, "utf-8")).trim();
+	} catch (err) {
+		throw new errs.InternalError("Tor control password could not be read", err);
+	}
 
 	return new Promise((resolve, reject) => {
 		const socket = createConnection(torControlPort, torControlHost, () => {
@@ -158,19 +163,19 @@ const sendAuthenticatedCommand = async (command) => {
 
 		socket.on("end", () => {
 			if (!authenticated) {
-				reject(new Error("Tor authentication failed"));
+				reject(new errs.InternalError("Tor authentication failed"));
 				return;
 			}
 			resolve(data);
 		});
 
 		socket.on("error", (err) => {
-			reject(err);
+			reject(new errs.InternalError("Tor control port connection failed", err));
 		});
 
 		socket.setTimeout(30000, () => {
 			socket.destroy();
-			reject(new Error("Tor command timeout"));
+			reject(new errs.InternalError("Tor command timeout"));
 		});
 	});
 };
@@ -570,7 +575,7 @@ const internalTor = {
 				await service.$query().patch({ status: 0 });
 				return true;
 			}
-			throw new Error("Tor refused to stop the onion service");
+			throw new errs.InternalError("Tor refused to stop the onion service");
 		} catch (err) {
 			logger.error(`Failed to stop Tor Onion Service ${service.id}:`, err);
 			await service.$query().patch({ status: 3 });

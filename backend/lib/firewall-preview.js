@@ -122,15 +122,17 @@ export const readFirewallPreviewConfig = async (handle, id) => {
 			throw new errs.ValidationError("Host configuration is too large for a preview");
 		}
 	};
-	while (true) {
-		const { bytesRead } = await handle.read(buffer, 0, buffer.length, null);
-		if (!bytesRead) break;
-		bytes += bytesRead;
-		if (bytes > MAX_PREVIEW_RAW_CONFIG_BYTES) {
-			throw new errs.ValidationError("Active host configuration is too large for a preview");
+	let bytesRead;
+	do {
+		({ bytesRead } = await handle.read(buffer, 0, buffer.length, null));
+		if (bytesRead > 0) {
+			bytes += bytesRead;
+			if (bytes > MAX_PREVIEW_RAW_CONFIG_BYTES) {
+				throw new errs.ValidationError("Active host configuration is too large for a preview");
+			}
+			consume(decoder.write(buffer.subarray(0, bytesRead)));
 		}
-		consume(decoder.write(buffer.subarray(0, bytesRead)));
-	}
+	} while (bytesRead > 0);
 	consume(decoder.end());
 	scanner.line(pending.replace(/\r$/, ""));
 	return scanner.finish();

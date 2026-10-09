@@ -4,13 +4,19 @@
  */
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import errs from "../../lib/error.js";
 import { global as logger } from "../../logger.js";
 
 /** Build provider endpoints without dropping reverse-proxy prefixes or duplicating /v1. */
 export const getLocalEndpoint = (baseUrl, endpoint) => {
-	const base = new URL(baseUrl || "http://localhost:11434");
+	let base;
+	try {
+		base = new URL(baseUrl || "http://localhost:11434");
+	} catch (err) {
+		throw new errs.ConfigurationError("Invalid base_url: a valid HTTP/HTTPS URL is required", err);
+	}
 	if (!["http:", "https:"].includes(base.protocol))
-		throw new Error("Only HTTP/HTTPS protocols are allowed for base_url");
+		throw new errs.ConfigurationError("Only HTTP/HTTPS protocols are allowed for base_url");
 	base.pathname = `${base.pathname.replace(/\/$/, "")}/`;
 	base.search = "";
 	base.hash = "";
@@ -45,7 +51,7 @@ const parseLocalResponse = (json, isOllamaNative, messages) => {
  * @returns {Promise<Object>} Response with content and optional toolCalls
  */
 export const callGemini = async (config, systemPrompt, message, history, tools) => {
-	if (!config.api_key) throw new Error("Gemini API Key is missing");
+	if (!config.api_key) throw new errs.ConfigurationError("Gemini API Key is missing");
 
 	const genAI = new GoogleGenerativeAI(config.api_key);
 	const model = genAI.getGenerativeModel({
@@ -182,7 +188,7 @@ export const callLocalLLM = async (config, systemPrompt, message, history, tools
 			targetUrl = getLocalEndpoint(baseUrl, "v1/chat/completions");
 		}
 	} catch (err) {
-		throw new Error(`Invalid base_url: ${err.message}`);
+		throw new errs.ConfigurationError("Invalid base_url", err);
 	}
 	const url = targetUrl.toString();
 
@@ -237,8 +243,8 @@ export const callLocalLLM = async (config, systemPrompt, message, history, tools
 	});
 
 	if (!res.ok) {
-		const err = await res.text();
-		throw new Error(`Local LLM Error: ${res.status} - ${err}`);
+		const body = await res.text();
+		throw new errs.InternalError(`Local LLM Error: ${res.status}`, { status: res.status, body });
 	}
 
 	const json = await res.json();
@@ -276,7 +282,7 @@ export const callLocalWithResults = async (
 			targetUrl = getLocalEndpoint(baseUrl, "v1/chat/completions");
 		}
 	} catch (err) {
-		throw new Error(`Invalid base_url: ${err.message}`);
+		throw new errs.ConfigurationError("Invalid base_url", err);
 	}
 	const url = targetUrl.toString();
 
@@ -357,8 +363,8 @@ export const callLocalWithResults = async (
 	});
 
 	if (!res.ok) {
-		const err = await res.text();
-		throw new Error(`Local LLM Result Error: ${res.status} - ${err}`);
+		const body = await res.text();
+		throw new errs.InternalError(`Local LLM Result Error: ${res.status}`, { status: res.status, body });
 	}
 
 	const json = await res.json();
