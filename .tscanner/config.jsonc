@@ -178,7 +178,6 @@
 			"**/build/**",
 			"**/coverage/**",
 			"**/.git/**",
-			"**/.agent/**",
 			".tscanner/**",
 			"docs/**",
 			"data/**",

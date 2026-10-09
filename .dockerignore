@@ -1,5 +1,4 @@
 .git
-.agent
 .tscanner
 .vscode
 **/node_modules

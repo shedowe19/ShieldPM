@@ -2428,7 +2428,6 @@
           "docs/wiki-intern/konfiguration/secrets-und-sicherheit.md",
           "docs/wiki-intern/entwicklung/code-audit-2026-09.md"
         ],
-        "catalog": ".agent/skills/CATALOG.md missing; no local skill loaded",
         "findings": [
           {
             "id": "auth-email-claim-race",
@@ -2580,8 +2579,7 @@
         "No blanket assurance that all backend lines were read. Inventory, manual review, selected context, search sweeps and delegated coverage are distinct.",
         "No live external AI/OIDC/DDNS/ACME/SSH/Tor/WireGuard providers contacted; fake/test data only.",
         "Actual SQLite and Node filesystem/process regressions; Auth child PGlite tests prove PostgreSQL SQL/TX behavior with one pool connection, not live multi-session row-lock timing.",
-        "Final full Backend/UI/CI tests belong to parent and are intentionally not duplicated here.",
-        "Missing local .agent/skills/CATALOG.md retained as known instruction-context limitation, not a product finding."
+        "Final full Backend/UI/CI tests belong to parent and are intentionally not duplicated here."
       ]
     },
     "nginx": {
@@ -3999,7 +3997,7 @@
           "Inventory is not a claim of complete manual line reading.",
           "No source edits, commits, posts or real credentials.",
           "Other root-assigned agents own firewall/GitOps/render/GeoIP and service implementation rescan; this review cross-checks exposed API/schema/model contracts.",
-          "Missing local .agent/skills/CATALOG.md retained; no extra child requested while slots occupied.",
+          "No extra child requested while slots occupied.",
           "All 29 route and 30 model files were freshly read in full, but helper/schema inventories include machine/selected review. No claim every schema prose line or delegated runtime helper was manually read.",
           "Node v24.19.0 local focused tests are distinct from Root/CI Node26 final full-tree gates.",
           "Other reviewers concurrently edited unrelated files after the clean baseline; this record identifies baseline HEAD and own narrow changes without claiming a new clean commit."
@@ -4068,7 +4066,6 @@
           "agent.md",
           "GEMINI.md"
         ],
-        "missing_instruction_catalog": ".agent/skills/CATALOG.md absent",
         "wiki_full_read": [
           "docs/wiki-intern/entwicklung/code-audit-2026-10.md",
           "docs/wiki-intern/module/git-deploy.md",
@@ -10575,7 +10572,6 @@
           "agent.md",
           "GEMINI.md"
         ],
-        "missing_instruction_reference": ".agent/skills/CATALOG.md is not present; existing instructions were followed.",
         "wiki_full_rereads": [
           "docs/wiki-intern/konfiguration/rootfs.md",
           "docs/wiki-intern/konfiguration/umgebungsvariablen.md",
