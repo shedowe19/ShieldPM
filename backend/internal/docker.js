@@ -1,6 +1,7 @@
 import Docker from "dockerode";
 import { SYSTEM_USER_ID } from "../lib/constants.js";
 import errs from "../lib/error.js";
+import { notifyProxyHostDomainsChanged } from "../lib/proxy-host-domain-events.js";
 import { global as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
 import internalCertificate from "./certificate.js";
@@ -529,6 +530,7 @@ class DockerService {
 					});
 				});
 				if (!updatedHost) return;
+				await notifyProxyHostDomainsChanged();
 				if (upstreamChanged) {
 					// A previous health result belongs to the old target. Disable HTTP
 					// monitoring if the new scheme cannot be probed by that monitor.
@@ -543,6 +545,7 @@ class DockerService {
 				payload.locations = [];
 
 				const newHost = await ProxyHost.query().insertGraphAndFetch(payload);
+				await notifyProxyHostDomainsChanged();
 				// RELOAD NGINX via Helper
 				await this.configureNginx(newHost.id);
 				logger.info(`Docker Auto-Discovery: Created host #${newHost.id}`);

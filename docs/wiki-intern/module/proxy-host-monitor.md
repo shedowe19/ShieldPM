@@ -9,10 +9,20 @@ Zustands an die für den Besitzer aktivierten ChatOps-Integrationen.
 ## Kontext
 
 `backend/internal/proxy-host-monitor.js` startet nach dem Start des API-Servers. Ein Polling-Takt von 10 Sekunden
-lädt fällige Hosts und führt insgesamt höchstens fünf Checks gleichzeitig aus. Das nächste Fälligkeitsdatum wird
-gespeichert; ein Neustart erzeugt deshalb keine unbeschränkte Reihe gleichzeitiger Prüfungen. Bei `SIGTERM` in
+lädt fällige Hosts und bearbeitet höchstens 100 Kandidaten je Durchgang. Bis zu fünf Worker füllen ihren freien Platz
+nach Abschluss einer Prüfung unmittelbar mit dem nächsten Kandidaten; sie warten dafür nicht auf den nächsten Poll.
+Die Reihenfolge folgt `next_check_at` und anschließend der Host-ID. Bereits laufende Hosts werden übersprungen;
+manuelle und geplante Checks teilen sich weiterhin die globale Grenze von fünf gleichzeitigen Prüfungen.
+Eine langsame Probe blockiert nur ihren Worker. Während eines laufenden Scans beginnt kein weiterer Scan;
+mehr als 100 fällige Kandidaten werden daher in späteren Durchgängen bearbeitet. Die Datenbankabfrage ist auf
+100 Kandidaten zuzüglich der Zahl bereits aktiver Prüfungen begrenzt, um deren übersprungene Zeilen auszugleichen.
+Das nächste Fälligkeitsdatum wird gespeichert; ein Neustart erzeugt deshalb keine unbeschränkte Reihe gleichzeitiger Prüfungen. Bei `SIGTERM` in
 Produktion und bei `SIGINT` oder `SIGTERM` in der Entwicklung wird der Timer beendet und laufende Sockets werden
 abgebrochen. Ausgeschaltete und gelöschte Hosts werden nicht geprüft.
+
+Beim Stoppen wechselt zusätzlich die Schedulergeneration: noch nicht gestartete Kandidaten eines laufenden Scans
+werden danach nicht mehr abgearbeitet. Einzelne Fehler werden protokolliert und verhindern nicht die folgenden
+Kandidaten. `backend/test/internal/proxy-host-monitor.spec.js` prüft die begrenzte Worker-Nachfüllung und den Stop.
 
 ## Wichtige Dateien
 

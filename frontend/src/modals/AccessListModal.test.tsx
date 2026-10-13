@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
 	remove: vi.fn(),
 	show: vi.fn(),
 	useAccessList: vi.fn(),
+	mutate: vi.fn(),
 }));
 
 vi.mock("@tabler/icons-react", () => ({ IconShieldLock: () => null }));
@@ -84,13 +85,14 @@ vi.mock("src/components/ui/textarea", () => ({
 
 vi.mock("src/hooks", () => ({
 	useAccessList: mocks.useAccessList,
-	useSetAccessList: () => ({ mutate: vi.fn() }),
+	useSetAccessList: () => ({ mutate: mocks.mutate }),
 }));
 
 vi.mock("src/modules/Validations", () => ({ validateString: vi.fn() }));
 vi.mock("src/notifications", () => ({ showObjectSuccess: vi.fn() }));
 
 beforeEach(async () => {
+	vi.clearAllMocks();
 	mocks.show.mockClear();
 	mocks.useAccessList.mockReturnValue({
 		data: { clients: [], id: 73, items: [], meta: "null", name: "Legacy access list" },
@@ -106,6 +108,30 @@ afterEach(async () => {
 });
 
 describe("AccessListModal", () => {
+	it("saves redacted SSO settings with blank replacement secrets", async () => {
+		mocks.useAccessList.mockReturnValue({
+			data: {
+				id: 73,
+				name: "Protected list",
+				clients: [],
+				items: [],
+				meta: { authType: "oauth2_proxy", oauth2ClientId: "public-client" },
+				credentialsConfigured: { oauth2ClientSecret: true, oauth2CookieSecret: true },
+			},
+			error: null,
+			isLoading: false,
+		});
+		const { showAccessListModal } = await import("./AccessListModal");
+		showAccessListModal(73);
+		const Modal = mocks.show.mock.calls[0][0];
+		render(<Modal id={73} remove={mocks.remove} visible />);
+		fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+		await waitFor(() => expect(mocks.mutate).toHaveBeenCalled());
+		const payload = JSON.parse(JSON.stringify(mocks.mutate.mock.calls[0][0]));
+		expect(payload.meta.oauth2_client_id).toBe("public-client");
+		expect(payload.meta).not.toHaveProperty("oauth2_client_secret");
+		expect(payload.meta).not.toHaveProperty("oauth2_cookie_secret");
+	});
 	it("renders an access list whose legacy JSON meta is null", async () => {
 		const { showAccessListModal } = await import("./AccessListModal");
 		showAccessListModal(73);

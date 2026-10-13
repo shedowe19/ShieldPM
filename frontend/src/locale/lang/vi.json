@@ -1,4 +1,5 @@
 {
+	"form.secret.keep-existing": "Đã cấu hình; để trống để giữ nguyên",
 	"2fa.active-methods": "Phương thức đang hoạt động",
 	"2fa.add-method": "Thêm phương thức mới",
 	"2fa.backup-code.placeholder": "MÃ-DỰ-PHÒNG",

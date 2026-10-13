@@ -361,6 +361,94 @@ describe("proxy host upstream monitor", () => {
 		expect(rows[0].state).toBe("down");
 	});
 
+	const insertScheduledHosts = async (count, targetPort = port, slowFirst = false) => {
+		await state.db("proxy_host").insert(
+			Array.from({ length: count }, (_, index) => ({
+				id: index + 1001,
+				enabled: 1,
+				owner_user_id: 7,
+				forward_scheme: "http",
+				forward_host: "127.0.0.1",
+				forward_port: targetPort,
+			})),
+		);
+		await state.db("proxy_host_monitor").insert(
+			Array.from({ length: count }, (_, index) => ({
+				host_id: index + 1001,
+				created_on: new Date().toISOString(),
+				modified_on: new Date().toISOString(),
+				enabled: 1,
+				interval_seconds: 15,
+				timeout_ms: 1000,
+				expected_status: 200,
+				path: slowFirst && index === 0 ? "/slow" : "/base/health",
+			})),
+		);
+	};
+	it("checks one hundred due upstreams in one scan and bounds each scan to one hundred", async () => {
+		await insertScheduledHosts(120);
+		await monitor.tick();
+		expect(await state.db("proxy_host_monitor").whereNotNull("checked_at")).toHaveLength(100);
+		expect(seenRequests).toHaveLength(100);
+		await monitor.tick();
+		expect(await state.db("proxy_host_monitor").whereNotNull("checked_at")).toHaveLength(120);
+		expect(seenRequests).toHaveLength(120);
+	});
+	it("refills fast worker slots while one upstream remains pending", async () => {
+		const releaseSlow = Promise.withResolvers();
+		let fastResponses = 0;
+		let simultaneous = 0;
+		let maximumSimultaneous = 0;
+		const upstream = http.createServer(async (req, res) => {
+			simultaneous++;
+			maximumSimultaneous = Math.max(maximumSimultaneous, simultaneous);
+			if (req.url === "/slow") await releaseSlow.promise;
+			else {
+				await new Promise((resolve) => setImmediate(resolve));
+				fastResponses++;
+			}
+			simultaneous--;
+			res.end("healthy");
+		});
+		await new Promise((resolve) => upstream.listen(0, "127.0.0.1", resolve));
+		try {
+			await insertScheduledHosts(30, upstream.address().port, true);
+			// Give the intentional slow probe enough time for all real DB/network work.
+			await state.db("proxy_host_monitor").where("host_id", 1001).update({ timeout_ms: 15000 });
+			const pending = monitor.tick();
+			await vi.waitFor(() => expect(fastResponses).toBe(29), { timeout: 5000 });
+			expect(await state.db("proxy_host_monitor").where("host_id", 1001).first()).toMatchObject({ checked_at: null });
+			expect(maximumSimultaneous).toBeLessThanOrEqual(5);
+			releaseSlow.resolve();
+			await pending;
+			expect(await state.db("proxy_host_monitor").whereNotNull("checked_at")).toHaveLength(30);
+		} finally {
+			releaseSlow.resolve();
+			upstream.closeAllConnections();
+			await new Promise((resolve) => upstream.close(resolve));
+		}
+	});
+	it("stops refilling the remaining queue after shutdown aborts active probes", async () => {
+		let requests = 0;
+		const upstream = http.createServer(() => {
+			requests++;
+		});
+		await new Promise((resolve) => upstream.listen(0, "127.0.0.1", resolve));
+		try {
+			await insertScheduledHosts(30, upstream.address().port);
+			const pending = monitor.tick();
+			await vi.waitFor(() => expect(requests).toBe(5));
+			monitor.stop();
+			await pending;
+			expect(requests).toBe(5);
+			expect(await state.db("proxy_host_monitor").whereNotNull("checked_at")).toHaveLength(0);
+		} finally {
+			monitor.stop();
+			upstream.closeAllConnections();
+			await new Promise((resolve) => upstream.close(resolve));
+		}
+	});
+
 	it("dampens flapping alerts and eventually announces a stable recovery", () => {
 		const start = new Date("2026-09-23T12:00:00.000Z").toISOString();
 		const initial = decideAlert(

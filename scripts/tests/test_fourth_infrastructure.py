@@ -196,6 +196,8 @@ class FourthInfrastructureTests(unittest.TestCase):
         # This fixture only exercises package discovery, not authorization; it
         # must also run as the ordinary GitHub Actions user.
         preamble = preamble.replace('if [ "$EUID" -ne 0 ]; then\n  echo "Please run as root"\n  exit 1\nfi', "")
+        preamble = preamble.replace("/run/shieldpm-maintenance", str(self.root / "maintenance"))
+        preamble = preamble.replace("install -d -o 0 -g 0 -m 700", "install -d -m 700")
         script = self.root / "install.sh"
         script.write_text(preamble + '\nprintf "SOURCE=%s" "$PWD"\n')
         # Missing release artifacts must be diagnosed before apt or service work.
@@ -217,6 +219,10 @@ class FourthInfrastructureTests(unittest.TestCase):
         (self.root / "usr").mkdir()
         fixture = '''
 active=true
+INSTALL_BACKEND_DIR=unused
+INSTALL_FRONTEND_DIR=unused
+INSTALL_TMP_DIR=unused
+backup_install_directory() { :; }
 systemctl() {
     case "$1" in
         cat) return 0 ;;

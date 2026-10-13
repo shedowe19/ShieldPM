@@ -24,6 +24,8 @@ export function useFirewallList(id?: number) {
 		queryKey: ["firewall-list", id],
 		queryFn: () => getFirewallList(id as number),
 		enabled: typeof id === "number",
+		refetchOnMount: "always",
+		retry: false,
 	});
 }
 

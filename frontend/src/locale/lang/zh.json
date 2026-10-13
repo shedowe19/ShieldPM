@@ -1,4 +1,5 @@
 {
+	"form.secret.keep-existing": "已配置；留空以保留",
 	"2fa.active-methods": "已启用的方法",
 	"2fa.add-method": "添加新方法",
 	"2fa.backup-code.placeholder": "备用代码",

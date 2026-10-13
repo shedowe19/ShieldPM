@@ -8,7 +8,9 @@ export interface AccessListFormValues extends Partial<AccessList> {
 	oauth2Provider?: string;
 	oauth2ClientId?: string;
 	oauth2ClientSecret?: string;
+	oauth2ClientSecretConfigured?: boolean;
 	oauth2CookieSecret?: string;
+	oauth2CookieSecretConfigured?: boolean;
 	oauth2OidcIssuerUrl?: string;
 	oauth2ProxyPrefix?: string;
 	oauth2Scope?: string;
@@ -19,6 +21,7 @@ export interface AccessListFormValues extends Partial<AccessList> {
 	oidcDiscoveryUrl?: string;
 	oidcClientId?: string;
 	oidcClientSecret?: string;
+	oidcClientSecretConfigured?: boolean;
 	mtlsEnabled?: boolean;
 	mtlsContent?: string;
 	mtlsUseInternal?: boolean;
@@ -101,7 +104,9 @@ export const createAccessListInitialValues = (data: Partial<AccessList> = {}): A
 		oauth2Provider: meta.oauth2_provider || meta.oauth2Provider || "google",
 		oauth2ClientId: meta.oauth2_client_id || meta.oauth2ClientId || "",
 		oauth2ClientSecret: meta.oauth2_client_secret || meta.oauth2ClientSecret || "",
+		oauth2ClientSecretConfigured: !!data.credentialsConfigured?.oauth2ClientSecret,
 		oauth2CookieSecret: meta.oauth2_cookie_secret || meta.oauth2CookieSecret || "",
+		oauth2CookieSecretConfigured: !!data.credentialsConfigured?.oauth2CookieSecret,
 		oauth2OidcIssuerUrl: meta.oauth2_oidc_issuer_url || meta.oauth2OidcIssuerUrl || "",
 		oauth2ProxyPrefix: meta.oauth2_proxy_prefix || meta.oauth2ProxyPrefix || "/oauth2/",
 		oauth2Scope: meta.oauth2_scope || meta.oauth2Scope || "",
@@ -114,6 +119,7 @@ export const createAccessListInitialValues = (data: Partial<AccessList> = {}): A
 		oidcDiscoveryUrl: meta.oidc_discovery_url || meta.oidcDiscoveryUrl || "",
 		oidcClientId: meta.oidc_client_id || meta.oidcClientId || "",
 		oidcClientSecret: meta.oidc_client_secret || meta.oidcClientSecret || "",
+		oidcClientSecretConfigured: !!data.credentialsConfigured?.oidcClientSecret,
 		mtlsEnabled: !!data.mtlsEnabled,
 		mtlsContent: data.mtlsCertificate || "",
 		mtlsUseInternal: !!data.mtlsUseInternal,

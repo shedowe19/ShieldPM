@@ -1,4 +1,5 @@
 {
+	"form.secret.keep-existing": "설정됨; 유지하려면 비워 두세요",
 	"2fa.active-methods": "활성 방법",
 	"2fa.add-method": "새 방법 추가",
 	"2fa.backup-code.placeholder": "백업코드",

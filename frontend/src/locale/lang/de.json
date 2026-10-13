@@ -1,4 +1,5 @@
 {
+	"form.secret.keep-existing": "Hinterlegt; zum Beibehalten leer lassen",
 	"2fa.active-methods": "Aktive Methoden",
 	"2fa.add-method": "Neue Methode hinzufügen",
 	"2fa.backup-code.placeholder": "BACKUP-CODE",

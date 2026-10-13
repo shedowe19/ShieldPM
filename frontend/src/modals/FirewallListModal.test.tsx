@@ -150,7 +150,7 @@ it("preserves unsaved fields across cache refreshes and the disabled state when 
 	expect(JSON.parse(String(request?.[1]?.body))).toMatchObject({ name: "Unsaved list", enabled: false });
 });
 
-it("updates pristine cached fields when the opening fetch returns newer saved data", async () => {
+it("waits for fresh opening data even when the cached list is still fresh", async () => {
 	client.setQueryData(["firewall-list", 7], {
 		...list,
 		sourceType: "manual",
@@ -161,7 +161,8 @@ it("updates pristine cached fields when the opening fetch returns newer saved da
 	const response = deferredResponse();
 	vi.mocked(fetch).mockReturnValueOnce(response.promise);
 	open(7);
-	expect(screen.getByLabelText("column.name")).toHaveValue("Saved list");
+	expect(screen.queryByLabelText("column.name")).not.toBeInTheDocument();
+	expect(screen.queryByRole("button", { name: "save" })).not.toBeInTheDocument();
 	await act(async () => {
 		response.resolve(
 			new Response(
@@ -170,6 +171,7 @@ it("updates pristine cached fields when the opening fetch returns newer saved da
 					name: "Latest saved name",
 					reason: "Latest saved reason",
 					entries: "198.51.100.0/24",
+					enabled: true,
 				}),
 			),
 		);
@@ -177,9 +179,10 @@ it("updates pristine cached fields when the opening fetch returns newer saved da
 	await waitFor(() => expect(screen.getByLabelText("column.name")).toHaveValue("Latest saved name"));
 	expect(screen.getByLabelText("firewall.reason")).toHaveValue("Latest saved reason");
 	expect(screen.getByLabelText("firewall.entries")).toHaveValue("198.51.100.0/24");
+	expect(screen.getByRole("switch", { name: "firewall.enabled" })).toHaveAttribute("aria-checked", "true");
 });
 
-it("preserves switch-only edits when a fresh saved list arrives", async () => {
+it("preserves switch-only edits after the fresh opening snapshot", async () => {
 	client.setQueryData(["firewall-list", 7], {
 		...list,
 		sourceType: "manual",
@@ -190,16 +193,17 @@ it("preserves switch-only edits when a fresh saved list arrives", async () => {
 	const response = deferredResponse();
 	vi.mocked(fetch).mockReturnValueOnce(response.promise);
 	open(7);
-	fireEvent.click(screen.getByRole("switch", { name: "firewall.enabled" }));
 	await act(async () => {
 		response.resolve(new Response(JSON.stringify({ ...list, name: "New server name" })));
 	});
-	await waitFor(() => expect(client.getQueryData(["firewall-list", 7])).toMatchObject({ name: "New server name" }));
+	await screen.findByLabelText("column.name");
+	fireEvent.click(screen.getByRole("switch", { name: "firewall.enabled" }));
+	act(() => client.setQueryData(["firewall-list", 7], { ...list, name: "Background change", enabled: false }));
 	expect(screen.getByRole("switch", { name: "firewall.enabled" })).toHaveAttribute("aria-checked", "true");
-	expect(screen.getByLabelText("column.name")).toHaveValue("Saved list");
+	expect(screen.getByLabelText("column.name")).toHaveValue("New server name");
 });
 
-it("requires a new import preview when refreshed pristine entries change", async () => {
+it("preserves the opening entries and their preview across background updates", async () => {
 	open(7);
 	await screen.findByLabelText("column.name");
 	fireEvent.click(screen.getByRole("button", { name: "firewall.import.preview" }));
@@ -214,9 +218,9 @@ it("requires a new import preview when refreshed pristine entries change", async
 			entries: "198.51.100.0/24",
 		}),
 	);
-	await waitFor(() => expect(screen.getByLabelText("firewall.entries")).toHaveValue("198.51.100.0/24"));
-	expect(screen.getByRole("button", { name: "save" })).toBeDisabled();
-	expect(screen.getByText("firewall.import.required")).toBeInTheDocument();
+	expect(screen.getByLabelText("firewall.entries")).toHaveValue("203.0.113.10");
+	expect(screen.getByRole("button", { name: "save" })).toBeEnabled();
+	expect(screen.getByText("firewall.import.summary")).toBeInTheDocument();
 });
 
 it("keeps an edited draft mounted through a background fetch failure and recovery", async () => {
@@ -243,13 +247,43 @@ it("keeps an edited draft mounted through a background fetch failure and recover
 	expect(screen.getByLabelText("firewall.entries")).toHaveValue("198.51.100.0/24");
 });
 
-it("does not show an empty edit form when the saved list cannot be loaded", async () => {
+it.each([false, true])("does not show an edit form when opening fails (cached: %s)", async (cached) => {
+	if (cached) client.setQueryData(["firewall-list", 7], { ...list, sourceType: "url" });
 	vi.mocked(fetch).mockResolvedValue(
 		new Response(JSON.stringify({ error: { message: "List unavailable" } }), { status: 503 }),
 	);
 	open(7);
 	expect(await screen.findByText("List unavailable")).toBeInTheDocument();
 	expect(screen.queryByRole("button", { name: "save" })).not.toBeInTheDocument();
+});
+
+it("uses the fresh URL and disabled state when saving a name-only edit", async () => {
+	client.setQueryData(["firewall-list", 7], {
+		...list,
+		sourceType: "url",
+		sourceUrl: "https://example.org/old.txt",
+		enabled: true,
+	});
+	vi.mocked(fetch).mockResolvedValueOnce(
+		new Response(
+			JSON.stringify({
+				...list,
+				source_type: "url",
+				source_url: "https://example.org/latest.txt",
+				enabled: false,
+			}),
+		),
+	);
+	open(7);
+	fireEvent.change(await screen.findByLabelText("column.name"), { target: { value: "New label" } });
+	fireEvent.click(screen.getByRole("button", { name: "save" }));
+	await waitFor(() => expect(mocks.remove).toHaveBeenCalled());
+	const request = vi.mocked(fetch).mock.calls.find(([, options]) => options?.method === "PUT");
+	expect(JSON.parse(String(request?.[1]?.body))).toMatchObject({
+		name: "New label",
+		source_url: "https://example.org/latest.txt",
+		enabled: false,
+	});
 });
 
 it("replaces text from a TXT upload and requires a new validation", async () => {

@@ -15,7 +15,9 @@ type AccessListSsoFormValues = {
 	oauth2AllowedGroups?: string;
 	oauth2ClientId?: string;
 	oauth2ClientSecret?: string;
+	oauth2ClientSecretConfigured?: boolean;
 	oauth2CookieSecret?: string;
+	oauth2CookieSecretConfigured?: boolean;
 	oauth2InsecureOidcAllowUnverifiedEmail?: boolean;
 	oauth2OidcIssuerUrl?: string;
 	oauth2Provider?: string;
@@ -23,6 +25,7 @@ type AccessListSsoFormValues = {
 	oauth2Scope?: string;
 	oidcClientId?: string;
 	oidcClientSecret?: string;
+	oidcClientSecretConfigured?: boolean;
 	oidcDiscoveryUrl?: string;
 };
 
@@ -120,7 +123,16 @@ const AccessListSsoTab = () => {
 							<Label htmlFor="oauth2ClientSecret">Client Secret</Label>
 							<Field name="oauth2ClientSecret">
 								{({ field }: FieldProps) => (
-									<Input {...field} type="password" id="oauth2ClientSecret" />
+									<Input
+										{...field}
+										type="password"
+										id="oauth2ClientSecret"
+										placeholder={
+											values.oauth2ClientSecretConfigured
+												? intl.formatMessage({ id: "form.secret.keep-existing" })
+												: undefined
+										}
+									/>
 								)}
 							</Field>
 						</div>
@@ -135,7 +147,11 @@ const AccessListSsoTab = () => {
 										{...field}
 										type="password"
 										id="oauth2CookieSecret"
-										placeholder="16, 24, or 32 bytes"
+										placeholder={
+											values.oauth2CookieSecretConfigured
+												? intl.formatMessage({ id: "form.secret.keep-existing" })
+												: "16, 24, or 32 bytes"
+										}
 									/>
 								)}
 							</Field>
@@ -252,7 +268,18 @@ const AccessListSsoTab = () => {
 					<div className="space-y-2">
 						<Label htmlFor="oidcClientSecret">Client Secret</Label>
 						<Field name="oidcClientSecret">
-							{({ field }: FieldProps) => <Input {...field} type="password" id="oidcClientSecret" />}
+							{({ field }: FieldProps) => (
+								<Input
+									{...field}
+									type="password"
+									id="oidcClientSecret"
+									placeholder={
+										values.oidcClientSecretConfigured
+											? intl.formatMessage({ id: "form.secret.keep-existing" })
+											: undefined
+									}
+								/>
+							)}
 						</Field>
 					</div>
 				</>

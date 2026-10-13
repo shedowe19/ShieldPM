@@ -12,6 +12,7 @@ import { normalizeListInput } from "../lib/firewall-list-validation.js";
 import { normalizeFirewallPolicy } from "../lib/firewall-policy.js";
 import { assertNoSymlinkPath, assertSafeConfigTree, writeConfigFile } from "../lib/gitops-files.js";
 import { withImportedIdSequence } from "../lib/gitops-sequences.js";
+import { notifyProxyHostDomainsChanged } from "../lib/proxy-host-domain-events.js";
 import { global as logger } from "../logger.js";
 import AccessList from "../models/access_list.js";
 import Certificate from "../models/certificate.js";
@@ -1323,7 +1324,12 @@ const internalGitOps = {
 
 			// 4. Import Hosts & Streams
 			const errorsBeforeHostImport = errors.length;
-			await importModel(ProxyHost, "proxy-hosts", "proxy_host", "host_domains");
+			try {
+				await importModel(ProxyHost, "proxy-hosts", "proxy_host", "host_domains");
+			} finally {
+				// One refresh covers successful, partially failed and pruned host batches.
+				await notifyProxyHostDomainsChanged();
+			}
 			const monitorDir = path.join(configDir, "proxy-host-monitors");
 			// An older GitOps backup has no monitor directory; preserve local settings in that case.
 			if (fs.existsSync(monitorDir)) {

@@ -30,9 +30,9 @@ export const createAccessListPayload = ({
 			oauth2_provider: authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2Provider : undefined,
 			oauth2_client_id: authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2ClientId : undefined,
 			oauth2_client_secret:
-				authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2ClientSecret : undefined,
+				authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2ClientSecret || undefined : undefined,
 			oauth2_cookie_secret:
-				authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2CookieSecret : undefined,
+				authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2CookieSecret || undefined : undefined,
 			oauth2_oidc_issuer_url:
 				authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2OidcIssuerUrl : undefined,
 			oauth2_proxy_prefix: authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2ProxyPrefix : undefined,
@@ -49,7 +49,8 @@ export const createAccessListPayload = ({
 					: undefined,
 			oidc_discovery_url: authType === ACCESS_LIST_AUTH_TYPE.OIDC ? values.oidcDiscoveryUrl : undefined,
 			oidc_client_id: authType === ACCESS_LIST_AUTH_TYPE.OIDC ? values.oidcClientId : undefined,
-			oidc_client_secret: authType === ACCESS_LIST_AUTH_TYPE.OIDC ? values.oidcClientSecret : undefined,
+			oidc_client_secret:
+				authType === ACCESS_LIST_AUTH_TYPE.OIDC ? values.oidcClientSecret || undefined : undefined,
 		},
 		items: (values.items || []).map(({ password, username }) => ({ password, username })),
 		clients: (values.clients || []).map(({ address, directive }) => ({

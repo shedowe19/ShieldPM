@@ -63,6 +63,14 @@ Die isolierte HTTP/2-Prüfkonfiguration aktiviert das Protokoll mit `http2 on;`.
 
 Lokal verwendet `bash scripts/ci/docker-smoke.sh IMAGE` ausschließlich ein bereits geladenes Image derselben Architektur. `scripts/tests/test_docker_smoke.py` prüft Erfolg, Health-Timeout und Schreibfehler einschließlich Cleanup mit einem simulierten Docker-CLI; der Docker-Build-Job führt den tatsächlichen Docker-Lauf aus.
 
+### Manueller Latest-Build mit geprüften Digests
+
+`docker-latest.yml` baut die beim manuellen Start gewählte Git-Referenz neu. Beide nativen Architektur-Jobs laden ihr finales Image zunächst lokal unter einem Kandidaten-Tag mit Lauf-ID, Wiederholungsnummer und Architektur. Die vorbereitenden Stages exportieren ausschließlich Build-Cache. Das geladene Kandidatenimage durchläuft denselben Online-GeoIP-Smoke und denselben Offline-Anwendungsstart unter UID `0` und `1000` wie `docker.yml`; beide Schritte sind auf jeweils zehn Minuten begrenzt.
+
+Nach erfolgreichen Prüfungen pusht der Architektur-Job genau dieses lokale Image und speichert dessen Registry-Digest als Artefakt. Ein erneuter Joblauf darf das eigene Digestartefakt ersetzen. Der Merge-Job benötigt beide erfolgreichen Architektur-Jobs und validiert beide vollständigen `ghcr.io/shedowe19/shieldpm@sha256:…`-Referenzen, bevor er die veröffentlichten Tags verändert. `latest`, der eingegebene Release-Tag, die Laufnummer sowie `latest-x86_64` und `latest-aarch64` übernehmen diese geprüften Digests. Die Veröffentlichung benötigt keinen weiteren Image-Build und verwendet die Kandidaten-Tags nicht als Manifestquelle.
+
+Alle manuellen Latest-Veröffentlichungen teilen eine Warteschlange. Ein fehlgeschlagener Smoke verhindert die Promotion der veröffentlichten Tags; ein erfolgreich geprüfter Kandidat der anderen Architektur kann bereits in GHCR liegen. `backend/test/ci/docker-latest-workflow.spec.js` prüft Architekturmatrix und Reihenfolge und führt die Push-/Merge-Shellblöcke mit simuliertem Docker aus, einschließlich fehlender, ungültiger oder fremder Digestreferenzen. Diese lokalen Vertragsprüfungen ersetzen die echten Containersmokes im Workflow nicht.
+
 ### Eigenständige TScanner-CI
 
 `.github/workflows/tscanner.yml` installiert das private Scanner-Paket mit eingefrorenem Lockfile und deaktivierten
@@ -135,6 +143,8 @@ Vor dem Export des LXC-Rootfs entfernt der Workflow SSH-Hostkeys und leert die M
 Beim Installieren der LXC-Systempakete erstellt der Workflow das benötigte Manpage-Verzeichnis und lässt ausschließlich `/usr/share/man/man8/idmapwb.8.gz` trotz des Manpage-Ausschlusses im Debian-Slim-Basisimage zu. Die Datei stammt aus dem ohnehin benötigten `cifs-utils` und ist das Ziel der zugehörigen `update-alternatives`-Verknüpfung. Die übrigen Dokumentationsfilter bleiben bestehen; ein zusätzliches Paket ist dafür nicht nötig.
 
 Der Installer erwartet das entpackte native Release-Paket mit `app/`, `html/`, `usr/` und `rootfs/`. Dieses Paket enthält die zuvor gebauten Anwendungsdateien und Nginx-Binaries; der Installer klont das Repository nicht. Ein Aufruf der einzelnen `scripts/install.sh` aus einem normalen Checkout ersetzt das native Paket nicht.
+
+Das Paket muss außerhalb von `/app` und `/html/frontend` entpackt sein; die Prüfung verwendet den physischen Quellpfad und erfasst auch Symlink-Aliase. Bei einer Neuinstallation werden die beiden Anwendungspfade nach Sicherung vollständig aus dem Paket ersetzt, einschließlich versteckter Dateien. Entfernte Module und alte Frontend-Assets bleiben dadurch nicht zurück. Weitere mitgelieferte statische Seiten werden weiterhin als Overlay kopiert. Installer und nativer Updater teilen eine Wartungssperre; Ablauf und Wiederherstellungsgrenzen stehen unter [Deployment](./deployment.md) und [Rootfs](../konfiguration/rootfs.md#native-update-austausch-und-fehlerbehandlung).
 
 ```bash
 tar -xzf shieldpm-install-linux-amd64.tar.gz

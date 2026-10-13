@@ -29,6 +29,7 @@ const boolFields = [
 	"disable_buffering",
 	"security_crowdsec",
 	"maintenance_active",
+	"maintenance_pending",
 	"php_enabled",
 	"git_sync_enabled",
 	"anubis_enabled",
@@ -89,6 +90,8 @@ class ProxyHost extends Model {
 	anubis_rules;
 	/** @type {number} */
 	maintenance_active;
+	/** @type {boolean | number} Internal durable scheduled-activation job. */
+	maintenance_pending;
 	/** @type {number} */
 	maintenance_on_failure;
 	/** @type {string|null} */

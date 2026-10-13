@@ -7,6 +7,7 @@ export const sanitizeHostMeta = (meta) => _.omit(meta, ["dns_provider_credential
 export const sanitizeProxyHost = (host) => {
 	const row = _.omit(host, [
 		"is_deleted",
+		"maintenance_pending",
 		"owner.is_deleted",
 		"git_credentials",
 		"terminal_password",

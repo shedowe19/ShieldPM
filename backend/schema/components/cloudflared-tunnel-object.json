@@ -23,7 +23,9 @@
         },
         "token": {
             "type": "string",
-            "example": "eyJhIj..."
+            "example": "eyJhIj...",
+            "writeOnly": true,
+            "description": "Write-only connector token. Omitted or blank update inputs retain the saved token."
         },
         "status": {
             "type": "integer",
@@ -33,6 +35,11 @@
         "meta": {
             "type": "object",
             "additionalProperties": true
+        },
+        "has_token": {
+            "type": "boolean",
+            "readOnly": true,
+            "description": "Whether a connector token is saved."
         }
     }
 }

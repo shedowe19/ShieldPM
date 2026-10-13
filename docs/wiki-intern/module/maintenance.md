@@ -34,6 +34,14 @@ Der Startzeitpunkt zählt einschließlich des exakten Grenzwerts. Ein bereits ak
 
 Deaktivierte Hosts erhalten keine neue Nginx-Konfiguration. Bei aktiven Hosts werden Domains, Zertifikat und vollständige Access-List mit Benutzern/IP-Regeln geladen, bevor die Konfiguration neu erzeugt wird.
 
+## Dauerhafte Aktivierungsaufträge
+
+Die Migration `20261013000001_add_maintenance_pending.js` ergänzt das private Feld `maintenance_pending`. Es wird weder als Benutzereinstellung ausgegeben noch über GitOps importiert. Ein fälliger Wechsel speichert seinen Aktivierungsauftrag vor dem Dateiaustausch; Start-/Endtermine bleiben bis zur erfolgreichen Aktivierung erhalten. Der Scan berücksichtigt ausstehende Aufträge auch ohne verbleibendes Datum.
+
+Ein Gruppenlauf hält die gemeinsame Nginx-Sperre vom Lesen der aktuellen Hosts über Rendern und validierten Reload bis zum Abschluss. Bei Render-, Syntax- oder Reloadfehlern werden die vorherigen Dateien restauriert; der nächste Poll beziehungsweise Neustart versucht die verbleibenden Aufträge erneut. Deaktivierte Hosts werden ohne neue Listener abgeschlossen. Erst nach erfolgreicher Aktivierung werden passende Termine entfernt. Eine während des Reloads gespeicherte neue Planung wird beim Abschluss des alten Auftrags nicht gelöscht. Fehler der Abschlusswrites lassen den Auftrag bestehen.
+
+`maintenance-schedule.spec.js` prüft diese Übergänge mit SQLite und PostgreSQL in PGlite, tatsächlichen Modellen, Liquid-Rendering und temporären Dateien. Prozessaufrufe sind kontrolliert; externe Nginx-/Anbieterbereitstellungen bleiben getrennte Betriebsprüfungen.
+
 ## Verwandte Seiten
 
 - [Proxy-Host](./proxy-host.md)

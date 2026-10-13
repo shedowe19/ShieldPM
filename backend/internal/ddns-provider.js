@@ -1,5 +1,6 @@
 import _ from "lodash";
 import errs from "../lib/error.js";
+import { preserveDdnsCredentials, publicDdnsProvider } from "../lib/service-credentials.js";
 import DdnsProvider from "../models/ddns_provider.js";
 import internalAuditLog from "./audit-log.js";
 import internalDdns from "./ddns.js";
@@ -33,7 +34,7 @@ const internalDdnsProvider = {
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("ddns-provider");
 
-		return row;
+		return publicDdnsProvider(row);
 	},
 
 	/**
@@ -44,13 +45,15 @@ const internalDdnsProvider = {
 	 */
 	update: async (access, data) => {
 		await access.can("ddns_providers:update", data.id);
-		const existing = await internalDdnsProvider.get(access, { id: data.id });
-		if (!existing) throw new errs.ItemNotFoundError(data.id);
-
-		const thisData = _.cloneDeep(data);
-
-		await DdnsProvider.query().patchAndFetchById(thisData.id, thisData);
-		const row = await internalDdnsProvider.get(access, { id: thisData.id });
+		const permission = await access.can("ddns_providers:get", data.id);
+		const row = await DdnsProvider.transaction(async (trx) => {
+			const query = DdnsProvider.query(trx).where("id", data.id).forUpdate();
+			if (permission.permission_visibility !== "all") query.where("owner_user_id", access.token.getUserId(1));
+			const existing = await query.first();
+			if (!existing) throw new errs.ItemNotFoundError(data.id);
+			const patch = preserveDdnsCredentials(_.cloneDeep(data), existing);
+			return DdnsProvider.query(trx).patchAndFetchById(data.id, patch);
+		});
 
 		await internalAuditLog.add(access, {
 			action: "updated",
@@ -65,16 +68,17 @@ const internalDdnsProvider = {
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("ddns-provider");
 
-		return row;
+		return publicDdnsProvider(row);
 	},
 
 	/**
 	 * @param  {import("../lib/types.js").Access}   access
 	 * @param  {Object}   data
 	 * @param  {Number}   data.id
+	 * @param  {{includeCredentials?: boolean}} [options] Trusted operation reads only; never request input.
 	 * @return {Promise}
 	 */
-	get: async (access, data) => {
+	get: async (access, data, options = {}) => {
 		const accessData = await access.can("ddns_providers:get", data.id);
 		const query = DdnsProvider.query().where("id", data.id);
 
@@ -84,7 +88,7 @@ const internalDdnsProvider = {
 
 		const row = await query.first();
 		if (!row) throw new errs.ItemNotFoundError(data.id);
-		return row;
+		return options.includeCredentials ? row : publicDdnsProvider(row);
 	},
 
 	/**
@@ -99,7 +103,7 @@ const internalDdnsProvider = {
 			query.where("owner_user_id", access.token.getUserId(1));
 		}
 
-		return await query;
+		return (await query).map(publicDdnsProvider);
 	},
 
 	/**
@@ -136,7 +140,7 @@ const internalDdnsProvider = {
 	 */
 	test: async (access, data) => {
 		await access.can("ddns_providers:update", data.id);
-		const row = await internalDdnsProvider.get(access, { id: data.id });
+		const row = await internalDdnsProvider.get(access, { id: data.id }, { includeCredentials: true });
 		const ips = await internalDdns.getWanIps();
 		const result = await internalDdns.updateProvider(row, ips);
 		if (!result.success) throw new errs.ValidationError(result.error);

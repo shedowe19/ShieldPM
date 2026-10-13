@@ -3,6 +3,7 @@ import _ from "lodash";
 import { encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import { sanitizeHostMeta, sanitizeProxyHost } from "../lib/host-response.js";
+import { notifyProxyHostDomainsChanged } from "../lib/proxy-host-domain-events.js";
 import utils from "../lib/utils.js";
 import AccessList from "../models/access_list.js";
 import proxyHostModel from "../models/proxy_host.js";
@@ -174,6 +175,7 @@ const internalProxyHost = {
 			),
 		);
 		row = utils.omitRow(omissions())(row);
+		await notifyProxyHostDomainsChanged();
 
 		if (createCertificate) {
 			const cert = await internalCertificate.createQuickCertificate(access, thisData);
@@ -364,6 +366,7 @@ const internalProxyHost = {
 			)
 		);
 		const _saved_row = utils.omitRow(omissions())(new_saved_row);
+		await notifyProxyHostDomainsChanged();
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -486,6 +489,7 @@ const internalProxyHost = {
 			}
 			await internalNginx.deleteBackupConfig("proxy_host", row);
 		});
+		await notifyProxyHostDomainsChanged();
 
 		// Add to audit log
 		await internalAuditLog.add(access, {

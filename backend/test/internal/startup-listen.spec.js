@@ -13,6 +13,8 @@ const state = vi.hoisted(() => ({
 	monitorStop: vi.fn(),
 	firewallStart: vi.fn(),
 	firewallStop: vi.fn(async () => {}),
+	configurationLock: vi.fn(),
+	reload: vi.fn(async () => {}),
 }));
 vi.mock("../../app.js", async () => {
 	const { default: express } = await import("express");
@@ -45,7 +47,9 @@ vi.mock("../../internal/git-deploy.js", () => ({ default: { init: async () => {}
 vi.mock("../../internal/gitops.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/ip_ranges.js", () => ({ default: {} }));
 vi.mock("../../internal/maintenance.js", () => ({ default: { initTimer: () => {} } }));
-vi.mock("../../internal/nginx.js", () => ({ default: { reload: async () => {} } }));
+vi.mock("../../internal/nginx.js", () => ({
+	default: { reload: state.reload, withConfigurationLock: state.configurationLock },
+}));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/proxy-host-monitor.js", () => ({
 	default: { init: state.monitorStart, stop: state.monitorStop },
@@ -62,10 +66,13 @@ vi.mock("../../setup.js", () => ({ default: async () => {} }));
 
 describe("backend listener lifecycle", () => {
 	let listeners;
-	beforeEach(() => {
+	beforeEach(async () => {
 		vi.resetModules();
 		vi.clearAllMocks();
 		state.firewallStop.mockResolvedValue(undefined);
+		state.configurationLock.mockImplementation(async (callback) => callback());
+		// index-dev intentionally replaces reload; restore the production fixture per case.
+		(await import("../../internal/nginx.js")).default.reload = state.reload;
 		vi.stubEnv("SKIP_IP_RANGES", "true");
 		for (const key of ["DATA_PATH", "INITIAL_ADMIN_EMAIL", "INITIAL_ADMIN_PASSWORD", "INITIAL_DEFAULT_PAGE"])
 			vi.stubEnv(key, "");
@@ -144,6 +151,23 @@ describe("backend listener lifecycle", () => {
 		expect(state.analyticsStop).toHaveBeenCalledOnce();
 		expect(state.monitorStop).toHaveBeenCalledOnce();
 		expect(server.listening).toBe(false);
+	});
+
+	it("waits for the configuration queue before reloading or accepting requests at startup", async () => {
+		let release;
+		state.configurationLock.mockImplementation(
+			(callback) =>
+				new Promise((resolve, reject) => {
+					release = () => Promise.resolve().then(callback).then(resolve, reject);
+				}),
+		);
+		await import("../../index.js");
+		await vi.waitFor(() => expect(state.configurationLock).toHaveBeenCalledOnce());
+		expect(state.reload).not.toHaveBeenCalled();
+		expect(state.servers).toHaveLength(0);
+		await release();
+		await vi.waitFor(() => expect(state.completed).toBe(true));
+		expect(state.reload).toHaveBeenCalledOnce();
 	});
 	it.each(["SIGINT", "SIGTERM"])("runs development monitoring after listen and stops it on %s", async (signal) => {
 		await import("../../index-dev.js");

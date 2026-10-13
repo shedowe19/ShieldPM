@@ -1,0 +1,24 @@
+name: Temporary validation tooling
+
+on:
+  push:
+    branches: [codex/october-optimization-fixes]
+
+permissions:
+  contents: read
+
+jobs:
+  formatter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - name: Prepare the repository formatter version
+        run: npm install --prefix "$RUNNER_TEMP/formatter" --ignore-scripts --no-audit --no-fund @biomejs/biome@2.5.15
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: validation-biome-linux-x64
+          path: ${{ runner.temp }}/formatter/node_modules/@biomejs/cli-linux-x64/biome
+          if-no-files-found: error
+          retention-days: 1

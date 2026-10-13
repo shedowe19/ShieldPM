@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { type Resolver, useForm } from "react-hook-form";
 import { z } from "zod";
 import type { TorOnion } from "@/api/backend";
@@ -27,6 +27,20 @@ interface TorOnionModalProps {
 
 export function TorOnionModal({ open, onOpenChange, service }: TorOnionModalProps) {
 	const { create, update } = useTorOnion();
+	const generation = useRef(0);
+	const submissionPending = useRef(false);
+	const identity = useRef<{ open: boolean; id: number | undefined }>({ open: false, id: undefined });
+	useEffect(
+		() => () => {
+			generation.current += 1;
+		},
+		[],
+	);
+
+	const changeOpen = (nextOpen: boolean) => {
+		if (!nextOpen) generation.current += 1;
+		onOpenChange(nextOpen);
+	};
 
 	const form = useForm<FormValues>({
 		resolver: zodResolver(formSchema) as unknown as Resolver<FormValues>,
@@ -38,6 +52,9 @@ export function TorOnionModal({ open, onOpenChange, service }: TorOnionModalProp
 	});
 
 	useEffect(() => {
+		if (identity.current.open === open && identity.current.id === service?.id) return;
+		identity.current = { open, id: service?.id };
+		generation.current += 1;
 		if (open) {
 			form.reset({
 				name: service?.name || "",
@@ -48,6 +65,17 @@ export function TorOnionModal({ open, onOpenChange, service }: TorOnionModalProp
 	}, [open, service, form]);
 
 	const onSubmit = (values: FormValues) => {
+		if (submissionPending.current) return;
+		submissionPending.current = true;
+		const submittedGeneration = generation.current;
+		const callbacks = {
+			onSuccess: () => {
+				if (generation.current === submittedGeneration) changeOpen(false);
+			},
+			onSettled: () => {
+				submissionPending.current = false;
+			},
+		};
 		if (service) {
 			update.mutate(
 				{
@@ -58,9 +86,7 @@ export function TorOnionModal({ open, onOpenChange, service }: TorOnionModalProp
 						targetPort: values.targetPort,
 					},
 				},
-				{
-					onSuccess: () => onOpenChange(false),
-				},
+				callbacks,
 			);
 		} else {
 			create.mutate(
@@ -69,9 +95,7 @@ export function TorOnionModal({ open, onOpenChange, service }: TorOnionModalProp
 					virtualPort: values.virtualPort,
 					targetPort: values.targetPort,
 				},
-				{
-					onSuccess: () => onOpenChange(false),
-				},
+				callbacks,
 			);
 		}
 	};
@@ -79,7 +103,7 @@ export function TorOnionModal({ open, onOpenChange, service }: TorOnionModalProp
 	const isSubmitting = create.isPending || update.isPending;
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog open={open} onOpenChange={changeOpen}>
 			<DialogContent className="max-w-lg p-0 gap-0 overflow-hidden flex flex-col">
 				<DialogHeader className="px-6 py-4 border-b">
 					<DialogTitle className="flex items-center gap-2">
@@ -161,7 +185,7 @@ export function TorOnionModal({ open, onOpenChange, service }: TorOnionModalProp
 							)}
 						</div>
 						<DialogFooter className="px-6 py-4 border-t bg-muted/10">
-							<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+							<Button type="button" variant="outline" onClick={() => changeOpen(false)}>
 								<T id="cancel" />
 							</Button>
 							<Button

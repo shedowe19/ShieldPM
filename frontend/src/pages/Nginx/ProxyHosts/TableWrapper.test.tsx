@@ -196,17 +196,19 @@ describe("Proxy host table pagination", () => {
 		expect(modalOptions.invalidations).toContainEqual(["proxy-hosts"]);
 		expect(mocks.showObjectSuccess).toHaveBeenCalledWith("proxy-host", "deleted");
 	});
-	it("keeps the search input focused across loading and failed filter requests", () => {
+	it("keeps the search input focused across loading and failed filter requests", async () => {
 		const { rerender } = render(<TableWrapper />);
 		const input = screen.getByRole("searchbox");
 		input.focus();
 		fireEvent.change(input, { target: { value: "My Host " } });
 		expect(input).toHaveValue("My Host ");
-		expect(mocks.useProxyHostsPage).toHaveBeenLastCalledWith(["owner", "access_list", "certificate"], {
-			limit: 100,
-			page: 1,
-			query: "my host",
-		});
+		await waitFor(() =>
+			expect(mocks.useProxyHostsPage).toHaveBeenLastCalledWith(["owner", "access_list", "certificate"], {
+				limit: 100,
+				page: 1,
+				query: "my host",
+			}),
+		);
 		mocks.useProxyHostsPage.mockReturnValue({ data: undefined, isFetching: true, isLoading: true, isError: false });
 		rerender(<TableWrapper />);
 		expect(screen.getByRole("searchbox")).toBe(input);
@@ -223,10 +225,12 @@ describe("Proxy host table pagination", () => {
 		expect(screen.getByText("Search failed")).toBeInTheDocument();
 		expect(screen.getByRole("searchbox")).toBe(input);
 		fireEvent.change(input, { target: { value: "corrected" } });
-		expect(mocks.useProxyHostsPage).toHaveBeenLastCalledWith(["owner", "access_list", "certificate"], {
-			limit: 100,
-			page: 1,
-			query: "corrected",
-		});
+		await waitFor(() =>
+			expect(mocks.useProxyHostsPage).toHaveBeenLastCalledWith(["owner", "access_list", "certificate"], {
+				limit: 100,
+				page: 1,
+				query: "corrected",
+			}),
+		);
 	});
 });

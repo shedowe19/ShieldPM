@@ -21,6 +21,7 @@ vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: { resetHost: s
 
 import host from "../../internal/host.js";
 import proxy from "../../internal/proxy-host.js";
+import { subscribeProxyHostDomains } from "../../lib/proxy-host-domain-events.js";
 import ProxyHost from "../../models/proxy_host.js";
 
 const access = {
@@ -42,6 +43,8 @@ const snapshot = async () => ({
 });
 
 describe("atomic proxy host and normalized domain writes", () => {
+	const domainSnapshots = [];
+	let unsubscribe;
 	beforeAll(async () => {
 		await state.db.schema.createTable("proxy_host", (table) => {
 			table.increments("id");
@@ -67,9 +70,13 @@ describe("atomic proxy host and normalized domain writes", () => {
 				table.increments("id");
 				table.integer("is_deleted").defaultTo(0);
 			});
+		unsubscribe = subscribeProxyHostDomains(async () => {
+			domainSnapshots.push(await snapshot());
+		});
 	});
 	beforeEach(async () => {
 		vi.clearAllMocks();
+		domainSnapshots.length = 0;
 		await state.db.raw("DROP TRIGGER IF EXISTS reject_domain");
 		await state.db("host_domain").delete();
 		await state.db("proxy_host").delete();
@@ -77,6 +84,7 @@ describe("atomic proxy host and normalized domain writes", () => {
 		state.configure.mockResolvedValue({ nginx_online: true });
 	});
 	afterAll(async () => {
+		unsubscribe();
 		vi.restoreAllMocks();
 		await state.db.destroy();
 	});
@@ -91,6 +99,7 @@ describe("atomic proxy host and normalized domain writes", () => {
 		expect(await snapshot()).toEqual({ hosts: [], domains: [] });
 		expect(state.configure).not.toHaveBeenCalled();
 		expect(state.audit).not.toHaveBeenCalled();
+		expect(domainSnapshots).toEqual([]);
 	});
 
 	it("restores existing domains and host fields when a replacement domain fails", async () => {
@@ -107,6 +116,7 @@ describe("atomic proxy host and normalized domain writes", () => {
 		expect(await snapshot()).toEqual(before);
 		expect(state.configure).not.toHaveBeenCalled();
 		expect(state.audit).not.toHaveBeenCalled();
+		expect(domainSnapshots).toEqual([]);
 	});
 
 	it("commits both records before rendering a successful create and update", async () => {
@@ -122,6 +132,9 @@ describe("atomic proxy host and normalized domain writes", () => {
 		]);
 		expect(state.configure).toHaveBeenCalledTimes(2);
 		expect(state.configure.mock.calls[1][2].note).toBe("changed");
+		expect(domainSnapshots).toHaveLength(2);
+		expect(domainSnapshots[0].domains[0].domain_name).toBe("original.example.test");
+		expect(domainSnapshots[1].domains[0].domain_name).toBe("replacement.example.test");
 	});
 
 	it("marks a changed upstream for monitor reconciliation after saving the host", async () => {

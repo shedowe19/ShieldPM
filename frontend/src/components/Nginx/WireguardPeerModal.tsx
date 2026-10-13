@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Shield } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import type { WireguardPeer } from "@/api/backend";
@@ -32,6 +32,20 @@ interface WireguardPeerModalProps {
 
 export function WireguardPeerModal({ open, onOpenChange, peer, onCreated }: WireguardPeerModalProps) {
 	const { create, update } = useWireguardPeer();
+	const generation = useRef(0);
+	const submissionPending = useRef(false);
+	const identity = useRef<{ open: boolean; id: number | undefined }>({ open: false, id: undefined });
+	useEffect(
+		() => () => {
+			generation.current += 1;
+		},
+		[],
+	);
+
+	const changeOpen = (nextOpen: boolean) => {
+		if (!nextOpen) generation.current += 1;
+		onOpenChange(nextOpen);
+	};
 	const settings = useQuery({
 		queryKey: ["wireguard-peers"],
 		queryFn: getWireguardPeers,
@@ -53,6 +67,9 @@ export function WireguardPeerModal({ open, onOpenChange, peer, onCreated }: Wire
 	});
 
 	useEffect(() => {
+		if (identity.current.open === open && identity.current.id === peer?.id) return;
+		identity.current = { open, id: peer?.id };
+		generation.current += 1;
 		if (open) {
 			form.reset({
 				name: peer?.name || "",
@@ -79,22 +96,32 @@ export function WireguardPeerModal({ open, onOpenChange, peer, onCreated }: Wire
 	const settingsUnavailable = !peer && (!settings.data?.server?.subnet || settings.isFetching || settings.isError);
 
 	const onSubmit = (values: z.infer<typeof formSchema>) => {
-		if (settingsUnavailable) return;
+		if (settingsUnavailable || submissionPending.current) return;
+		submissionPending.current = true;
+		const submittedGeneration = generation.current;
+		const onSettled = () => {
+			submissionPending.current = false;
+		};
 		if (peer) {
 			update.mutate(
 				{ id: peer.id, data: values },
 				{
-					onSuccess: () => onOpenChange(false),
+					onSuccess: () => {
+						if (generation.current === submittedGeneration) changeOpen(false);
+					},
+					onSettled,
 				},
 			);
 		} else {
 			create.mutate(values, {
 				onSuccess: (newPeer) => {
-					onOpenChange(false);
+					if (generation.current !== submittedGeneration) return;
+					changeOpen(false);
 					if (onCreated) {
 						onCreated(newPeer);
 					}
 				},
+				onSettled,
 			});
 		}
 	};
@@ -103,7 +130,7 @@ export function WireguardPeerModal({ open, onOpenChange, peer, onCreated }: Wire
 	const isEditing = !!peer;
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog open={open} onOpenChange={changeOpen}>
 			<DialogContent className="max-w-lg p-0 gap-0 overflow-hidden flex flex-col">
 				<DialogHeader className="px-6 py-4 border-b">
 					<DialogTitle className="flex items-center gap-2">
@@ -225,7 +252,7 @@ export function WireguardPeerModal({ open, onOpenChange, peer, onCreated }: Wire
 							</div>
 						</div>
 						<DialogFooter className="px-6 py-4 border-t bg-muted/10">
-							<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+							<Button type="button" variant="outline" onClick={() => changeOpen(false)}>
 								<T id="cancel" />
 							</Button>
 							<Button

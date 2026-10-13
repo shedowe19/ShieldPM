@@ -136,12 +136,12 @@ const internalNginx = {
 		return combined_meta;
 	},
 
-	commitStagedConfig: async ({ host, host_type, model }) => {
+	commitStagedConfig: async ({ host, host_type, model }, options = {}) => {
 		const meta = await updateHostStatus(model, host, {
 			nginx_online: Boolean(host.enabled),
 			nginx_err: null,
 		});
-		await internalNginx.deleteBackupConfig(host_type, host);
+		if (!options.preserveBackup) await internalNginx.deleteBackupConfig(host_type, host);
 		return meta;
 	},
 
@@ -559,18 +559,40 @@ const internalNginx = {
 					}
 				}
 				await internalNginx.test();
-				const statuses = await Promise.all(stages.map((stage) => internalNginx.commitStagedConfig(stage)));
+				// Every backup remains available until all status writes finish. A failure in
+				// another host must not turn a completed status write into a missing listener.
+				const commits = await Promise.allSettled(
+					stages.map((stage) => internalNginx.commitStagedConfig(stage, { preserveBackup: true })),
+				);
+				const statuses = commits.map((result) => {
+					if (result.status === "rejected") throw result.reason;
+					return result.value;
+				});
+				// Cleanup cannot invalidate a successfully validated group. Keep failed
+				// backup removals for later cleanup rather than attempting an unsafe rollback.
+				const cleanups = await Promise.allSettled(
+					stages.map(({ host_type, host }) => internalNginx.deleteBackupConfig(host_type, host)),
+				);
+				for (const cleanup of cleanups) {
+					if (cleanup.status === "rejected") logger.error(`Nginx backup cleanup failed: ${cleanup.reason.message}`);
+				}
 				Promise.resolve()
 					.then(() => internalAnubis.generatePolicy())
 					.catch((err) => logger.error(`Anubis policy generation failed: ${err.message}`));
 				return statuses;
 			} catch (err) {
 				logger.error(`Nginx batch test failed: ${err.message}`);
-				const statuses = await Promise.all(
+				const rollbacks = await Promise.allSettled(
 					stages.map((stage) => internalNginx.rollbackStagedConfig(stage, err)),
 				);
+				// Do not release the shared lock while another rollback can still write files.
+				const failedRollback = rollbacks.find((result) => result.status === "rejected");
+				if (failedRollback) throw failedRollback.reason;
 				if (options.throwOnError) throw err;
-				return statuses;
+				return rollbacks.map((result) => {
+					if (result.status === "rejected") throw result.reason;
+					return result.value;
+				});
 			}
 		}),
 

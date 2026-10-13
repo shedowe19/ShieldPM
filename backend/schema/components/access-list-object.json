@@ -32,7 +32,8 @@
 		},
 		"meta": {
 			"type": "object",
-			"example": {}
+			"example": {},
+			"description": "Public responses omit OAuth2/OIDC client secrets and the OAuth2 cookie secret. Blank or omitted update secrets retain the saved values."
 		},
 		"satisfy_any": {
 			"type": "boolean",
@@ -46,6 +47,22 @@
 			"type": "integer",
 			"minimum": 0,
 			"example": 3
+		},
+		"credentials_configured": {
+			"type": "object",
+			"readOnly": true,
+			"properties": {
+				"oauth2_client_secret": {
+					"type": "boolean"
+				},
+				"oauth2_cookie_secret": {
+					"type": "boolean"
+				},
+				"oidc_client_secret": {
+					"type": "boolean"
+				}
+			},
+			"additionalProperties": false
 		}
 	}
 }

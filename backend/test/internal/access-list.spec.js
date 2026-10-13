@@ -22,6 +22,7 @@ vi.mock("../../models/access_list.js", () => ({
 			}
 		},
 		query: () => ({
+			findById: () => ({ forUpdate: async () => ({ id: 1, ...state.config }) }),
 			where: () => ({ patch: async (data) => Object.assign(state.config, data) }),
 			insertAndFetch: async (data) => Object.assign(state.config, data, { id: 1 }),
 		}),

@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import { Tail } from "tail";
 import { resolveAnalyticsRange } from "../lib/analytics-range.js";
 import errs from "../lib/error.js";
+import { subscribeProxyHostDomains } from "../lib/proxy-host-domain-events.js";
 import { analytics as logger } from "../logger.js";
 import AnalyticCount from "../models/analytic_count.js";
 import AnalyticsLogs from "../models/analytics_logs.js";
@@ -36,6 +37,12 @@ export class AnalyticsService {
 
 		// Caches
 		this.hostCache = new Map(); // hostname -> id
+		this.domainRefreshTimer = null;
+		this.domainLoadPromise = null;
+		this.domainRevision = 0;
+		this.domainAppliedRevision = -1;
+		this.domainGeneration = 0;
+		this.unsubscribeDomains = null;
 		this.flushTimer = null;
 		this.retentionTimer = null;
 		this.flushPromise = null;
@@ -65,6 +72,7 @@ export class AnalyticsService {
 	}
 
 	async initialize() {
+		const generation = this.domainGeneration;
 		try {
 			// Using 'wx' flag (write, exclusive) to create file atomically.
 			// If file exists, it fails with EEXIST, which we ignore.
@@ -79,7 +87,16 @@ export class AnalyticsService {
 		logger.info(`Starting Analytics Service, watching ${this.logFile}...`);
 
 		// Load initial domains
+		const unsubscribe = subscribeProxyHostDomains(() => {
+			this.domainRevision++;
+			return this.loadDomains();
+		});
+		this.unsubscribeDomains = unsubscribe;
 		await this.loadDomains();
+		if (generation !== this.domainGeneration) {
+			unsubscribe();
+			return false;
+		}
 
 		// Tail the log file
 		try {
@@ -88,11 +105,13 @@ export class AnalyticsService {
 			this.tail.on("error", (error) => logger.error(`Tail error: ${error}`));
 		} catch (err) {
 			logger.error(`Failed to initialize tail: ${err.message}`);
+			unsubscribe();
+			if (this.unsubscribeDomains === unsubscribe) this.unsubscribeDomains = null;
 			return false;
 		}
 
 		// Refresh domains every 10 min only after the tail is active.
-		setInterval(() => this.loadDomains(), 10 * 60 * 1000);
+		this.domainRefreshTimer = setInterval(() => void this.loadDomains(), 10 * 60 * 1000);
 
 		// Start timers
 		this.flushTimer = setInterval(() => {
@@ -106,20 +125,45 @@ export class AnalyticsService {
 	}
 
 	async loadDomains() {
+		const generation = this.domainGeneration;
+		while (generation === this.domainGeneration) {
+			const pending = this.domainLoadPromise || this.readDomains(generation);
+			this.domainLoadPromise = pending;
+			let applied;
+			try {
+				applied = await pending;
+			} finally {
+				if (this.domainLoadPromise === pending) this.domainLoadPromise = null;
+			}
+			// A change can arrive after publication but before the shared promise clears.
+			if (!applied || this.domainAppliedRevision === this.domainRevision) return;
+		}
+	}
+
+	async readDomains(generation) {
 		try {
-			const hosts = await ProxyHost.query().where("is_deleted", 0).select("id").withGraphFetched("host_domains");
-			const newMap = new Map();
-			for (const host of hosts) {
-				if (host.domain_names && Array.isArray(host.domain_names)) {
-					for (const domain of host.domain_names) {
-						newMap.set(domain.toLowerCase(), host.id);
+			while (generation === this.domainGeneration) {
+				const revision = this.domainRevision;
+				const hosts = await ProxyHost.query().where("is_deleted", 0).select("id").withGraphFetched("host_domains");
+				if (generation !== this.domainGeneration) return;
+				// A committed change during the read requires a fresh snapshot before publication.
+				if (revision !== this.domainRevision) continue;
+				const newMap = new Map();
+				for (const host of hosts) {
+					if (host.domain_names && Array.isArray(host.domain_names)) {
+						for (const domain of host.domain_names) {
+							newMap.set(domain.toLowerCase(), host.id);
+						}
 					}
 				}
+				this.hostCache = newMap;
+				this.domainAppliedRevision = revision;
+				logger.info(`Loaded ${this.hostCache.size} domains for analytics.`);
+				return true;
 			}
-			this.hostCache = newMap;
-			logger.info(`Loaded ${this.hostCache.size} domains for analytics.`);
 		} catch (err) {
 			logger.error("Failed to load domains for analytics:", err);
+			return false;
 		}
 	}
 
@@ -154,6 +198,12 @@ export class AnalyticsService {
 	}
 
 	async stop() {
+		clearInterval(this.domainRefreshTimer);
+		this.domainRefreshTimer = null;
+		this.unsubscribeDomains?.();
+		this.unsubscribeDomains = null;
+		this.domainGeneration++;
+		this.domainLoadPromise = null;
 		clearInterval(this.flushTimer);
 		clearInterval(this.retentionTimer);
 		this.tail?.unwatch?.();
