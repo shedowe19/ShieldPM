@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ddnsService from "../../internal/ddns.js";
 import errs from "../../lib/error.js";
 import { global as logger } from "../../logger.js";
@@ -25,12 +25,13 @@ vi.mock("../../logger.js", () => ({
 
 // Mock Global Fetch
 const fetchMock = vi.fn();
-global.fetch = fetchMock;
+afterEach(() => vi.unstubAllGlobals());
 
 describe("DDNS Service", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		fetchMock.mockReset();
+		vi.stubGlobal("fetch", fetchMock);
 	});
 
 	describe("getWanIps", () => {

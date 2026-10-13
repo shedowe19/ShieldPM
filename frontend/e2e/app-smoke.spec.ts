@@ -15,6 +15,17 @@ interface DashboardNote {
 }
 
 const localE2eOrigin = "http://127.0.0.1:4173";
+const pageErrors = new WeakMap<Page, string[]>();
+
+test.beforeEach(({ page }) => {
+	const errors: string[] = [];
+	pageErrors.set(page, errors);
+	page.on("pageerror", (error) => errors.push(error.message));
+});
+
+test.afterEach(({ page }) => {
+	expect(pageErrors.get(page), "The application must not produce uncaught browser errors").toEqual([]);
+});
 
 const auditEvent = {
 	action: "updated",

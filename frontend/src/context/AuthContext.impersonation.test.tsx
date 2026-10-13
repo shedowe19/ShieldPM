@@ -23,6 +23,7 @@ import { AuthProvider, useAuthState } from "./AuthContext";
 
 const admin = { expires: Date.now() + 900_000, user: { id: 1 } };
 const target = { expires: Date.now() + 900_000, user: { id: 2 } };
+const queryClients = new Set<QueryClient>();
 
 function Probe() {
 	const { authenticated, loading, loginAs, logout } = useAuthState();
@@ -41,6 +42,7 @@ function Probe() {
 
 function renderProvider() {
 	const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+	queryClients.add(client);
 	return render(
 		<QueryClientProvider client={client}>
 			<AuthProvider>
@@ -51,7 +53,7 @@ function renderProvider() {
 }
 
 beforeEach(() => {
-	vi.clearAllMocks();
+	vi.resetAllMocks();
 	AuthStore.clear();
 	mocks.refreshToken.mockResolvedValue(admin);
 	mocks.loginAsUser.mockResolvedValue(target);
@@ -59,6 +61,8 @@ beforeEach(() => {
 });
 afterEach(() => {
 	cleanup();
+	for (const client of queryClients) client.clear();
+	queryClients.clear();
 	AuthStore.clear();
 });
 

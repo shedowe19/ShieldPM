@@ -1,6 +1,18 @@
 import fs from "node:fs/promises";
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import axe from "axe-core";
+
+const pageErrors = new WeakMap<Page, string[]>();
+
+test.beforeEach(({ page }) => {
+	const errors: string[] = [];
+	pageErrors.set(page, errors);
+	page.on("pageerror", (error) => errors.push(error.message));
+});
+
+test.afterEach(({ page }) => {
+	expect(pageErrors.get(page), "The public block page must not produce uncaught browser errors").toEqual([]);
+});
 
 const template = await fs.readFile(new URL("../../backend/templates/ip-blocked.html", import.meta.url), "utf8");
 const nginxTemplate = await fs.readFile(new URL("../../backend/templates/_ip_firewall.conf", import.meta.url), "utf8");

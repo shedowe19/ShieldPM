@@ -83,6 +83,12 @@ Fehlerfall als Artefakt für sieben Tage aufbewahrt. Neue Fehler sowie Scanner-A
 `.dockerignore` schließt `.tscanner/` und `.vscode/` aus: Scanner, Babel und Berichte gelangen nicht in das Image oder
 die daraus erstellten nativen Pakete. Details: [TScanner-Anleitung](../../wiki/TScanner.md).
 
+### Dependency-Verifikation und Dockerlint
+
+Der automatische NPM-Updateworkflow prüft Aktualisierungen mit `bash scripts/ci/verify-dependencies.sh`. Der gemeinsame Vertrag umfasst Backendtypen/-tests, Frontendlocales/-tests, Produktionsbuild mit Frontendtypen und Bundlebudget. Nach fehlerhafter Verifikation bleiben die genauen Manifeste, Lockfiles und NCU-Ausgaben als Artefakt verfügbar; die vorhandenen Token- und PR-Schutzbedingungen gelten unverändert. Der Refractor-5-Editor verwendet öffentliche Exportpfade und ausgewählte Grammatiken, damit Versionsupdates keine entfernten tiefen Paketpfade voraussetzen.
+
+Dockerlint ruft `bash scripts/ci/dockerlint.sh` auf. Das Skript übernimmt die bisherigen vier ignorierten Hadolint-Regeln, sammelt stdout und stderr und behandelt den tatsächlichen Pipeline-Exitcode als Fehler. Auch ein abgestürzter Linter ohne DL-/SC-Regeltext schlägt dadurch fehl. Weitere Dockerfiles werden nach einem Fehler weiterhin geprüft; Dateinamen werden NUL-getrennt verarbeitet. Fehlende Dockerfiles, Discovery- und Logfehler sind fatal. Die acht lokalen Regressionen verwenden einen kontrollierten Linter; echter Hadolint und Shellcheck laufen in CI.
+
 ## Frontend Build (standalone)
 
 ```bash

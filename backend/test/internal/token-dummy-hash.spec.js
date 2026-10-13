@@ -1,54 +1,71 @@
 import bcrypt from "bcryptjs";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-/**
- * Fix #61: DUMMY_HASH in token.js must be a valid bcrypt hash so that
- * bcrypt.compare() actually performs the full KDF work instead of throwing
- * immediately on the malformed hash. Without this, response times differ
- * between "user not found" and "wrong password" paths, enabling user enumeration.
- */
+const state = vi.hoisted(() => ({ users: [], auth: undefined, createToken: vi.fn() }));
+vi.mock("../../models/user.js", () => ({
+	default: {
+		query: () => ({
+			whereRaw: vi.fn().mockReturnThis(),
+			andWhere: vi.fn().mockReturnThis(),
+			limit: async () => state.users,
+		}),
+	},
+}));
+vi.mock("../../models/auth.js", () => ({
+	default: {
+		query: () => ({ where: vi.fn().mockReturnThis(), first: async () => state.auth }),
+	},
+}));
+vi.mock("../../models/token.js", () => ({ default: () => ({ create: state.createToken }) }));
+vi.mock("../../internal/auth-session-service.js", () => ({ default: {} }));
 
-const DUMMY_HASH = "$2b$13$3w5sK5BtNWq/d7D6YQJfj.G2HM4.3roIvbxytInY6p3WiJjLfVdQ6";
+import tokens from "../../internal/token.js";
 
-describe("Fix #61: DUMMY_HASH is a valid bcrypt hash", () => {
-	it("DUMMY_HASH starts with a valid bcrypt prefix ($2b$)", () => {
-		expect(DUMMY_HASH).toMatch(/^\$2[ab]\$\d{2}\$/);
+const login = () => tokens.getTokenFromEmail({ identity: "missing@example.test", secret: "wrong-password" });
+
+describe("password login dummy work uses the real service hash", () => {
+	beforeEach(() => {
+		state.users = [];
+		state.auth = undefined;
+		state.createToken.mockReset();
+	});
+	afterEach(() => vi.restoreAllMocks());
+
+	it("performs actual bcrypt work with a valid cost-13 hash for a missing user", async () => {
+		const compare = vi.spyOn(bcrypt, "compare");
+		await expect(login()).rejects.toMatchObject({ name: "AuthError", message: "Invalid email or password" });
+		expect(compare).toHaveBeenCalledOnce();
+		const [password, hash] = compare.mock.calls[0];
+		expect(password).toBe("wrong-password");
+		expect(hash).toMatch(/^\$2[ab]\$13\$[./A-Za-z0-9]{53}$/);
+		expect(bcrypt.getRounds(hash)).toBe(13);
+		await expect(compare.mock.results[0].value).resolves.toBe(false);
+		expect(state.createToken).not.toHaveBeenCalled();
 	});
 
-	it("DUMMY_HASH has the correct length for a bcrypt hash (60 chars)", () => {
-		expect(DUMMY_HASH.length).toBe(60);
+	it.each([
+		["missing", []],
+		["disabled", [{ id: 7, is_disabled: 1 }]],
+		["ambiguous", [{ id: 7 }, { id: 8 }]],
+		["missing password", [{ id: 7, is_disabled: 0 }]],
+	])("awaits dummy work before rejecting a %s account", async (_reason, users) => {
+		state.users = users;
+		const work = Promise.withResolvers();
+		const compare = vi.spyOn(bcrypt, "compare").mockReturnValue(work.promise);
+		let settled = false;
+		const attempt = login().finally(() => {
+			settled = true;
+		});
+		const rejection = expect(attempt).rejects.toMatchObject({
+			name: "AuthError",
+			message: "Invalid email or password",
+		});
+		await vi.waitFor(() => expect(compare).toHaveBeenCalledOnce());
+		expect(settled).toBe(false);
+		work.resolve(false);
+		await rejection;
+		expect(settled).toBe(true);
+		expect(bcrypt.getRounds(compare.mock.calls[0][1])).toBe(13);
+		expect(state.createToken).not.toHaveBeenCalled();
 	});
-
-	it("bcrypt.compare() does NOT throw on DUMMY_HASH (old hash was malformed)", async () => {
-		// This must resolve (returning false) — not throw
-		await expect(bcrypt.compare("wrong-password", DUMMY_HASH)).resolves.toBe(false);
-	});
-
-	it("bcrypt.compare() returns false for any attempted password against DUMMY_HASH", async () => {
-		const result = await bcrypt.compare("attacker-guess", DUMMY_HASH);
-		expect(result).toBe(false);
-	});
-
-	it("DUMMY_HASH reports cost factor of 13", () => {
-		const rounds = bcrypt.getRounds(DUMMY_HASH);
-		expect(rounds).toBe(13);
-	});
-
-	it("OLD malformed hash returns false instantly without performing KDF work (timing oracle)", async () => {
-		const OLD_DUMMY_HASH = "$2a$13$mzC9.T8Qed0f/M9.2v.9JO/1.1.1.1.1.1.1.1.1.1.1.1.1.1";
-		const start = Date.now();
-		const result = await bcrypt.compare("any-password", OLD_DUMMY_HASH);
-		const elapsed = Date.now() - start;
-		// Old hash returns false but takes < 50ms — bcrypt did NOT perform the full KDF (cost-13 should take ~500ms)
-		expect(result).toBe(false);
-		expect(elapsed).toBeLessThan(50);
-	});
-
-	it("NEW DUMMY_HASH performs full KDF work (takes ~500ms at cost 13)", async () => {
-		const start = Date.now();
-		await bcrypt.compare("any-password", DUMMY_HASH);
-		const elapsed = Date.now() - start;
-		// Cost-13 bcrypt must take at least 200ms — proves real KDF work is done
-		expect(elapsed).toBeGreaterThan(200);
-	}, 10000);
 });

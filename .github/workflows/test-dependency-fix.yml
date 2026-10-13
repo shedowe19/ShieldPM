@@ -34,6 +34,16 @@ jobs:
       - name: Install locked backend dependencies
         working-directory: backend
         run: yarn install --frozen-lockfile
+      - name: Preserve migrated baseline lockfile
+        if: matrix.dependencies == 'locked'
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: migrated-frontend-lock
+          path: |
+            frontend/package.json
+            frontend/yarn.lock
+          if-no-files-found: error
+          retention-days: 7
       - name: Validate latest direct dependencies
         if: matrix.dependencies == 'latest'
         run: |

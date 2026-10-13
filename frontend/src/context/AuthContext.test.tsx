@@ -42,6 +42,7 @@ vi.mock("src/modules/AuthStore", () => ({
 import { AuthProvider, useAuthState } from "./AuthContext";
 
 let nextSessionProbeInstance = 0;
+const queryClients = new Set<QueryClient>();
 
 function AuthProbe() {
 	const { authenticated, loading, completeLogin, login, loginAs, logout } = useAuthState();
@@ -73,6 +74,7 @@ function SessionProbe() {
 
 function renderAuthProvider() {
 	const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+	queryClients.add(queryClient);
 
 	render(
 		<QueryClientProvider client={queryClient}>
@@ -88,7 +90,7 @@ function renderAuthProvider() {
 
 describe("AuthProvider", () => {
 	beforeEach(() => {
-		vi.clearAllMocks();
+		vi.resetAllMocks();
 		window.history.replaceState({}, "", "/");
 		nextSessionProbeInstance = 0;
 		mocks.authStoreActive = true;
@@ -97,6 +99,8 @@ describe("AuthProvider", () => {
 
 	afterEach(() => {
 		cleanup();
+		for (const queryClient of queryClients) queryClient.clear();
+		queryClients.clear();
 		window.history.replaceState({}, "", "/");
 	});
 
