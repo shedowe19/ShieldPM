@@ -10,7 +10,6 @@ describe("npm and Yarn dependency constraints", () => {
 	it("pins only remaining vulnerable transitive paths in both manifests", () => {
 		expect(readManifest("backend").resolutions).toEqual({
 			"**/get-uri/basic-ftp": "6.2.2",
-			"@apidevtools/swagger-parser/**/js-yaml": "4.3.2",
 			"@duosecurity/duo_universal/axios": "1.20.0",
 			"ajv/fast-uri": "3.1.8",
 			"archiver/**/brace-expansion": "5.0.12",

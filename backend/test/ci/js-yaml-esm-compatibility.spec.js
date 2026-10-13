@@ -1,4 +1,7 @@
 import fs from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import SwaggerParser from "@apidevtools/swagger-parser";
 import * as yaml from "js-yaml";
 import { describe, expect, it } from "vitest";
 import { backendSourcePath } from "../helpers/source-path.js";
@@ -6,7 +9,6 @@ import { backendSourcePath } from "../helpers/source-path.js";
 const readSource = (path) => fs.readFileSync(backendSourcePath(path), "utf8");
 
 const yamlConsumers = ["internal/anubis.js", "internal/gitops.js"];
-const packageManifest = JSON.parse(readSource("package.json"));
 
 describe("js-yaml ESM compatibility", () => {
 	it("uses the named exports exposed by js-yaml under Node 26", () => {
@@ -24,8 +26,46 @@ describe("js-yaml ESM compatibility", () => {
 		}
 	});
 
-	it("keeps the scoped security resolution for transitive js-yaml 4", () => {
-		// Resolved versions are checked separately without relying on Yarn's selector grouping.
-		expect(packageManifest.resolutions["@apidevtools/swagger-parser/**/js-yaml"]).toBe("4.3.2");
+	it("dereferences local schema references from a YAML OpenAPI document", async () => {
+		const directory = fs.mkdtempSync(join(tmpdir(), "shieldpm-openapi-yaml-"));
+		const documentPath = join(directory, "openapi.yaml");
+
+		try {
+			fs.writeFileSync(
+				documentPath,
+				[
+					"openapi: 3.0.3",
+					"info:",
+					"  title: YAML compatibility fixture",
+					"  version: 1.0.0",
+					"paths:",
+					"  /health:",
+					"    get:",
+					"      responses:",
+					"        '200':",
+					"          description: Health status",
+					"          content:",
+					"            application/json:",
+					"              schema:",
+					"                $ref: '#/components/schemas/Health'",
+					"components:",
+					"  schemas:",
+					"    Health:",
+					"      type: object",
+					"      properties:",
+					"        healthy:",
+					"          type: boolean",
+					"",
+				].join("\n"),
+			);
+
+			const document = await SwaggerParser.dereference(documentPath);
+			const responseSchema = document.paths["/health"].get.responses["200"].content["application/json"].schema;
+
+			expect(responseSchema).toBe(document.components.schemas.Health);
+			expect(responseSchema).toEqual({ type: "object", properties: { healthy: { type: "boolean" } } });
+		} finally {
+			fs.rmSync(directory, { recursive: true, force: true });
+		}
 	});
 });

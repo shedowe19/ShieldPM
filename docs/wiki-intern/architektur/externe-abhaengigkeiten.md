@@ -108,11 +108,25 @@ verwendet ausschließlich eingebaute deterministische Prüfungen und lokale AST-
 Provider-CLI oder Kontoanmeldung ist nicht erforderlich. Installation, Regelumfang und CI-Verhalten stehen in der
 [TScanner-Anleitung](../../wiki/TScanner.md).
 
+## YAML-Kompatibilität beim Dependency-Update
+
+`@apidevtools/swagger-parser` 13.1.0 verwendet `@apidevtools/json-schema-ref-parser` mit `^16.0.3`.
+Dieser Parser verlangt bereits `js-yaml` mit `^5.4.2`; die direkte Backend-Abhängigkeit ist `^5.4.3`.
+Der frühere scoped Sicherheits-Pin `@apidevtools/swagger-parser/**/js-yaml` auf 4.3.2 ist damit inkompatibel
+und wurde mitsamt seinem ungenutzten Lockfile-Eintrag entfernt. Yarn Classic wendet einen solchen Pin trotz
+seiner Versionswarnung an; die gemeinsame YAML-Abhängigkeit konnte dadurch beim Dependency-Update mit
+`Invariant Violation: should have a resolved reference` abbrechen.
+
+Die übrigen gezielten Sicherheitsauflösungen und die bestehenden Lockfile-Untergrenzen bleiben erhalten.
+`backend/test/ci/js-yaml-esm-compatibility.spec.js` prüft neben den Anwendungsimporten eine echte YAML-Datei
+durch Swagger Parser; `npm-package-constraints.spec.js` verhindert die Wiedereinführung des veralteten 4.x-Pins. Die unten dokumentierte
+September-Korrektur auf 4.3.2 beschreibt weiterhin den damaligen Paketstand.
+
 ## Sicherheitsprüfung September 2026
 
 Der dokumentierte `yarn audit --json`-Lauf meldete nach der damaligen Korrektur keine bekannten Befunde: Backend 0 bei 536 erfassten Abhängigkeiten, Frontend 0 bei 610. Zuvor wurden im Backend 13 hohe und 4 mittlere Befunde gemeldet; mehrere davon betreffen dieselben Pakete über unterschiedliche Pfade. Diese Zahlen sind ein historischer Snapshot vor späteren Dependency-Updates und keine aktuelle Sicherheitszusage.
 
-Gezielt aktualisiert wurden `fast-uri` von 3.1.5 auf 3.1.6, `qs` von 6.15.3 auf 6.16.0, `nanoid` von 3.3.16 auf 3.3.18 und die transitive `@apidevtools/swagger-parser`-Kette für `js-yaml` auf 4.3.2. Die Resolutions bleiben auf die betroffenen Abhängigkeitspfade begrenzt; die Sicherheitstests kontrollieren die korrigierten Lockfile-Versionen.
+Gezielt aktualisiert wurden `fast-uri` von 3.1.5 auf 3.1.6, `qs` von 6.15.3 auf 6.16.0, `nanoid` von 3.3.16 auf 3.3.18 und die transitive `@apidevtools/swagger-parser`-Kette für `js-yaml` auf 4.3.2. Die damaligen Resolutions waren auf die betroffenen Abhängigkeitspfade begrenzt; die Sicherheitstests kontrollieren weiterhin die korrigierten Lockfile-Untergrenzen.
 
 ## Sicherheitsprüfung Oktober 2026
 
