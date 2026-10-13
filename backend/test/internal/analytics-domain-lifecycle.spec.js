@@ -25,8 +25,8 @@ const retentionQuery = () => ({ where: () => ({ delete: async () => 0 }) });
 vi.mock("../../models/analytics_logs.js", () => ({ default: { query: () => retentionQuery() } }));
 vi.mock("../../models/analytic_count.js", () => ({ default: { query: () => retentionQuery() } }));
 
-import { notifyProxyHostDomainsChanged } from "../../lib/proxy-host-domain-events.js";
 import { AnalyticsService } from "../../internal/analytics.js";
+import { notifyProxyHostDomainsChanged } from "../../lib/proxy-host-domain-events.js";
 
 const deferred = () => {
 	let resolve;

@@ -73,7 +73,8 @@ const activateMaintenance = async (hosts) => {
 			stages.map((stage) => internalNginx.rollbackStagedConfig(stage, error)),
 		);
 		for (const rollback of rollbacks) {
-			if (rollback.status === "rejected") logger.error("Maintenance configuration rollback failed:", rollback.reason);
+			if (rollback.status === "rejected")
+				logger.error("Maintenance configuration rollback failed:", rollback.reason);
 		}
 		if (stages.length) {
 			try {
@@ -166,7 +167,9 @@ const internalMaintenance = {
 				.query()
 				.where("is_deleted", 0)
 				.andWhere(function () {
-					this.whereNotNull("maintenance_start").orWhereNotNull("maintenance_end").orWhere("maintenance_pending", 1);
+					this.whereNotNull("maintenance_start")
+						.orWhereNotNull("maintenance_end")
+						.orWhere("maintenance_pending", 1);
 				});
 
 			const activeTimerKeys = new Set(hosts.map((host) => `host_${host.id}`));

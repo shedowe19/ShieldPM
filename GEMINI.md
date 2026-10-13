@@ -196,6 +196,8 @@ SQL is legitimate, and the Nginx engine serializes changes without a mandatory g
 
 The October repository rescan, confirmed fixes, and validation limits for PR #149 are recorded in [the internal audit report](./docs/wiki-intern/entwicklung/code-audit-2026-10.md).
 
+The [October 13 optimization review](./docs/wiki-intern/entwicklung/optimierungspruefung-2026-10-13.md) implements thirteen additional fixes. Public Cloudflare, DDNS and Access List responses expose configured indicators instead of secrets; omitted replacements preserve current credentials inside locked writes. Nginx batches retain all backups until status writes settle. Maintenance persists a private `maintenance_pending` activation job and retries failed reloads across restarts. Monitor scans refill at most five workers across a bounded 100-host batch. Analytics refreshes domain mappings after committed changes, coalesces reads and releases its domain timer/subscription; GitOps notifies once per host batch. Native installs and updates share an inherited maintenance lock, replace application payloads exactly and stage optional binary transfers before downtime. Manual latest builds promote only the image digests that passed both native smoke suites. Editing dialogs preserve fresh opening snapshots and reject older mutation completions; Proxy Host search debounces 300 ms and forwards cancellation.
+
 ### 6.1 Nginx Configuration Engine (`backend/internal/nginx.js`)
 
 - **Core Logic**: Reads DB state -> Renders Liquid templates (`backend/templates/`) -> Writes `.conf` files to `/data/nginx/`.

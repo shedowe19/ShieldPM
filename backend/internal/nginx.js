@@ -574,7 +574,8 @@ const internalNginx = {
 					stages.map(({ host_type, host }) => internalNginx.deleteBackupConfig(host_type, host)),
 				);
 				for (const cleanup of cleanups) {
-					if (cleanup.status === "rejected") logger.error(`Nginx backup cleanup failed: ${cleanup.reason.message}`);
+					if (cleanup.status === "rejected")
+						logger.error(`Nginx backup cleanup failed: ${cleanup.reason.message}`);
 				}
 				Promise.resolve()
 					.then(() => internalAnubis.generatePolicy())

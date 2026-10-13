@@ -191,7 +191,8 @@ describe("Nginx bulk validation outcome", () => {
 		});
 		const statuses = await nginx.bulkGenerateConfigGroups(groups(), { throwOnError: true });
 		expect(statuses.every((status) => status.nginx_online)).toBe(true);
-		for (const row of rows) expect(await fs.promises.readFile(filename(row.id), "utf8")).toBe(`replacement ${row.id}`);
+		for (const row of rows)
+			expect(await fs.promises.readFile(filename(row.id), "utf8")).toBe(`replacement ${row.id}`);
 		expect(await fs.promises.readFile(`${filename(2)}.bak`, "utf8")).toBe("working 2");
 	});
 });

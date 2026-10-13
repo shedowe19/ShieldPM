@@ -36,10 +36,10 @@ import jwt from "../../lib/express/jwt.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
 import DdnsProvider from "../../models/ddns_provider.js";
 import Token from "../../models/token.js";
-import { getCompiledSchema } from "../../schema/index.js";
 import accessRouter from "../../routes/nginx/access_lists.js";
 import cloudRouter from "../../routes/nginx/cloudflared.js";
 import ddnsRouter from "../../routes/nginx/ddns_providers.js";
+import { getCompiledSchema } from "../../schema/index.js";
 
 const secret = "synthetic-secret-do-not-return";
 const accessMeta = {
@@ -52,7 +52,7 @@ const accessMeta = {
 let server;
 let origin;
 const tokens = {};
-const request = async (user, resource, suffix = "", body) => {
+const request = async (user, resource, suffix = "", body = undefined) => {
 	const response = await fetch(`${origin}/api/nginx/${resource}${suffix}`, {
 		method: body ? "PUT" : "GET",
 		headers: { Authorization: `Bearer ${tokens[user]}`, "Content-Type": "application/json" },
@@ -133,15 +133,13 @@ beforeAll(async () => {
 		["manager", 4, "all", "manage"],
 	]) {
 		await state.db("user").insert({ id, roles: "[]" });
-		await state
-			.db("user_permission")
-			.insert({
-				user_id: id,
-				visibility,
-				access_lists: permission,
-				cloudflared_tunnels: permission,
-				ddns_providers: permission,
-			});
+		await state.db("user_permission").insert({
+			user_id: id,
+			visibility,
+			access_lists: permission,
+			cloudflared_tunnels: permission,
+			ddns_providers: permission,
+		});
 		tokens[name] = (await Token().create({ attrs: { id }, scope: ["user"], expiresIn: "5m" })).token;
 	}
 	const app = express();
@@ -167,17 +165,15 @@ beforeEach(async () => {
 		[2, 2],
 	]) {
 		await CloudflaredTunnel.query().insert({ id, owner_user_id: owner, name: "Tunnel", token: secret, meta: {} });
-		await state
-			.db("ddns_provider")
-			.insert({
-				id,
-				owner_user_id: owner,
-				name: "DNS",
-				provider: "cloudflare",
-				config: JSON.stringify({ token: secret, zone_id: "public-zone" }),
-				domains: '["example.test"]',
-				meta: "{}",
-			});
+		await state.db("ddns_provider").insert({
+			id,
+			owner_user_id: owner,
+			name: "DNS",
+			provider: "cloudflare",
+			config: JSON.stringify({ token: secret, zone_id: "public-zone" }),
+			domains: '["example.test"]',
+			meta: "{}",
+		});
 		await state
 			.db("access_list")
 			.insert({ id, owner_user_id: owner, name: "Access", meta: JSON.stringify(accessMeta) });

@@ -144,7 +144,10 @@ export class AnalyticsService {
 		try {
 			while (generation === this.domainGeneration) {
 				const revision = this.domainRevision;
-				const hosts = await ProxyHost.query().where("is_deleted", 0).select("id").withGraphFetched("host_domains");
+				const hosts = await ProxyHost.query()
+					.where("is_deleted", 0)
+					.select("id")
+					.withGraphFetched("host_domains");
 				if (generation !== this.domainGeneration) return;
 				// A committed change during the read requires a fresh snapshot before publication.
 				if (revision !== this.domainRevision) continue;

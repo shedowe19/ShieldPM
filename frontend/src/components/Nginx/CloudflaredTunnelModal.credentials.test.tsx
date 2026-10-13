@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CloudflaredTunnel } from "@/api/backend";
 import { CloudflaredTunnelModal } from "./CloudflaredTunnelModal";
+import type { CloudflaredTunnel } from "@/api/backend";
 
 const mocks = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn(), changeOpen: vi.fn() }));
 vi.mock("@/hooks/useCloudflaredTunnel", () => ({

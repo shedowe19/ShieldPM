@@ -72,15 +72,15 @@ if (args[0] === "image" && args[1] === "inspect") console.log(process.env.MOCK_D
 			},
 		},
 	);
-	const calls = fs.existsSync(dockerLog)
-		? fs.readFileSync(dockerLog, "utf8").trim().split("\n").map(JSON.parse)
-		: [];
+	const calls = fs.existsSync(dockerLog) ? fs.readFileSync(dockerLog, "utf8").trim().split("\n").map(JSON.parse) : [];
 	return { result, calls, directory };
 };
 
 describe("Latest Docker publication workflow", () => {
 	it("tests the loaded candidate on both native architectures before pushing it", () => {
-		expect(workflow.jobs.build.strategy.matrix.include).toEqual(standardWorkflow.jobs.build.strategy.matrix.include);
+		expect(workflow.jobs.build.strategy.matrix.include).toEqual(
+			standardWorkflow.jobs.build.strategy.matrix.include,
+		);
 		const finalBuild = steps.find((step) => step.with?.load === true);
 		expect(finalBuild?.with.push).toBe(false);
 		expect(finalBuild?.with.tags).toBe(
@@ -128,8 +128,16 @@ describe("Latest Docker publication workflow", () => {
 		expect(result.status, result.stderr).toBe(0);
 		expect(calls).toEqual([
 			[
-				"buildx", "imagetools", "create", "--tag", `${imageName}:latest`,
-				"--tag", `${imageName}:v4.4.1`, "--tag", `${imageName}:42`, ...refs,
+				"buildx",
+				"imagetools",
+				"create",
+				"--tag",
+				`${imageName}:latest`,
+				"--tag",
+				`${imageName}:v4.4.1`,
+				"--tag",
+				`${imageName}:42`,
+				...refs,
 			],
 			["buildx", "imagetools", "create", "--prefer-index=false", "--tag", `${imageName}:latest-x86_64`, refs[0]],
 			["buildx", "imagetools", "create", "--prefer-index=false", "--tag", `${imageName}:latest-aarch64`, refs[1]],
@@ -141,7 +149,10 @@ describe("Latest Docker publication workflow", () => {
 		["invalid digest", { "image-digests/x86_64.txt": refs[0], "image-digests/aarch64.txt": "invalid" }],
 		[
 			"foreign repository",
-			{ "image-digests/x86_64.txt": refs[0], "image-digests/aarch64.txt": `other/image@sha256:${"c".repeat(64)}` },
+			{
+				"image-digests/x86_64.txt": refs[0],
+				"image-digests/aarch64.txt": `other/image@sha256:${"c".repeat(64)}`,
+			},
 		],
 	])("rejects %s before changing any published tag", (_name, files) => {
 		const { result, calls } = runScript(mergeScript, { files });

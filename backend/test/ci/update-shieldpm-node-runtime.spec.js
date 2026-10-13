@@ -224,7 +224,9 @@ printf 'elapsed=%s' "$SECONDS"
 
 	it("updates optional runtime binaries and waits for migrations to become healthy", () => {
 		expect(nativeBinaryPreflight).toMatch(/version=1\.27\.0[\s\S]*https:\/\/github\.com\/TecharoHQ\/anubis/);
-		expect(nativeBinaryPreflight).toMatch(/version=7\.15\.3[\s\S]*https:\/\/github\.com\/oauth2-proxy\/oauth2-proxy/);
+		expect(nativeBinaryPreflight).toMatch(
+			/version=7\.15\.3[\s\S]*https:\/\/github\.com\/oauth2-proxy\/oauth2-proxy/,
+		);
 		expect(nativeBinaryPreflight).toContain('python3 "$helper" binary');
 		expect(updater).toContain("wait_for_backend_health()");
 		expect(updater).toContain("--unix-socket /run/shieldpm/shieldpm.sock");
@@ -255,7 +257,9 @@ printf 'elapsed=%s' "$SECONDS"
 		expect(updater).toContain("database-backup-checkpoint");
 		const checkpointAt = updateActions.indexOf("if ! confirm_database_recovery_checkpoint; then");
 		expect(checkpointAt).toBeGreaterThanOrEqual(0);
-		expect(checkpointAt).toBeLessThan(updateActions.indexOf('cp -a "$BACKEND_DIR" "$UPDATE_RUN_DIR/backend-backup"'));
+		expect(checkpointAt).toBeLessThan(
+			updateActions.indexOf('cp -a "$BACKEND_DIR" "$UPDATE_RUN_DIR/backend-backup"'),
+		);
 		expect(checkpointAt).toBeLessThan(updateActions.indexOf("\nsystemctl stop shieldpm\n"));
 	});
 

@@ -417,7 +417,9 @@ describe("proxy host upstream monitor", () => {
 			await state.db("proxy_host_monitor").where("host_id", 1001).update({ timeout_ms: 15000 });
 			const pending = monitor.tick();
 			await vi.waitFor(() => expect(fastResponses).toBe(29), { timeout: 5000 });
-			expect(await state.db("proxy_host_monitor").where("host_id", 1001).first()).toMatchObject({ checked_at: null });
+			expect(await state.db("proxy_host_monitor").where("host_id", 1001).first()).toMatchObject({
+				checked_at: null,
+			});
 			expect(maximumSimultaneous).toBeLessThanOrEqual(5);
 			releaseSlow.resolve();
 			await pending;

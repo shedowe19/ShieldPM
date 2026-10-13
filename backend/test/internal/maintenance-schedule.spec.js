@@ -36,8 +36,18 @@ describe.each(["sqlite", "postgres"])("durable maintenance activation in %s", (e
 	let embedded;
 	const filename = (id = 1) => path.join(directory, `${id}.conf`);
 	const insertHost = async (data = {}) => {
-		await state.db("proxy_host").insert({ id: 1, forward_host: "upstream.example.test", forward_scheme: "http", forward_port: 8080, meta: "{}", maintenance_start: "2026-09-01T12:00:00Z", ...data });
-		await state.db("host_domain").insert({ proxy_host_id: data.id || 1, domain_name: `host-${data.id || 1}.example.test` });
+		await state.db("proxy_host").insert({
+			id: 1,
+			forward_host: "upstream.example.test",
+			forward_scheme: "http",
+			forward_port: 8080,
+			meta: "{}",
+			maintenance_start: "2026-09-01T12:00:00Z",
+			...data,
+		});
+		await state
+			.db("host_domain")
+			.insert({ proxy_host_id: data.id || 1, domain_name: `host-${data.id || 1}.example.test` });
 		await fs.promises.writeFile(filename(data.id || 1), `working ${data.id || 1}`);
 	};
 	const persisted = () => ProxyHost.query().findById(1);
@@ -52,8 +62,18 @@ describe.each(["sqlite", "postgres"])("durable maintenance activation in %s", (e
 		}
 		await state.db.schema.createTable("proxy_host", (table) => {
 			table.increments("id");
-			for (const name of ["forward_host", "forward_scheme", "domain_names", "meta", "modified_on", "maintenance_start", "maintenance_end"]) table.text(name);
-			for (const name of ["forward_port", "certificate_id", "access_list_id", "is_deleted", "maintenance_active"]) table.integer(name).defaultTo(0);
+			for (const name of [
+				"forward_host",
+				"forward_scheme",
+				"domain_names",
+				"meta",
+				"modified_on",
+				"maintenance_start",
+				"maintenance_end",
+			])
+				table.text(name);
+			for (const name of ["forward_port", "certificate_id", "access_list_id", "is_deleted", "maintenance_active"])
+				table.integer(name).defaultTo(0);
 			table.integer("enabled").defaultTo(1);
 		});
 		await addPending(state.db);
@@ -62,17 +82,19 @@ describe.each(["sqlite", "postgres"])("durable maintenance activation in %s", (e
 			table.integer("proxy_host_id");
 			table.text("domain_name");
 		});
-		for (const name of ["certificate", "access_list"]) await state.db.schema.createTable(name, (table) => {
-			table.increments("id");
-			table.integer("is_deleted").defaultTo(0);
-			table.text("meta");
-			table.text("provider");
-		});
-		for (const name of ["access_list_auth", "access_list_client"]) await state.db.schema.createTable(name, (table) => {
-			table.increments("id");
-			table.integer("access_list_id");
-			table.text("username");
-		});
+		for (const name of ["certificate", "access_list"])
+			await state.db.schema.createTable(name, (table) => {
+				table.increments("id");
+				table.integer("is_deleted").defaultTo(0);
+				table.text("meta");
+				table.text("provider");
+			});
+		for (const name of ["access_list_auth", "access_list_client"])
+			await state.db.schema.createTable(name, (table) => {
+				table.increments("id");
+				table.integer("access_list_id");
+				table.text("username");
+			});
 	});
 	beforeEach(async () => {
 		directory = await fs.promises.mkdtemp(path.join(os.tmpdir(), "shieldpm-maintenance-"));
@@ -101,7 +123,11 @@ describe.each(["sqlite", "postgres"])("durable maintenance activation in %s", (e
 	it("activates at the exact scheduled instant and clears a one-shot only after reload", async () => {
 		await insertHost();
 		await maintenance.processMaintenance();
-		expect(await persisted()).toMatchObject({ maintenance_active: true, maintenance_pending: false, maintenance_start: null });
+		expect(await persisted()).toMatchObject({
+			maintenance_active: true,
+			maintenance_pending: false,
+			maintenance_start: null,
+		});
 		expect(await fs.promises.readFile(filename(), "utf8")).toContain("/maintenance.html =503");
 		expect(reloadCalls()).toHaveLength(1);
 		expect(sanitizeProxyHost(await persisted())).not.toHaveProperty("maintenance_pending");
@@ -109,7 +135,11 @@ describe.each(["sqlite", "postgres"])("durable maintenance activation in %s", (e
 	it("keeps disabled hosts disabled while completing their schedule", async () => {
 		await insertHost({ enabled: 0 });
 		await maintenance.processMaintenance();
-		expect(await persisted()).toMatchObject({ maintenance_active: true, maintenance_pending: false, maintenance_start: null });
+		expect(await persisted()).toMatchObject({
+			maintenance_active: true,
+			maintenance_pending: false,
+			maintenance_start: null,
+		});
 		expect(await fs.promises.readFile(filename(), "utf8")).toBe("working 1");
 		expect(utils.execFile).not.toHaveBeenCalled();
 	});
@@ -121,7 +151,8 @@ describe.each(["sqlite", "postgres"])("durable maintenance activation in %s", (e
 	});
 	it.each(["render", "test", "reload"])("retries a failed %s without consuming its schedule", async (phase) => {
 		await insertHost();
-		if (phase === "render") vi.spyOn(nginx, "generateConfig").mockRejectedValueOnce(new Error("Temporary render failure"));
+		if (phase === "render")
+			vi.spyOn(nginx, "generateConfig").mockRejectedValueOnce(new Error("Temporary render failure"));
 		else {
 			let rejected = false;
 			utils.execFile.mockImplementation(async (_command, args) => {
@@ -133,10 +164,18 @@ describe.each(["sqlite", "postgres"])("durable maintenance activation in %s", (e
 			});
 		}
 		await maintenance.processMaintenance();
-		expect(await persisted()).toMatchObject({ maintenance_active: true, maintenance_pending: true, maintenance_start: "2026-09-01T12:00:00.000Z" });
+		expect(await persisted()).toMatchObject({
+			maintenance_active: true,
+			maintenance_pending: true,
+			maintenance_start: "2026-09-01T12:00:00.000Z",
+		});
 		expect(await fs.promises.readFile(filename(), "utf8")).toBe("working 1");
 		await maintenance.processMaintenance();
-		expect(await persisted()).toMatchObject({ maintenance_active: true, maintenance_pending: false, maintenance_start: null });
+		expect(await persisted()).toMatchObject({
+			maintenance_active: true,
+			maintenance_pending: false,
+			maintenance_start: null,
+		});
 		expect(await fs.promises.readFile(filename(), "utf8")).toContain("/maintenance.html =503");
 	});
 	it("recovers a persisted pending activation after startup without any remaining dates", async () => {
@@ -146,12 +185,25 @@ describe.each(["sqlite", "postgres"])("durable maintenance activation in %s", (e
 		expect(await fs.promises.readFile(filename(), "utf8")).toContain("/maintenance.html =503");
 	});
 	it("retries a failed scheduled end and clears both dates only after activation", async () => {
-		await insertHost({ maintenance_active: 1, maintenance_start: "2026-09-01T11:00:00Z", maintenance_end: "2026-09-01T12:00:00Z" });
+		await insertHost({
+			maintenance_active: 1,
+			maintenance_start: "2026-09-01T11:00:00Z",
+			maintenance_end: "2026-09-01T12:00:00Z",
+		});
 		vi.spyOn(nginx, "reload").mockRejectedValueOnce(new Error("Temporary reload failure"));
 		await maintenance.processMaintenance();
-		expect(await persisted()).toMatchObject({ maintenance_active: false, maintenance_pending: true, maintenance_end: "2026-09-01T12:00:00.000Z" });
+		expect(await persisted()).toMatchObject({
+			maintenance_active: false,
+			maintenance_pending: true,
+			maintenance_end: "2026-09-01T12:00:00.000Z",
+		});
 		await maintenance.processMaintenance();
-		expect(await persisted()).toMatchObject({ maintenance_active: false, maintenance_pending: false, maintenance_start: null, maintenance_end: null });
+		expect(await persisted()).toMatchObject({
+			maintenance_active: false,
+			maintenance_pending: false,
+			maintenance_start: null,
+			maintenance_end: null,
+		});
 		expect(await fs.promises.readFile(filename(), "utf8")).not.toContain("/maintenance.html =503");
 	});
 	it("restores every staged host after a later render failure and activates one retry batch", async () => {
@@ -171,7 +223,10 @@ describe.each(["sqlite", "postgres"])("durable maintenance activation in %s", (e
 		utils.execFile.mockClear();
 		await maintenance.processMaintenance();
 		for (const id of [1, 2]) {
-			expect(await ProxyHost.query().findById(id)).toMatchObject({ maintenance_pending: false, maintenance_start: null });
+			expect(await ProxyHost.query().findById(id)).toMatchObject({
+				maintenance_pending: false,
+				maintenance_start: null,
+			});
 			expect(await fs.promises.readFile(filename(id), "utf8")).toContain("/maintenance.html =503");
 		}
 		expect(reloadCalls()).toHaveLength(1);
@@ -182,14 +237,23 @@ describe.each(["sqlite", "postgres"])("durable maintenance activation in %s", (e
 		utils.execFile.mockImplementation(async (_command, args) => {
 			if (args[0] === "-s" && !edited) {
 				edited = true;
-				await ProxyHost.query().findById(1).patch({ maintenance_active: 0, maintenance_start: "2026-09-02T12:00:00Z" });
+				await ProxyHost.query()
+					.findById(1)
+					.patch({ maintenance_active: 0, maintenance_start: "2026-09-02T12:00:00Z" });
 			}
 			return "";
 		});
 		await maintenance.processMaintenance();
-		expect(await persisted()).toMatchObject({ maintenance_active: false, maintenance_pending: true, maintenance_start: "2026-09-02T12:00:00.000Z" });
+		expect(await persisted()).toMatchObject({
+			maintenance_active: false,
+			maintenance_pending: true,
+			maintenance_start: "2026-09-02T12:00:00.000Z",
+		});
 		await maintenance.processMaintenance();
-		expect(await persisted()).toMatchObject({ maintenance_pending: false, maintenance_start: "2026-09-02T12:00:00.000Z" });
+		expect(await persisted()).toMatchObject({
+			maintenance_pending: false,
+			maintenance_start: "2026-09-02T12:00:00.000Z",
+		});
 		expect(await fs.promises.readFile(filename(), "utf8")).not.toContain("/maintenance.html =503");
 	});
 	it("does not overflow Node's timer limit for distant future dates", () => {

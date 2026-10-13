@@ -61,7 +61,7 @@ export function CloudflaredTunnelModal({ open, onOpenChange, tunnel }: Cloudflar
 
 	const onSubmit = (values: z.infer<typeof formSchema>) => {
 		if (!open || submissionPending.current) return;
-		if ((!tunnel || !tunnel.hasToken) && !values.token) {
+		if (!tunnel?.hasToken && !values.token) {
 			form.setError("token", { message: intl.formatMessage({ id: "error.required_field" }) });
 			return;
 		}

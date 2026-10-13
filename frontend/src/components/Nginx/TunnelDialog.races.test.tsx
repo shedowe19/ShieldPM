@@ -2,9 +2,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { TorOnion, WireguardPeer } from "@/api/backend";
 import { TorOnionModal } from "./TorOnionModal";
 import { WireguardPeerModal } from "./WireguardPeerModal";
+import type { TorOnion, WireguardPeer } from "@/api/backend";
 
 const mocks = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn(), getPeers: vi.fn(), onCreated: vi.fn() }));
 vi.mock("@/api/backend", () => ({
