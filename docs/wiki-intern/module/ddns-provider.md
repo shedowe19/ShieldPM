@@ -12,6 +12,8 @@ Das DDNS-Modul nutzt Provider-spezifische Logik, um IP-Adressen zu aktualisieren
 
 - `backend/internal/ddns-provider.js` — Provider-Verwaltung
 - `backend/internal/ddns.js` — Hauptlogik, die die Provider aufruft
+- `backend/lib/service-credentials.js` — öffentliche Konfiguration und Erhaltung gespeicherter Zugangsdaten
+- `frontend/src/modals/DdnsProviderModal.tsx` — Bearbeitung mit frischem Öffnungssnapshot
 
 ## Verhalten
 
@@ -36,6 +38,14 @@ Auch direkte interne Aufrufe von `update()` und `test()` benötigen `ddns_provid
 ### REST-Schemavertrag
 
 Die PUT-Route lädt ihr Request-Schema unter dem im zusammengesetzten OpenAPI-Dokument definierten Pfad `/nginx/ddns-providers/{id}`. Der Dateiverzeichnisname `providerID` ist kein OpenAPI-Pfadsegment. Ein Regressionstest lädt das reale Schema und prüft, dass reguläre Änderungen akzeptiert und unbekannte Felder abgewiesen werden.
+
+### Öffentliche Konfiguration und Zugangsdaten
+
+Listen-, Detail-, Erstellungs- und Änderungsantworten entfernen Zugangsdaten aus `config`. Bei Cloudflare bleibt ausschließlich `zone_id` sichtbar; DuckDNS und benutzerdefinierte Provider liefern ein leeres Konfigurationsobjekt. Eine benutzerdefinierte URL wird vollständig entfernt, weil Pfad, Query oder URL-Benutzerinfo Zugangsdaten enthalten können. `has_credentials` meldet lediglich, ob ein Token beziehungsweise eine benutzerdefinierte URL hinterlegt ist. Die Bereinigung gilt unabhängig von eigener oder globaler Sichtbarkeit.
+
+Beim Update wird der aktuelle autorisierte Datensatz innerhalb einer Transaktion mit `forUpdate()` gelesen. Für denselben Provider werden ausgelassene oder leere Zugangsdaten aus diesem aktuellen Datensatz übernommen; ein zwischenzeitlich rotierter Token wird deshalb nicht aus einem früheren Formular- oder Servicesnapshot wiederhergestellt. Nicht leere Eingaben ersetzen den gespeicherten Wert. Beim Wechsel des Providertyps werden die Zugangsdaten des bisherigen Providers nicht übernommen. Der operative Test lädt ausdrücklich die tatsächlichen Zugangsdaten; reguläre öffentliche Lesemethoden bleiben bereinigt. Das DDNS-Modul und der GitOps-Export behalten ihren internen Zugriff auf die gespeicherte Konfiguration. DDNS-Auditantworten enthalten weiterhin kein `config`.
+
+Der Dialog wartet vor der Bearbeitung auf seine Öffnungsaktualisierung, hält danach den Entwurf stabil und zeigt für vorhandene Zugangsdaten ein leeres Feld mit Beibehalten-Hinweis. Beim Speichern eines unveränderten Secrets lässt er den Wert aus. Eine reine Namensänderung erhält den Providerstatus, statt einen deaktivierten Provider erneut zu aktivieren. `DdnsProviderModal.test.tsx` und `backend/test/routes/service-credentials.spec.js` prüfen öffentliche Antworten, Eigentümergrenzen, erhaltene Zugangsdaten und den operativen Test.
 
 ## Offene Fragen
 

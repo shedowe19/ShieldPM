@@ -7,6 +7,27 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+# Keep one maintenance operation active, including both updater exec handoffs.
+# Never unlink this file: another process could otherwise lock a different inode.
+MAINTENANCE_LOCK_DIR=/run/shieldpm-maintenance
+if ! command -v flock >/dev/null 2>&1; then
+    echo "ShieldPM maintenance requires flock from util-linux." >&2
+    exit 1
+fi
+if [ -L "$MAINTENANCE_LOCK_DIR" ]; then
+    echo "Unsafe ShieldPM maintenance lock directory." >&2
+    exit 1
+fi
+install -d -o 0 -g 0 -m 700 "$MAINTENANCE_LOCK_DIR"
+MAINTENANCE_LOCK="$MAINTENANCE_LOCK_DIR/operation.lock"
+if ! [[ /proc/$$/fd/9 -ef "$MAINTENANCE_LOCK" ]]; then
+    exec 9>"$MAINTENANCE_LOCK"
+fi
+if ! flock -n 9; then
+    echo "Another ShieldPM install or update is already running." >&2
+    exit 1
+fi
+
 # Use a private, unpredictable directory before replacing the installed updater.
 SELF_PATH=$(readlink -f "$0")
 if [[ "$SELF_PATH" != /tmp/shieldpm-update.*/update-shieldpm || "$SELF_PATH" != "${SHIELDPM_UPDATE_RUNNING:-}" ]]; then
@@ -339,6 +360,102 @@ install_node_26() {
     echo "    - Node.js $NODE_VERSION, npm $(npm --version), Yarn $(yarn --version)"
 }
 
+stage_native_binaries() {
+    local helper="$TEMP_DIR/rootfs/usr/local/bin/stage-native-binaries.py"
+    local release_base="https://github.com/shedowe19/ShieldPM/releases/download/nginx-binaries"
+    local version url member
+    local stage="$UPDATE_RUN_DIR/binaries"
+
+    STAGED_NGINX=false
+    STAGED_ANUBIS=false
+    STAGED_OAUTH2=false
+    ANUBIS_INSTALLED=false
+    [ ! -f /usr/local/bin/anubis ] || ANUBIS_INSTALLED=true
+    ARCH=$(dpkg --print-architecture)
+    mkdir -p "$stage"
+    if [[ "$ARCH" != amd64 && "$ARCH" != arm64 ]]; then
+        echo "    - Skipping native binary updates: Architecture $ARCH not supported."
+        return 0
+    fi
+    if [ ! -f "$helper" ]; then
+        echo "Missing native archive preflight helper; no application files were changed." >&2
+        return 1
+    fi
+
+    echo "--> [5/9] Preparing Nginx Binary Updates..."
+    read -p "    ? Update compiled Nginx binaries? (Recommended) [Y/n] " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+        curl --fail --location --connect-timeout 10 --max-time 900 --retry 2 --retry-max-time 900 \
+            -o "$stage/nginx.tar.gz" "$release_base/nginx-linux-$ARCH.tar.gz"
+        python3 "$helper" nginx "$stage/nginx.tar.gz" "$stage/nginx" "$ARCH"
+        STAGED_NGINX=true
+    fi
+
+    echo "--> [6/9] Preparing Anubis AI Firewall Updates..."
+    if [ "$ANUBIS_INSTALLED" = true ]; then
+        read -p "    ? Update Anubis binary? [Y/n] " -n 1 -r
+    else
+        read -p "    ? Install Anubis AI Firewall? [y/N] " -n 1 -r
+    fi
+    echo ""
+    if { [ "$ANUBIS_INSTALLED" = true ] && [[ ! $REPLY =~ ^[Nn]$ ]]; } || \
+        { [ "$ANUBIS_INSTALLED" = false ] && [[ $REPLY =~ ^[Yy]$ ]]; }; then
+        version=1.27.0
+        member="anubis-$version-linux-$ARCH/bin/anubis"
+        url="https://github.com/TecharoHQ/anubis/releases/download/v$version/anubis-$version-linux-$ARCH.tar.gz"
+        curl --fail --location --connect-timeout 10 --max-time 900 --retry 2 --retry-max-time 900 \
+            -o "$stage/anubis.tar.gz" "$url"
+        python3 "$helper" binary "$stage/anubis.tar.gz" "$stage/anubis" "$ARCH" "$member"
+        STAGED_ANUBIS=true
+    fi
+
+    echo "--> [7/9] Preparing OAuth2 Proxy Updates..."
+    if [ -f /usr/local/bin/oauth2-proxy ]; then
+        read -p "    ? Update OAuth2 Proxy binary? [Y/n] " -n 1 -r
+    else
+        read -p "    ? Install OAuth2 Proxy? [y/N] " -n 1 -r
+    fi
+    echo ""
+    if { [ -f /usr/local/bin/oauth2-proxy ] && [[ ! $REPLY =~ ^[Nn]$ ]]; } || \
+        { [ ! -f /usr/local/bin/oauth2-proxy ] && [[ $REPLY =~ ^[Yy]$ ]]; }; then
+        version=7.15.3
+        member="oauth2-proxy-v$version.linux-$ARCH/oauth2-proxy"
+        url="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v$version/oauth2-proxy-v$version.linux-$ARCH.tar.gz"
+        curl --fail --location --connect-timeout 10 --max-time 900 --retry 2 --retry-max-time 900 \
+            -o "$stage/oauth2-proxy.tar.gz" "$url"
+        python3 "$helper" binary "$stage/oauth2-proxy.tar.gz" "$stage/oauth2-proxy" "$ARCH" "$member"
+        STAGED_OAUTH2=true
+    fi
+}
+
+apply_staged_native_binaries() {
+    local stage="$UPDATE_RUN_DIR/binaries"
+    if [ "$STAGED_NGINX" = true ]; then
+        cp -a "$stage/nginx/usr/." /usr/
+        ldconfig
+        echo "    - Prepared Nginx binaries installed."
+    fi
+    if [ "$STAGED_ANUBIS" = true ]; then
+        install -m 755 "$stage/anubis" /usr/local/bin/anubis
+        if [ "$ANUBIS_INSTALLED" = false ]; then
+            ENV_FILE="/data/.env"
+            if [ -f "$ENV_FILE" ]; then
+                    if grep -qE '^[[:space:]]*(#[[:space:]]*)?(export[[:space:]]+)?ANUBIS_ENABLED=' "$ENV_FILE"; then
+                        sed -i -E 's|^[[:space:]]*(#[[:space:]]*)?(export[[:space:]]+)?ANUBIS_ENABLED=.*$|ANUBIS_ENABLED=true|' "$ENV_FILE"
+                    else
+                        echo "ANUBIS_ENABLED=true" >> "$ENV_FILE"
+                    fi
+            fi
+        fi
+        echo "    - Prepared Anubis binary installed."
+    fi
+    if [ "$STAGED_OAUTH2" = true ]; then
+        install -m 755 "$stage/oauth2-proxy" /usr/local/bin/oauth2-proxy
+        echo "    - Prepared OAuth2 Proxy binary installed."
+    fi
+}
+
 echo "--> [1/9] Updating System & Dependencies..."
 
 apt-get update
@@ -377,11 +494,14 @@ cd "$TEMP_DIR/frontend"
 yarn install --frozen-lockfile --production=false --silent
 yarn run build
 
+# Complete every prompt, transfer and archive check while the old service runs.
+stage_native_binaries
+
 if ! confirm_database_recovery_checkpoint; then
     exit 1
 fi
 
-echo "--> [5/9] Swapping files..."
+echo "--> [8/9] Swapping files..."
 # Preserve a recoverable copy before stopping the service. Rollback is disabled
 # once the new backend starts because migrations may change the database schema.
 cp -a "$BACKEND_DIR" "$UPDATE_RUN_DIR/backend-backup"
@@ -410,171 +530,8 @@ echo "    - Updating System Configs (rootfs)..."
 rm -rf "$TEMP_DIR/rootfs/data"
 cp -rf "$TEMP_DIR/rootfs/"* /
 
-echo "--> [6/9] Checking for Nginx Binary Updates..."
-RELEASE_BASE="https://github.com/shedowe19/ShieldPM/releases/download/nginx-binaries"
-ARCH=$(dpkg --print-architecture)
-
-if [[ "$ARCH" == "amd64" || "$ARCH" == "arm64" ]]; then
-    # Simple prompt, defaulting to Yes for convenience
-    read -p "    ? Update compiled Nginx binaries? (Recommended) [Y/n] " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Nn]$ ]]; then
-         echo "    - Skipping binary update."
-    else
-         echo "    - Downloading nginx-linux-$ARCH.tar.gz..."
-         curl -L -f -o "$TEMP_DIR/nginx.tar.gz" "$RELEASE_BASE/nginx-linux-$ARCH.tar.gz"
-         if [ -f "$TEMP_DIR/nginx.tar.gz" ]; then
-             echo "    - Extracting binaries..."
-             tar -xzf "$TEMP_DIR/nginx.tar.gz" -C /
-             echo "    - Binaries updated successfully."
-         else
-             echo "    ! Failed to download binaries. Please check internet connection or GitHub status."
-         fi
-    fi
-else
-    echo "    - Skipping Nginx update: Architecture $ARCH not supported for auto-update."
-fi
-
-echo "--> [7/9] Checking for Anubis AI Firewall Updates..."
-# Check if Anubis is installed or enabled
-ANUBIS_INSTALLED=false
-if [ -f "/usr/local/bin/anubis" ]; then
-    ANUBIS_INSTALLED=true
-fi
-
-# Detect Arch for Anubis (reuse ARCH from nginx step if valid, else re-detect)
-# Anubis uses "amd64" / "arm64" suffix
-ANUBIS_ARCH=""
-if [[ "$ARCH" == "amd64" ]]; then
-    ANUBIS_ARCH="amd64"
-elif [[ "$ARCH" == "arm64" ]]; then
-    ANUBIS_ARCH="arm64"
-fi
-
-if [[ -n "$ANUBIS_ARCH" ]]; then
-    SHOULD_UPDATE=false
-
-    if [ "$ANUBIS_INSTALLED" = true ]; then
-        echo "    - Anubis is installed."
-        read -p "    ? Update Anubis binary? [Y/n] " -n 1 -r
-        echo ""
-        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-            SHOULD_UPDATE=true
-        fi
-    else
-        echo "    - Anubis is NOT installed."
-        read -p "    ? Install Anubis AI Firewall? [y/N] " -n 1 -r
-        echo ""
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            SHOULD_UPDATE=true
-        fi
-    fi
-
-    if [ "$SHOULD_UPDATE" = true ]; then
-        ANUBIS_VERSION="1.27.0"
-        ANUBIS_URL="https://github.com/TecharoHQ/anubis/releases/download/v${ANUBIS_VERSION}/anubis-${ANUBIS_VERSION}-linux-${ANUBIS_ARCH}.tar.gz"
-        echo "    - Downloading Anubis $ANUBIS_VERSION ($ANUBIS_ARCH)..."
-        curl -L -f -o "$UPDATE_RUN_DIR/anubis.tar.gz" "$ANUBIS_URL"
-        if [ -s "$UPDATE_RUN_DIR/anubis.tar.gz" ]; then
-            tar -xzf "$UPDATE_RUN_DIR/anubis.tar.gz" -C /usr/local/bin --strip-components=2 "anubis-${ANUBIS_VERSION}-linux-${ANUBIS_ARCH}/bin/anubis"
-            rm "$UPDATE_RUN_DIR/anubis.tar.gz"
-            chmod +x /usr/local/bin/anubis
-            echo "    - Anubis installed successfully."
-
-            # Ensure enabled in env if installing fresh
-            if [ "$ANUBIS_INSTALLED" = false ]; then
-                ENV_FILE="/data/.env"
-                if [ -f "$ENV_FILE" ]; then
-                    if grep -qE '^[[:space:]]*(#[[:space:]]*)?(export[[:space:]]+)?ANUBIS_ENABLED=' "$ENV_FILE"; then
-                        sed -i -E 's|^[[:space:]]*(#[[:space:]]*)?(export[[:space:]]+)?ANUBIS_ENABLED=.*$|ANUBIS_ENABLED=true|' "$ENV_FILE"
-                    else
-                        echo "ANUBIS_ENABLED=true" >> "$ENV_FILE"
-                    fi
-                    echo "    - Enabled Anubis in $ENV_FILE"
-                fi
-            fi
-        else
-            echo "    ! Failed to download Anubis. Check internet connection."
-        fi
-    else
-        echo "    - Skipping Anubis update/install."
-    fi
-else
-    echo "    - Skipping Anubis: Architecture $ARCH not supported."
-fi
-
-echo "--> [8/9] Checking for OAuth2 Proxy Updates..."
-# Check if OAuth2 Proxy is installed
-OAUTH2_INSTALLED=false
-if [ -f "/usr/local/bin/oauth2-proxy" ]; then
-    OAUTH2_INSTALLED=true
-fi
-
-# Detect Arch for OAuth2 Proxy (reuse ARCH from nginx step if valid, else re-detect)
-# OAuth2 Proxy uses "amd64" / "arm64" suffix
-OAUTH2_ARCH=""
-if [[ "$ARCH" == "amd64" ]]; then
-    OAUTH2_ARCH="amd64"
-elif [[ "$ARCH" == "arm64" ]]; then
-    OAUTH2_ARCH="arm64"
-fi
-
-if [[ -n "$OAUTH2_ARCH" ]]; then
-    SHOULD_UPDATE_OAUTH2=false
-
-    if [ "$OAUTH2_INSTALLED" = true ]; then
-        echo "    - OAuth2 Proxy is installed."
-        read -p "    ? Update OAuth2 Proxy binary? [Y/n] " -n 1 -r
-        echo ""
-        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-            SHOULD_UPDATE_OAUTH2=true
-        fi
-    else
-        echo "    - OAuth2 Proxy is NOT installed."
-        read -p "    ? Install OAuth2 Proxy? [y/N] " -n 1 -r
-        echo ""
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            SHOULD_UPDATE_OAUTH2=true
-        fi
-    fi
-
-    if [ "$SHOULD_UPDATE_OAUTH2" = true ]; then
-        OAUTH2_VERSION="7.15.3"
-        OAUTH2_TARBALL="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}.tar.gz"
-        OAUTH2_URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${OAUTH2_VERSION}/${OAUTH2_TARBALL}"
-        
-        OAUTH2_TMP_DIR=$(mktemp -d)
-        OAUTH2_TAR="$OAUTH2_TMP_DIR/$OAUTH2_TARBALL"
-
-        echo "    - Downloading OAuth2 Proxy $OAUTH2_VERSION ($OAUTH2_ARCH)..."
-        curl -L -f -o "$OAUTH2_TAR" "$OAUTH2_URL" || true
-
-        if [ -s "$OAUTH2_TAR" ]; then
-            cd "$OAUTH2_TMP_DIR"
-            if tar -xzf "$OAUTH2_TARBALL"; then
-                # Check if extracted binary exists before moving
-                EXTRACTED_BIN="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
-                if [ -f "$EXTRACTED_BIN" ]; then
-                    mv "$EXTRACTED_BIN" /usr/local/bin/oauth2-proxy
-                    chmod +x /usr/local/bin/oauth2-proxy
-                    echo "    - OAuth2 Proxy installed successfully."
-                else
-                    echo "    ! Failed to locate extracted OAuth2 Proxy binary."
-                fi
-            else
-                echo "    ! Failed to extract OAuth2 Proxy."
-            fi
-            cd - > /dev/null
-        else
-            echo "    ! Failed to download OAuth2 Proxy or checksum. Check internet connection."
-        fi
-        rm -rf "$OAUTH2_TMP_DIR"
-    else
-        echo "    - Skipping OAuth2 Proxy update/install."
-    fi
-else
-    echo "    - Skipping OAuth2 Proxy: Architecture $ARCH not supported."
-fi
+# Only prepared local files are installed while ShieldPM is stopped.
+apply_staged_native_binaries
 
 echo "--> [9/9] Restarting ShieldPM and applying database migrations..."
 systemctl daemon-reload

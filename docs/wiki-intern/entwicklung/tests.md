@@ -96,6 +96,15 @@ Dokumentation des Test-Setups und der Test-Strategien.
 - `frontend/src/pages/Analytics/AnalyticsMapContent.test.tsx` rendert die lokal aus `world-atlas` gebündelte Länder-Topologie mit einem echten DE-Marker und prüft die SVG-Viewport-Transformationen für pointerzentriertes Scroll-Zoom sowie Ziehen. Damit bleibt die Analytics-Karte unabhängig von `react-simple-maps` und einem Laufzeit-CDN-Abruf.
 - `test/internal/proxy-host-pagination.spec.js` sichert für 1.000 synthetische Hosts die Seitengröße, Zählmetadaten sowie die Owner- und Such-Einschränkung vor dem Paging. `proxy-hosts-route-pagination.spec.js` deckt den optionalen API-Vertrag und die Legacy-Arrayantwort ab; `ProxyHosts/TableWrapper.test.tsx` sichert die 100er-Seite, Seitennavigation und die Rückkehr von einer nach Löschen leeren Seite.
 
+## Regressionen der Optimierungsprüfung vom 13. Oktober
+
+- `backend/test/routes/service-credentials.spec.js` prüft tatsächliche HTTP-/JWT-/Capability-/SQLite-Pfade: redaktierte Listen, Einzelobjekte und Schreibantworten, Owner-Sichtbarkeit, verbotene Writes sowie Erhaltung aktueller Secrets bei konkurrierender Rotation.
+- `nginx-bulk-validation.spec.js`, `maintenance-schedule.spec.js` und `migrations/maintenance-pending.spec.js` prüfen vollständigen Batchabschluss, Rollbackdateien und dauerhafte Wartungsaufträge einschließlich PostgreSQL, finalem Reloadfehler und gleichzeitiger neuer Planung.
+- `proxy-host-monitor.spec.js` verwendet tatsächliche lokale HTTP-Upstreams für 100/120 fällige Hosts, frei werdende Workerplätze und Stopverhalten; die Grenze von fünf gleichzeitigen Probes bleibt geprüft.
+- `analytics-domain-lifecycle.spec.js` prüft Domainwechsel, zusammengeführte Abfragen, das Promise-Abschlussrennen, Neustart und Timer-/Subscriptionabbau. Graphtransaktions- und GitOps-Batchtests sichern Benachrichtigungen nach Commit sowie einen Refresh für den vollständigen Import einschließlich Teilfehlern.
+- Gemountete Firewall-, Cloudflare-, DDNS-/Access-List-, Tunnel-Race- und Proxy-Host-Suchtests prüfen frische Öffnungssnapshots, Secret-Erhaltung, verspätete Mutationsantworten, Suchverzögerung und tatsächlichen Fetch-Abbruch.
+- `scripts/tests/test_native_maintenance.py` führt native Sperr-/Kopier-/Rollback- und Archivprüfungen in isolierten temporären Pfaden aus. `docker-latest-workflow.spec.js` prüft Smoke-Gates und führt die Push-/Digest-Promotion-Skripte mit kontrolliertem Docker aus. Die tatsächlichen Containersmokes laufen auf beiden nativen CI-Architekturen.
+
 ## Typprüfung des Backends
 
 `cd backend && node node_modules/typescript/bin/tsc --noEmit` prüft die JavaScript-Module unter `internal/`, `lib/` und `models/` samt importierten Abhängigkeiten mit ihren JSDoc-Verträgen. Die CI führt diese Prüfung vor den Backend-Tests aus. Modellfelder, QueryBuilder-Rückgaben und asynchrone Serviceverträge sind dabei typisiert; die Standardbibliothek umfasst die bereits von Node 26 unterstützten ES2023-APIs. Die Frontend-Typprüfung bleibt Bestandteil des Produktionsbuilds.

@@ -11,6 +11,7 @@ import internalChat from "./chat.js";
 
 const TICK_MS = 10_000;
 const MAX_CONCURRENT = 5;
+const MAX_SCHEDULED_CHECKS_PER_TICK = 100;
 const MAX_HISTORY = 100;
 const RETENTION_DAYS = 30;
 const RETENTION_CLEANUP_MS = 24 * 60 * 60 * 1000;
@@ -53,6 +54,7 @@ const active = new Map();
 let timer = null;
 let scanning = false;
 let lastCleanupAt = 0;
+let schedulerGeneration = 0;
 
 const pemWhitespace = (code) => code === 9 || code === 10 || code === 13 || code === 32;
 const pemBase64 = (code) =>
@@ -723,6 +725,7 @@ const internalProxyHostMonitor = {
 	async tick() {
 		if (scanning || active.size >= MAX_CONCURRENT) return;
 		scanning = true;
+		const generation = schedulerGeneration;
 		try {
 			if (Date.now() - lastCleanupAt >= RETENTION_CLEANUP_MS) {
 				// Paused monitors do not run probes, so trim their expired history here too.
@@ -747,9 +750,25 @@ const internalProxyHostMonitor = {
 						.orWhere("proxy_host_monitor.next_check_at", "<=", new Date().toISOString()),
 				)
 				.orderBy("proxy_host_monitor.next_check_at", "asc")
-				.limit(MAX_CONCURRENT + active.size);
-			const candidates = due.filter((row) => !active.has(row.host_id)).slice(0, MAX_CONCURRENT - active.size);
-			await Promise.allSettled(candidates.map((row) => this.run(row.host_id)));
+				.orderBy("proxy_host_monitor.host_id", "asc")
+				.limit(MAX_SCHEDULED_CHECKS_PER_TICK + active.size);
+			const candidates = due.filter((row) => !active.has(row.host_id)).slice(0, MAX_SCHEDULED_CHECKS_PER_TICK);
+			let nextCandidate = 0;
+			const worker = async () => {
+				while (generation === schedulerGeneration && nextCandidate < candidates.length) {
+					const candidate = candidates[nextCandidate++];
+					try {
+						await this.run(candidate.host_id);
+					} catch (error) {
+						logger.error(`[Monitor] Check failed for host #${candidate.host_id}:`, error);
+					}
+				}
+			};
+			// Refill completed slots immediately, while bounding both concurrent probes
+			// and the work of one scan. A slow upstream holds only its own worker.
+			await Promise.allSettled(
+				Array.from({ length: Math.min(MAX_CONCURRENT - active.size, candidates.length) }, worker),
+			);
 		} catch (error) {
 			logger.error("[Monitor] Scheduler failed:", error);
 		} finally {
@@ -767,6 +786,7 @@ const internalProxyHostMonitor = {
 		if (timer) clearInterval(timer);
 		timer = null;
 		lastCleanupAt = 0;
+		schedulerGeneration++;
 		for (const controller of active.values()) controller.abort();
 	},
 

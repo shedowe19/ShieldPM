@@ -1,4 +1,5 @@
 {
+	"form.secret.keep-existing": "Настроено; оставете празно, за да се запази",
 	"2fa.active-methods": "Активни методи",
 	"2fa.add-method": "Добавяне на нов метод",
 	"2fa.backup-code.placeholder": "РЕЗЕРВЕН-КОД",

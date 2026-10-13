@@ -59,7 +59,7 @@ async function appStart() {
 
 		await internalCertificate.initTimer();
 		internalMaintenance.initTimer();
-		await internalNginx.reload();
+		await internalNginx.withConfigurationLock(() => internalNginx.reload());
 		internalFirewallList.initTimer();
 		internalCloudflared.init();
 		internalTor.init();

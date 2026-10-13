@@ -3,6 +3,7 @@ import { transaction } from "objection";
 import internalAuditLog from "../../internal/audit-log.js";
 import internalCloudflared from "../../internal/cloudflared.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
+import { publicCloudflaredTunnel } from "../../lib/service-credentials.js";
 import apiValidator from "../../lib/validator/api.js";
 import { global as logger } from "../../logger.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
@@ -36,7 +37,7 @@ router.get("/", async (_req, res) => {
 		}
 	});
 
-	res.status(200).send(tunnels);
+	res.status(200).send(tunnels.map(publicCloudflaredTunnel));
 });
 
 /**
@@ -57,7 +58,7 @@ router.get("/:id", async (req, res) => {
 		return;
 	}
 
-	res.status(200).send(tunnel);
+	res.status(200).send(publicCloudflaredTunnel(tunnel));
 });
 
 /**
@@ -91,7 +92,7 @@ router.post("/", async (req, res, next) => {
 			},
 		});
 
-		res.status(201).send(newTunnel);
+		res.status(201).send(publicCloudflaredTunnel(newTunnel));
 	} catch (err) {
 		if (trx) {
 			await trx.rollback();
@@ -119,6 +120,7 @@ router.put("/:id", async (req, res, next) => {
 		}
 
 		const payload = await apiValidator(getValidationSchema("/nginx/cloudflared-tunnels/{id}", "put"), req.body);
+		if (!payload.token) delete payload.token;
 
 		trx = await transaction.start(CloudflaredTunnel.knex());
 		const result = await tunnel.$query(trx).patchAndFetch(payload);
@@ -137,7 +139,7 @@ router.put("/:id", async (req, res, next) => {
 			},
 		});
 
-		res.status(200).send(result);
+		res.status(200).send(publicCloudflaredTunnel(result));
 	} catch (err) {
 		if (trx) {
 			await trx.rollback();

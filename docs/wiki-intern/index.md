@@ -29,6 +29,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 
 ### Entwicklung
 
+- [Optimierungsprüfung vom 13. Oktober 2026](./entwicklung/optimierungspruefung-2026-10-13.md) — 13 korrigierte Fehlerfälle und Optimierungen mit Prüfnachweisen.
 - [Setup](./entwicklung/setup.md)
 - [Setup-Interna](./entwicklung/setup-intern.md)
 - [Lokale Entwicklung](./entwicklung/lokale-entwicklung.md)

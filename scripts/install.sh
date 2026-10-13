@@ -16,7 +16,7 @@ fi
 
 # Resolve the release payload beside this script, independently of the caller's
 # working directory. Reject an incomplete/source checkout before changing apt.
-INSTALL_SOURCE_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+INSTALL_SOURCE_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 for required_file in app/package.json html/frontend/index.html usr/local/nginx/sbin/nginx rootfs/usr/local/bin/start.sh rootfs/usr/local/bin/update-geoip.py; do
     if [ ! -f "$INSTALL_SOURCE_DIR/$required_file" ]; then
         echo "ERROR: Incomplete native installer package: missing $required_file." >&2
@@ -26,8 +26,88 @@ for required_file in app/package.json html/frontend/index.html usr/local/nginx/s
 done
 cd "$INSTALL_SOURCE_DIR"
 
+# Clearing application directories must never remove the unpacked payload itself.
+case "$INSTALL_SOURCE_DIR/" in
+    /app/*|/html/frontend/*)
+        echo "ERROR: Extract the installer outside /app and /html/frontend." >&2
+        exit 1
+        ;;
+esac
+
+# This is the same lock as the standalone updater. Keep its inode between runs.
+MAINTENANCE_LOCK_DIR=/run/shieldpm-maintenance
+if ! command -v flock >/dev/null 2>&1; then
+    echo "ShieldPM maintenance requires flock from util-linux." >&2
+    exit 1
+fi
+if [ -L "$MAINTENANCE_LOCK_DIR" ]; then
+    echo "Unsafe ShieldPM maintenance lock directory." >&2
+    exit 1
+fi
+install -d -o 0 -g 0 -m 700 "$MAINTENANCE_LOCK_DIR"
+MAINTENANCE_LOCK="$MAINTENANCE_LOCK_DIR/operation.lock"
+if ! [[ /proc/$$/fd/9 -ef "$MAINTENANCE_LOCK" ]]; then
+    exec 9>"$MAINTENANCE_LOCK"
+fi
+if ! flock -n 9; then
+    echo "Another ShieldPM install or update is already running." >&2
+    exit 1
+fi
+
 INSTALL_TMP_DIR=$(mktemp -d /tmp/shieldpm-install.XXXXXX)
-trap 'rm -rf "$INSTALL_TMP_DIR"' EXIT
+INSTALL_ROLLBACK=false
+INSTALL_MIGRATIONS_STARTED=false
+INSTALL_SERVICE_WAS_RUNNING=false
+INSTALL_BACKEND_DIR=/app
+INSTALL_FRONTEND_DIR=/html/frontend
+
+backup_install_directory() {
+    local target=$1 backup=$2
+    if [ "$(readlink -m "$target")" != "$target" ] || { [ -e "$target" ] && [ ! -d "$target" ]; }; then
+        echo "ERROR: Unsafe application directory: $target" >&2
+        return 1
+    fi
+    mkdir -p "$backup/content" || return 1
+    if [ -d "$target" ]; then
+        cp -a "$target/." "$backup/content/" || return 1
+        touch "$backup/existed" || return 1
+    fi
+}
+
+restore_install_directory() {
+    local target=$1 backup=$2
+    if [ -f "$backup/existed" ]; then
+        mkdir -p "$target" || return 1
+        find "$target" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + || return 1
+        cp -a "$backup/content/." "$target/" || return 1
+    else
+        rm -rf -- "$target"
+    fi
+}
+
+cleanup_install() {
+    local result=$?
+    if [ "$INSTALL_ROLLBACK" = true ]; then
+        echo "Installation interrupted before migrations; restoring application files..."
+        if restore_install_directory "$INSTALL_BACKEND_DIR" "$INSTALL_TMP_DIR/backend-backup" && \
+            restore_install_directory "$INSTALL_FRONTEND_DIR" "$INSTALL_TMP_DIR/frontend-backup"; then
+            systemctl daemon-reload || true
+            if [ "$INSTALL_SERVICE_WAS_RUNNING" = true ]; then
+                systemctl start shieldpm || true
+            fi
+        else
+            echo "Application recovery failed. Backups retained in $INSTALL_TMP_DIR." >&2
+            return 1
+        fi
+    elif [ "$result" -ne 0 ] && [ "$INSTALL_MIGRATIONS_STARTED" = true ]; then
+        echo "Installation failed after migrations may have started. Recovery files retained in $INSTALL_TMP_DIR." >&2
+        echo "Check the database migration state before restoring older application files." >&2
+        return "$result"
+    fi
+    rm -rf "$INSTALL_TMP_DIR"
+    return "$result"
+}
+trap cleanup_install EXIT
 
 enable_node_system_ca() {
     if [[ " ${NODE_OPTIONS:-} " != *" --use-system-ca "* ]]; then
@@ -172,12 +252,19 @@ echo "    Please select your desired system locale (e.g., en_US.UTF-8 or de_DE.U
 dpkg-reconfigure locales
 
 # 3. Copy Pre-built Binaries (Nginx, Certbot, Cloudflared, Libs)
+# Back up the exact application trees before stopping an existing installation.
+backup_install_directory "$INSTALL_BACKEND_DIR" "$INSTALL_TMP_DIR/backend-backup"
+backup_install_directory "$INSTALL_FRONTEND_DIR" "$INSTALL_TMP_DIR/frontend-backup"
 # A reinstall must not replace files while the old backend is still serving
 # requests. The final service start must launch the newly installed code.
 # Stop even an activating/auto-restarting unit, not only an active one.
 if systemctl cat shieldpm.service >/dev/null 2>&1; then
+    if systemctl is-active --quiet shieldpm; then
+        INSTALL_SERVICE_WAS_RUNNING=true
+    fi
     systemctl stop shieldpm
 fi
+INSTALL_ROLLBACK=true
 echo ">>> Installing pre-built binaries..."
 # The tarball structure already mirrors the final filesystem layout
 if [ -d "usr" ]; then
@@ -186,8 +273,16 @@ fi
 
 # 4. Copy Application Files
 echo ">>> Copying application files..."
-cp -r app /
-cp -r html /
+mkdir -p "$INSTALL_BACKEND_DIR" "$INSTALL_FRONTEND_DIR"
+find "$INSTALL_BACKEND_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+cp -a app/. "$INSTALL_BACKEND_DIR/"
+find "$INSTALL_FRONTEND_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+cp -a html/frontend/. "$INSTALL_FRONTEND_DIR/"
+# Other bundled static pages retain their existing overlay behavior.
+for static_path in html/*; do
+    [ "$(basename "$static_path")" = frontend ] && continue
+    cp -a "$static_path" /html/
+done
 
 # 5. Copy Rootfs Overlays (Systemd service, scripts, configs)
 echo ">>> Installing system configs..."
@@ -956,6 +1051,9 @@ fi
 
 echo "=== Starting ShieldPM ==="
 echo "--> Starting service to run initial migrations..."
+# Older code must never be restored automatically after the new schema can run.
+INSTALL_ROLLBACK=false
+INSTALL_MIGRATIONS_STARTED=true
 systemctl start shieldpm
 
 echo "--> Waiting for the backend and initial database migrations..."

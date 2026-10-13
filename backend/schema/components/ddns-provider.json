@@ -31,19 +31,32 @@
             }
         },
         "config": {
-            "type": "object"
+            "type": "object",
+            "description": "Input provider configuration. On responses only Cloudflare zone_id is included; tokens and custom URLs are omitted. Blank or omitted credentials preserve the saved value for the same provider."
         },
         "last_ipv4": {
-            "type": ["string", "null"]
+            "type": [
+                "string",
+                "null"
+            ]
         },
         "last_ipv6": {
-            "type": ["string", "null"]
+            "type": [
+                "string",
+                "null"
+            ]
         },
         "last_updated_on": {
-            "type": ["string", "null"]
+            "type": [
+                "string",
+                "null"
+            ]
         },
         "last_error": {
-            "type": ["string", "null"]
+            "type": [
+                "string",
+                "null"
+            ]
         },
         "enabled": {
             "type": "boolean"
@@ -59,6 +72,11 @@
                 "dual"
             ],
             "default": "dual"
+        },
+        "has_credentials": {
+            "type": "boolean",
+            "readOnly": true,
+            "description": "Whether provider credentials are saved. Public config contains only non-secret zone_id; tokens and custom URLs are write-only."
         }
     }
 }

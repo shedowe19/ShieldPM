@@ -16,6 +16,7 @@ Access-Lists können an Proxy-Hosts gebunden werden, um den Zugriff einzuschrän
 - `backend/models/access_list_auth.js` (1 KB) — Basic-Auth-Modell
 - `backend/models/access_list_client.js` (1 KB) — IP-Client-Modell
 - `backend/routes/nginx/access_lists.js` (3 KB) — API-Routen
+- `backend/lib/service-credentials.js` — öffentliche SSO-Metadaten und Erhaltung hinterlegter Secrets
 - `frontend/src/modals/AccessListModal.tsx` — Dialog für Erstellung und Bearbeitung
 - `frontend/src/modals/AccessListFormTabs.tsx` — gemeinsame Tab-Navigation mit Formik-gebundenem SSO-Status
 - `frontend/src/modals/AccessListModalSubmission.ts` — serialisiert den Formularzustand zum API-Payload
@@ -36,9 +37,10 @@ Access-Lists können an Proxy-Hosts gebunden werden, um den Zugriff einzuschrän
 - Der integrierte Typ `oidc` nutzt `resty.openidc` mit `oidc_discovery_url` und dem Redirect-Pfad `/_oauth2_callback`. Der eigenständige Typ `oauth2_proxy` verwendet den verwalteten Subprozess und standardmäßig `/oauth2/callback`; beide Endpunkte dürfen in Provider-Konfigurationen nicht verwechselt werden.
 - Die gemeinsame Tab-Navigation leitet die unveränderten Basic-Auth- und Client-Regeln an die jeweiligen Untertabs
   weiter und sperrt sie bei aktivem SSO weiterhin über den aus demselben Formik-Status abgeleiteten Wert.
-- Die Submission-Serialisierung übernimmt die aktive Authentifizierungsart in `meta`, entfernt ungenutzte OAuth2- bzw.
-  OIDC-Felder und sendet bei deaktiviertem externen mTLS keinen Zertifikatstext. Sie reduziert Clients und Credentials
-  auf die editierbaren API-Felder.
+- Die Submission-Serialisierung übernimmt die aktive Authentifizierungsart in `meta`, lässt ungenutzte OAuth2- bzw.
+  OIDC-Formularfelder und nicht ersetzte Secrets aus und sendet bei deaktiviertem externen mTLS keinen Zertifikatstext.
+  Sie reduziert Clients und Credentials auf die editierbaren API-Felder. Das Backend erhält zuvor gespeicherte SSO-Secrets;
+  das Auslassen eines Feldes löscht sie auch bei einem Wechsel der Authentifizierungsart nicht.
 - Formularinitialisierung und Submission verwenden denselben Parser für ältere JSON-Strings in `meta`. Beim Umbenennen oder Bearbeiten bleiben dadurch auch zusätzliche Metadaten erhalten; der JSON-Text wird nicht als einzelne Zeichen mit numerischen Schlüsseln gespeichert. `AccessListModalSubmission.test.ts` prüft den vollständigen Lade-/Speicherübergang für diese Legacy-Daten.
 - Die ausgelagerte Formularvalidierung behält die bisherige Prüfungsreihenfolge und die bestehenden Fehlermeldungen für
   leere Listen, unvollständige SSO- und mTLS-Konfigurationen sowie doppelte Benutzernamen bei.
@@ -63,6 +65,14 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - Audit-Metadaten enthalten keine OAuth2-Client-Secrets, OAuth2-Cookie-Secrets oder OIDC-Client-Secrets. Die eigentliche Konfiguration behält diese Werte. Passwort-Hinweise haben eine feste Länge und verraten weder Anfangszeichen noch Passwortlänge.
 
 Regressionstest: `backend/test/internal/access-list.spec.js` prüft reale Service-Aufrufe einschließlich Schreibreihenfolge, Rollback, mTLS, Geheimnisbereinigung und Eingabevalidierung.
+
+## Öffentliche SSO-Zugangsdaten und Bearbeitung
+
+Öffentliche Listen-, Detail-, Erstellungs- und Änderungsantworten entfernen `oauth2_client_secret`, `oauth2_cookie_secret` und `oidc_client_secret` sowie deren ältere Camel-Case-Aliase aus `meta`. Ältere JSON-String-Metadaten werden vor der Bereinigung als Objekt normalisiert; ungültige Werte werden als leeres Objekt behandelt. Die Bereinigung gilt auch ohne angeforderte Basic-Auth-Items. `credentials_configured` enthält für diese drei Felder ausschließlich boolesche Angaben zum gespeicherten Zustand. Basic-Auth-Items behalten die vorhandene Maskierung mit leerem `password` und festem Hinweis. Die Antwortbereinigung arbeitet auf einer Kopie, damit ein intern noch zur Konfiguration verwendeter Snapshot seine tatsächlichen Zugangsdaten behält.
+
+Ausgelassene oder leere SSO-Secrets erhalten beim Update den Wert des innerhalb derselben Schreibtransaktion mit `forUpdate()` gelesenen aktuellen Datensatzes. Eine vorherige Rotation wird dadurch nicht aus dem früheren Öffnungssnapshot rückgängig gemacht. Nicht leere Eingaben ersetzen den jeweiligen Wert; alte Aliasnamen werden beim Zusammenführen auf den kanonischen Feldnamen vereinheitlicht. Vertrauenswürdige Konfigurationsaufrufe können weiterhin ausdrücklich unmaskierte Werte verwenden.
+
+Der Dialog initialisiert die drei Secretfelder leer und erkennt anhand von `credentials_configured`, welche Pflichtwerte bereits hinterlegt sind. Er verlangt bei unverändertem SSO keine erneute Eingabe und sendet nur ausdrücklich eingegebene Ersatzwerte. Die vorhandene Öffnungsaktualisierung bleibt Voraussetzung für das Bearbeitungsformular; spätere Cacheänderungen ersetzen den geöffneten Entwurf nicht. `backend/test/routes/service-credentials.spec.js`, `AccessListModal.test.tsx` und `AccessListModalFormValues.test.ts` prüfen diese Verträge.
 
 ## Verwandte Seiten
 

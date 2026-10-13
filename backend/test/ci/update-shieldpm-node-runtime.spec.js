@@ -13,6 +13,9 @@ const nodePackageVersionAssignment = updater
 	.split("\n")
 	.find((line) => line.includes('NODE_PACKAGE_VERSION="$(apt-cache madison nodejs'));
 const backendHealthCheck = updater.match(/wait_for_backend_health\(\) \{[\s\S]*?^\}/m)?.[0];
+const nativeBinaryPreflight = updater.match(/^stage_native_binaries\(\) \{[\s\S]*?^\}/m)?.[0];
+const nativeBinaryApply = updater.match(/^apply_staged_native_binaries\(\) \{[\s\S]*?^\}/m)?.[0];
+const updateActions = updater.slice(updater.indexOf('echo "--> [1/9] Updating System'));
 const databaseRecoveryCheckpoint = updater.match(
 	/confirm_database_recovery_checkpoint\(\) \{[\s\S]*?^\}(?=\n\ninstall_node_26)/m,
 )?.[0];
@@ -28,6 +31,10 @@ if (!backendHealthCheck) {
 
 if (!databaseRecoveryCheckpoint) {
 	throw new Error("The updater must define the database recovery checkpoint.");
+}
+
+if (!nativeBinaryPreflight || !nativeBinaryApply) {
+	throw new Error("The updater must prepare native binaries separately from their installation.");
 }
 
 const createAptCacheFixture = () => {
@@ -216,8 +223,11 @@ printf 'elapsed=%s' "$SECONDS"
 	});
 
 	it("updates optional runtime binaries and waits for migrations to become healthy", () => {
-		expect(updater).toContain('ANUBIS_VERSION="1.27.0"');
-		expect(updater).toContain('OAUTH2_VERSION="7.15.3"');
+		expect(nativeBinaryPreflight).toMatch(/version=1\.27\.0[\s\S]*https:\/\/github\.com\/TecharoHQ\/anubis/);
+		expect(nativeBinaryPreflight).toMatch(
+			/version=7\.15\.3[\s\S]*https:\/\/github\.com\/oauth2-proxy\/oauth2-proxy/,
+		);
+		expect(nativeBinaryPreflight).toContain('python3 "$helper" binary');
 		expect(updater).toContain("wait_for_backend_health()");
 		expect(updater).toContain("--unix-socket /run/shieldpm/shieldpm.sock");
 		expect(updater).toContain('.status == "OK"');
@@ -229,14 +239,28 @@ printf 'elapsed=%s' "$SECONDS"
 		expect(nativeInstaller).not.toContain("SHOULD_UPDATE_OAUTH2");
 	});
 
+	it("prepares binaries before downtime and installs only staged local files after the stop", () => {
+		const prepareAt = updateActions.indexOf("\nstage_native_binaries\n");
+		const stopAt = updateActions.indexOf("\nsystemctl stop shieldpm\n");
+		const applyAt = updateActions.indexOf("\napply_staged_native_binaries\n");
+		expect(prepareAt).toBeGreaterThanOrEqual(0);
+		expect(stopAt).toBeGreaterThan(prepareAt);
+		expect(applyAt).toBeGreaterThan(stopAt);
+		expect(nativeBinaryPreflight).toContain("--connect-timeout 10 --max-time 900");
+		expect(nativeBinaryApply).not.toMatch(/\b(?:curl|read|tar)\b/);
+	});
+
 	it("requires a database recovery checkpoint before replacing application files", () => {
 		expect(updater).toContain("confirm_database_recovery_checkpoint()");
 		expect(updater).toContain(`local data_path="${dataPathVariable}"`);
 		expect(updater).toContain("external database backup");
 		expect(updater).toContain("database-backup-checkpoint");
-		expect(updater.indexOf("confirm_database_recovery_checkpoint")).toBeLessThan(
-			updater.indexOf('echo "--> [5/9] Swapping files..."'),
+		const checkpointAt = updateActions.indexOf("if ! confirm_database_recovery_checkpoint; then");
+		expect(checkpointAt).toBeGreaterThanOrEqual(0);
+		expect(checkpointAt).toBeLessThan(
+			updateActions.indexOf('cp -a "$BACKEND_DIR" "$UPDATE_RUN_DIR/backend-backup"'),
 		);
+		expect(checkpointAt).toBeLessThan(updateActions.indexOf("\nsystemctl stop shieldpm\n"));
 	});
 
 	it("uses a custom DATA_PATH for recovery detection without exposing its external database details", () => {

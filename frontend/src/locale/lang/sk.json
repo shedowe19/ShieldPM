@@ -1,4 +1,5 @@
 {
+	"form.secret.keep-existing": "Nastavené; ponechajte prázdne na zachovanie",
 	"2fa.active-methods": "Aktívne metódy",
 	"2fa.add-method": "Pridať novú metódu",
 	"2fa.backup-code.placeholder": "ZÁLOŽNÝ-KÓD",

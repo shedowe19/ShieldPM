@@ -69,18 +69,29 @@ function getSavedColumnVisibility(): ColumnVisibilityState {
 export default function TableWrapper() {
 	const queryClient = useQueryClient();
 	const [search, setSearch] = useState("");
+	const [querySearch, setQuerySearch] = useState("");
 	const [page, setPage] = useState(1);
+	const normalizedSearch = search.trim().toLowerCase();
 	const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(getSavedColumnVisibility);
 	const { isFetching, isLoading, isError, error, data } = useProxyHostsPage(
 		["owner", "access_list", AUDIT_LOG_OBJECT_TYPE.CERTIFICATE],
 		{
 			limit: 100,
 			page,
-			query: search.trim().toLowerCase(),
+			query: querySearch,
 		},
 	);
 	const rows = data?.items ?? [];
 	const pagination = data?.pagination;
+
+	useEffect(() => {
+		if (normalizedSearch === querySearch) return;
+		const timeout = window.setTimeout(() => {
+			setPage(1);
+			setQuerySearch(normalizedSearch);
+		}, 300);
+		return () => window.clearTimeout(timeout);
+	}, [normalizedSearch, querySearch]);
 
 	useEffect(() => {
 		try {
@@ -131,7 +142,6 @@ export default function TableWrapper() {
 								className="pl-8 h-9"
 								value={search}
 								onChange={(e) => {
-									setPage(1);
 									setSearch(e.target.value);
 								}}
 							/>

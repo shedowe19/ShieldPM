@@ -11,6 +11,7 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 ## Wichtige Dateien
 
 - `backend/internal/analytics.js` (14 KB) — Business-Logik
+- `backend/lib/proxy-host-domain-events.js` — Benachrichtigung nach persistierten Host-/Domainänderungen
 - `backend/models/analytic_count.js` (1 KB) — Zähler-Modell
 - `backend/models/analytics_logs.js` (1 KB) — Log-Modell
 - `backend/routes/analytics.js` (8 KB) — API-Routen
@@ -86,9 +87,15 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 Die Domainzuordnung lädt `host_domains` und normalisiert Groß-/Kleinschreibung sowie den Port im HTTP-Host-Fallback. Ungültige JSON-Werte und ungültige Zeitstempel verändern keine Zähler. Detailzeilen erhalten `created_at` als Unix-Millisekunden. Der Tailer liest `/data/nginx/json_access.log`; der zehnsekündliche Flush lässt kurzzeitige Verzögerungen zwischen Request und Dashboard zu. Detailzeilen enthalten personenbezogene IP-Adressen und Pfade und sind entsprechend zu schützen.
 
+Nach persistiertem Erstellen, Ändern oder Löschen eines Proxy-Hosts melden die Host-Verwaltung und Docker-Discovery ihre Änderung über `notifyProxyHostDomainsChanged()`. GitOps benachrichtigt einmal nach dem gesamten Proxy-Host-Import einschließlich seiner Löschungen; der `finally`-Pfad berücksichtigt auch erfolgreiche Teiländerungen bei einem fehlgeschlagenen Import. Dadurch entsteht nicht für jede importierte Zeile ein vollständiger Domainabruf. Der laufende Analytics-Dienst lädt daraufhin die aktuelle Domainzuordnung, statt allein auf den periodischen Abruf zu warten. Gleichzeitige Benachrichtigungen teilen sich eine laufende Abfrage. Eine Revision verhindert, dass eine während des Lesens überholte Zuordnung veröffentlicht wird; auch eine Änderung zwischen Veröffentlichung und Abschluss der gemeinsamen Promise erzwingt einen weiteren Abruf.
+
+Der zehnminütige Refresh bleibt als ergänzende Aktualisierung erhalten und beginnt erst nach erfolgreichem Start des Tailers. Bei einem Abfragefehler bleibt die letzte Zuordnung erhalten; die nächste Benachrichtigung oder der periodische Refresh versucht es erneut. Die Benachrichtigung wartet auf die Aktualisierung, macht deren Fehler aber nicht zum Fehler einer bereits persistierten Hoständerung. Bereits erfasste Requests werden nicht rückwirkend einem neuen Host zugeordnet. Beim Stoppen entfernt der Dienst Domain-, Flush- und Retention-Intervalle sowie seine Event-Subscription. Eine Dienstgeneration verhindert, dass verspätete Domainantworten nach dem Stoppen oder Neustart den aktuellen Cache überschreiben oder während einer abgebrochenen Initialisierung Tailer und Timer neu anlegen. `analytics-domain-lifecycle.spec.js` prüft diese Übergänge und die gemeinsame Abfrage.
+
 Alle Chunks eines Detail- oder Aggregationsbatches werden jeweils in einer Transaktion geschrieben. Bei einem Fehler in einem späteren Chunk bleiben frühere Chunks ungeschrieben; der Wiederholungsversuch zählt sie deshalb nicht doppelt. Die Tail-Ingestion nimmt höchstens 2.000 noch unverarbeitete Zeilen an und drainiert sie in festen 250er-Batches pro Event-Loop-Runde. Überlauf wird gezählt und begrenzt protokolliert, statt ungebunden `setImmediate`-Callbacks anzusammeln. Während langsamer Datenbankzugriffe bleiben die Folgepuffer auf 1.000 Detailzeilen und 500 Aggregationsschlüssel begrenzt. Detailzeilen werden standardmäßig nach 24 Stunden und Minutenaggregate nach 35 Tagen entfernt; `ANALYTICS_DETAILED_RETENTION_HOURS` sowie `ANALYTICS_AGGREGATION_RETENTION_DAYS` erlauben eine explizite Betriebsanpassung. Die API akzeptiert nur `1h`, `24h`, `7d` und `30d`; sie liefert Minutenpunkte bis 24 Stunden, Stundenpunkte für sieben Tage und Tagespunkte für 30 Tage. Dadurch bleiben Antwortgrößen begrenzt und Langzeit-Charts klar lesbar.
 
 ## Verwandte Seiten
 
 - [Modulübersicht](./README.md)
+- [Proxy-Host](./proxy-host.md)
+- [GitOps](./gitops.md)
 - [Umgebungsvariablen](../konfiguration/umgebungsvariablen.md)

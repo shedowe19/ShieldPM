@@ -77,11 +77,14 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		// Prepare config based on provider
 		let config: Record<string, unknown> = {};
 		if (values.provider === DDNS_PROVIDER_NAME.CLOUDFLARE) {
-			config = { token: values.cloudfare_token, zone_id: values.cloudfare_zone_id };
+			config = {
+				...(values.cloudfare_token ? { token: values.cloudfare_token } : {}),
+				zone_id: values.cloudfare_zone_id,
+			};
 		} else if (values.provider === DDNS_PROVIDER_NAME.DUCKDNS) {
-			config = { token: values.duckdns_token };
+			config = values.duckdns_token ? { token: values.duckdns_token } : {};
 		} else if (values.provider === DDNS_PROVIDER_NAME.CUSTOM) {
-			config = { url: values.custom_url };
+			config = values.custom_url ? { url: values.custom_url } : {};
 		}
 
 		// Split domains by comma or space
@@ -267,7 +270,19 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												</Label>
 												<Field name="cloudfare_token">
 													{({ field }: FieldProps) => (
-														<Input {...field} type="password" id="cloudfare_token" />
+														<Input
+															{...field}
+															type="password"
+															id="cloudfare_token"
+															placeholder={
+																data?.hasCredentials &&
+																data.provider === values.provider
+																	? intl.formatMessage({
+																			id: "form.secret.keep-existing",
+																		})
+																	: undefined
+															}
+														/>
 													)}
 												</Field>
 											</div>
@@ -291,7 +306,18 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											</Label>
 											<Field name="duckdns_token">
 												{({ field }: FieldProps) => (
-													<Input {...field} type="password" id="duckdns_token" />
+													<Input
+														{...field}
+														type="password"
+														id="duckdns_token"
+														placeholder={
+															data?.hasCredentials && data.provider === values.provider
+																? intl.formatMessage({
+																		id: "form.secret.keep-existing",
+																	})
+																: undefined
+														}
+													/>
 												)}
 											</Field>
 										</div>
@@ -308,7 +334,11 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														{...field}
 														id="custom_url"
 														placeholder={intl.formatMessage({
-															id: "ddns-providers.custom_url.placeholder",
+															id:
+																data?.hasCredentials &&
+																data.provider === values.provider
+																	? "form.secret.keep-existing"
+																	: "ddns-providers.custom_url.placeholder",
 														})}
 													/>
 												)}

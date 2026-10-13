@@ -1,6 +1,6 @@
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { AlertCircle, CheckCircle2, FileUp, Loader2, ShieldBan } from "lucide-react";
-import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { FirewallList, FirewallListInput, FirewallListPreview } from "src/api/backend/firewallLists";
 import { Loading } from "src/components/Loading";
@@ -22,6 +22,7 @@ import { Textarea } from "src/components/ui/textarea";
 import { useFirewallList, usePreviewFirewallList, useSaveFirewallList } from "src/hooks/useFirewallLists";
 import { intl, T } from "src/locale";
 import { showSuccess } from "src/notifications";
+import { useFreshFormData } from "./useFreshFormData";
 
 export const FIREWALL_PRESETS = {
 	vpn: "https://raw.githubusercontent.com/X4BNet/lists_vpn/main/output/vpn/ipv4.txt",
@@ -66,14 +67,6 @@ function FirewallListForm({
 	const form = useForm<FirewallListInput>({
 		defaultValues: defaultValues(data, preset),
 	});
-	const {
-		reset,
-		formState: { isDirty },
-	} = form;
-	useEffect(() => {
-		// Opening a cached list may refetch newer values. Preserve any edits made before that response arrives.
-		if (data && !isDirty) reset(defaultValues(data, preset));
-	}, [data, isDirty, preset, reset]);
 	const save = useSaveFirewallList();
 	const preview = usePreviewFirewallList();
 	const [checked, setChecked] = useState<{ input: string; result: FirewallListPreview } | null>(null);
@@ -417,6 +410,7 @@ function FirewallListForm({
 
 const FirewallListModal = EasyModal.create(({ listId, preset, visible, remove }: Props) => {
 	const query = useFirewallList(listId);
+	const opening = useFreshFormData(listId ?? "new", query);
 	const [busy, setBusy] = useState(false);
 	return (
 		<Dialog open={visible} onOpenChange={(open) => !open && !busy && remove()}>
@@ -434,11 +428,11 @@ const FirewallListModal = EasyModal.create(({ listId, preset, visible, remove }:
 						<T id="firewall.modalDescription" />
 					</DialogDescription>
 				</DialogHeader>
-				{typeof listId === "number" && query.isPending ? (
+				{typeof listId === "number" && opening.isLoading ? (
 					<Loading noLogo />
-				) : query.error && !query.data ? (
+				) : typeof listId === "number" && opening.error ? (
 					<Alert variant="destructive">
-						<AlertDescription>{query.error.message}</AlertDescription>
+						<AlertDescription>{opening.error.message}</AlertDescription>
 					</Alert>
 				) : (
 					<>
@@ -447,7 +441,7 @@ const FirewallListModal = EasyModal.create(({ listId, preset, visible, remove }:
 								<AlertDescription>{query.error.message}</AlertDescription>
 							</Alert>
 						)}
-						<FirewallListForm data={query.data} preset={preset} onClose={remove} onBusyChange={setBusy} />
+						<FirewallListForm data={opening.data} preset={preset} onClose={remove} onBusyChange={setBusy} />
 					</>
 				)}
 			</DialogContent>

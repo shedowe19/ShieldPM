@@ -72,6 +72,7 @@ export interface AccessList {
 	ownerUserId: number;
 	name: string;
 	meta: Record<string, unknown>;
+	credentialsConfigured?: { oauth2ClientSecret?: boolean; oauth2CookieSecret?: boolean; oidcClientSecret?: boolean };
 	mtlsEnabled?: boolean;
 	mtlsUseInternal?: boolean;
 	mtlsCertificate?: string;
@@ -317,7 +318,8 @@ export interface CloudflaredTunnel {
 	modifiedOn: string;
 	userId: number;
 	name: string;
-	token: string;
+	token?: string;
+	hasToken?: boolean;
 	status: number;
 	meta: Record<string, unknown>;
 	owner?: User;
@@ -357,6 +359,7 @@ export interface DdnsProvider {
 	provider: DdnsProviderName;
 	domains: string[];
 	config: Record<string, unknown>;
+	hasCredentials?: boolean;
 	ipVer?: IpVersion;
 	lastIpv4?: string;
 	lastIpv6?: string;

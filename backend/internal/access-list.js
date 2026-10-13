@@ -8,6 +8,7 @@ import errs from "../lib/error.js";
 import { normalizeAddress } from "../lib/firewall-addresses.js";
 import { filterHostExpansions, restrictHostExpansions } from "../lib/host-expansions.js";
 import { sanitizeProxyHost } from "../lib/host-response.js";
+import { preserveAccessListCredentials, publicAccessListCredentials } from "../lib/service-credentials.js";
 import utils from "../lib/utils.js";
 import { access as logger } from "../logger.js";
 import accessListModel from "../models/access_list.js";
@@ -262,6 +263,12 @@ const internalAccessList = {
 
 		// Keep configuration, credentials and client rules consistent on failure.
 		await accessListModel.transaction(async (trx) => {
+			if (data.meta) {
+				// A pending edit must not restore credentials rotated since its first read.
+				const current = await accessListModel.query(trx).findById(data.id).forUpdate();
+				if (!current) throw new errs.ItemNotFoundError(data.id);
+				data.meta = preserveAccessListCredentials(data.meta, current.meta);
+			}
 			const patch = _.pick(data, [
 				"name",
 				"satisfy_any",
@@ -536,9 +543,7 @@ const internalAccessList = {
 
 		if (rows) {
 			rows.map((row, idx) => {
-				if (typeof row.items !== "undefined" && row.items) {
-					rows[idx] = internalAccessList.maskItems(row);
-				}
+				rows[idx] = internalAccessList.maskItems(row);
 				return true;
 			});
 		}
@@ -568,22 +573,25 @@ const internalAccessList = {
 	 * @returns {Object}
 	 */
 	maskItems: (list) => {
-		if (Array.isArray(list?.items)) {
-			list.items.map((_val, idx) => {
-				list.items[idx].hint = "********";
-				list.items[idx].password = "";
+		// Configuration workers may still hold this snapshot after an API response.
+		const masked = _.cloneDeep(list);
+		if (masked) Object.assign(masked, publicAccessListCredentials(masked.meta));
+		if (Array.isArray(masked?.items)) {
+			masked.items.map((_val, idx) => {
+				masked.items[idx].hint = "********";
+				masked.items[idx].password = "";
 				return true;
 			});
 		}
-		for (const host of list?.proxy_hosts || []) {
+		for (const host of masked?.proxy_hosts || []) {
 			if (host.access_list) {
-				internalAccessList.maskItems(host.access_list);
+				host.access_list = internalAccessList.maskItems(host.access_list);
 			}
 		}
-		if (Array.isArray(list?.proxy_hosts)) {
-			list.proxy_hosts = list.proxy_hosts.map(sanitizeProxyHost);
+		if (Array.isArray(masked?.proxy_hosts)) {
+			masked.proxy_hosts = masked.proxy_hosts.map(sanitizeProxyHost);
 		}
-		return list;
+		return masked;
 	},
 
 	/**

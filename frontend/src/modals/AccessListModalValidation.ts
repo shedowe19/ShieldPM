@@ -17,14 +17,14 @@ export const validateAccessListForm = (values: AccessListFormValues): string | n
 
 	if (values.authType === ACCESS_LIST_AUTH_TYPE.OIDC) {
 		if (!values.oidcClientId) return "Client ID is required";
-		if (!values.oidcClientSecret) return "Client Secret is required";
+		if (!values.oidcClientSecret && !values.oidcClientSecretConfigured) return "Client Secret is required";
 		if (!values.oidcDiscoveryUrl) return "Discovery URL is required";
 	}
 
 	if (values.authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY) {
 		if (!values.oauth2ClientId) return "Client ID is required";
-		if (!values.oauth2ClientSecret) return "Client Secret is required";
-		if (!values.oauth2CookieSecret) return "Cookie Secret is required";
+		if (!values.oauth2ClientSecret && !values.oauth2ClientSecretConfigured) return "Client Secret is required";
+		if (!values.oauth2CookieSecret && !values.oauth2CookieSecretConfigured) return "Cookie Secret is required";
 		if (
 			(values.oauth2Provider === "oidc" || values.oauth2Provider === "keycloak-oidc") &&
 			!values.oauth2OidcIssuerUrl?.trim()

@@ -1,4 +1,5 @@
 {
+	"form.secret.keep-existing": "設定済みです。空欄のままにすると保持されます",
 	"2fa.active-methods": "有効な方法",
 	"2fa.add-method": "新しい方法を追加",
 	"2fa.backup-code.placeholder": "バックアップコード",

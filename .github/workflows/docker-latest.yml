@@ -11,7 +11,7 @@ on:
 env:
   IMAGE_NAME: ghcr.io/shedowe19/shieldpm
 
-# Every dispatch writes the same latest architecture tags, regardless of ref.
+# Every dispatch promotes the same latest tags, regardless of ref.
 concurrency:
   group: docker-latest-publish
   cancel-in-progress: false
@@ -46,8 +46,8 @@ jobs:
           FULL_VER="${RELEASE_TAG}-${SHORT_SHA}-${VERSION_FILE}"
 
           echo "version=${FULL_VER}" >> $GITHUB_OUTPUT
-          # Base tag for the arch-specific images will be 'latest'
-          echo "tag_base=latest" >> $GITHUB_OUTPUT
+          # Candidates cannot replace a published tag before both architectures pass.
+          echo "tag_base=latest-candidate-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> $GITHUB_OUTPUT
 
   # ---------------------------------------------------------
   # PHASE 2: BUILD (Matrix)
@@ -97,6 +97,7 @@ jobs:
           file: ./Dockerfile
           target: frontend
           push: false
+          outputs: type=cacheonly
           build-args: |
             ${{ matrix.flags }}
           cache-from: type=gha,scope=${{ matrix.arch }}-frontend
@@ -109,17 +110,19 @@ jobs:
           file: ./Dockerfile
           target: backend
           push: false
+          outputs: type=cacheonly
           build-args: |
             ${{ matrix.flags }}
           cache-from: type=gha,scope=${{ matrix.arch }}-backend
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-backend
 
-      - name: "🚀 Build Final & Push"
+      - name: "🏗️ Build and load candidate image"
         uses: docker/build-push-action@v7.3.0
         with:
           context: .
           file: ./Dockerfile
-          push: true
+          push: false
+          load: true
           tags: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
           build-args: |
             ${{ matrix.flags }}
@@ -128,6 +131,40 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-backend
             type=gha,scope=${{ matrix.arch }}-final
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
+
+      - name: "🌍 Smoke GeoIP bootstrap from latest release"
+        timeout-minutes: 10
+        env:
+          SMOKE_IMAGE: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
+          GEOIP_GITHUB_TOKEN: ${{ github.token }}
+        run: bash scripts/ci/geoip-update-smoke.sh "$SMOKE_IMAGE"
+
+      - name: "🧪 Smoke loaded image as root and UID 1000"
+        timeout-minutes: 10
+        env:
+          SMOKE_IMAGE: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
+        run: bash scripts/ci/docker-smoke.sh "$SMOKE_IMAGE"
+
+      - name: "📤 Push tested candidate and record its digest"
+        env:
+          SMOKE_IMAGE: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
+          IMAGE_ARCH: ${{ matrix.arch }}
+        run: |
+          docker push "$SMOKE_IMAGE"
+          IMAGE_REF=$(docker image inspect --format '{{index .RepoDigests 0}}' "$SMOKE_IMAGE")
+          DIGEST=${IMAGE_REF#"$IMAGE_NAME@"}
+          [[ "$IMAGE_REF" == "$IMAGE_NAME@$DIGEST" && "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || exit 1
+          mkdir -p image-digests
+          printf '%s\n' "$IMAGE_REF" > "image-digests/$IMAGE_ARCH.txt"
+
+      - name: "📤 Upload tested image digest"
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: latest-image-digest-${{ matrix.arch }}
+          path: image-digests/${{ matrix.arch }}.txt
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 1
 
   # ---------------------------------------------------------
   # PHASE 3: MERGE
@@ -138,12 +175,22 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'shedowe19' }}
     steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.2.0
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download tested image digests
+        uses: actions/download-artifact@v8.0.1
+        with:
+          pattern: latest-image-digest-*
+          path: image-digests
+          merge-multiple: true
 
       - name: Create Multiarch Manifest
         env:
@@ -153,17 +200,19 @@ jobs:
           INPUT_TAG="${{ env.IMAGE_NAME }}:${RELEASE_TAG}"
           RUN_TAG="${{ env.IMAGE_NAME }}:${{ github.run_number }}"
 
-          # Create and push 'latest'
-          docker buildx imagetools create --tag "${LATEST_TAG}" \
-            "${LATEST_TAG}-x86_64" \
-            "${LATEST_TAG}-aarch64"
-            
-          # Create and push input tag
-          docker buildx imagetools create --tag "${INPUT_TAG}" \
-            "${LATEST_TAG}-x86_64" \
-            "${LATEST_TAG}-aarch64"
-            
-          # Create and push run number tag
-          docker buildx imagetools create --tag "${RUN_TAG}" \
-            "${LATEST_TAG}-x86_64" \
-            "${LATEST_TAG}-aarch64"
+          # Validate both immutable references before changing any published tag.
+          IMAGES=()
+          for ARCH in x86_64 aarch64; do
+            IMAGE_REF=$(cat "image-digests/$ARCH.txt")
+            DIGEST=${IMAGE_REF#"$IMAGE_NAME@"}
+            [[ "$IMAGE_REF" == "$IMAGE_NAME@$DIGEST" && "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || exit 1
+            IMAGES+=("$IMAGE_REF")
+          done
+
+          docker buildx imagetools create \
+            --tag "$LATEST_TAG" --tag "$INPUT_TAG" --tag "$RUN_TAG" \
+            "${IMAGES[@]}"
+
+          # Keep existing architecture tags, promoting only already-tested images.
+          docker buildx imagetools create --prefer-index=false --tag "${LATEST_TAG}-x86_64" "${IMAGES[0]}"
+          docker buildx imagetools create --prefer-index=false --tag "${LATEST_TAG}-aarch64" "${IMAGES[1]}"

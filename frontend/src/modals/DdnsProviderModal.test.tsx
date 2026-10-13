@@ -73,6 +73,30 @@ it("round-trips the stored zone and IP version without reenabling a disabled pro
 	expect(JSON.parse(String(update?.[1]?.body))).not.toHaveProperty("id");
 });
 
+it("edits redacted provider credentials without requiring or resubmitting its token", async () => {
+	vi.mocked(fetch).mockImplementation((_url, options) =>
+		Promise.resolve(
+			new Response(
+				JSON.stringify(
+					options?.method === "GET"
+						? [{ ...provider, config: { zone_id: "test-zone" }, has_credentials: true }]
+						: provider,
+				),
+			),
+		),
+	);
+	open(7);
+	const token = await screen.findByLabelText("ddns-providers.cloudfare_token");
+	expect(token).toHaveValue("");
+	expect(token).toHaveAttribute("placeholder", "form.secret.keep-existing");
+	fireEvent.change(screen.getByLabelText("column.name"), { target: { value: "Renamed" } });
+	fireEvent.click(screen.getByRole("button", { name: "save" }));
+	await waitFor(() => expect(mocks.remove).toHaveBeenCalled());
+	const update = vi.mocked(fetch).mock.calls.find(([, options]) => options?.method === "PUT");
+	expect(JSON.parse(String(update?.[1]?.body))).toMatchObject({ name: "Renamed", config: { zone_id: "test-zone" } });
+	expect(JSON.parse(String(update?.[1]?.body)).config).not.toHaveProperty("token");
+});
+
 it("does not offer an empty edit form when the provider cannot be loaded", async () => {
 	vi.mocked(fetch).mockResolvedValue(
 		new Response(JSON.stringify({ error: { message: "Provider unavailable" } }), { status: 503 }),

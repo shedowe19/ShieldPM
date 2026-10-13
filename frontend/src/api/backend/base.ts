@@ -192,7 +192,7 @@ interface DeleteArgs {
 	silentAuth?: boolean;
 }
 
-async function baseGet({ url, params }: GetArgs, abortController?: AbortController) {
+async function baseGet({ url, params }: GetArgs, abortController?: Pick<AbortController, "signal">) {
 	const apiUrl = buildUrl({ url, params });
 	const method = "GET";
 	const headers = buildAuthHeader();
@@ -201,7 +201,10 @@ async function baseGet({ url, params }: GetArgs, abortController?: AbortControll
 	return response;
 }
 
-export async function get<T = DynamicResponse>(args: GetArgs, abortController?: AbortController): Promise<T> {
+export async function get<T = DynamicResponse>(
+	args: GetArgs,
+	abortController?: Pick<AbortController, "signal">,
+): Promise<T> {
 	const sessionRevision = AuthStore.sessionRevision;
 	return processResponse<T>(await baseGet(args, abortController), sessionRevision, args.silentAuth);
 }

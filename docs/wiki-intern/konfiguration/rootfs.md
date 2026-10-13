@@ -10,21 +10,22 @@ Das `rootfs/`-Verzeichnis enthält Dateien, die direkt ins Dateisystem des Conta
 
 ## Startup-Scripts (`rootfs/usr/local/bin/`)
 
-| Datei                | Zweck                                                                                                               |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `entrypoint.sh`      | Docker-Einstieg: Datenverzeichnis-Migration und optionale Prerun-Skripte; ruft `envs.sh` auf                        |
-| `envs.sh`            | Lädt `/data/.env`, bereitet GeoIP vor, validiert Umgebungswerte und prüft den Vorlagenfingerabdruck                 |
-| `migration.sh`       | Übergibt an `start.sh`                                                                                              |
-| `start.sh`           | Konfiguriert Nginx, Module, Zertifikate, Dienste und Berechtigungen; ruft `launch.sh` auf                           |
-| `migrate-data.sh`    | Funktionen für die Migration historischer Datenpfade und Certbot-Dateien                                            |
-| `runtime-config.sh`  | Passt Nginx-, GoAccess- und Certbot-Dateien an aktuelle Laufzeitpfade und Umgebungswerte an                         |
-| `update-geoip.py`    | Prüft die neueste GeoLite.mmdb-Veröffentlichung und bereitet Country, City und ASN vor allen Diensten vor           |
-| `launch.sh`          | Startet Backend-Prozess und optionale Hilfsdienste; beendet den Container, wenn Nginx oder Backend unerwartet endet |
-| `healthcheck.sh`     | Docker-Healthcheck der lokalen HTTPS-UI (`/api/`) und gegebenenfalls GoAccess-/PHP-Dienste                          |
-| `aio.sh`             | Richtet den Nextcloud-AIO-Proxy-Host einschließlich TLS-Zertifikat einmalig ein                                     |
-| `update-shieldpm`    | Updater für native Installationen; erstellt vor dem Austausch einen Recovery-Checkpoint                             |
-| `npm-reset-password` | Passwort-Reset-Wrapper                                                                                              |
-| `shieldpm-vacuum`    | Führt eine ausdrücklich angeforderte SQLite-`VACUUM`-Wartung aus; nie im Startpfad                                  |
+| Datei                      | Zweck                                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `entrypoint.sh`            | Docker-Einstieg: Datenverzeichnis-Migration und optionale Prerun-Skripte; ruft `envs.sh` auf                        |
+| `envs.sh`                  | Lädt `/data/.env`, bereitet GeoIP vor, validiert Umgebungswerte und prüft den Vorlagenfingerabdruck                 |
+| `migration.sh`             | Übergibt an `start.sh`                                                                                              |
+| `start.sh`                 | Konfiguriert Nginx, Module, Zertifikate, Dienste und Berechtigungen; ruft `launch.sh` auf                           |
+| `migrate-data.sh`          | Funktionen für die Migration historischer Datenpfade und Certbot-Dateien                                            |
+| `runtime-config.sh`        | Passt Nginx-, GoAccess- und Certbot-Dateien an aktuelle Laufzeitpfade und Umgebungswerte an                         |
+| `update-geoip.py`          | Prüft die neueste GeoLite.mmdb-Veröffentlichung und bereitet Country, City und ASN vor allen Diensten vor           |
+| `launch.sh`                | Startet Backend-Prozess und optionale Hilfsdienste; beendet den Container, wenn Nginx oder Backend unerwartet endet |
+| `healthcheck.sh`           | Docker-Healthcheck der lokalen HTTPS-UI (`/api/`) und gegebenenfalls GoAccess-/PHP-Dienste                          |
+| `aio.sh`                   | Richtet den Nextcloud-AIO-Proxy-Host einschließlich TLS-Zertifikat einmalig ein                                     |
+| `update-shieldpm`          | Updater für native Installationen; erstellt vor dem Austausch einen Recovery-Checkpoint                             |
+| `stage-native-binaries.py` | Prüft ausgewählte native Archive und bereitet ihre Dateien vor dem Dienststopp vor                                  |
+| `npm-reset-password`       | Passwort-Reset-Wrapper                                                                                              |
+| `shieldpm-vacuum`          | Führt eine ausdrücklich angeforderte SQLite-`VACUUM`-Wartung aus; nie im Startpfad                                  |
 
 ## Datenmigration und Dateirechte
 
@@ -78,6 +79,12 @@ Die aktuelle Prüfung kodiert den Branchnamen und liest die vollständige JSON-A
 
 Das Selbstupdate lädt das Skript aus genau dem aufgelösten Ziel-Commit, statt unabhängig von `-b` immer `develop` zu verwenden. Dadurch ersetzt ein Update auf einen Feature-Branch dessen korrigierten Updater nicht wieder durch einen älteren Stand. Syntaxprüfung, ursprüngliche Argumente und die Begrenzung auf einen Selbstupdate-Neustart bleiben erhalten. `scripts/tests/test_update_preflight.py` führt diese Vorprüfung mit echten Bash-/Node-Prozessen, temporären Dateien und simulierten Downloads aus; Paketinstallationen oder Dienständerungen werden dabei nicht gestartet. Hinweise für Altinstallationen stehen unter [Deployment](../entwicklung/deployment.md).
 
+## Native-Wartung: gemeinsame Sperre
+
+`update-shieldpm` und `scripts/install.sh` erwerben vor Systemänderungen dieselbe nicht blockierende `flock`-Sperre auf `/run/shieldpm-maintenance/operation.lock`. `flock` aus `util-linux` ist dafür Voraussetzung. Das separate Verzeichnis gehört Root und erhält Modus `0700`; ein Symlink als Verzeichnis wird zurückgewiesen. Das Startskript verwaltet weiterhin ausschließlich sein eigenes `/run/shieldpm` und übernimmt diese Wartungssperre nicht für die Dienst-UID.
+
+Der geöffnete Deskriptor `9` bleibt bei der Übergabe an die private Updaterkopie und bei einem Selbstupdate erhalten. Der neue Prozess verwendet den bereits geöffneten Deskriptor erneut, wenn er auf dieselbe Sperrdatei zeigt. Die Datei wird zwischen Aufrufen nicht entfernt: Ein anderer Inode könnte sonst eine zweite unabhängige Sperre erlauben. Ein konkurrierender Installations- oder Updateaufruf beendet sich mit einer Meldung, statt auf das Ende des ersten Aufrufs zu warten.
+
 ## Native-Update: Yarn-Classic-Fallback
 
 Falls Corepack nicht verfügbar ist, installieren sowohl `update-shieldpm` als auch `scripts/install.sh` Yarn Classic mit `npm install --global --allow-scripts=yarn yarn@1.22.22`. Damit ist ausschließlich das bekannte Yarn-`preinstall`-Skript für diesen Aufruf erlaubt; es gibt keine globale Freigabe fremder Install-Skripte. Zuvor entfernt der Fallback nur verwaiste Corepack-Shims.
@@ -92,9 +99,23 @@ Das Update läuft aus einem privaten, mit `mktemp` angelegten Verzeichnis. Selbs
 
 Vor dem Austausch erzeugt der Updater einen Recovery-Checkpoint im privaten Update-Verzeichnis. Dabei verwendet er `${DATA_PATH:-/data}` durchgängig: Für SQLite entsteht ein mit der SQLite-Backup-API erstellter Snapshot; für MySQL/MariaDB oder PostgreSQL erkennt der Updater die Datenbankkonfiguration ohne Zugangswerte auszugeben und verlangt eine interaktive Bestätigung, dass eine aktuelle externe Datenbanksicherung existiert. Ohne Bestätigung wird vor dem Dateiaustausch abgebrochen. Der Checkpoint und SQLite-Snapshots haben Modus `0600`; die zuvor gültige Prozess-Umask wird anschließend wiederhergestellt.
 
-Danach werden Backend und Frontend gesichert und der Dienst gestoppt. Ein Abbruch vor dem ersten Start der neuen Datenbankmigrationen stellt diese Anwendungsdateien wieder her und versucht, den Dienst erneut zu starten. Sobald Migrationen beginnen, erfolgt kein automatisches Zurücksetzen auf den vorherigen Anwendungscode: Ein solcher Wechsel könnte mit dem bereits geänderten Datenbankschema inkompatibel sein. Das ist keine vollständige Systemsicherung; Systempakete, Nginx-Binaries und Rootfs-Konfigurationen können bereits aktualisiert worden sein.
+Der Updater bereitet zuvor auch alle ausgewählten nativen Binärarchive vor, wie im [Archivvertrag](./rootfs.md#native-update-archivvorbereitung-vor-dem-dienststopp) beschrieben. Danach werden Backend und Frontend gesichert und der Dienst gestoppt. `/app` und `/html/frontend` werden vollständig ersetzt, einschließlich versteckter Dateien. Aus dem Rootfs-Update wird `/data` vor dem Kopieren entfernt, sodass dessen mitgelieferte Vorlage weder Benutzerdaten noch Datenbank ersetzt. Vorbereitete native Binärdateien werden anschließend aus dem lokalen Staging installiert.
+
+Ein Abbruch vor dem ersten Start der neuen Datenbankmigrationen stellt diese Anwendungsdateien wieder her und versucht, den Dienst erneut zu starten. Unmittelbar vor dem Neustart wird der automatische Dateirückwechsel deaktiviert: Ein solcher Wechsel könnte mit dem bereits geänderten Datenbankschema inkompatibel sein. Das ist keine vollständige Systemsicherung; Systempakete, Nginx-Binaries und Rootfs-Konfigurationen können bereits aktualisiert worden sein.
 
 Scheitern Neustart oder Healthcheck nach diesem Punkt, bleiben die Recovery-Dateien im ausgegebenen privaten Arbeitsverzeichnis erhalten. Vor einer manuellen Wiederherstellung muss der Stand der Datenbankmigrationen geprüft werden.
+
+Der gebündelte Installer sichert dieselben beiden Anwendungspfade und ersetzt sie ebenfalls vollständig. Der physische Paketpfad muss außerhalb dieser Ziele liegen, und umgeleitete Zielpfade werden zurückgewiesen. Bei einem Fehler vor dem neuen Dienststart stellt er vorhandene Anwendungsdateien wieder her; bei einer Erstinstallation entfernt er die teilweise angelegten Ziele. Nur ein zuvor aktiver Dienst wird nach diesem Versuch automatisch gestartet. Sobald der neue Dienststart versucht wird, behält ein Fehler die neuen Dateien und Sicherungen. Weitere statische Seiten, native Binaries, Systempakete und Konfigurationen gehören nicht zu diesem automatischen Anwendungsrollback.
+
+## Native-Update: Archivvorbereitung vor dem Dienststopp
+
+Nach Quellcode- und Frontend-Build fragt `stage_native_binaries` nach Updates beziehungsweise Erstinstallation von Nginx, Anubis und OAuth2-Proxy. Für die unterstützten Architekturen `amd64` und `arm64` folgen die ausgewählten Downloads und die Prüfung durch `stage-native-binaries.py`, während der bisherige Dienst noch läuft. Ein fehlender Helfer, Transferfehler oder ungültiges ausgewähltes Archiv beendet den Ablauf vor dem Dienststopp. Abgewählte Komponenten werden unverändert gelassen. Nicht unterstützte Architekturen überspringen die automatische Binärvorbereitung.
+
+Nginx-Archive dürfen nur Pfade unter `usr/` enthalten. Absolute Mitgliedspfade, `..`-Komponenten, doppelte normalisierte Namen, besondere Dateitypen sowie Schreibpfade durch im Archiv angelegte Links werden zurückgewiesen. Es gelten höchstens 100.000 Mitglieder und insgesamt 8 GiB deklarierter Dateiinhalte. Symlinkziele müssen innerhalb `/usr` bleiben; absolute `/usr`-Links werden für das Staging in gleichbedeutende relative Links umgewandelt. Hardlinks werden als reguläre Dateien aus ihrem Archivinhalt materialisiert. Der erforderliche Nginx-Pfad `usr/local/nginx/sbin/nginx` muss eine reguläre Datei sein.
+
+Bei Anubis und OAuth2-Proxy wird ausschließlich das für Version und Architektur erwartete reguläre Binärmitglied übernommen, mit höchstens 8 GiB deklarierter Dateigröße. Die drei ausgewählten Programme benötigen einen 64-Bit-ELF-Header mit passender Maschinenkennung und Ausführungsrechten. Das bestätigt Dateityp und Architektur; es ist keine Signaturprüfung des Herausgebers und kein Laufzeitnachweis für die Binary oder ihre Bibliotheksabhängigkeiten. Erst nach erfolgreicher Vorbereitung und Recovery-Checkpoint werden die vorhandenen Anwendungsdateien gesichert und der Dienst gestoppt. Während des Dateiaustauschs erfolgen keine weiteren Rückfragen oder Binärdownloads.
+
+`scripts/tests/test_native_maintenance.py` führt den gemeinsamen Lock einschließlich Exec-Übergabe, die Wiederinstallation und ihre Fehlergrenzen sowie die Archivvorbereitung mit temporären Dateien und simulierten Downloads/Diensten aus. Die Tests prüfen unter anderem veraltete Dateien, Symlink-Aliase, Traversal, Links und falsche Architektur; sie starten weder einen echten Installer noch einen produktiven Dienst.
 
 ## Healthcheck und AIO
 

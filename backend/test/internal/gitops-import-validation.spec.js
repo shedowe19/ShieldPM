@@ -175,12 +175,38 @@ import gitops from "../../internal/gitops.js";
 import nginx from "../../internal/nginx.js";
 import monitor from "../../internal/proxy-host-monitor.js";
 import { assertNoSymlinkPath, writeConfigFile } from "../../lib/gitops-files.js";
+import { subscribeProxyHostDomains } from "../../lib/proxy-host-domain-events.js";
 
 const access = { can: vi.fn().mockResolvedValue(true), token: { getUserId: () => 1 } };
 const file = (directory, data) =>
 	mocks.files.set(`/data/gitops/shieldpm-config/${directory}/1.yaml`, JSON.stringify(data));
 
 describe("GitOps import sanitization and safe restore", () => {
+	it.each([false, true])(
+		"publishes one complete domain snapshot for a host batch (partial failure: %s)",
+		async (partialFailure) => {
+			const snapshots = [];
+			const unsubscribe = subscribeProxyHostDomains(async () => {
+				snapshots.push(structuredClone(mocks.rows.ProxyHost || []));
+			});
+			try {
+				for (let id = 1; id <= 20; id++) {
+					mocks.files.set(
+						`/data/gitops/shieldpm-config/proxy-hosts/${id}.yaml`,
+						JSON.stringify({ id, domain_names: [`host${id}.example.test`] }),
+					);
+				}
+				if (partialFailure) mocks.files.set("/data/gitops/shieldpm-config/proxy-hosts/invalid.yaml", "[]");
+				const result = await gitops.importConfig(access, { overwrite: true });
+				expect(result.success).toBe(!partialFailure);
+				expect(snapshots).toHaveLength(1);
+				expect(snapshots[0]).toHaveLength(20);
+				expect(snapshots[0].every((row) => row.host_domains.length === 1)).toBe(true);
+			} finally {
+				unsubscribe();
+			}
+		},
+	);
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.files.clear();
