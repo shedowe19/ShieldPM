@@ -41,6 +41,8 @@ docker build -t shieldpm:local .
 
 ### GitHub-Actions-Builds bei Pull Requests
 
+Docker-Prüfungen teilen weiterhin eine Warteschlange pro Git-Referenz. Nur bei `pull_request` ist `cancel-in-progress` aktiviert: Ein neuer PR-Stand beendet überholte Builds derselben PR-Referenz, statt hinter deren nicht mehr benötigten Paketerstellungen zu warten. Push-, Tag- und manuelle Veröffentlichungen behalten ihre Serialisierung und brechen laufende Veröffentlichungen nicht ab; der separate Releasejob behält ebenfalls seine unveränderte Sperre.
+
 Pull Requests aus demselben Repository melden sich mit dem vorhandenen `GITHUB_TOKEN` bei GHCR an, damit die finale Stage das Nginx-Basisimage laden kann. Das Package muss dem Workflow-Repository Lesezugriff gewähren. Ohne Anmeldung lieferte GHCR im PR-Build HTTP 401 beim Abruf des Basisimages.
 
 PR-Builds laden das fertige Image nur in den lokalen Docker-Daemon des Runners (`load: true`, `push: false`); Registry-Push, Multiarch-Veröffentlichung und Releases bleiben auf Ereignisse außerhalb von Pull Requests begrenzt. Fork-PRs erhalten über den Login-Schritt keine Registry-Zugangsdaten und benötigen ein anonym zugängliches Basisimage für den vollständigen Build.

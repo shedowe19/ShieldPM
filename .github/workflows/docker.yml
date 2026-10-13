@@ -56,7 +56,7 @@ env:
 # Arch tags must not be overwritten by another run before its manifest merges.
 concurrency:
   group: docker-publish-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: write
