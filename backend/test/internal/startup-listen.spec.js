@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
 	analyticsStop: vi.fn(async () => {}),
+	analyticsInit: vi.fn(async () => {}),
+	migrate: vi.fn(async () => {}),
 	port: 0,
 	servers: [],
 	completed: false,
@@ -34,7 +36,7 @@ vi.mock("../../app.js", async () => {
 		},
 	};
 });
-vi.mock("../../internal/analytics.js", () => ({ default: { init: async () => {}, stop: state.analyticsStop } }));
+vi.mock("../../internal/analytics.js", () => ({ default: { init: state.analyticsInit, stop: state.analyticsStop } }));
 vi.mock("../../internal/certificate.js", () => ({ default: { initTimer: async () => {} } }));
 vi.mock("../../internal/chat.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/cloudflared.js", () => ({ default: { init: async () => {} } }));
@@ -57,10 +59,11 @@ vi.mock("../../internal/proxy-host-monitor.js", () => ({
 vi.mock("../../internal/terminal.js", () => ({ default: { init: state.terminal } }));
 vi.mock("../../internal/tor.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/wireguard.js", () => ({ default: { init: async () => {} } }));
+vi.mock("../../internal/upload-relay.js", () => ({ default: { init: vi.fn(), stop: vi.fn(async () => {}) } }));
 vi.mock("../../lib/db-migrate.js", () => ({ default: async () => {} }));
 vi.mock("../../lib/utils.js", () => ({ default: { execFile: vi.fn() } }));
 vi.mock("../../logger.js", () => ({ global: { info: state.info, error: state.error } }));
-vi.mock("../../migrate.js", () => ({ migrateUp: async () => {} }));
+vi.mock("../../migrate.js", () => ({ migrateUp: state.migrate }));
 vi.mock("../../schema/index.js", () => ({ getCompiledSchema: async () => {} }));
 vi.mock("../../setup.js", () => ({ default: async () => {} }));
 
@@ -70,6 +73,9 @@ describe("backend listener lifecycle", () => {
 		vi.resetModules();
 		vi.clearAllMocks();
 		state.firewallStop.mockResolvedValue(undefined);
+		state.analyticsStop.mockResolvedValue(undefined);
+		state.analyticsInit.mockResolvedValue(undefined);
+		state.migrate.mockResolvedValue(undefined);
 		state.configurationLock.mockImplementation(async (callback) => callback());
 		// index-dev intentionally replaces reload; restore the production fixture per case.
 		(await import("../../internal/nginx.js")).default.reload = state.reload;
@@ -99,6 +105,57 @@ describe("backend listener lifecycle", () => {
 		vi.restoreAllMocks();
 		vi.unstubAllEnvs();
 	});
+	it.each(["production", "development"])(
+		"waits for migrations and analytics initialization before listening in %s mode",
+		async (mode) => {
+			const migration = Promise.withResolvers();
+			const initialization = Promise.withResolvers();
+			state.migrate.mockReturnValueOnce(migration.promise);
+			state.analyticsInit.mockReturnValueOnce(initialization.promise);
+			try {
+				if (mode === "production") await import("../../index.js");
+				else await import("../../index-dev.js");
+				await vi.waitFor(() => expect(state.migrate).toHaveBeenCalledOnce());
+				expect(state.analyticsInit).not.toHaveBeenCalled();
+				expect(state.servers).toHaveLength(0);
+				migration.resolve();
+				await vi.waitFor(() => expect(state.analyticsInit).toHaveBeenCalledOnce());
+				expect(state.servers).toHaveLength(0);
+				initialization.resolve();
+				await vi.waitFor(() => expect(state.completed).toBe(true));
+				expect(state.servers).toHaveLength(1);
+			} finally {
+				migration.resolve();
+				initialization.resolve();
+				await vi.waitFor(() => expect(state.completed).toBe(true));
+			}
+		},
+	);
+
+	it.each(["production", "development"])(
+		"waits for analytics draining before process exit in %s mode",
+		async (mode) => {
+			const stopping = Promise.withResolvers();
+			state.analyticsStop.mockReturnValueOnce(stopping.promise);
+			try {
+				if (mode === "production") await import("../../index.js");
+				else await import("../../index-dev.js");
+				await vi.waitFor(() => expect(state.completed).toBe(true));
+				const handler = process
+					.listeners("SIGTERM")
+					.find((listener) => !listeners.get("SIGTERM").includes(listener));
+				expect(handler).toBeTypeOf("function");
+				handler();
+				await vi.waitFor(() => expect(state.analyticsStop).toHaveBeenCalledOnce());
+				expect(process.exit).not.toHaveBeenCalled();
+				stopping.resolve();
+				await vi.waitFor(() => expect(process.exit).toHaveBeenCalledExactlyOnceWith(0));
+			} finally {
+				stopping.resolve();
+			}
+		},
+	);
+
 	it.each(["production", "development"])("exits on a real binding failure in %s mode", async (mode) => {
 		const blocker = createServer();
 		state.servers.push(blocker);

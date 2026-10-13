@@ -300,10 +300,13 @@ else:
 
     def test_all_shell_sources_parse(self):
         for directory in (REPO / "scripts", REPO / "rootfs/usr/local/bin"):
-            for path in directory.iterdir():
+            for path in sorted(directory.rglob("*")):
                 if not path.is_file() or path.is_symlink():
                     continue
-                first_line = path.read_text().splitlines()[0]
+                # Recursive discovery also sees binary fixtures and __pycache__.
+                # Inspect just the shebang before deciding whether to parse.
+                with path.open("rb") as source:
+                    first_line = source.readline(512).decode("utf-8", errors="replace")
                 if not first_line.startswith("#!") or not ("sh" in first_line):
                     continue
                 shell = "bash" if "bash" in first_line else "sh"

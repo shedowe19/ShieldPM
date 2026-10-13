@@ -165,6 +165,9 @@ class FourthInfrastructureTests(unittest.TestCase):
         source = (REPO / "rootfs/usr/local/bin/launch.sh").read_text()
         programs = [line.rstrip(" &") for line in source.splitlines()
                     if line.startswith('if [ "$PHP') and "then while true;" in line]
+        self.assertEqual({re.search(r'\$PHP(\d+)', program).group(1) for program in programs},
+                         {"82", "83", "84"}, "Each supported PHP service must exercise its restart loop")
+        self.assertEqual(len(programs), 3, "Duplicate or missing PHP restart loops")
         source_lines = source.splitlines()
         goaccess_start = next(index for index, line in enumerate(source_lines)
                             if line.startswith('if [ "$GOA" = "true" ]; then while true;'))
@@ -260,6 +263,8 @@ cp() { [ "$active" = false ] || { echo "service still serving old code" >&2; ret
 curl() { ((SECONDS >= 242)) && printf '{"status":"OK"}'; }
 jq() { body=$(cat); [[ "$body" == '{"status":"OK"}' ]]; }
 sleep() { if ((SECONDS == 0)); then SECONDS=241; else SECONDS=$((SECONDS + 1)); fi; }
+# Remove Bash's elapsed-time behavior so only the fixture advances this clock.
+unset SECONDS
 SECONDS=0
 '''
         result = subprocess.run(["bash", "-e", "-c", fixture + section + '\nprintf "deadline=%s elapsed=%s" "$INSTALL_HEALTH_DEADLINE" "$SECONDS"'],

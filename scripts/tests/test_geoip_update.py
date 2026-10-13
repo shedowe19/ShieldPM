@@ -132,6 +132,8 @@ class GeoipUpdateTests(unittest.TestCase):
         try:
             ctypes.CDLL(ctypes.util.find_library("maxminddb") or "libmaxminddb.so.0")
         except OSError:
+            if os.environ.get("CI"):
+                raise
             self.skipTest("libmaxminddb0 is required for native database validation")
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)

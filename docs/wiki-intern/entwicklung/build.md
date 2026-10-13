@@ -41,6 +41,8 @@ docker build -t shieldpm:local .
 
 ### GitHub-Actions-Builds bei Pull Requests
 
+Docker-Prüfungen teilen weiterhin eine Warteschlange pro Git-Referenz. Nur bei `pull_request` ist `cancel-in-progress` aktiviert: Ein neuer PR-Stand beendet überholte Builds derselben PR-Referenz, statt hinter deren nicht mehr benötigten Paketerstellungen zu warten. Push-, Tag- und manuelle Veröffentlichungen behalten ihre Serialisierung und brechen laufende Veröffentlichungen nicht ab; der separate Releasejob behält ebenfalls seine unveränderte Sperre.
+
 Pull Requests aus demselben Repository melden sich mit dem vorhandenen `GITHUB_TOKEN` bei GHCR an, damit die finale Stage das Nginx-Basisimage laden kann. Das Package muss dem Workflow-Repository Lesezugriff gewähren. Ohne Anmeldung lieferte GHCR im PR-Build HTTP 401 beim Abruf des Basisimages.
 
 PR-Builds laden das fertige Image nur in den lokalen Docker-Daemon des Runners (`load: true`, `push: false`); Registry-Push, Multiarch-Veröffentlichung und Releases bleiben auf Ereignisse außerhalb von Pull Requests begrenzt. Fork-PRs erhalten über den Login-Schritt keine Registry-Zugangsdaten und benötigen ein anonym zugängliches Basisimage für den vollständigen Build.
@@ -82,6 +84,12 @@ JSON-Berichte und Markdown-Zusammenfassung liegen unter `.tscanner/reports/`; vo
 Fehlerfall als Artefakt für sieben Tage aufbewahrt. Neue Fehler sowie Scanner-Ausführungswarnungen/-fehler sind fatal.
 `.dockerignore` schließt `.tscanner/` und `.vscode/` aus: Scanner, Babel und Berichte gelangen nicht in das Image oder
 die daraus erstellten nativen Pakete. Details: [TScanner-Anleitung](../../wiki/TScanner.md).
+
+### Dependency-Verifikation und Dockerlint
+
+Der automatische NPM-Updateworkflow prüft Aktualisierungen mit `bash scripts/ci/verify-dependencies.sh`. Der gemeinsame Vertrag umfasst Backendtypen/-tests, Frontendlocales/-tests, Produktionsbuild mit Frontendtypen und Bundlebudget. Nach fehlerhafter Verifikation bleiben die genauen Manifeste, Lockfiles und NCU-Ausgaben als Artefakt verfügbar; die vorhandenen Token- und PR-Schutzbedingungen gelten unverändert. Der Refractor-5-Editor verwendet öffentliche Exportpfade und ausgewählte Grammatiken, damit Versionsupdates keine entfernten tiefen Paketpfade voraussetzen.
+
+Dockerlint ruft `bash scripts/ci/dockerlint.sh` auf. Das Skript übernimmt die bisherigen vier ignorierten Hadolint-Regeln, sammelt stdout und stderr und behandelt den tatsächlichen Pipeline-Exitcode als Fehler. Auch ein abgestürzter Linter ohne DL-/SC-Regeltext schlägt dadurch fehl. Weitere Dockerfiles werden nach einem Fehler weiterhin geprüft; Dateinamen werden NUL-getrennt verarbeitet. Fehlende Dockerfiles, Discovery- und Logfehler sind fatal. Die acht lokalen Regressionen verwenden einen kontrollierten Linter; echter Hadolint und Shellcheck laufen in CI.
 
 ## Frontend Build (standalone)
 

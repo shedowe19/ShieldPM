@@ -642,12 +642,12 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [hasown@2.0.4](https://www.npmjs.com/package/hasown/v/2.0.4) - MIT
 - [hast-util-from-html@2.0.3](https://www.npmjs.com/package/hast-util-from-html/v/2.0.3) - MIT
 - [hast-util-from-parse5@8.0.3](https://www.npmjs.com/package/hast-util-from-parse5/v/8.0.3) - MIT
-- [hast-util-parse-selector@3.1.1](https://www.npmjs.com/package/hast-util-parse-selector/v/3.1.1) - MIT
+- [hast-util-parse-selector@4.0.0](https://www.npmjs.com/package/hast-util-parse-selector/v/4.0.0) - MIT
 - [hast-util-to-html@9.0.5](https://www.npmjs.com/package/hast-util-to-html/v/9.0.5) - MIT
 - [hast-util-to-jsx-runtime@2.3.6](https://www.npmjs.com/package/hast-util-to-jsx-runtime/v/2.3.6) - MIT
 - [hast-util-to-string@3.0.1](https://www.npmjs.com/package/hast-util-to-string/v/3.0.1) - MIT
 - [hast-util-whitespace@3.0.0](https://www.npmjs.com/package/hast-util-whitespace/v/3.0.0) - MIT
-- [hastscript@7.2.0](https://www.npmjs.com/package/hastscript/v/7.2.0) - MIT
+- [hastscript@9.0.1](https://www.npmjs.com/package/hastscript/v/9.0.1) - MIT
 - [hoist-non-react-statics@3.3.2](https://www.npmjs.com/package/hoist-non-react-statics/v/3.3.2) - BSD-3-Clause
 - [html-parse-stringify@4.0.1](https://www.npmjs.com/package/html-parse-stringify/v/4.0.1) - MIT
 - [html-url-attributes@3.0.1](https://www.npmjs.com/package/html-url-attributes/v/3.0.1) - MIT
@@ -763,9 +763,9 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [recharts@3.10.1](https://www.npmjs.com/package/recharts/v/3.10.1) - MIT
 - [redux-thunk@3.1.0](https://www.npmjs.com/package/redux-thunk/v/3.1.0) - MIT
 - [redux@5.0.1](https://www.npmjs.com/package/redux/v/5.0.1) - MIT
-- [refractor@4.9.0](https://www.npmjs.com/package/refractor/v/4.9.0) - MIT
+- [refractor@5.0.0](https://www.npmjs.com/package/refractor/v/5.0.0) - MIT
 - [rehype-parse@9.0.1](https://www.npmjs.com/package/rehype-parse/v/9.0.1) - MIT
-- [rehype-prism-plus@2.0.0](https://www.npmjs.com/package/rehype-prism-plus/v/2.0.0) - MIT
+- [rehype-prism-plus@2.0.2](https://www.npmjs.com/package/rehype-prism-plus/v/2.0.2) - MIT
 - [rehype-stringify@10.0.1](https://www.npmjs.com/package/rehype-stringify/v/10.0.1) - MIT
 - [rehype@13.0.2](https://www.npmjs.com/package/rehype/v/13.0.2) - MIT
 - [remark-gfm@4.0.1](https://www.npmjs.com/package/remark-gfm/v/4.0.1) - MIT
@@ -974,4 +974,4 @@ These tools run only during development and CI. They are not included in ShieldP
 - [@babel/traverse@8.0.7](https://www.npmjs.com/package/@babel/traverse/v/8.0.7) - MIT
 - [tscanner@0.1.3](https://www.npmjs.com/package/tscanner/v/0.1.3) - MIT
 
-The above information reflects the installed packages as of October 8, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
+The above information reflects the installed packages as of October 13, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.

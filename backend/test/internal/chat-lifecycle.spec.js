@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ bots: [], requests: [] }));
 vi.mock("telegraf", () => ({
@@ -35,14 +35,47 @@ vi.mock("../../models/chat_integration.js", () => ({ default: {} }));
 vi.mock("../../internal/ai.js", () => ({ default: {} }));
 
 import chat from "../../internal/chat.js";
+import { global as logger } from "../../logger.js";
 
 const integration = (id) => ({ id, enabled: true, token: "token", config: { allowed_ids: [7] }, user_id: 1 });
 
 describe("ChatOps launch cancellation", () => {
 	beforeEach(() => {
+		vi.clearAllMocks();
 		mocks.bots.length = 0;
 		mocks.requests.length = 0;
 	});
+	afterEach(async () => {
+		for (const id of [101, 102, 103]) await chat.stopBot(id);
+	});
+
+	it.each([undefined, null, {}, { allowed_ids: undefined }, { allowed_ids: null }, { allowed_ids: [] }])(
+		"denies chat access and warns for an unconfigured allowlist %s",
+		async (config) => {
+			await chat.startBot({ ...integration(103), config });
+			const next = vi.fn();
+			const context = { from: { id: 7 } };
+			await mocks.bots[0].middleware(context, next);
+			expect(next).not.toHaveBeenCalled();
+			expect(context).not.toHaveProperty("shieldAccess");
+			expect(logger.warn).toHaveBeenCalledExactlyOnceWith(
+				"[ChatOps] WARNING: allowed_ids is not configured — all access denied",
+			);
+		},
+	);
+
+	it("denies a foreign Telegram user before synthesizing account access", async () => {
+		await chat.startBot(integration(103));
+		const next = vi.fn();
+		const context = { from: { id: 8 } };
+		await mocks.bots[0].middleware(context, next);
+		expect(next).not.toHaveBeenCalled();
+		expect(context).not.toHaveProperty("shieldAccess");
+		expect(logger.warn).toHaveBeenCalledExactlyOnceWith(
+			"[ChatOps] Unauthorized access attempt from Telegram ID: 8",
+		);
+	});
+
 	it("cancels an in-progress launch when stopped before polling exists", async () => {
 		await chat.startBot(integration(101));
 		const old = mocks.bots[0];

@@ -130,10 +130,22 @@ jobs:
 
       - name: Run dependency verification
         if: steps.check_changes.outputs.updates_found == 'true'
-        run: |
-          (cd backend && npx --yes --package yarn@1.22.22 yarn test --run)
-          (cd frontend && npx --yes --package yarn@1.22.22 yarn test --run)
-          (cd frontend && npx --yes --package yarn@1.22.22 yarn build)
+        run: bash scripts/ci/verify-dependencies.sh
+
+      - name: Preserve dependency verification inputs
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: dependency-verification-inputs
+          path: |
+            frontend/package.json
+            frontend/yarn.lock
+            backend/package.json
+            backend/yarn.lock
+            /tmp/frontend-updates.txt
+            /tmp/backend-updates.txt
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Require dedicated pull request token
         if: steps.check_changes.outputs.updates_found == 'true'
@@ -166,7 +178,7 @@ jobs:
           echo "### Verification" >> /tmp/pr_body.txt
           echo "- Validated the installed Vite/Rolldown dependency baseline against the internal wiki." >> /tmp/pr_body.txt
           echo "- Regenerated \`THIRD-PARTY-NOTICES.md\` after all license scans succeeded." >> /tmp/pr_body.txt
-          echo "- Ran backend tests, frontend tests, and the frontend production build." >> /tmp/pr_body.txt
+          echo "- Ran backend types/tests, frontend tests/locales/build, and the compressed bundle budget." >> /tmp/pr_body.txt
 
       - name: Create Pull Request
         if: steps.check_changes.outputs.updates_found == 'true' && steps.publish_guard.outputs.can_update == 'true'

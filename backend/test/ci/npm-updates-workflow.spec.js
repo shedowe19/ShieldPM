@@ -134,9 +134,26 @@ describe("npm dependency update workflow", () => {
 	});
 
 	it("verifies updated dependencies before creating a pull request", () => {
-		expect(workflow).toMatch(
-			/Run dependency verification[\s\S]*backend[\s\S]*yarn test --run[\s\S]*frontend[\s\S]*yarn test --run[\s\S]*yarn build/,
+		expect(namedStep("Run dependency verification")).toContain("run: bash scripts/ci/verify-dependencies.sh");
+		expect(workflow.indexOf("      - name: Run dependency verification\n")).toBeLessThan(
+			workflow.indexOf("      - name: Create Pull Request\n"),
 		);
+	});
+
+	it("preserves exact dependency inputs even when compatibility verification fails", () => {
+		const artifacts = namedStep("Preserve dependency verification inputs");
+		expect(artifacts).toContain("if: always()");
+		for (const file of [
+			"frontend/package.json",
+			"frontend/yarn.lock",
+			"backend/package.json",
+			"backend/yarn.lock",
+			"/tmp/frontend-updates.txt",
+			"/tmp/backend-updates.txt",
+		]) {
+			expect(artifacts).toContain(file);
+		}
+		expect(artifacts).toContain("retention-days: 7");
 	});
 
 	it("requires a dedicated PR token so automated pull requests trigger normal checks", () => {

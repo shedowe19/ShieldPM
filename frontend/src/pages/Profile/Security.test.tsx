@@ -37,11 +37,14 @@ vi.mock("@simplewebauthn/browser", () => ({
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+const queryClients = new Set<QueryClient>();
+
 const makeWrapper = (
 	client = new QueryClient({
 		defaultOptions: { queries: { retry: false } },
 	}),
 ) => {
+	queryClients.add(client);
 	const Wrapper = ({ children }: { children: React.ReactNode }) => (
 		<QueryClientProvider client={client}>{children}</QueryClientProvider>
 	);
@@ -54,12 +57,22 @@ const emptyStatus = { methods: [], backupCodesRemaining: 0 };
 
 describe("SecuritySettings", () => {
 	beforeEach(() => {
-		vi.clearAllMocks();
+		vi.resetAllMocks();
 		mockGet2fa.mockResolvedValue(emptyStatus);
+		vi.mocked(startRegistration).mockResolvedValue({
+			id: "cred_123",
+			rawId: "cred_123",
+			type: "public-key",
+			response: { clientDataJSON: "", attestationObject: "", transports: ["usb"] },
+			clientExtensionResults: {},
+		});
 	});
 
 	afterEach(() => {
 		cleanup();
+		for (const client of queryClients) client.clear();
+		queryClients.clear();
+		vi.restoreAllMocks();
 	});
 
 	it("renders the 2FA heading", async () => {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 vi.mock("../../db.js", () => ({ default: () => ({}) }));
@@ -18,9 +18,15 @@ vi.mock("../../internal/anubis.js", () => ({ default: {} }));
 
 import fs from "node:fs";
 import internalNginx from "../../internal/nginx.js";
+import utils from "../../lib/utils.js";
 
 // Spy on fs.promises.readFile after import so we can control it per test
-const readFileSpy = vi.spyOn(fs.promises, "readFile");
+let readFileSpy;
+
+afterEach(() => {
+	vi.restoreAllMocks();
+	vi.unstubAllEnvs();
+});
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const makeAccess = () => ({ can: vi.fn().mockResolvedValue(true) });
@@ -29,6 +35,7 @@ const makeAccess = () => ({ can: vi.fn().mockResolvedValue(true) });
 describe("Fix #59: internalNginx.getLogs", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		readFileSpy = vi.spyOn(fs.promises, "readFile");
 	});
 
 	it("getLogs is defined as a function", () => {
@@ -96,32 +103,33 @@ describe("Fix #59: internalNginx.getLogs", () => {
 	});
 });
 
-describe("Fix #63: DISABLE_NGINX_BEAUTIFIER env var logic", () => {
-	it("beautifier runs when env var is unset (default on)", () => {
-		delete process.env.DISABLE_NGINX_BEAUTIFIER;
-		expect(process.env.DISABLE_NGINX_BEAUTIFIER !== "true").toBe(true);
+describe("Nginx config beautifier runtime setting", () => {
+	let writeFile;
+	let beautify;
+	beforeEach(() => {
+		vi.spyOn(internalNginx, "renderConfig").mockResolvedValue("generated host configuration");
+		writeFile = vi.spyOn(fs.promises, "writeFile").mockResolvedValue();
+		beautify = vi.spyOn(utils, "execFile").mockResolvedValue("");
 	});
 
-	it("beautifier is disabled when DISABLE_NGINX_BEAUTIFIER=true", () => {
-		process.env.DISABLE_NGINX_BEAUTIFIER = "true";
-		expect(process.env.DISABLE_NGINX_BEAUTIFIER !== "true").toBe(false);
-		delete process.env.DISABLE_NGINX_BEAUTIFIER;
+	it.each([undefined, "false", "true"])("installs a config with DISABLE_NGINX_BEAUTIFIER=%s", async (value) => {
+		vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", value);
+		const host = { id: 12 };
+		const filename = internalNginx.getConfigName("proxy_host", host.id);
+		expect(await internalNginx.generateConfig("proxy_host", host)).toBe(true);
+		expect(internalNginx.renderConfig).toHaveBeenCalledExactlyOnceWith("proxy_host", host);
+		expect(writeFile).toHaveBeenCalledExactlyOnceWith(filename, "generated host configuration", {
+			encoding: "utf8",
+		});
+		if (value === "true") expect(beautify).not.toHaveBeenCalled();
+		else expect(beautify).toHaveBeenCalledExactlyOnceWith("nginxbeautifier", ["-s", "4", filename]);
 	});
 
-	it("beautifier runs when DISABLE_NGINX_BEAUTIFIER=false (explicitly enabled)", () => {
-		process.env.DISABLE_NGINX_BEAUTIFIER = "false";
-		expect(process.env.DISABLE_NGINX_BEAUTIFIER !== "true").toBe(true);
-		delete process.env.DISABLE_NGINX_BEAUTIFIER;
-	});
-
-	it("OLD bug: === 'false' was always truthy when var was unset or set to 'true'", () => {
-		// When unset: undefined === 'false' → false (beautifier would NOT run — wrong!)
-		delete process.env.DISABLE_NGINX_BEAUTIFIER;
-		expect(process.env.DISABLE_NGINX_BEAUTIFIER === "false").toBe(false);
-
-		// When set to 'true' to disable: 'true' === 'false' → false (beautifier would NOT run — accidentally correct, but wrong reason)
-		process.env.DISABLE_NGINX_BEAUTIFIER = "true";
-		expect(process.env.DISABLE_NGINX_BEAUTIFIER === "false").toBe(false);
-		delete process.env.DISABLE_NGINX_BEAUTIFIER;
+	it("keeps successfully generated config usable when the optional beautifier fails", async () => {
+		vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", undefined);
+		beautify.mockRejectedValueOnce(new Error("optional beautifier unavailable"));
+		expect(await internalNginx.generateConfig("proxy_host", { id: 12 })).toBe(true);
+		expect(writeFile).toHaveBeenCalledOnce();
+		expect(beautify).toHaveBeenCalledOnce();
 	});
 });

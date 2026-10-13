@@ -1,10 +1,10 @@
 import CodeEditor, { type TextareaCodeEditorProps } from "@uiw/react-textarea-code-editor/nohighlight";
-import css from "refractor/lang/css.js";
-import javascript from "refractor/lang/javascript.js";
-import json from "refractor/lang/json.js";
-import nginx from "refractor/lang/nginx.js";
-import php from "refractor/lang/php.js";
-import { refractor } from "refractor/lib/core.js";
+import { refractor } from "refractor/core";
+import css from "refractor/css";
+import javascript from "refractor/javascript";
+import json from "refractor/json";
+import nginx from "refractor/nginx";
+import php from "refractor/php";
 import rehypePrismGenerator from "rehype-prism-plus/generator";
 
 refractor.register(json);

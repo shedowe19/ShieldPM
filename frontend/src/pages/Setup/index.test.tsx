@@ -15,7 +15,7 @@ vi.mock("src/locale", () => ({
 
 let client: QueryClient;
 beforeEach(() => {
-	vi.clearAllMocks();
+	vi.resetAllMocks();
 	client = new QueryClient();
 	mocks.createUser.mockResolvedValue({ id: 1, email: "admin@example.test" });
 	mocks.login.mockResolvedValue(undefined);
@@ -23,6 +23,7 @@ beforeEach(() => {
 afterEach(() => {
 	cleanup();
 	client.clear();
+	vi.restoreAllMocks();
 });
 
 function fillSetup(password: string) {

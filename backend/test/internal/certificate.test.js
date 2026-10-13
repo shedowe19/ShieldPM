@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock db and config to avoid filesystem/DB side effects
 vi.mock("../../db.js", () => ({ default: () => ({}) }));
@@ -89,57 +89,60 @@ vi.mock("node:fs", async (importOriginal) => {
 // Import the module under test
 import internalCertificate from "../../internal/certificate.js";
 
-describe("Fix #58: initTimer interval uses safe default when CRT env var is unset", () => {
-	it("intervalTimeout property no longer exists on the static object (no NaN at module load)", () => {
-		// The static object must NOT have intervalTimeout – it was moved into initTimer()
-		expect(internalCertificate.intervalTimeout).toBeUndefined();
+describe("certificate renewal timer", () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+		vi.spyOn(internalCertificate, "processExpiringHosts").mockResolvedValue();
+		vi.spyOn(internalCertificate, "cleanUpMissingCertificates").mockResolvedValue();
 	});
 
-	it("uses 72-hour default when CRT is not set", () => {
-		const originalCRT = process.env.CRT;
-		delete process.env.CRT;
-
-		const crtHours = Number.parseInt(process.env.CRT, 10);
-		const intervalTimeout = 1000 * 60 * 60 * (Number.isFinite(crtHours) ? crtHours : 72);
-
-		expect(Number.isNaN(intervalTimeout)).toBe(false);
-		expect(intervalTimeout).toBe(1000 * 60 * 60 * 72);
-
-		if (originalCRT !== undefined) process.env.CRT = originalCRT;
+	afterEach(() => {
+		clearInterval(internalCertificate.interval);
+		internalCertificate.interval = null;
+		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
+		vi.useRealTimers();
 	});
 
-	it("uses configured value when CRT is a valid integer", () => {
-		const originalCRT = process.env.CRT;
-		process.env.CRT = "24";
-
-		const crtHours = Number.parseInt(process.env.CRT, 10);
-		const intervalTimeout = 1000 * 60 * 60 * (Number.isFinite(crtHours) ? crtHours : 72);
-
-		expect(intervalTimeout).toBe(1000 * 60 * 60 * 24);
-
-		process.env.CRT = originalCRT;
+	it.each([
+		[undefined, 72],
+		["invalid", 72],
+		["24", 24],
+		["1", 1],
+		["596", 596],
+		["597", 72],
+		["1.5", 72],
+	])("schedules the actual renewal callback for CRT=%s every %s hours", async (value, hours) => {
+		vi.stubEnv("CRT", value);
+		await internalCertificate.initTimer();
+		expect(internalCertificate.processExpiringHosts).toHaveBeenCalledTimes(1);
+		expect(internalCertificate.cleanUpMissingCertificates).toHaveBeenCalledOnce();
+		await vi.advanceTimersByTimeAsync(hours * 3600000 - 1);
+		expect(internalCertificate.processExpiringHosts).toHaveBeenCalledTimes(1);
+		await vi.advanceTimersByTimeAsync(1);
+		expect(internalCertificate.processExpiringHosts).toHaveBeenCalledTimes(2);
 	});
 
-	it("falls back to 72h default when CRT is set to a non-numeric value", () => {
-		const originalCRT = process.env.CRT;
-		process.env.CRT = "invalid";
-
-		const crtHours = Number.parseInt(process.env.CRT, 10);
-		const intervalTimeout = 1000 * 60 * 60 * (Number.isFinite(crtHours) ? crtHours : 72);
-
-		expect(Number.isNaN(intervalTimeout)).toBe(false);
-		expect(intervalTimeout).toBe(1000 * 60 * 60 * 72);
-
-		process.env.CRT = originalCRT;
+	it("replaces the previous schedule with the current runtime configuration", async () => {
+		vi.stubEnv("CRT", "24");
+		await internalCertificate.initTimer();
+		vi.stubEnv("CRT", "48");
+		await internalCertificate.initTimer();
+		expect(vi.getTimerCount()).toBe(1);
+		internalCertificate.processExpiringHosts.mockClear();
+		await vi.advanceTimersByTimeAsync(24 * 3600000);
+		expect(internalCertificate.processExpiringHosts).not.toHaveBeenCalled();
+		await vi.advanceTimersByTimeAsync(24 * 3600000);
+		expect(internalCertificate.processExpiringHosts).toHaveBeenCalledOnce();
 	});
 });
 
-describe("Security Fix: Prototype Pollution", () => {
+describe("certificate HTTPS challenge delegation", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
-	it("should return an object with null prototype", async () => {
+	it("returns the result produced by certbot without changing its prototype", async () => {
 		const mockAccess = {
 			can: vi.fn().mockResolvedValue(true),
 		};
@@ -150,11 +153,11 @@ describe("Security Fix: Prototype Pollution", () => {
 		const result = await internalCertificate.testHttpsChallenge(mockAccess, payload);
 
 		expect(result).toBeDefined();
-		// In our mock, performTestForDomain calls logic that returns "ok" (since response matches Success)
+		// The adapter delegates to certbot; transport and result construction are tested there.
 		expect(result["example.com"]).toBe("ok");
 		expect(result["test.com"]).toBe("ok");
 
-		// This is the key check: the object should have null prototype
+		// Preserve the delegated result contract.
 		expect(Object.getPrototypeOf(result)).toBeNull();
 		expect(Reflect.get(result, "__proto__")).toBeUndefined();
 	});
