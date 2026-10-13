@@ -9,6 +9,8 @@ describe("configured code editor", () => {
 		["nginx", "server { listen 80; }"],
 		["json", '{"enabled": true}'],
 		["php", "<?php echo 'ShieldPM'; ?>"],
+		["css", "body { color: red; }"],
+		["javascript", "const answer = 42;"],
 	])("highlights %s without changing the editable value", (language, value) => {
 		const onChange = vi.fn();
 		const { container } = render(
@@ -46,5 +48,16 @@ describe("configured code editor", () => {
 		render(<ConfiguredCodeEditor aria-label="Other configuration" language="unsupported" value="custom syntax" />);
 
 		expect(screen.getByRole("textbox", { name: "Other configuration" })).toHaveValue("custom syntax");
+	});
+
+	it("renders configuration markup as text without creating executable elements", () => {
+		const value = '<script>window.unexpectedExecution = true;</script><img src="x" onerror="alert(1)">';
+		const { container } = render(
+			<ConfiguredCodeEditor aria-label="Untrusted configuration" language="php" value={value} />,
+		);
+
+		expect(screen.getByRole("textbox", { name: "Untrusted configuration" })).toHaveValue(value);
+		expect(container.querySelector("script, img")).toBeNull();
+		expect(container.querySelector(".token")).not.toBeNull();
 	});
 });

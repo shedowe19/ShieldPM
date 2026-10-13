@@ -1,0 +1,83 @@
+name: Dependency fix compatibility validation
+
+on:
+  push:
+    branches:
+      - codex/fix-dependency-tests
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        dependencies: [locked, latest]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - name: Install validation tools
+        run: npm install --global yarn@1.22.22 npm-check-updates@23.0.2 yarn-deduplicate@6.0.2
+      - name: Resolve the Refractor migration lockfile
+        working-directory: frontend
+        run: |
+          yarn install
+          yarn install --frozen-lockfile
+      - name: Install locked backend dependencies
+        working-directory: backend
+        run: yarn install --frozen-lockfile
+      - name: Validate latest direct dependencies
+        if: matrix.dependencies == 'latest'
+        run: |
+          for directory in frontend backend; do
+            (
+              cd "$directory"
+              ncu -u --target latest > "/tmp/${directory}-updates.txt"
+              yarn install
+              yarn-deduplicate --strategy highest yarn.lock
+              yarn install --frozen-lockfile
+            )
+          done
+          node scripts/sync-verified-dependency-docs.js
+      - name: Run complete dependency verification
+        run: bash scripts/ci/verify-dependencies.sh
+      - name: Install pinned scanner dependencies
+        run: yarn --cwd .tscanner install --frozen-lockfile --ignore-scripts --production=false
+      - name: Validate scanner integration and conventions
+        run: |
+          yarn --cwd .tscanner test
+          node scripts/ci/tscanner.mjs
+      - name: Validate infrastructure tests
+        run: python3 -m unittest discover -s scripts/tests -v
+      - name: Install Chromium
+        working-directory: frontend
+        run: node node_modules/@playwright/test/cli.js install --with-deps chromium
+      - name: Validate browser smoke
+        working-directory: frontend
+        env:
+          CI: '1'
+        run: yarn test:e2e:ci
+      - name: Preserve resolved dependency inputs and results
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: dependency-fix-${{ matrix.dependencies }}
+          path: |
+            frontend/package.json
+            frontend/yarn.lock
+            backend/package.json
+            backend/yarn.lock
+            /tmp/frontend-updates.txt
+            /tmp/backend-updates.txt
+            frontend/test-results/
+            .tscanner/reports/
+          if-no-files-found: error
+          retention-days: 7
