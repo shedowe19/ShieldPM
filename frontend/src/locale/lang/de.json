@@ -1006,5 +1006,12 @@
 	"firewall.host.asn.reasonInvalid": "Die öffentliche Begründung darf höchstens 1000 Zeichen und keine Nullzeichen enthalten.",
 	"firewall.host.asn.remove": "ASN-Regel {row} entfernen",
 	"firewall.host.asn.rulesRetained": "Gespeicherte ASN-Regeln bleiben erhalten. Du kannst sie auch ohne verfügbare ASN-Daten entfernen.",
-	"firewall.host.asn.title": "ASN-Sperren"
+	"firewall.host.asn.title": "ASN-Sperren",
+	"terminal.host-fingerprint": "Vertrauenswürdiger SSH-Host-Fingerprint",
+	"terminal.host-fingerprint.help": "Trage den SHA256-Fingerprint ein, den du über einen vertrauenswürdigen Kanal oder direkt am SSH-Server geprüft hast. Prüfe einen geänderten Serverschlüssel unabhängig, bevor du diesen Fingerprint ersetzt. Bestehende Terminals benötigen vor der nächsten Verbindung einen bestätigten Fingerprint.",
+	"terminal.host-fingerprint.invalid": "Trage einen bestätigten OpenSSH-SHA256-Fingerprint ein (SHA256: gefolgt von 43 Base64-Zeichen, ohne Auffüllzeichen).",
+	"proxy-host.git-sync.root-conflict": "Git-Sync hat ein anderes Webroot aktiviert, während in diesem Entwurf ebenfalls Webroot oder Weiterleitungsart geändert wurden. Wähle vor dem Speichern aus, welches Webroot gelten soll.",
+	"proxy-host.git-sync.use-synced-root": "Synchronisiertes Webroot übernehmen",
+	"proxy-host.git-sync.keep-draft-root": "Mein Webroot beibehalten",
+	"proxy-host.git-sync.in-progress": "Git-Sync läuft. Warte vor dem Speichern auf das Ergebnis."
 }

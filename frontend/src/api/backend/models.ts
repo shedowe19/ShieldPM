@@ -222,6 +222,7 @@ export interface ProxyHost {
 	iconType?: IconType;
 	// Terminal Fields
 	terminalHost?: string;
+	terminalHostFingerprint?: string;
 	terminalPort?: number;
 	terminalUsername?: string;
 	terminalAuthType?: TerminalAuthType;

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("src/modules/AuthStore", () => ({
+	AUTHENTICATION_CHANGED_EVENT: "shieldpm:authentication-changed",
 	AUTHENTICATION_EXPIRED_EVENT: "shieldpm:authentication-expired",
 	default: {
 		csrfToken: "csrf-token",

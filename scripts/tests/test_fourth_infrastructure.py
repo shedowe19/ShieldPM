@@ -23,7 +23,7 @@ class FourthInfrastructureTests(unittest.TestCase):
         function = name + "() {" + self.installer.split(name + "() {", 1)[1].split("\n}\n", 1)[0] + "\n}\n"
         return subprocess.run(["bash", "-eu", "-c", function +
             f'ENV_FILE=$1; shift; {name} "$@"', "test", str(self.root / ".env"), *arguments],
-            env={"PATH": os.environ["PATH"]}, capture_output=True, text=True)
+            env={"PATH": os.environ["PATH"], "SHIELDPM_ENV_HELPER": str(REPO / "rootfs/usr/local/bin/shieldpm-env.py")}, capture_output=True, text=True)
 
     def validate_sourced_environment(self):
         node = shutil.which("node")
@@ -39,12 +39,12 @@ class FourthInfrastructureTests(unittest.TestCase):
         phase = phase.replace(". /data/.env", '. "$1"')
         return subprocess.run(["sh", "-eu", "-c", phase + 'exec "$2" "$3"',
             "test", str(self.root / ".env"), node, str(validator)],
-            env={"PATH": os.environ["PATH"]}, capture_output=True, text=True)
+            env={"PATH": os.environ["PATH"], "SHIELDPM_ENV_HELPER": str(REPO / "rootfs/usr/local/bin/shieldpm-env.py")}, capture_output=True, text=True)
 
     def sourced_value(self, key):
         self.assertRegex(key, r"^[A-Za-z_][A-Za-z0-9_]*$")
         result = subprocess.run(["sh", "-eu", "-c", f'. "$1"; printf %s "${{{key}}}"',
-            "test", str(self.root / ".env"), key], env={"PATH": os.environ["PATH"]},
+            "test", str(self.root / ".env"), key], env={"PATH": os.environ["PATH"], "SHIELDPM_ENV_HELPER": str(REPO / "rootfs/usr/local/bin/shieldpm-env.py")},
             capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         return result.stdout
@@ -155,11 +155,14 @@ class FourthInfrastructureTests(unittest.TestCase):
         result = self.validate_sourced_environment()
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_standalone_helpers_use_identical_literal_parser(self):
-        parsers = re.findall(r"# Keep this literal-only parser identical.*?(?=\nif |\nprovider =)",
-                            self.installer, re.DOTALL)
-        self.assertEqual(len(parsers), 2)
-        self.assertEqual(parsers[0], parsers[1])
+    def test_installer_helpers_share_one_literal_parser_with_updater(self):
+        for name in ("set_env_value", "configure_database_environment"):
+            function = self.installer.split(name + "() {", 1)[1].split("\n}\n", 1)[0]
+            self.assertIn("/usr/local/bin/shieldpm-env.py", function)
+            self.assertNotIn("def environment_entries", function)
+        updater = (REPO / "rootfs/usr/local/bin/update-shieldpm").read_text()
+        self.assertIn('shieldpm-env.py" database-kind "$data_path"', updater)
+        self.assertIn('shieldpm-env.py" set "$ENV_FILE" ANUBIS_ENABLED true', updater)
 
     def test_optional_service_restart_loops_wait_after_process_exit(self):
         source = (REPO / "rootfs/usr/local/bin/launch.sh").read_text()
@@ -212,6 +215,11 @@ class FourthInfrastructureTests(unittest.TestCase):
             path = self.root / filename
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("packaged artifact")
+        result = subprocess.run(["bash", str(script)], cwd="/tmp", capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing rootfs/usr/local/bin/shieldpm-env.py", result.stderr)
+        self.assertFalse((self.root / "maintenance").exists())
+        (self.root / "rootfs/usr/local/bin/shieldpm-env.py").write_text("packaged environment helper")
         result = subprocess.run(["bash", str(script)], cwd="/tmp", capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn(f"SOURCE={self.root}", result.stdout)
@@ -305,7 +313,8 @@ SECONDS=0
             with self.subTest(selected=selected):
                 env_file.write_text("export DB_MYSQL_HOST=old-mysql\n  DB_POSTGRES_HOST=old-postgres\n# DB_SQLITE_FILE=/data/custom.sqlite\nTZ=UTC\n")
                 program = helper + setter + 'ENV_FILE=$1; DB_HOST=selected; DB_PORT=5432; DB_USER=user; DB_PASS=pass; DB_NAME=app\n' + branch
-                result = subprocess.run(["bash", "-e", "-c", program, "test", str(env_file)], capture_output=True, text=True)
+                result = subprocess.run(["bash", "-e", "-c", program, "test", str(env_file)], capture_output=True, text=True,
+                                        env={**os.environ, "SHIELDPM_ENV_HELPER": str(REPO / "rootfs/usr/local/bin/shieldpm-env.py")})
                 self.assertEqual(result.returncode, 0, result.stderr)
                 result = subprocess.run(["sh", "-c", '. "$1"; printf "%s|%s|%s|%s" "${DB_MYSQL_HOST:-}" "${DB_POSTGRES_HOST:-}" "${DB_SQLITE_FILE:-}" "$TZ"', "test", str(env_file)], capture_output=True, text=True)
                 expected = {"postgres": "|selected||UTC", "mysql": "selected|||UTC", "sqlite": "|||UTC"}
@@ -336,12 +345,12 @@ SECONDS=0
                     result = subprocess.run(["bash", "-eu", "-c",
                         helper + 'ENV_FILE=$1; configure_database_environment "$2"',
                         "test", str(env_file), selected],
-                        env={"PATH": os.environ["PATH"]}, capture_output=True, text=True)
+                        env={"PATH": os.environ["PATH"], "SHIELDPM_ENV_HELPER": str(REPO / "rootfs/usr/local/bin/shieldpm-env.py")}, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stderr)
                     result = subprocess.run(["sh", "-eu", "-c",
                         'set -a; . "$1"; exec "$2" "$3"', "test",
                         str(env_file), node, str(validator)],
-                        env={"PATH": os.environ["PATH"]}, capture_output=True, text=True)
+                        env={"PATH": os.environ["PATH"], "SHIELDPM_ENV_HELPER": str(REPO / "rootfs/usr/local/bin/shieldpm-env.py")}, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stderr)
                     updated = env_file.read_text().splitlines()
                     for line in unrelated:

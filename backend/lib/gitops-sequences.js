@@ -1,4 +1,5 @@
 /**
+ * Keep multi-statement graph imports atomic on every database engine.
  * Preserve imported numeric IDs without allowing later PostgreSQL inserts to reuse them.
  * The table lock precedes the write and blocks normal inserts until its sequence is advanced.
  * @template T
@@ -8,17 +9,18 @@
  */
 export const withImportedIdSequence = async (model, write) => {
 	const database = model.knex?.();
-	if (!["pg", "postgres", "postgresql"].includes(database?.client?.config?.client)) return write();
-	const idColumn = model.idColumn;
-	if (typeof idColumn !== "string") return write();
-	const tableName = model.tableName;
-	const result = await database.raw("SELECT pg_get_serial_sequence(?, ?) AS sequence_name", [
-		database.ref(tableName).toString(),
-		idColumn,
-	]);
-	const sequence = result.rows[0]?.sequence_name;
-	if (!sequence) return write();
+	if (!database?.transaction) return write();
 	return database.transaction(async (transaction) => {
+		if (!["pg", "postgres", "postgresql"].includes(database.client.config.client)) return write(transaction);
+		const idColumn = model.idColumn;
+		if (typeof idColumn !== "string") return write(transaction);
+		const tableName = model.tableName;
+		const result = await transaction.raw("SELECT pg_get_serial_sequence(?, ?) AS sequence_name", [
+			database.ref(tableName).toString(),
+			idColumn,
+		]);
+		const sequence = result.rows[0]?.sequence_name;
+		if (!sequence) return write(transaction);
 		await transaction.raw("LOCK TABLE ?? IN SHARE ROW EXCLUSIVE MODE", [tableName]);
 		const written = await write(transaction);
 		const { rows } = await transaction.raw(

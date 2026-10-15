@@ -132,6 +132,23 @@ describe("analytics committed domain changes and lifecycle", () => {
 		expect(vi.getTimerCount()).toBe(0);
 	});
 
+	it("restarts immediately while an initialization from the stopped generation is still pending", async () => {
+		const slow = deferred();
+		mocks.hosts.mockImplementationOnce(() => slow.promise);
+		const starting = service.init();
+		await service.stop();
+		mocks.hosts.mockResolvedValue([host(9, "restart.example.test")]);
+		await service.init();
+		expect(service.isInitialized).toBe(true);
+		expect(mocks.tail).toHaveBeenCalledTimes(1);
+		slow.resolve([host(8, "stale.example.test")]);
+		await starting;
+		expect(service.isInitialized).toBe(true);
+		expect(service.hostCache.get("restart.example.test")).toBe(9);
+		expect(service.hostCache.has("stale.example.test")).toBe(false);
+		expect(vi.getTimerCount()).toBe(3);
+	});
+
 	it("preserves the last cache on a failed refresh and retries the next committed change", async () => {
 		await service.init();
 		mocks.hosts.mockRejectedValueOnce(new Error("database unavailable"));

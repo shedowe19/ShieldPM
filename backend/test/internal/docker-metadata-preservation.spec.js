@@ -89,7 +89,11 @@ describe("Docker rediscovery preserves current host metadata", () => {
 		await vi.advanceTimersByTimeAsync(2000);
 		expect(state.generate).toHaveBeenCalledOnce();
 		expect(state.generate.mock.calls[0][2][0].meta).toEqual(current.meta);
-		expect(state.reload).toHaveBeenCalledOnce();
+		expect(state.generate).toHaveBeenCalledWith(ProxyHost, "proxy_host", expect.any(Array), {
+			throwOnError: true,
+			reload: true,
+		});
+		expect(state.reload).not.toHaveBeenCalled();
 	});
 
 	it("reloads metadata inside the write transaction after a delayed certificate request", async () => {

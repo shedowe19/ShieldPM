@@ -20,9 +20,13 @@ vi.mock("src/components", () => ({
 	Loading: () => null,
 }));
 
+const hosts = vi.hoisted(() => ({ data: [{ domainNames: ["example.com"], id: 1 }] }));
 vi.mock("src/hooks", () => ({
 	useHealth: () => ({ data: undefined }),
-	useProxyHosts: () => ({ data: [{ domainNames: ["example.com"], id: 1 }], isLoading: false }),
+	useAnalyticsHosts: () => ({ data: hosts.data, isLoading: false }),
+	useProxyHosts: () => {
+		throw new Error("Proxy management is hidden");
+	},
 }));
 
 vi.mock("src/components/ui/select", () => ({
@@ -64,6 +68,7 @@ let onLineDescriptor: PropertyDescriptor | undefined;
 let visibilityStateDescriptor: PropertyDescriptor | undefined;
 
 beforeEach(() => {
+	hosts.data = [{ domainNames: ["example.com"], id: 1 }];
 	onLineDescriptor = Object.getOwnPropertyDescriptor(navigator, "onLine");
 	visibilityStateDescriptor = Object.getOwnPropertyDescriptor(document, "visibilityState");
 	Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
@@ -100,6 +105,17 @@ afterEach(async () => {
 });
 
 describe("Analytics", () => {
+	it("retains a globally authorized foreign host without requiring proxy management", async () => {
+		hosts.data = [
+			{ id: 1, domainNames: ["own.example"] },
+			{ id: 42, domainNames: ["foreign.example"] },
+		];
+		const { default: Analytics } = await import("./index");
+		render(<Analytics />, "/analytics?host=42&range=24h");
+		await waitFor(() => expect(getAnalyticsSummary).toHaveBeenCalledWith(42, "24h"));
+		expect(screen.getByTestId("analytics-location")).toHaveTextContent("?host=42&range=24h");
+		expect(getAnalyticsSummary).not.toHaveBeenCalledWith(1, "24h");
+	});
 	it("restores and shares the selected host and range in the URL", async () => {
 		const { default: Analytics } = await import("./index");
 

@@ -133,6 +133,10 @@ simulierten API-Antworten.
 - [ChatOps](./chatops.md) — Telegram-Integration
 - [Datenmodell](../daten/datenmodell.md) — Datenbanktabellen
 
+## Korrekturen der Gesamtprüfung vom 15. Oktober
+
+Fällige Monitore sortieren NULL-Termine ausdrücklich zuerst und anschließend nach tatsächlicher Fälligkeit. Der zweite Sortierschlüssel bleibt auch bei Knexs SQLite-/MySQL-Übersetzung erhalten; vorhandene Batch- und Workergrenzen ändern sich nicht. Siehe [Umsetzung und Nachweise](../entwicklung/gesamtpruefung-2026-10-15.md).
+
 ## Offene Fragen
 
 - TODO: Falls später Mail oder Webhook als Ausgabekanal eingeführt wird, die Alarmzustellung um einen ausdrücklich

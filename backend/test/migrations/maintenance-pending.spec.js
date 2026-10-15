@@ -33,5 +33,7 @@ describe("durable maintenance activation migration", () => {
 				else await db.destroy();
 			}
 		},
+		// Include a cold embedded PostgreSQL start, both migration directions and database cleanup.
+		30_000,
 	);
 });

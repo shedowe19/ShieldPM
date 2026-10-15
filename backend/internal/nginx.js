@@ -535,67 +535,74 @@ const internalNginx = {
 	 * @param   {Array}   hosts
 	 * @returns {Promise}
 	 */
-	bulkGenerateConfigs: async (model, hostType, hosts) =>
-		internalNginx.bulkGenerateConfigGroups([{ hostType, hosts, model }]),
+	bulkGenerateConfigs: async (model, hostType, hosts, options = {}) =>
+		internalNginx.bulkGenerateConfigGroups([{ hostType, hosts, model }], options),
 
 	/**
 	 * Render multiple host types into one atomic validation batch.
 	 * @param {Array<{model: object, hostType: string, hosts: Array<object>}>} groups
-	 * @param {{throwOnError?: boolean}} [options]
+	 * @param {{throwOnError?: boolean, reload?: boolean}} [options]
 	 * @returns {Promise<Array<object>>}
 	 */
 	bulkGenerateConfigGroups: async (groups, options = {}) =>
-		internalNginx.withConfigurationLock(async () => {
-			/** @type {Array<{host: object, host_type: string, model: object}>} */
-			const stages = [];
-			try {
-				for (const { model, hostType, hosts } of groups) {
-					for (const host of hosts) {
-						const stage = await internalNginx.configureHost(model, hostType, host, {
-							defer_validation: true,
-							skip_reload: true,
-						});
-						stages.push(/** @type {{host: object, host_type: string, model: object}} */ (stage));
-					}
+		internalNginx.withConfigurationLock(() => internalNginx.bulkGenerateConfigGroupsLocked(groups, options)),
+
+	/** Run a batch while the caller owns the configuration lock; never enqueue recursively. */
+	bulkGenerateConfigGroupsLocked: async (groups, options = {}) => {
+		/** @type {Array<{host: object, host_type: string, model: object}>} */
+		const stages = [];
+		try {
+			for (const { model, hostType, hosts } of groups) {
+				for (const host of hosts) {
+					const stage = await internalNginx.configureHost(model, hostType, host, {
+						defer_validation: true,
+						skip_reload: true,
+					});
+					stages.push(/** @type {{host: object, host_type: string, model: object}} */ (stage));
 				}
-				await internalNginx.test();
-				// Every backup remains available until all status writes finish. A failure in
-				// another host must not turn a completed status write into a missing listener.
-				const commits = await Promise.allSettled(
-					stages.map((stage) => internalNginx.commitStagedConfig(stage, { preserveBackup: true })),
-				);
-				const statuses = commits.map((result) => {
-					if (result.status === "rejected") throw result.reason;
-					return result.value;
-				});
-				// Cleanup cannot invalidate a successfully validated group. Keep failed
-				// backup removals for later cleanup rather than attempting an unsafe rollback.
-				const cleanups = await Promise.allSettled(
-					stages.map(({ host_type, host }) => internalNginx.deleteBackupConfig(host_type, host)),
-				);
-				for (const cleanup of cleanups) {
-					if (cleanup.status === "rejected")
-						logger.error(`Nginx backup cleanup failed: ${cleanup.reason.message}`);
-				}
-				Promise.resolve()
-					.then(() => internalAnubis.generatePolicy())
-					.catch((err) => logger.error(`Anubis policy generation failed: ${err.message}`));
-				return statuses;
-			} catch (err) {
-				logger.error(`Nginx batch test failed: ${err.message}`);
-				const rollbacks = await Promise.allSettled(
-					stages.map((stage) => internalNginx.rollbackStagedConfig(stage, err)),
-				);
-				// Do not release the shared lock while another rollback can still write files.
-				const failedRollback = rollbacks.find((result) => result.status === "rejected");
-				if (failedRollback) throw failedRollback.reason;
-				if (options.throwOnError) throw err;
-				return rollbacks.map((result) => {
-					if (result.status === "rejected") throw result.reason;
-					return result.value;
-				});
 			}
-		}),
+			if (options.reload) await internalNginx.reload();
+			else await internalNginx.test();
+			// Every backup remains available until all status writes finish. A failure in
+			// another host must not turn a completed status write into a missing listener.
+			const commits = await Promise.allSettled(
+				stages.map((stage) => internalNginx.commitStagedConfig(stage, { preserveBackup: true })),
+			);
+			const statuses = commits.map((result) => {
+				if (result.status === "rejected") throw result.reason;
+				return result.value;
+			});
+			// Cleanup cannot invalidate a successfully validated group. Keep failed
+			// backup removals for later cleanup rather than attempting an unsafe rollback.
+			const cleanups = await Promise.allSettled(
+				stages.map(({ host_type, host }) => internalNginx.deleteBackupConfig(host_type, host)),
+			);
+			for (const cleanup of cleanups) {
+				if (cleanup.status === "rejected")
+					logger.error(`Nginx backup cleanup failed: ${cleanup.reason.message}`);
+			}
+			Promise.resolve()
+				.then(() => internalAnubis.generatePolicy())
+				.catch((err) => logger.error(`Anubis policy generation failed: ${err.message}`));
+			return statuses;
+		} catch (err) {
+			logger.error(`Nginx batch test failed: ${err.message}`);
+			const rollbacks = await Promise.allSettled(
+				stages.map((stage) => internalNginx.rollbackStagedConfig(stage, err)),
+			);
+			// Do not release the shared lock while another rollback can still write files.
+			const failedRollback = rollbacks.find((result) => result.status === "rejected");
+			// A rollback can restore its file and still fail while recording status.
+			// Reactivate every restored listener before propagating either failure.
+			if (options.reload) await internalNginx.reload();
+			if (failedRollback) throw failedRollback.reason;
+			if (options.throwOnError) throw err;
+			return rollbacks.map((result) => {
+				if (result.status === "rejected") throw result.reason;
+				return result.value;
+			});
+		}
+	},
 
 	/**
 	 * @param   {string}  cfg

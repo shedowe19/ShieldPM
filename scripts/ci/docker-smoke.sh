@@ -440,6 +440,13 @@ for service_uid in 0 1000; do
     # shellcheck disable=SC2016
     docker_cmd exec --user "$service_uid:$service_uid" "$container" sh -ceu '
         test "$(id -u)" = "$1"
+        # Verify the packaged runtime, shared by Docker and native exporters.
+        test ! -e /app/test
+        test ! -e /app/fixtures
+        for runtime_file in /app/index.js /app/validate-env.cjs /app/password-reset.js /app/sqlite-vaccum.js \
+            /app/templates/ip-blocked.html /usr/local/bin/shieldpm-env.py /usr/local/bin/update-geoip.py; do
+            test -s "$runtime_file"
+        done
         test -S /run/shieldpm/shieldpm.sock
         test "$(stat -c %u /run/shieldpm/shieldpm.sock)" = "$1"
         test -s /data/nginx/default.conf

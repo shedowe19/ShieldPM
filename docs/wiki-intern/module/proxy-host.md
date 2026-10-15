@@ -159,6 +159,10 @@ Erstellung und Aktualisierung schreiben den Proxy-Host und seine normalisierten 
 - `models/proxy_host.js` — Datenbank-Modell
 - `models/host_domain.js` — Domain-Zuordnung
 
+## Korrekturen der Gesamtprüfung vom 15. Oktober
+
+Die interne Tabelle `host_domain_reservation` reserviert aktive Domainnamen über Proxy-, Redirection- und Dead-Hosts hinweg eindeutig. Datenbanktrigger halten Domainänderung, Softdelete, Restore und physisches Löschen atomar konsistent. Bereits vorhandene aktive Konflikte werden vor Schemaänderungen mit Domain und Hostidentitäten gemeldet, ohne Hosts zu löschen. ASCII-/Punycode-DNSnamen sind datenbankübergreifend konsistent; rohe Unicode-Casefoldingregeln und überlappende Nginx-Regexnamen werden nicht als identisch normalisiert behauptet. Siehe [Umsetzung und Nachweise](../entwicklung/gesamtpruefung-2026-10-15.md).
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

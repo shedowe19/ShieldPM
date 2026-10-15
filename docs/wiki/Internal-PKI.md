@@ -90,6 +90,8 @@ Before browsers and devices trust your internal certificates, you must install t
 
 Client certificates allow you to enforce **Zero Trust** — only devices with a valid certificate can access your service.
 
+**Administrator access is required to issue client certificates.** The internal CA is shared: its client certificates are trusted by every host that relies solely on this CA, regardless of certificate ownership. Existing certificates remain valid after upgrading; this authorization change does not revoke or rotate them. Server-certificate permissions are unchanged.
+
 1. Go to **SSL Certificates** → **Add Certificate** → **Internal (ECDSA)**
 2. Select **Certificate Type**: **Client Identity (mTLS)**
 3. Enter an **Identity Name** (e.g., `my-laptop`, `work-phone`)

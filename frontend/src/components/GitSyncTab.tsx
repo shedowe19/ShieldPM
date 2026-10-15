@@ -1,7 +1,7 @@
 import { IconCheck, IconGitBranch, IconGitCommit, IconRefresh, IconX } from "@tabler/icons-react";
 import { Field, type FieldProps, useFormikContext } from "formik";
 import { Loader2 } from "lucide-react";
-import type { ProxyHost } from "src/api/backend";
+import type { GitSyncResult } from "src/api/backend/gitSync";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent } from "src/components/ui/card";
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "s
 import { Switch } from "src/components/ui/switch";
 import { useGitSyncStatus, useTriggerGitSync } from "src/hooks/useGitSync";
 import { intl, T } from "src/locale";
+import type { ProxyHostFormValues } from "src/modals/ProxyHostModalFormValues";
 import { validateString } from "src/modules/Validations";
 import { showError, showSuccess } from "src/notifications";
 import { TIME_UNIT } from "src/types/enums";
@@ -20,24 +21,46 @@ interface Props {
 }
 
 export function GitSyncTab({ hostId }: Props) {
-	const { values } = useFormikContext<ProxyHost>();
+	const { values, initialValues, setValues } = useFormikContext<ProxyHostFormValues>();
 	const { data: status, isLoading, isError, error } = useGitSyncStatus(hostId);
-	const { mutate: triggerSync, isPending: isSyncing } = useTriggerGitSync();
+	const { mutateAsync: triggerSync, isPending: isSyncing } = useTriggerGitSync();
 
-	const handleSync = () => {
-		if (hostId) {
-			triggerSync(hostId, {
-				onSuccess: (result) => {
-					if (result.success) {
-						showSuccess(intl.formatMessage({ id: "proxy-host.git-sync.success" }));
-					} else {
-						showError(result.message || intl.formatMessage({ id: "notification.error" }));
-					}
-					// Status reload happens via hook invalidation
-				},
-				onError: (error) => showError(error.message),
-			});
+	const handleSync = async () => {
+		if (!hostId || values.gitSyncPending) return;
+		setValues((current) => ({ ...current, gitSyncPending: true }));
+		let result: GitSyncResult;
+		try {
+			// Await the mutation promise so switching tabs cannot discard the
+			// reconciliation while the enclosing host draft is still open.
+			result = await triggerSync(hostId);
+			if (!result.success) throw new Error(result.message || intl.formatMessage({ id: "notification.error" }));
+		} catch (error) {
+			setValues((current) => ({ ...current, gitSyncPending: false }));
+			showError(error instanceof Error ? error.message : String(error));
+			return;
 		}
+		const root =
+			result.forwardHost && result.forwardScheme
+				? { forwardHost: result.forwardHost, forwardScheme: result.forwardScheme }
+				: undefined;
+		// Formik resolves functional setters against its current snapshot. Two
+		// setters in the same tick do not compose: settle and reconcile together.
+		setValues((current) => {
+			const settled = { ...current, gitSyncPending: false };
+			if (!root) return settled;
+			const matchesResult =
+				current.forwardHost === root.forwardHost && current.forwardScheme === root.forwardScheme;
+			const unchanged =
+				current.forwardHost === initialValues.forwardHost &&
+				current.forwardScheme === initialValues.forwardScheme;
+			const matchesPreviousSync =
+				current.gitSyncedRoot?.forwardHost === current.forwardHost &&
+				current.gitSyncedRoot?.forwardScheme === current.forwardScheme;
+			return unchanged || matchesResult || matchesPreviousSync
+				? { ...settled, ...root, gitSyncedRoot: root, gitSyncConflict: undefined }
+				: { ...settled, gitSyncConflict: root };
+		});
+		showSuccess(intl.formatMessage({ id: "proxy-host.git-sync.success" }));
 	};
 
 	return (
@@ -200,7 +223,7 @@ export function GitSyncTab({ hostId }: Props) {
 								variant="default"
 								size="sm"
 								onClick={handleSync}
-								disabled={isSyncing || isLoading}
+								disabled={isSyncing || isLoading || values.gitSyncPending}
 							>
 								{isSyncing ? (
 									<Loader2 className="mr-2 h-3 w-3 animate-spin" />

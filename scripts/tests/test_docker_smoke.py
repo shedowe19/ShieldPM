@@ -103,6 +103,8 @@ elif args[0] == 'logs':
         executions = [call for call in calls if call[0] == "exec"]
         self.assertEqual([call[call.index("--user") + 1] for call in executions], ["0:0", "1000:1000"])
         for call in executions:
+            self.assertTrue(any("test ! -e /app/test" in arg and "test ! -e /app/fixtures" in arg for arg in call))
+            self.assertTrue(any("/app/validate-env.cjs" in arg and "/usr/local/bin/shieldpm-env.py" in arg for arg in call))
             self.assertTrue(any("nginx -e stderr -tq" in arg and "nginx -e stderr -s reload" in arg for arg in call))
             self.assertTrue(any("NGINX_GEOIP_DATABASE=/data/GeoIP2-Country-Test.mmdb" in arg for arg in call))
             self.assertTrue(any("NGINX_ASN_DATABASE=/data/GeoLite2-ASN-Test.mmdb" in arg and "NGINX_REQUIRE_ASN_STARTUP=true" in arg for arg in call))
@@ -115,6 +117,31 @@ elif args[0] == 'logs':
         self.assertTrue(transfers[0][1].endswith("-0:/data/logs/ip_firewall_ci.log"))
         self.assertTrue(transfers[0][2].endswith("/logs/ip_firewall_ci.log"))
         self.assert_cleaned(calls, 2)
+
+    def test_runtime_payload_probe_rejects_test_sources_and_missing_runtime_helpers(self):
+        source = SCRIPT.read_text()
+        probe = source.split("        # Verify the packaged runtime, shared by Docker and native exporters.\n", 1)[1]
+        probe = probe.split('        test -S /run/shieldpm/shieldpm.sock', 1)[0]
+        files = ["app/index.js", "app/validate-env.cjs", "app/password-reset.js", "app/sqlite-vaccum.js",
+                 "app/templates/ip-blocked.html", "usr/local/bin/shieldpm-env.py", "usr/local/bin/update-geoip.py"]
+        for filename in files:
+            destination = self.root / filename
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text("runtime fixture")
+        probe = probe.replace("/app/", str(self.root / "app") + "/").replace(
+            "/usr/local/bin/", str(self.root / "usr/local/bin") + "/")
+        self.assertEqual(subprocess.run(["sh", "-ceu", probe]).returncode, 0)
+        for directory in ("app/test", "app/fixtures"):
+            destination = self.root / directory
+            destination.mkdir()
+            self.assertNotEqual(subprocess.run(["sh", "-ceu", probe]).returncode, 0)
+            destination.rmdir()
+        for filename in files:
+            destination = self.root / filename
+            content = destination.read_text()
+            destination.unlink()
+            self.assertNotEqual(subprocess.run(["sh", "-ceu", probe]).returncode, 0)
+            destination.write_text(content)
 
     def test_log_probe_preserves_uid_0_append_when_uid_1000_runs(self):
         source = SCRIPT.read_text()

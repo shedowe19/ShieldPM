@@ -1,6 +1,7 @@
 export * from "./use-toast";
 export * from "./useAccessList";
 export * from "./useAccessLists";
+export * from "./useAnalyticsHosts";
 export * from "./useAuditLog";
 export * from "./useAuditLogs";
 export * from "./useCertificate";

@@ -1,4 +1,5 @@
 import _ from "lodash";
+import { publicAccessListCredentials } from "./service-credentials.js";
 
 // DNS credentials belong to the certificate, never to host responses or audit history.
 export const sanitizeHostMeta = (meta) => _.omit(meta, ["dns_provider_credentials", "dnsProviderCredentials"]);
@@ -23,14 +24,7 @@ export const sanitizeProxyHost = (host) => {
 	if (row.access_list) {
 		row.access_list = {
 			...row.access_list,
-			meta: _.omit(row.access_list.meta, [
-				"oauth2_client_secret",
-				"oauth2_cookie_secret",
-				"oidc_client_secret",
-				"oauth2ClientSecret",
-				"oauth2CookieSecret",
-				"oidcClientSecret",
-			]),
+			...publicAccessListCredentials(row.access_list.meta),
 		};
 		if (Array.isArray(row.access_list.items)) {
 			row.access_list.items = row.access_list.items.map((item) => _.omit(item, ["password"]));

@@ -24,13 +24,14 @@ vi.mock("isomorphic-git", () => ({
 vi.mock("isomorphic-git/http/node", () => ({ default: {} }));
 vi.mock("../../lib/config.js", () => ({ isDemoMode: () => false }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: (value) => value, decrypt: (value) => value }));
-vi.mock("../../internal/nginx.js", () => ({ default: {} }));
+vi.mock("../../internal/nginx.js", () => ({ default: { withConfigurationLock: (callback) => callback() } }));
 vi.mock("../../models/proxy_host.js", () => ({
 	default: {
 		query: () => {
 			const query = {
 				findById: () => query,
 				where: () => query,
+				withGraphFetched: () => query,
 				patch: async (data) => Object.assign(state.host, data),
 				// biome-ignore lint/suspicious/noThenProperty: Objection queries are thenable.
 				then: (resolve, reject) => Promise.resolve({ ...state.host }).then(resolve, reject),

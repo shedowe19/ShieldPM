@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	downloadPost: vi.fn(),
+	roles: ["admin"] as string[],
 	invalidateQueries: vi.fn(),
 	remove: vi.fn(),
 	show: vi.fn(),
@@ -19,6 +20,8 @@ vi.mock("ez-modal-react", () => ({
 vi.mock("@tanstack/react-query", () => ({
 	useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries }),
 }));
+
+vi.mock("src/hooks/useUser", () => ({ useUser: () => ({ data: { roles: mocks.roles } }) }));
 
 vi.mock("src/api/backend", () => ({
 	createCertificate: vi.fn(),
@@ -76,6 +79,8 @@ afterEach(() => {
 
 describe("InternalCertificateModal", () => {
 	beforeEach(() => {
+		mocks.roles = ["admin"];
+		mocks.downloadPost.mockReset();
 		mocks.invalidateQueries.mockClear();
 		mocks.remove.mockClear();
 		mocks.show.mockClear();
@@ -94,6 +99,16 @@ describe("InternalCertificateModal", () => {
 		});
 		vi.stubGlobal("URL", TestURL);
 		vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+	});
+
+	it("hides global client issuance for ordinary certificate managers", async () => {
+		mocks.roles = ["user"];
+		const { showInternalCertificateModal } = await import("./InternalCertificateModal");
+		showInternalCertificateModal();
+		const ModalComponent = mocks.show.mock.calls[0]?.[0];
+		render(<ModalComponent remove={mocks.remove} visible />);
+		expect(screen.queryByText("certificates.internal.type.client")).not.toBeInTheDocument();
+		expect(screen.getByText("certificates.internal.type.server")).toBeInTheDocument();
 	});
 
 	it("uses the shared POST download client after saving a client certificate", async () => {

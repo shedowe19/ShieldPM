@@ -45,6 +45,10 @@ Frühe gültige Resize-Ereignisse werden bis zur Shell-Erzeugung gespeichert und
 
 Der Terminal-Service registriert pro HTTP-Server nur einen Upgrade-Listener und einen WebSocket-Server. Wiederholt die Backend-Startsequenz die Initialisierung, bleibt die vorhandene Instanz erhalten; doppelte WebSocket-Upgrades werden dadurch vermieden.
 
+## Korrekturen der Gesamtprüfung vom 15. Oktober
+
+Terminalziele verwenden `terminal_host_fingerprint` (API/DB) beziehungsweise `terminalHostFingerprint` (UI): ein ausdrücklich bestätigter OpenSSH-SHA256-Fingerprint. Fehlende Pins blockieren vor Entschlüsselung und Verbindungsaufbau, abweichende Pins vor der SSH-Anmeldung. Bestehende Ziele erhalten keinen automatisch übernommenen Schlüssel. Der Fingerprint muss über einen bereits vertrauenswürdigen Kanal geprüft und im Terminalformular gespeichert werden. Beim Backend-Shutdown werden neue Upgrades gesperrt und bestehende SSH-/WebSocket-Verbindungen beendet; nach einer Sekunde werden verbliebene Verbindungen terminiert. Siehe [Umsetzung und Nachweise](../entwicklung/gesamtpruefung-2026-10-15.md).
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

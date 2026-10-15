@@ -209,7 +209,8 @@ class InfrastructureTests(unittest.TestCase):
         env_file.write_text("TZ=UTC\n# DB_MYSQL_PASSWORD=old\nDB_MYSQL_PASSWORD=duplicate\n")
         value = 'spaces "quotes" apostrophe\' \\ & | $(touch ' + str(self.root / "injected") + ') `false`'
         program = 'set_env_value() {' + function + '\n}\nENV_FILE=$1\nset_env_value DB_MYSQL_PASSWORD "$2"\n'
-        result = subprocess.run(["bash", "-c", program, "test", str(env_file), value], capture_output=True, text=True)
+        result = subprocess.run(["bash", "-c", program, "test", str(env_file), value], capture_output=True, text=True,
+                                env={**os.environ, "SHIELDPM_ENV_HELPER": str(REPO / "rootfs/usr/local/bin/shieldpm-env.py")})
         self.assertEqual(result.returncode, 0, result.stderr)
         result = subprocess.run(["sh", "-c", '. "$1"; printf %s "$DB_MYSQL_PASSWORD"', "test", str(env_file)], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -226,16 +227,19 @@ class InfrastructureTests(unittest.TestCase):
         env_file.write_text(original + "# ANUBIS_ENABLED=false\n")
         program = 'set_env_value() {' + function + '\n}\nENV_FILE=$1\n'
         program += "set_env_value ANUBIS_ENABLED true\nset_env_value NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE true\n"
-        result = subprocess.run(["bash", "-c", program, "test", str(env_file)], capture_output=True, text=True)
+        result = subprocess.run(["bash", "-c", program, "test", str(env_file)], capture_output=True, text=True,
+                                env={**os.environ, "SHIELDPM_ENV_HELPER": str(REPO / "rootfs/usr/local/bin/shieldpm-env.py")})
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn(original, env_file.read_text())
         self.assertIn("ANUBIS_ENABLED=true\n", env_file.read_text())
         updater = (REPO / "rootfs/usr/local/bin/update-shieldpm").read_text()
-        branch = updater.split('                    if grep -qE ', 1)[1].split('\n                    fi', 1)[0]
+        activation = next(line.strip() for line in updater.splitlines()
+                          if 'shieldpm-env.py" set "$ENV_FILE" ANUBIS_ENABLED true' in line)
         for content in (original, original + "# ANUBIS_ENABLED=false\n", original + "export ANUBIS_ENABLED=false\n"):
             env_file.write_text(content)
-            program = 'ENV_FILE=$1\nif grep -qE ' + branch + '\nfi\n'
-            result = subprocess.run(["bash", "-c", program, "test", str(env_file)], capture_output=True, text=True)
+            program = 'ENV_FILE=$1; TEMP_DIR=$2\n' + activation
+            result = subprocess.run(["bash", "-eu", "-c", program, "test", str(env_file), str(REPO)],
+                                    capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn(original, env_file.read_text())
             self.assertEqual(env_file.read_text().count("ANUBIS_ENABLED=true"), 1)

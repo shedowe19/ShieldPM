@@ -29,6 +29,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 
 ### Entwicklung
 
+- [Gesamtprüfung vom 15. Oktober 2026](./entwicklung/gesamtpruefung-2026-10-15.md) — 18 korrigierte Defektgruppen aus dem Scan auf PR #152; Umsetzung, Regressionen und Upgradehinweise für PR #154.
 - [Optimierungsprüfung vom 13. Oktober 2026](./entwicklung/optimierungspruefung-2026-10-13.md) — 13 korrigierte Fehlerfälle und Optimierungen mit Prüfnachweisen.
 - [Setup](./entwicklung/setup.md)
 - [Setup-Interna](./entwicklung/setup-intern.md)

@@ -981,7 +981,7 @@ const getAllToolDefinitions = () => [
 const restrictedToolPermissions = new Map([
 	["get_system_status", "analytics:list"],
 	["get_audit_log", "auditlog:list"],
-	["create_client_certificate", "certificates:create"],
+	["create_client_certificate", "certificates:create-client"],
 	["renew_certificate", "certificates:update"],
 	["test_nginx_config", "settings:update"],
 	["force_nginx_reload", "settings:update"],

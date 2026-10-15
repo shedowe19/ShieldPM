@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { join } from "node:path";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Form, Formik } from "formik";
 import type { ComponentProps, PropsWithChildren } from "react";
 import { FORWARD_SCHEME, TERMINAL_AUTH_TYPE } from "src/types/enums";
@@ -33,7 +33,10 @@ vi.mock("src/components/ui/textarea", () => ({
 	Textarea: (props: ComponentProps<"textarea">) => <textarea {...props} />,
 }));
 
-vi.mock("src/locale", () => ({ T: ({ id }: { id: string }) => <>{id}</> }));
+vi.mock("src/locale", () => ({
+	intl: { formatMessage: ({ id }: { id: string }) => id },
+	T: ({ id }: { id: string }) => <>{id}</>,
+}));
 
 const privateKeyPlaceholder = ["-----BEGIN", "OPENSSH", "PRIVATE", "KEY-----"].join(" ");
 
@@ -50,6 +53,7 @@ const terminalValues = (overrides: Partial<ProxyHostFormValues> = {}): ProxyHost
 	forwardScheme: FORWARD_SCHEME.TERMINAL,
 	terminalAuthType: TERMINAL_AUTH_TYPE.PASSWORD,
 	terminalHost: "terminal.example.test",
+	terminalHostFingerprint: `SHA256:${"A".repeat(43)}`,
 	terminalPassword: "secret",
 	terminalPort: 22,
 	terminalPrivateKey: "private-key",
@@ -81,6 +85,26 @@ describe("ProxyHostTerminalFields", () => {
 		const source = fs.readFileSync(join(process.cwd(), "src/modals/ProxyHostTerminalFields.tsx"), "utf8");
 		expect(screen.getByLabelText("terminal.private-key")).toHaveAttribute("placeholder", privateKeyPlaceholder);
 		expect(source).not.toContain(privateKeyPlaceholder);
+	});
+
+	it("requires an explicitly confirmed host pin before a terminal draft can submit", async () => {
+		const save = vi.fn();
+		render(
+			<Formik initialValues={terminalValues({ terminalHostFingerprint: "" })} onSubmit={save}>
+				<Form>
+					<ProxyHostTerminalFields />
+					<button type="submit">Save</button>
+				</Form>
+			</Formik>,
+		);
+		fireEvent.click(screen.getByRole("button", { name: "Save" }));
+		await waitFor(() => expect(save).not.toHaveBeenCalled());
+		fireEvent.change(screen.getByLabelText("terminal.host-fingerprint"), {
+			target: { value: `SHA256:${"A".repeat(43)}` },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Save" }));
+		await waitFor(() => expect(save).toHaveBeenCalledOnce());
+		expect(screen.getByText("terminal.host-fingerprint.help")).toBeInTheDocument();
 	});
 
 	it("renders private-key credentials for terminal hosts using key authentication", () => {

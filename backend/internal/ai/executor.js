@@ -930,7 +930,7 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "create_client_certificate": {
-					await access.can("certificates:create");
+					await access.can("certificates:create-client");
 					const tmpDir = `/tmp/client-cert-${Date.now()}`;
 					const p12Path = await internalPki.createClientCert(
 						{

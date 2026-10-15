@@ -91,6 +91,10 @@ Nach einem erfolgreichen `configure()` wird `internalAnubis.generatePolicy()` **
 
 - `backend/test/internal/nginx-render-regressions.spec.js`: echte Liquid-Ausgabe für Custom-Root, Alias und interne Stream-Zertifikate; Warteschlange und Dateisystemfehler mit gemockten Systemoperationen.
 
+## Korrekturen der Gesamtprüfung vom 15. Oktober
+
+Bulkaktivierung, Statuscommit und Wiederherstellung laufen unter derselben Konfigurationssperre. Der explizite gesperrte Bulkpfad kann einen finalen Reload ausführen, während Backups bis zum erfolgreichen Statuscommit erhalten bleiben. Bei Fehlern werden Listener restauriert und erneut aktiviert; auch zusätzliche Fehler beim Rollback-Statuswrite dürfen die Reaktivierung nicht überspringen. Docker-/GitOps-Finalreloads und GitOps-Pruning verwenden diese Queue. Siehe [Umsetzung und Nachweise](../entwicklung/gesamtpruefung-2026-10-15.md).
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

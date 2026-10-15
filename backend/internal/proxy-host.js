@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import _ from "lodash";
+import { translateDomainReservationError } from "../lib/domain-reservations.js";
 import { encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import { sanitizeHostMeta, sanitizeProxyHost } from "../lib/host-response.js";
@@ -171,7 +172,8 @@ const internalProxyHost = {
 			proxyHostModel.transaction(async (trx) =>
 				proxyHostModel
 					.query(trx)
-					.insertGraphAndFetch(/** @type {any} */ ({ ...thisData, meta: sanitizeHostMeta(thisData.meta) })),
+					.insertGraphAndFetch(/** @type {any} */ ({ ...thisData, meta: sanitizeHostMeta(thisData.meta) }))
+					.catch(translateDomainReservationError),
 			),
 		);
 		row = utils.omitRow(omissions())(row);
@@ -361,7 +363,10 @@ const internalProxyHost = {
 		const new_saved_row = /** @type {any} */ (
 			await withFirewallReferences(thisData, row, () =>
 				proxyHostModel.transaction(async (trx) =>
-					proxyHostModel.query(trx).upsertGraphAndFetch(/** @type {any} */ (thisData)),
+					proxyHostModel
+						.query(trx)
+						.upsertGraphAndFetch(/** @type {any} */ (thisData))
+						.catch(translateDomainReservationError),
 				),
 			)
 		);

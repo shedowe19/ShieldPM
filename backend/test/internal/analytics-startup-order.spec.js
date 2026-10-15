@@ -26,6 +26,10 @@ describe("analytics startup order", () => {
 
 	it("flushes queued analytics before the production process exits on SIGTERM", () => {
 		const startupSource = readBackendSource("index.js");
-		expect(startupSource).toMatch(/server\.close\(async \(\) => \{[\s\S]*?await analyticsService\.stop\(\)/);
+		// HTTP shutdown may be awaited through a promise; the runtime ordering is
+		// also exercised with deferred close/stop callbacks in startup-listen.spec.js.
+		expect(startupSource).toMatch(
+			/await internalTerminal\.stop\(\)[\s\S]*?server\.close\([\s\S]*?await analyticsService\.stop\(\)[\s\S]*?process\.exit\(0\)/,
+		);
 	});
 });

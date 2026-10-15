@@ -131,14 +131,11 @@ describe("lint-and-format workflow", () => {
 		);
 	});
 
-	it("reports high and critical dependency findings without blocking existing baseline debt", () => {
+	it("blocks high and critical dependency findings without baseline exceptions", () => {
 		expect(workflow).toMatch(/audit --level high/);
-		expect(workflow).toMatch(
-			/Audit backend dependencies \(advisory: high and critical\)"\n\s+continue-on-error: true/,
-		);
-		expect(workflow).toMatch(
-			/Audit frontend dependencies \(advisory: high and critical\)"\n\s+continue-on-error: true/,
-		);
+		expect(workflow).toContain('"Audit backend dependencies (high and critical)"');
+		expect(workflow).toContain('"Audit frontend dependencies (high and critical)"');
+		expect(workflow).not.toContain("continue-on-error");
 		expect(workflow).toContain("git diff --check");
 	});
 

@@ -92,6 +92,147 @@ describe("Upload relay asynchronous finalizer", () => {
 		await vi.waitFor(() => expect(fs.readdirSync(join(root, "host-42", upload.id))).toEqual(["upload.json"]));
 	});
 
+	it.each([3, 4])(
+		"aborts preparation promptly and never dispatches after late host lookup %i",
+		async (pendingLookup) => {
+			const root = createTempRoot();
+			const scheduled = [];
+			const lookupStarted = Promise.withResolvers();
+			const lateHost = Promise.withResolvers();
+			let lookups = 0;
+			const fetchImpl = vi.fn();
+			const relay = createUploadRelay({
+				fetchImpl,
+				getHost: async () => {
+					if (++lookups === pendingLookup) {
+						lookupStarted.resolve();
+						return lateHost.promise;
+					}
+					return host();
+				},
+				root,
+				schedule: (task) => scheduled.push(task),
+			});
+			const upload = await relay.create(42, { filename: "late.bin", length: 3 });
+			await relay.append(42, upload.id, {
+				contentLength: 3,
+				headers: {},
+				offset: 0,
+				stream: Readable.from([Buffer.from("abc")]),
+			});
+			runNextScheduled(scheduled);
+			await lookupStarted.promise;
+			await relay.stop();
+			expect(fetchImpl).not.toHaveBeenCalled();
+			lateHost.resolve(host());
+			await new Promise((resolve) => setImmediate(resolve));
+			expect(fetchImpl).not.toHaveBeenCalled();
+			expect(await relay.get(42, upload.id)).toMatchObject({
+				state: pendingLookup === 3 ? "queued" : "forwarding",
+			});
+			await expect(relay.finalize(42, upload.id, {})).rejects.toThrow("stopping");
+		},
+	);
+
+	it("rejects a finalization prepared by a generation that stopped before restart", async () => {
+		const scheduled = [];
+		const pendingHost = Promise.withResolvers();
+		const preparationStarted = Promise.withResolvers();
+		let hostReads = 0;
+		const root = createTempRoot();
+		const fetchImpl = vi.fn();
+		const relay = createUploadRelay({
+			fetchImpl,
+			getHost: async () => {
+				if (++hostReads === 3) {
+					preparationStarted.resolve();
+					return pendingHost.promise;
+				}
+				return host();
+			},
+			root,
+			schedule: (task) => scheduled.push(task),
+		});
+		const upload = await relay.create(42, { filename: "old-generation.bin", length: 3 });
+		await relay.append(42, upload.id, {
+			contentLength: 3,
+			headers: {},
+			offset: 0,
+			stream: Readable.from([Buffer.from("abc")]),
+		});
+		const metadataPath = join(root, "host-42", upload.id, "upload.json");
+		const metadata = JSON.parse(fs.readFileSync(metadataPath, "utf8"));
+		metadata.state = "failed";
+		fs.writeFileSync(metadataPath, JSON.stringify(metadata));
+		const finalizing = relay.finalize(42, upload.id, {});
+		const rejected = expect(finalizing).rejects.toThrow("stopping");
+		await preparationStarted.promise;
+		await relay.stop();
+		await relay.init();
+		pendingHost.resolve(host());
+		await rejected;
+		for (const callback of scheduled) callback();
+		await relay.recoverInterruptedFinalizations();
+		await relay.stop();
+		expect(fetchImpl).not.toHaveBeenCalled();
+		expect(JSON.parse(fs.readFileSync(metadataPath, "utf8")).state).toBe("failed");
+	});
+
+	it("blocks a scheduled callback and queued followers after stop", async () => {
+		const scheduled = [];
+		const fetchImpl = vi.fn();
+		const relay = createUploadRelay({
+			fetchImpl,
+			getHost: async () => host(),
+			root: createTempRoot(),
+			schedule: (task) => scheduled.push(task),
+		});
+		for (let index = 0; index < 2; index++) {
+			const upload = await relay.create(42, { filename: `queued-${index}.bin`, length: 3 });
+			await relay.append(42, upload.id, {
+				contentLength: 3,
+				headers: {},
+				offset: 0,
+				stream: Readable.from([Buffer.from("abc")]),
+			});
+		}
+		await relay.stop();
+		for (const callback of scheduled) callback();
+		await new Promise((resolve) => setImmediate(resolve));
+		expect(fetchImpl).not.toHaveBeenCalled();
+		await expect(relay.create(42, { filename: "late.bin", length: 3 })).rejects.toThrow("stopping");
+	});
+
+	it("aborts the active origin and prevents the next queued origin from starting", async () => {
+		const scheduled = [];
+		const fetchImpl = vi.fn(
+			async (_url, init) =>
+				await new Promise((_resolve, reject) => {
+					init.signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+				}),
+		);
+		const relay = createUploadRelay({
+			fetchImpl,
+			getHost: async () => host(),
+			root: createTempRoot(),
+			schedule: (task) => scheduled.push(task),
+		});
+		for (let index = 0; index < 2; index++) {
+			const upload = await relay.create(42, { filename: `active-${index}.bin`, length: 3 });
+			await relay.append(42, upload.id, {
+				contentLength: 3,
+				headers: {},
+				offset: 0,
+				stream: Readable.from([Buffer.from("abc")]),
+			});
+		}
+		runNextScheduled(scheduled);
+		await vi.waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(1));
+		await relay.stop();
+		for (const callback of scheduled) callback();
+		expect(fetchImpl).toHaveBeenCalledTimes(1);
+	});
+
 	it("does not replay an authenticated queued upload after a process restart", async () => {
 		const root = createTempRoot();
 		const scheduled = [];

@@ -1,7 +1,14 @@
 import { EventEmitter } from "node:events";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ query: vi.fn(), connect: vi.fn(), shell: vi.fn(), end: vi.fn(), ssh: null }));
+const mocks = vi.hoisted(() => ({
+	query: vi.fn(),
+	connect: vi.fn(),
+	shell: vi.fn(),
+	end: vi.fn(),
+	destroy: vi.fn(),
+	ssh: null,
+}));
 vi.mock("../../lib/config.js", () => ({ getEncryptionKey: () => "01".repeat(32) }));
 vi.mock("../../lib/encryption.js", () => ({ decrypt: (value) => value }));
 vi.mock("../../logger.js", () => ({ internal: {}, debug: vi.fn() }));
@@ -17,6 +24,7 @@ vi.mock("ssh2", async () => {
 			connect = mocks.connect;
 			shell = mocks.shell;
 			end = mocks.end;
+			destroy = mocks.destroy;
 		},
 	};
 });
@@ -27,6 +35,11 @@ import { getTerminalAccessToken, isValidTerminalAccessToken } from "../../lib/te
 describe("terminal Nginx access handoff", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		terminal.stopping = false;
+		terminal.stopPromise = null;
+	});
+	afterEach(async () => {
+		await terminal.stop();
 	});
 	it("binds the handoff to its host and rejects malformed or absent tokens", () => {
 		const token = getTerminalAccessToken(7);
@@ -48,7 +61,11 @@ describe("terminal Nginx access handoff", () => {
 		mocks.query.mockReturnValue({
 			findById: vi.fn().mockReturnThis(),
 			where,
-			throwIfNotFound: async () => ({ terminal_host: "server", terminal_username: "user" }),
+			throwIfNotFound: async () => ({
+				terminal_host: "server",
+				terminal_username: "user",
+				terminal_host_fingerprint: `SHA256:${"A".repeat(43)}`,
+			}),
 		});
 		const ws = new EventEmitter();
 		ws.send = vi.fn();
@@ -56,6 +73,7 @@ describe("terminal Nginx access handoff", () => {
 		const stream = new EventEmitter();
 		stream.setWindow = vi.fn();
 		stream.write = vi.fn();
+		stream.end = vi.fn();
 		mocks.shell.mockImplementation((_options, callback) => callback(null, stream));
 		await terminal.handleConnection(ws, {
 			url: "/nginx/proxy-hosts/7/terminal/ws",
@@ -85,7 +103,11 @@ describe("terminal Nginx access handoff", () => {
 			headers: { "x-shieldpm-terminal-token": getTerminalAccessToken(7) },
 		});
 		ws.emit("close");
-		resolveHost({ terminal_host: "server", terminal_username: "user" });
+		resolveHost({
+			terminal_host: "server",
+			terminal_username: "user",
+			terminal_host_fingerprint: `SHA256:${"A".repeat(43)}`,
+		});
 		await pending;
 		expect(mocks.connect).not.toHaveBeenCalled();
 	});
@@ -107,7 +129,11 @@ describe("terminal Nginx access handoff", () => {
 			headers: { "x-shieldpm-terminal-token": getTerminalAccessToken(7) },
 		});
 		ws.emit("message", JSON.stringify({ type: "resize", cols: 140, rows: 42 }));
-		resolveHost({ terminal_host: "server", terminal_username: "user" });
+		resolveHost({
+			terminal_host: "server",
+			terminal_username: "user",
+			terminal_host_fingerprint: `SHA256:${"A".repeat(43)}`,
+		});
 		await pending;
 		mocks.shell.mockImplementation(() => {});
 		mocks.ssh.emit("ready");
@@ -117,5 +143,41 @@ describe("terminal Nginx access handoff", () => {
 		);
 		expect(() => ws.emit("error", new Error("Invalid UTF-8"))).not.toThrow();
 		expect(mocks.end).toHaveBeenCalled();
+	});
+	it("bounds shutdown even when the browser ignores its close frame and SSH is still handshaking", async () => {
+		vi.useFakeTimers();
+		try {
+			mocks.query.mockReturnValue({
+				findById: vi.fn().mockReturnThis(),
+				where: vi.fn().mockReturnThis(),
+				throwIfNotFound: async () => ({
+					terminal_host: "server",
+					terminal_username: "user",
+					terminal_host_fingerprint: `SHA256:${"A".repeat(43)}`,
+				}),
+			});
+			const ws = new EventEmitter();
+			ws.close = vi.fn();
+			ws.terminate = vi.fn();
+			const server = new EventEmitter();
+			const onUpgrade = vi.fn();
+			server.on("upgrade", onUpgrade);
+			terminal.servers.set(server, { wss: { clients: new Set([ws]), close: vi.fn() }, onUpgrade });
+			await terminal.handleConnection(ws, {
+				url: "/nginx/proxy-hosts/7/terminal/ws",
+				headers: { "x-shieldpm-terminal-token": getTerminalAccessToken(7) },
+			});
+			const pending = terminal.stop();
+			expect(mocks.end).toHaveBeenCalledOnce();
+			expect(ws.close).toHaveBeenCalledWith(1001, "Backend shutting down");
+			expect(mocks.destroy).not.toHaveBeenCalled();
+			await vi.advanceTimersByTimeAsync(1000);
+			await pending;
+			expect(mocks.destroy).toHaveBeenCalledOnce();
+			expect(ws.terminate).toHaveBeenCalledOnce();
+			expect(server.listenerCount("upgrade")).toBe(0);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });

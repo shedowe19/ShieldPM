@@ -9,6 +9,9 @@ export interface ProxyHostFormValues extends Omit<Partial<ProxyHost>, "advLimitR
 	anubisEnabled?: boolean;
 	anubisRules?: ProxyHost["anubisRules"];
 	gitCredentials?: string;
+	gitSyncPending?: boolean;
+	gitSyncedRoot?: { forwardHost: string; forwardScheme: ProxyHost["forwardScheme"] };
+	gitSyncConflict?: { forwardHost: string; forwardScheme: ProxyHost["forwardScheme"] };
 }
 
 export const parseProxyHostMeta = (value: unknown): ProxyHost["meta"] => {
@@ -54,6 +57,7 @@ export const createProxyHostInitialValues = (data: Partial<ProxyHost> = {}): Pro
 	indexFile: data.indexFile || "",
 	// Terminal Fields
 	terminalHost: data.terminalHost || "",
+	terminalHostFingerprint: data.terminalHostFingerprint || "",
 	terminalPort: data.terminalPort || 22,
 	terminalUsername: data.terminalUsername || "",
 	terminalAuthType: data.terminalAuthType || TERMINAL_AUTH_TYPE.PASSWORD,

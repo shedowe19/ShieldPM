@@ -55,6 +55,10 @@ function renderProvider() {
 beforeEach(() => {
 	vi.resetAllMocks();
 	AuthStore.clear();
+	vi.stubGlobal(
+		"fetch",
+		vi.fn(async () => new Response(JSON.stringify({ id: AuthStore.userId }), { status: 200 })),
+	);
 	mocks.refreshToken.mockResolvedValue(admin);
 	mocks.loginAsUser.mockResolvedValue(target);
 	mocks.restoreSession.mockResolvedValue(admin);
@@ -64,6 +68,7 @@ afterEach(() => {
 	for (const client of queryClients) client.clear();
 	queryClients.clear();
 	AuthStore.clear();
+	vi.unstubAllGlobals();
 });
 
 describe("impersonated session refresh", () => {

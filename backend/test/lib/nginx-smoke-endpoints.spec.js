@@ -138,6 +138,7 @@ describe("isolated Nginx smoke endpoints", () => {
 		const internalPort = await reservations.reserve();
 		await reservations.release();
 		let running;
+		let fixture;
 		let nginxArguments;
 		try {
 			running = await startSmokeNginx({
@@ -149,14 +150,20 @@ describe("isolated Nginx smoke endpoints", () => {
 				report: () => {},
 				spawnProcess: (_command, arguments_, options) => {
 					nginxArguments = arguments_;
-					return spawn(
+					fixture = spawn(
 						process.execPath,
 						[
 							"-e",
-							`const server = require('node:http2').createServer(); setTimeout(() => server.listen(${internalPort}, '127.0.0.1'), 100);`,
+							`const server = require('node:http2').createServer();
+							const startup = setTimeout(() => server.listen(${internalPort}, '127.0.0.1'), 100);
+							process.once('SIGQUIT', () => {
+								clearTimeout(startup);
+								server.close(() => process.exit(0));
+							});`,
 						],
 						options,
 					);
+					return fixture;
 				},
 			});
 			expect(running.client.remoteSettings).toBeDefined();
@@ -165,28 +172,44 @@ describe("isolated Nginx smoke endpoints", () => {
 			if (running) await stopSmokeNginx(running);
 			await reservations.release();
 		}
+		expect(fixture.exitCode).toBe(0);
+		expect(fixture.signalCode).toBeNull();
 	});
 
-	it("recognizes exact bind diagnostics while rejecting syntax and idle endpoints", async () => {
-		const reservations = new SmokePortReservations();
-		const internalPort = await reservations.reserve();
-		await reservations.release();
-		try {
-			for (const [program, errorType, message, timeout] of [
-				[
-					"process.stderr.write('nginx: [emerg] bind() to 127.0.0.1:40123 failed (98: Address already in use)\\n'); setInterval(() => {}, 1000);",
-					SmokePortCollisionError,
-					"listener was claimed",
-					2000,
-				],
-				[
-					"process.stderr.write('nginx: [emerg] unknown directive\\n'); process.exit(1);",
-					Error,
-					"exited before readiness",
-					2000,
-				],
-				["setInterval(() => {}, 1000);", Error, "did not become ready", 300],
-			]) {
+	it.each([
+		{
+			name: "classifies an exact bind diagnostic as a listener collision",
+			program:
+				"process.stderr.write('nginx: [emerg] bind() to 127.0.0.1:40123 failed (98: Address already in use)\\n'); setInterval(() => {}, 1000);",
+			errorType: SmokePortCollisionError,
+			message: "listener was claimed",
+			timeout: 2000,
+			exitCode: 0,
+		},
+		{
+			name: "rejects a syntax error without retrying it as a collision",
+			program: "process.stderr.write('nginx: [emerg] unknown directive\\n'); process.exit(1);",
+			errorType: Error,
+			message: "exited before readiness",
+			timeout: 2000,
+			exitCode: 1,
+		},
+		{
+			name: "rejects an idle process that never serves HTTP/2",
+			program: "setInterval(() => {}, 1000);",
+			errorType: Error,
+			message: "did not become ready",
+			timeout: 300,
+			exitCode: 0,
+		},
+	])(
+		"$name",
+		async ({ program, errorType, message, timeout, exitCode }) => {
+			const reservations = new SmokePortReservations();
+			const internalPort = await reservations.reserve();
+			await reservations.release();
+			let fixture;
+			try {
 				await expect(
 					startSmokeNginx({
 						nginxBin: "fixture",
@@ -195,13 +218,23 @@ describe("isolated Nginx smoke endpoints", () => {
 						internalPort,
 						timeout,
 						report: () => {},
-						spawnProcess: (_command, _arguments, options) =>
-							spawn(process.execPath, ["-e", program], options),
+						spawnProcess: (_command, _arguments, options) => {
+							fixture = spawn(
+								process.execPath,
+								["-e", `process.once('SIGQUIT', () => process.exit(0)); ${program}`],
+								options,
+							);
+							return fixture;
+						},
 					}),
 				).rejects.toMatchObject({ constructor: errorType, message: expect.stringContaining(message) });
+				expect(fixture.exitCode).toBe(exitCode);
+				expect(fixture.signalCode).toBeNull();
+			} finally {
+				await reservations.release();
 			}
-		} finally {
-			await reservations.release();
-		}
-	});
+		},
+		// Each real child has its own bounded readiness and cleanup budget.
+		10_000,
+	);
 });

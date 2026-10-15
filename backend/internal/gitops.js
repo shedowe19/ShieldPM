@@ -136,6 +136,7 @@ const ALLOWED_IMPORT_FIELDS = {
 		"icon_url",
 		"icon_type",
 		"terminal_host",
+		"terminal_host_fingerprint",
 		"terminal_port",
 		"terminal_username",
 		"terminal_auth_type",
@@ -1164,6 +1165,7 @@ const internalGitOps = {
 										"forward_host",
 										"forward_port",
 										"terminal_host",
+										"terminal_host_fingerprint",
 										"terminal_port",
 									].some(
 										(field) =>
@@ -1289,7 +1291,8 @@ const internalGitOps = {
 							deleted++;
 							logger.info(`GitOps Full Sync: Deleted ${dirName} #${item.id}`);
 						};
-						if (modelClass.name === "FirewallList") await internalNginx.withConfigurationLock(deleteItem);
+						if (hostType || modelClass.name === "FirewallList")
+							await internalNginx.withConfigurationLock(deleteItem);
 						else await deleteItem();
 					});
 
@@ -1622,10 +1625,8 @@ const internalGitOps = {
 					{ model: DeadHost, hostType: "dead_host", hosts: await DeadHost.query().where("is_deleted", 0) },
 					{ model: Stream, hostType: "stream", hosts: await Stream.query().where("is_deleted", 0) },
 				],
-				{ throwOnError: true },
+				{ throwOnError: true, reload: true },
 			);
-
-			await internalNginx.reload();
 
 			// Keep the last usable lists on any failed restore, including a failed Nginx activation.
 			if (!errors.length) {

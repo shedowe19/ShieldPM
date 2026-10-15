@@ -169,7 +169,7 @@ describe("AI system tool permissions", () => {
 		expect(mocks.getNetworkStats).toHaveBeenCalledOnce();
 	});
 
-	it("does not advertise or execute client certificate generation without certificates:create", async () => {
+	it("does not advertise or execute client certificate generation without certificates:create-client", async () => {
 		const access = { can: vi.fn().mockRejectedValue(new errs.PermissionError("Not allowed")) };
 
 		const toolNames = namesOf(await getToolDefinitions(access));
@@ -182,7 +182,7 @@ describe("AI system tool permissions", () => {
 		expect(mocks.createClientCertificate).not.toHaveBeenCalled();
 	});
 
-	it("advertises and executes client certificate generation with certificates:create", async () => {
+	it("advertises and executes client certificate generation with certificates:create-client", async () => {
 		const access = { can: vi.fn().mockResolvedValue(true) };
 
 		const toolNames = namesOf(await getToolDefinitions(access));
@@ -194,7 +194,7 @@ describe("AI system tool permissions", () => {
 		expect(results.map((result) => result.result)).toEqual([
 			"Client Certificate Created at: /tmp/client.p12. You can retrieve it from the server filesystem.",
 		]);
-		expect(access.can).toHaveBeenCalledWith("certificates:create");
+		expect(access.can).toHaveBeenCalledWith("certificates:create-client");
 		expect(mocks.createClientCertificate).toHaveBeenCalledWith(
 			{ common_name: "agent", password: "x", years: 2 },
 			expect.stringMatching(/^\/tmp\/client-cert-\d+$/),

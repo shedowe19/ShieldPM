@@ -76,6 +76,10 @@ vi.mock("../../models/proxy_host.js", () => ({
 			const query = {
 				patch: async (data) => state.proxyPatches.push(data),
 				where: () => query,
+				whereIn: () => query,
+				// biome-ignore lint/suspicious/noThenProperty: Objection query builders are intentionally thenable.
+				then: (resolve) =>
+					Promise.resolve([{ id: 42, access_list_id: 1, upload_relay_enabled: true }]).then(resolve),
 			};
 			return query;
 		},
@@ -84,7 +88,12 @@ vi.mock("../../models/proxy_host.js", () => ({
 vi.mock("../../models/now_helper.js", () => ({ default: () => "now" }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: state.audit } }));
 vi.mock("../../internal/nginx.js", () => ({
-	default: { reload: vi.fn(), bulkGenerateConfigs: vi.fn(), withConfigurationLock: (callback) => callback() },
+	default: {
+		reload: vi.fn(),
+		bulkGenerateConfigs: vi.fn(),
+		bulkGenerateConfigGroupsLocked: vi.fn(),
+		withConfigurationLock: (callback) => callback(),
+	},
 }));
 vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: vi.fn() } }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: { stop: vi.fn(), restart: vi.fn() } }));

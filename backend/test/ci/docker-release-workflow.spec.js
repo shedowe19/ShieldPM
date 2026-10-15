@@ -19,7 +19,7 @@ describe("Docker publication workflow", () => {
 	});
 
 	it("smoke-tests the exact image before packaging deployment artifacts", () => {
-		expect(workflow).toContain('docker image inspect "$SMOKE_IMAGE" >/dev/null 2>&1 || docker pull "$SMOKE_IMAGE"');
+		expect(workflow).not.toContain('docker pull "$SMOKE_IMAGE"');
 		expect(workflow).toMatch(/Smoke loaded image as root and UID 1000[\s\S]*?bash scripts\/ci\/docker-smoke\.sh/);
 	});
 });

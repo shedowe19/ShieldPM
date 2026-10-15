@@ -190,6 +190,10 @@ Der Wiki-Generator ersetzt seine HTML-Platzhalter in einem einzigen Durchlauf. S
 
 Das optionale `pentest_crowdsec.py` benötigt Python mit `requests` und eine ausdrücklich angegebene HTTP(S)-Origin, beispielsweise `python3 pentest_crowdsec.py https://eigener-testhost.example --rounds 1`. Es startet beim Import keine Anfragen, folgt keinen Weiterleitungen und führt standardmäßig eine Runde aus (maximal 50 bei ausdrücklicher Angabe). Rückgabecode 0 bedeutet einen erkannten CrowdSec-Block, 1 bedeutet, dass keine entsprechende Blockantwort erkannt wurde.
 
+## Korrekturen der Gesamtprüfung vom 15. Oktober
+
+Vor dem Update bestehender Terminalhosts bestätigte SHA256-Serverfingerprints bereitstellen; es gibt kein blindes Enrollment. Vorhandene CA-/Clientzertifikate werden nicht automatisch ersetzt oder widerrufen. Für die neue Domainreservierung müssen MySQL-/MariaDB-Migrationsbenutzer TRIGGER-Rechte besitzen; historische aktive Domainkonflikte werden vor DDL zur ausdrücklichen Auflösung gemeldet. Installer und Updater verwenden denselben ausführungsfreien Literalparser für vollständige mehrzeilige `.env`-Zuweisungen und sichere Recovery-Datenbankerkennung. Siehe [Umsetzung und Nachweise](./gesamtpruefung-2026-10-15.md).
+
 ## Verwandte Seiten
 
 - [Build](./build.md)

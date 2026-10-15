@@ -28,9 +28,11 @@ describe("SQLite password recovery", () => {
 		fs.rmSync(directory, { recursive: true, force: true });
 	});
 
-	it("changes only the live password and revokes only that user's active sessions", async () => {
+	// Real bcrypt cost 13 hashing plus verification needs a bounded CPU-contention allowance.
+	it("changes only the live password and revokes only that user's active sessions", { timeout: 15000 }, async () => {
 		expect(await resetPassword(filename, "owner@example.test", "new-test-password")).toBe(1);
 		const rows = database.prepare("SELECT * FROM auth ORDER BY id").all();
+		expect(bcrypt.getRounds(rows[0].secret)).toBe(13);
 		expect(await bcrypt.compare("new-test-password", rows[0].secret)).toBe(true);
 		expect(rows.slice(1).map((row) => row.secret)).toEqual([
 			"preserved-oidc",

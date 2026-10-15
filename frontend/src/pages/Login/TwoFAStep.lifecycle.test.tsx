@@ -13,7 +13,10 @@ vi.mock("src/api/backend", () => ({
 	complete2faPasskeyAuth: vi.fn(),
 	begin2faDuoAuth: vi.fn(),
 }));
-vi.mock("src/modules/AuthStore", () => ({ default: { set: vi.fn() } }));
+vi.mock("src/modules/AuthStore", () => ({
+	AUTHENTICATION_CHANGED_EVENT: "shieldpm:authentication-changed",
+	default: { set: vi.fn() },
+}));
 
 function deferred<T>() {
 	let resolve!: (value: T) => void;

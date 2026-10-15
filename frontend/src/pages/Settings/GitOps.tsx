@@ -29,6 +29,7 @@ import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
 import { intl, T } from "src/locale";
+import { useFreshFormData } from "src/modals/useFreshFormData";
 import { GITOPS_AUTH_TYPE, type GitOpsAuthType } from "src/types/enums";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -36,7 +37,12 @@ import { Separator } from "@/components/ui/separator";
 import { useGitOps, useGitOpsConfig, useGitOpsHistory } from "@/hooks/useGitOps";
 
 export default function GitOps() {
-	const { data: config, isLoading, error: fetchError } = useGitOpsConfig();
+	const configQuery = useGitOpsConfig();
+	const { data: openingConfig, isLoading, error: openingError } = useFreshFormData("gitops-config", configQuery);
+	// Freeze only the opening draft. Live configuration still drives saved-state
+	// comparisons and operation status after subsequent saves and refreshes.
+	const config = openingConfig ? configQuery.data || openingConfig : undefined;
+	const fetchError = openingError || configQuery.error;
 	const { data: history } = useGitOpsHistory(10);
 	const { updateConfig, testConnection, push, pull, revert, importConfig } = useGitOps();
 
@@ -55,15 +61,15 @@ export default function GitOps() {
 	const [isImportOpen, setIsImportOpen] = useState(false);
 
 	// Initialize form data when config is loaded
-	if (config && !isInitialized) {
+	if (openingConfig && !isInitialized) {
 		setFormData({
-			enabled: config.enabled,
-			repositoryUrl: config.repositoryUrl || "",
-			branch: config.branch || "main",
+			enabled: openingConfig.enabled,
+			repositoryUrl: openingConfig.repositoryUrl || "",
+			branch: openingConfig.branch || "main",
 			authType: GITOPS_AUTH_TYPE.HTTPS,
 			credentials: "", // Never populate credentials from server
-			autoPush: config.autoPush,
-			autoPullOnStartup: config.autoPullOnStartup,
+			autoPush: openingConfig.autoPush,
+			autoPullOnStartup: openingConfig.autoPullOnStartup,
 		});
 		setIsInitialized(true);
 	}

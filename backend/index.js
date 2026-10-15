@@ -83,18 +83,33 @@ async function appStart() {
 			// Initialize Terminal WebSocket (needs server instance)
 			internalTerminal.init(server);
 
-			process.on("SIGTERM", () => {
-				logger.info(`PID ${process.pid} received SIGTERM`);
+			let shuttingDown = false;
+			const shutdown = async () => {
+				if (shuttingDown) return;
+				shuttingDown = true;
+				process.removeListener("SIGINT", shutdown);
+				process.removeListener("SIGTERM", shutdown);
+				logger.info(`PID ${process.pid} shutting down`);
 				internalProxyHostMonitor.stop();
 				internalFirewallList.stopTimer();
-				server.close(async () => {
+				try {
+					// Upgraded connections must close before server.close can finish.
+					await internalTerminal.stop();
+					await new Promise((resolve, reject) => {
+						server.close((err) => (err ? reject(err) : resolve()));
+					});
 					await internalFirewallList.stopTimer();
 					await analyticsService.stop();
 					await internalUploadRelay.stop();
 					logger.info("Stopping.");
 					process.exit(0);
-				});
-			});
+				} catch (err) {
+					logger.error("Shutdown failed:", err);
+					process.exit(1);
+				}
+			};
+			process.on("SIGINT", shutdown);
+			process.on("SIGTERM", shutdown);
 		});
 	} catch (err) {
 		logger.error(`Startup Error: ${err.message}`, err);

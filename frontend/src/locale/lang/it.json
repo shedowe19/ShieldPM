@@ -1006,5 +1006,12 @@
 	"firewall.host.asn.reasonHint": "Il motivo compare nella pagina di blocco. Lascialo vuoto per usare la spiegazione standard di questo ASN.",
 	"firewall.host.asn.reasonInvalid": "Usa un motivo pubblico di massimo 1000 caratteri, senza caratteri nulli.",
 	"firewall.host.asn.rulesRetained": "Le regole ASN salvate restano invariate. Puoi rimuoverle mentre i dati ASN non sono disponibili.",
-	"firewall.host.asn.title": "Blocchi ASN"
+	"firewall.host.asn.title": "Blocchi ASN",
+	"terminal.host-fingerprint": "Trusted SSH host fingerprint",
+	"terminal.host-fingerprint.help": "Enter the SHA256 fingerprint verified through a trusted channel or directly on the SSH server. Verify a changed server key independently before replacing this pin. Existing terminals cannot connect until a trusted fingerprint is saved.",
+	"terminal.host-fingerprint.invalid": "Enter a verified OpenSSH SHA256 fingerprint (SHA256: followed by 43 Base64 characters, without padding).",
+	"proxy-host.git-sync.root-conflict": "Git sync activated a different web root while this draft also changed the root or forwarding type. Choose which root to save before continuing.",
+	"proxy-host.git-sync.use-synced-root": "Use synced root",
+	"proxy-host.git-sync.keep-draft-root": "Keep my draft root",
+	"proxy-host.git-sync.in-progress": "Git sync is running. Wait for its result before saving."
 }

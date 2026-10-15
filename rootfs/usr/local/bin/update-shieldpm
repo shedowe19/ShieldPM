@@ -238,19 +238,15 @@ confirm_database_recovery_checkpoint() {
 
     original_umask="$(umask)"
 
-    if grep -qsE '^[[:space:]]*(export[[:space:]]+)?DB_(MYSQL|POSTGRES)_HOST=' "$data_path/.env"; then
-        external_database=true
-    elif [ -f "$data_path/shieldpm/default.json" ] && DATA_PATH="$data_path" node --input-type=module -e '
-        import fs from "node:fs";
-        const dataPath = process.env.DATA_PATH;
-        try {
-            const engine = JSON.parse(fs.readFileSync(dataPath + "/shieldpm/default.json", "utf8"))?.database?.engine;
-            process.exit(["mysql", "mysql2", "pg"].includes(engine) ? 0 : 1);
-        } catch {
-            process.exit(1);
-        }
-    '; then
-        external_database=true
+    local database_kind
+    if ! database_kind=$(python3 "$TEMP_DIR/rootfs/usr/local/bin/shieldpm-env.py" database-kind "$data_path"); then
+        echo "    ! Could not determine the configured database; no application files were replaced." >&2
+        return 1
+    fi
+    [ "$database_kind" != external ] || external_database=true
+    if [ "$external_database" = false ] && ! sqlite_source=$(python3 "$TEMP_DIR/rootfs/usr/local/bin/shieldpm-env.py" sqlite-file "$data_path" "$BACKEND_DIR"); then
+        echo "    ! Could not determine the SQLite recovery path; no application files were replaced." >&2
+        return 1
     fi
 
     umask 077
@@ -439,13 +435,9 @@ apply_staged_native_binaries() {
     if [ "$STAGED_ANUBIS" = true ]; then
         install -m 755 "$stage/anubis" /usr/local/bin/anubis
         if [ "$ANUBIS_INSTALLED" = false ]; then
-            ENV_FILE="/data/.env"
+            ENV_FILE="${DATA_PATH:-/data}/.env"
             if [ -f "$ENV_FILE" ]; then
-                    if grep -qE '^[[:space:]]*(#[[:space:]]*)?(export[[:space:]]+)?ANUBIS_ENABLED=' "$ENV_FILE"; then
-                        sed -i -E 's|^[[:space:]]*(#[[:space:]]*)?(export[[:space:]]+)?ANUBIS_ENABLED=.*$|ANUBIS_ENABLED=true|' "$ENV_FILE"
-                    else
-                        echo "ANUBIS_ENABLED=true" >> "$ENV_FILE"
-                    fi
+                python3 "$TEMP_DIR/rootfs/usr/local/bin/shieldpm-env.py" set "$ENV_FILE" ANUBIS_ENABLED true
             fi
         fi
         echo "    - Prepared Anubis binary installed."
@@ -516,6 +508,8 @@ echo "    - Updating Backend at $BACKEND_DIR..."
 mkdir -p "$BACKEND_DIR"
 find "$BACKEND_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
 cp -a "$TEMP_DIR/backend/." "$BACKEND_DIR/"
+# Source checkout tests are useful during CI, never part of the installed API.
+rm -rf "$BACKEND_DIR/test" "$BACKEND_DIR/fixtures"
 printf '%s\n' "$LATEST_SHA_FULL" > "$BACKEND_DIR/.git-commit"
 
 # Frontend

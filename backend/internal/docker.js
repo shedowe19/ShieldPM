@@ -246,10 +246,13 @@ class DockerService {
 						.whereIn("id", hostIds)
 						.where("is_deleted", 0)
 						.withGraphFetched("[owner,access_list.[items,clients],certificate,host_domains]");
-					await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", hosts);
+					await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", hosts, {
+						throwOnError: true,
+						reload: true,
+					});
+				} else {
+					await internalNginx.withConfigurationLock(() => internalNginx.reload());
 				}
-				logger.info("Docker Auto-Discovery: Triggering batched Nginx reload...");
-				await internalNginx.reload();
 			} catch (err) {
 				logger.error("Docker Auto-Discovery: Batch configuration or reload failed", err);
 			}

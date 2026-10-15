@@ -56,7 +56,27 @@ describe("Docker discovery Nginx batching", () => {
 
 		await vi.advanceTimersByTimeAsync(2_000);
 
-		expect(nginx.bulkGenerateConfigs).toHaveBeenCalledExactlyOnceWith(ProxyHost, "proxy_host", state.hosts);
+		expect(nginx.bulkGenerateConfigs).toHaveBeenCalledExactlyOnceWith(ProxyHost, "proxy_host", state.hosts, {
+			throwOnError: true,
+			reload: true,
+		});
+		expect(nginx.reload).not.toHaveBeenCalled();
+	});
+	it("queues reload-only discovery updates behind an in-flight configuration change", async () => {
+		const entered = Promise.withResolvers();
+		const release = Promise.withResolvers();
+		const previous = nginx.withConfigurationLock(async () => {
+			entered.resolve();
+			await release.promise;
+		});
+		await entered.promise;
+		docker.triggerReload();
+		vi.advanceTimersByTime(2000);
+		await Promise.resolve();
+		expect(nginx.reload).not.toHaveBeenCalled();
+		release.resolve();
+		await previous;
+		await nginx.withConfigurationLock(() => {});
 		expect(nginx.reload).toHaveBeenCalledOnce();
 	});
 });

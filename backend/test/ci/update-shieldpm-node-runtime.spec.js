@@ -20,6 +20,10 @@ const databaseRecoveryCheckpoint = updater.match(
 	/confirm_database_recovery_checkpoint\(\) \{[\s\S]*?^\}(?=\n\ninstall_node_26)/m,
 )?.[0];
 const temporaryDirectories = [];
+const shellQuote = (value) => `'${String(value).replaceAll("'", "'\\''")}'`;
+// Extracted functions run against the production helper in the source payload,
+// just as the updater does after cloning and before replacing installed files.
+const recoveryPayload = `TEMP_DIR=${shellQuote(backendSourcePath(".."))}\nBACKEND_DIR=/app`;
 
 if (!nodePackageVersionAssignment) {
 	throw new Error("The updater must determine a Node.js package version from apt-cache madison output.");
@@ -276,10 +280,11 @@ printf 'elapsed=%s' "$SECONDS"
 		);
 		const script = `set -euo pipefail
 ${databaseRecoveryCheckpoint}
+${recoveryPayload}
 umask 0022
-DATA_PATH=${JSON.stringify(dataPath)} UPDATE_RUN_DIR=${JSON.stringify(updateRunDirectory)} confirm_database_recovery_checkpoint <<< "y"
+DATA_PATH=${shellQuote(dataPath)} UPDATE_RUN_DIR=${shellQuote(updateRunDirectory)} confirm_database_recovery_checkpoint <<< "y"
 test "$(umask)" = "0022"
-grep -Fx 'database_kind=external' ${JSON.stringify(join(updateRunDirectory, "database-backup-checkpoint"))}`;
+grep -Fx 'database_kind=external' ${shellQuote(join(updateRunDirectory, "database-backup-checkpoint"))}`;
 		const result = spawnSync("bash", ["-c", script], { encoding: "utf8" });
 
 		expect(result.status, result.stderr).toBe(0);
@@ -295,7 +300,7 @@ grep -Fx 'database_kind=external' ${JSON.stringify(join(updateRunDirectory, "dat
 		fs.mkdirSync(join(dataPath, "shieldpm"), { recursive: true });
 		fs.mkdirSync(updateRunDirectory);
 		const script = `set -euo pipefail
-python3 - ${JSON.stringify(databasePath)} <<'PY'
+python3 - ${shellQuote(databasePath)} <<'PY'
 import sqlite3
 import sys
 connection = sqlite3.connect(sys.argv[1])
@@ -305,11 +310,12 @@ connection.commit()
 connection.close()
 PY
 ${databaseRecoveryCheckpoint}
+${recoveryPayload}
 umask 0022
-DATA_PATH=${JSON.stringify(dataPath)} UPDATE_RUN_DIR=${JSON.stringify(updateRunDirectory)} confirm_database_recovery_checkpoint
+DATA_PATH=${shellQuote(dataPath)} UPDATE_RUN_DIR=${shellQuote(updateRunDirectory)} confirm_database_recovery_checkpoint
 test "$(umask)" = "0022"
-test -s ${JSON.stringify(join(updateRunDirectory, "database-backup.sqlite"))}
-python3 - ${JSON.stringify(join(updateRunDirectory, "database-backup.sqlite"))} <<'PY'
+test -s ${shellQuote(join(updateRunDirectory, "database-backup.sqlite"))}
+python3 - ${shellQuote(join(updateRunDirectory, "database-backup.sqlite"))} <<'PY'
 import sqlite3
 import sys
 connection = sqlite3.connect(sys.argv[1])
@@ -319,7 +325,7 @@ try:
 finally:
     connection.close()
 PY
-grep -Fx 'database_kind=sqlite' ${JSON.stringify(join(updateRunDirectory, "database-backup-checkpoint"))}`;
+grep -Fx 'database_kind=sqlite' ${shellQuote(join(updateRunDirectory, "database-backup-checkpoint"))}`;
 		const result = spawnSync("bash", ["-c", script], { encoding: "utf8" });
 
 		expect(result.status, result.stderr).toBe(0);

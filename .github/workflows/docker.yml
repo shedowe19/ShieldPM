@@ -59,9 +59,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
-  contents: write
-  packages: write
-  pull-requests: write
+  contents: read
 
 jobs:
   # ---------------------------------------------------------
@@ -75,7 +73,7 @@ jobs:
       version_hash: ${{ steps.calc.outputs.hash }}
       version: ${{ steps.calc.outputs.version }}
       docker_tag_base: ${{ steps.calc.outputs.tag_base }}
-      is_pr: ${{ steps.calc.outputs.is_pr }}
+      candidate_tag: ${{ steps.calc.outputs.candidate_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -83,6 +81,7 @@ jobs:
       - name: "Calculate Version & Tags"
         id: calc
         run: |
+          echo "candidate_tag=candidate-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
           SHORT_SHA=$(git rev-parse --short HEAD)
           VERSION=$(cat .version)
           echo "hash=${SHORT_SHA}" >> $GITHUB_OUTPUT
@@ -91,10 +90,8 @@ jobs:
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             CLEAN_PR=$(echo pr-${{ github.ref_name }} | sed "s|refs/pull/:||g" | sed "s|/merge||g")
             echo "tag_base=${CLEAN_PR}" >> $GITHUB_OUTPUT
-            echo "is_pr=true" >> $GITHUB_OUTPUT
           else
             echo "tag_base=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-            echo "is_pr=false" >> $GITHUB_OUTPUT
           fi
 
   # ---------------------------------------------------------
@@ -172,14 +169,14 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.arch }}-backend
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-backend
 
-      - name: "🚀 Build Final & Push"
+      - name: "🏗️ Build and load candidate image"
         uses: docker/build-push-action@v7.3.0
         with:
           context: .
           file: ./Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          load: ${{ github.event_name == 'pull_request' }}
-          tags: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
+          push: false
+          load: true
+          tags: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.candidate_tag }}-${{ matrix.arch }}
           build-args: |
             ${{ matrix.flags }}
           cache-from: |
@@ -192,19 +189,16 @@ jobs:
       - name: "🌍 Smoke GeoIP bootstrap from latest release"
         timeout-minutes: 10
         env:
-          SMOKE_IMAGE: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
+          SMOKE_IMAGE: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.candidate_tag }}-${{ matrix.arch }}
           GEOIP_GITHUB_TOKEN: ${{ github.token }}
         run: |
-          docker image inspect "$SMOKE_IMAGE" >/dev/null 2>&1 || docker pull "$SMOKE_IMAGE"
           bash scripts/ci/geoip-update-smoke.sh "$SMOKE_IMAGE"
 
       - name: "🧪 Smoke loaded image as root and UID 1000"
         timeout-minutes: 10
         env:
-          SMOKE_IMAGE: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
-        # Pull after a non-PR push; PR builds have already loaded the exact image locally.
+          SMOKE_IMAGE: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.candidate_tag }}-${{ matrix.arch }}
         run: |
-          docker image inspect "$SMOKE_IMAGE" >/dev/null 2>&1 || docker pull "$SMOKE_IMAGE"
           bash scripts/ci/docker-smoke.sh "$SMOKE_IMAGE"
 
       # ---------------------------------------------------------
@@ -213,9 +207,9 @@ jobs:
       # ---------------------------------------------------------
       - name: "📦 Create Native Installer Package"
         run: |
-          # 1. Pull Image (For app/html only)
-          TAG="${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}"
-          docker image inspect "$TAG" >/dev/null 2>&1 || docker pull "$TAG"
+          # 1. Use the same locally tested candidate (For app/html only)
+          TAG="${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.candidate_tag }}-${{ matrix.arch }}"
+          docker image inspect "$TAG" >/dev/null
 
           # 2. Create Temp Container
           CONTAINER_NAME="installer-extractor-${{ matrix.arch }}"
@@ -279,9 +273,9 @@ jobs:
         id: lxc
         # if: matrix.arch == 'x86_64' # Enable for both architectures
         run: |
-          # 1. Pull the image we just pushed/built to ensure it's local
-          TAG="${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}"
-          docker image inspect "$TAG" >/dev/null 2>&1 || docker pull "$TAG"
+          # 1. Use the same locally tested candidate
+          TAG="${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.candidate_tag }}-${{ matrix.arch }}"
+          docker image inspect "$TAG" >/dev/null
 
           # 2. Run a temporary builder container
           # We start it with a sleep entrypoint so we can exec patches into it
@@ -372,6 +366,29 @@ jobs:
           path: ${{ env.LXC_TEMPLATE_NAME }}
           if-no-files-found: error
 
+      - name: "📤 Push tested candidate and record its digest"
+        if: github.event_name != 'pull_request'
+        env:
+          SMOKE_IMAGE: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.candidate_tag }}-${{ matrix.arch }}
+          IMAGE_ARCH: ${{ matrix.arch }}
+        run: |
+          docker push "$SMOKE_IMAGE"
+          IMAGE_REF=$(docker image inspect --format '{{index .RepoDigests 0}}' "$SMOKE_IMAGE")
+          DIGEST=${IMAGE_REF#"$IMAGE_NAME@"}
+          [[ "$IMAGE_REF" == "$IMAGE_NAME@$DIGEST" && "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || exit 1
+          mkdir -p image-digests
+          printf '%s\n' "$IMAGE_REF" > "image-digests/$IMAGE_ARCH.txt"
+
+      - name: "📤 Upload tested image digest"
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: image-digest-${{ matrix.arch }}
+          path: image-digests/${{ matrix.arch }}.txt
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 1
+
   # ---------------------------------------------------------
   # PHASE 3: ZUSAMMENFÜGEN (Manifest erstellen)
   # ---------------------------------------------------------
@@ -380,7 +397,12 @@ jobs:
     needs: [prepare, build]
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'pull_request' && github.repository_owner == 'shedowe19' }}
+    permissions:
+      packages: write
     steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.2.0
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4.6.0
         with:
@@ -388,21 +410,28 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create Multiarch Manifest
-        run: |
-          TAG_BASE="${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}"
-
-          docker buildx imagetools create --tag "${TAG_BASE}" \
-            "${TAG_BASE}-x86_64" \
-            "${TAG_BASE}-aarch64"
-
-      - name: "Add PR Comment"
-        uses: mshick/add-pr-comment@v3.12.0
-        if: ${{ needs.prepare.outputs.is_pr == 'true' }}
+      - name: Download tested image digests
+        uses: actions/download-artifact@v8.0.1
         with:
-          message: "The Docker Image can now be found here: `${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}`"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          refresh-message-position: true
+          pattern: image-digest-*
+          path: image-digests
+          merge-multiple: true
+
+      - name: Promote tested images
+        env:
+          TAG_BASE: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}
+        run: |
+          # Validate both immutable references before changing any public tag.
+          IMAGES=()
+          for ARCH in x86_64 aarch64; do
+            IMAGE_REF=$(cat "image-digests/$ARCH.txt")
+            DIGEST=${IMAGE_REF#"$IMAGE_NAME@"}
+            [[ "$IMAGE_REF" == "$IMAGE_NAME@$DIGEST" && "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || exit 1
+            IMAGES+=("$IMAGE_REF")
+          done
+          docker buildx imagetools create --tag "$TAG_BASE" "${IMAGES[@]}"
+          docker buildx imagetools create --prefer-index=false --tag "${TAG_BASE}-x86_64" "${IMAGES[0]}"
+          docker buildx imagetools create --prefer-index=false --tag "${TAG_BASE}-aarch64" "${IMAGES[1]}"
 
   # ---------------------------------------------------------
   # PHASE 4: RELEASE (Artifacts as GitHub Release)

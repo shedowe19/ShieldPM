@@ -195,4 +195,71 @@ describe("Nginx bulk validation outcome", () => {
 			expect(await fs.promises.readFile(filename(row.id), "utf8")).toBe(`replacement ${row.id}`);
 		expect(await fs.promises.readFile(`${filename(2)}.bak`, "utf8")).toBe("working 2");
 	});
+	it("keeps activation in the shared queue until the batched reload completes", async () => {
+		const entered = Promise.withResolvers();
+		const release = Promise.withResolvers();
+		vi.spyOn(nginx, "reload").mockImplementation(async () => {
+			entered.resolve();
+			await release.promise;
+		});
+		const batch = nginx.bulkGenerateConfigGroups(groups(), { throwOnError: true, reload: true });
+		await entered.promise;
+		let nextStarted = false;
+		const next = nginx.withConfigurationLock(() => {
+			nextStarted = true;
+		});
+		await new Promise((resolve) => setImmediate(resolve));
+		expect(nextStarted).toBe(false);
+		for (const row of rows) expect(fs.existsSync(`${filename(row.id)}.bak`)).toBe(true);
+		release.resolve();
+		await batch;
+		await next;
+		expect(nextStarted).toBe(true);
+	});
+	it("reactivates the complete restored group when a batched reload fails", async () => {
+		const failure = new Error("Nginx activation failed");
+		const reload = vi
+			.spyOn(nginx, "reload")
+			.mockRejectedValueOnce(failure)
+			.mockImplementationOnce(async () => {
+				for (const row of rows)
+					expect(await fs.promises.readFile(filename(row.id), "utf8")).toBe(`working ${row.id}`);
+			});
+		await expect(nginx.bulkGenerateConfigGroups(groups(), { throwOnError: true, reload: true })).rejects.toBe(
+			failure,
+		);
+		expect(reload).toHaveBeenCalledTimes(2);
+		for (const row of rows) expect(row.meta.nginx_online).toBe(false);
+	});
+	it("reloads restored listeners even if both commit and rollback status writes fail", async () => {
+		const statusFailure = new Error("Status database unavailable");
+		model.transaction = async () => {
+			throw statusFailure;
+		};
+		const restoring = Promise.withResolvers();
+		const release = Promise.withResolvers();
+		const reload = vi
+			.spyOn(nginx, "reload")
+			.mockResolvedValueOnce()
+			.mockImplementationOnce(async () => {
+				for (const row of rows)
+					expect(await fs.promises.readFile(filename(row.id), "utf8")).toBe(`working ${row.id}`);
+				restoring.resolve();
+				await release.promise;
+			});
+		const batch = nginx
+			.bulkGenerateConfigGroups(groups(), { throwOnError: true, reload: true })
+			.catch((error) => error);
+		await restoring.promise;
+		let nextStarted = false;
+		const next = nginx.withConfigurationLock(() => {
+			nextStarted = true;
+		});
+		await new Promise((resolve) => setImmediate(resolve));
+		expect(nextStarted).toBe(false);
+		expect(reload).toHaveBeenCalledTimes(2);
+		release.resolve();
+		expect(await batch).toBe(statusFailure);
+		await next;
+	});
 });

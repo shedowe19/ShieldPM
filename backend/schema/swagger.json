@@ -71,6 +71,10 @@
 		{
 			"name": "firewall-lists",
 			"description": "IP/CIDR lists selected independently per proxy host"
+		},
+		{
+			"name": "analytics",
+			"description": "Endpoints for analytics data"
 		}
 	],
 	"paths": {
@@ -604,6 +608,11 @@
 		"/nginx/firewall-lists/{listID}/refresh": {
 			"post": {
 				"$ref": "./paths/nginx/firewall-lists/listID/refresh/post.json"
+			}
+		},
+		"/analytics/hosts": {
+			"get": {
+				"$ref": "./paths/analytics/hosts/get.json"
 			}
 		}
 	}

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import _ from "lodash";
+import { translateDomainReservationError } from "../lib/domain-reservations.js";
 import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
 import { sanitizeHostMeta } from "../lib/host-response.js";
@@ -68,7 +69,7 @@ const internalDeadHost = {
 			...thisData,
 			meta: sanitizeHostMeta(thisData.meta),
 		});
-		let row = await deadHostModel.query().insertAndFetch(persistedData);
+		let row = await deadHostModel.query().insertAndFetch(persistedData).catch(translateDomainReservationError);
 		row = utils.omitRow(omissions())(row);
 
 		// Add to audit log
@@ -182,7 +183,7 @@ const internalDeadHost = {
 		thisData.meta = sanitizeHostMeta(thisData.meta);
 
 		// do the row update
-		await deadHostModel.query().where({ id: data.id }).patch(thisData);
+		await deadHostModel.query().where({ id: data.id }).patch(thisData).catch(translateDomainReservationError);
 
 		// Add to audit log
 		await internalAuditLog.add(access, {

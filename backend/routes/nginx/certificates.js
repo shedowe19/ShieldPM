@@ -147,7 +147,8 @@ router
 			},
 		);
 
-		await res.locals.access.can("certificates:create", payload);
+		// These identities are trusted by every host using the shared internal CA.
+		await res.locals.access.can("certificates:create-client", payload);
 		const tmpDir = await fs.mkdtemp("/tmp/shieldpm-client-cert-");
 		const cleanupTmpDir = async () => {
 			try {

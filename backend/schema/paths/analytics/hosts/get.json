@@ -1,0 +1,51 @@
+{
+	"operationId": "getAnalyticsHosts",
+	"summary": "Get the hosts available for analytics selection",
+	"description": "Returns active host identifiers and domain names only. Global analytics:list access includes all active hosts. Otherwise, the existing proxy-host ownership permission fallback limits the result to permitted hosts. This endpoint grants no proxy-host management access.",
+	"tags": [
+		"analytics"
+	],
+	"security": [
+		{
+			"bearerAuth": []
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Hosts available to the authenticated user",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"additionalProperties": false,
+							"required": [
+								"id",
+								"domain_names"
+							],
+							"properties": {
+								"id": {
+									"type": "integer",
+									"minimum": 1
+								},
+								"domain_names": {
+									"type": "array",
+									"items": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"401": {
+			"description": "Authentication required"
+		},
+		"403": {
+			"description": "Analytics and proxy-host ownership permissions do not allow access"
+		}
+	}
+}

@@ -31,6 +31,7 @@ vi.mock("src/locale", () => ({
 }));
 
 vi.mock("src/modules/AuthStore", () => ({
+	AUTHENTICATION_CHANGED_EVENT: "shieldpm:authentication-changed",
 	default: {
 		add: mocks.authStoreAdd,
 		set: mocks.authStoreSet,

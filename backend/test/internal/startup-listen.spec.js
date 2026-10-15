@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
 	info: vi.fn(),
 	error: vi.fn(),
 	terminal: vi.fn(),
+	terminalStop: vi.fn(async () => {}),
 	monitorStart: vi.fn(),
 	monitorStop: vi.fn(),
 	firewallStart: vi.fn(),
@@ -56,7 +57,7 @@ vi.mock("../../internal/oauth2-proxy.js", () => ({ default: { init: async () => 
 vi.mock("../../internal/proxy-host-monitor.js", () => ({
 	default: { init: state.monitorStart, stop: state.monitorStop },
 }));
-vi.mock("../../internal/terminal.js", () => ({ default: { init: state.terminal } }));
+vi.mock("../../internal/terminal.js", () => ({ default: { init: state.terminal, stop: state.terminalStop } }));
 vi.mock("../../internal/tor.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/wireguard.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/upload-relay.js", () => ({ default: { init: vi.fn(), stop: vi.fn(async () => {}) } }));
@@ -74,6 +75,7 @@ describe("backend listener lifecycle", () => {
 		vi.clearAllMocks();
 		state.firewallStop.mockResolvedValue(undefined);
 		state.analyticsStop.mockResolvedValue(undefined);
+		state.terminalStop.mockResolvedValue(undefined);
 		state.analyticsInit.mockResolvedValue(undefined);
 		state.migrate.mockResolvedValue(undefined);
 		state.configurationLock.mockImplementation(async (callback) => callback());
@@ -225,6 +227,28 @@ describe("backend listener lifecycle", () => {
 		await release();
 		await vi.waitFor(() => expect(state.completed).toBe(true));
 		expect(state.reload).toHaveBeenCalledOnce();
+	});
+	it("drains terminal connections before closing HTTP or running final cleanup", async () => {
+		const stopped = Promise.withResolvers();
+		state.terminalStop.mockReturnValueOnce(stopped.promise);
+		await import("../../index.js");
+		await vi.waitFor(() => expect(state.completed).toBe(true));
+		const server = state.servers[0];
+		const close = vi.spyOn(server, "close");
+		const handler = process.listeners("SIGTERM").find((listener) => !listeners.get("SIGTERM").includes(listener));
+		try {
+			handler();
+			handler();
+			expect(state.terminalStop).toHaveBeenCalledOnce();
+			expect(close).not.toHaveBeenCalled();
+			expect(state.analyticsStop).not.toHaveBeenCalled();
+			stopped.resolve();
+			await vi.waitFor(() => expect(process.exit).toHaveBeenCalledExactlyOnceWith(0));
+			expect(close).toHaveBeenCalledOnce();
+			expect(state.analyticsStop).toHaveBeenCalledOnce();
+		} finally {
+			stopped.resolve();
+		}
 	});
 	it.each(["SIGINT", "SIGTERM"])("runs development monitoring after listen and stops it on %s", async (signal) => {
 		await import("../../index-dev.js");

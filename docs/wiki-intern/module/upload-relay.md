@@ -51,6 +51,10 @@ Ein Reverse Proxy kann eine beliebige einzelne Browser-Formularanfrage nicht tra
 - Ohne erklärbaren Zielhinweis bleibt der Request transparent; es wird nie auf einen geratenen Pfad geschrieben.
 - Bei `pass_auth: false` wird Basic-`Authorization` auch bei einer IP-only Access List nicht an den Upstream weitergereicht.
 
+## Korrekturen der Gesamtprüfung vom 15. Oktober
+
+Stop sperrt neue Arbeit, wechselt die Generation, leert die RAM-Queue und bricht Controller ab, die bereits vor asynchronen Locks und Hostabfragen registriert sind. Vor einem Origintransfer wird die Generation erneut geprüft. Recovery und Initialisierung können nach Stop/Restart keine alten Aufträge nachträglich starten. Persistente queued Uploads werden nicht gelöscht und folgen beim nächsten Start den bestehenden Recoveryregeln. Siehe [Umsetzung und Nachweise](../entwicklung/gesamtpruefung-2026-10-15.md).
+
 ## Verwandte Seiten
 
 - [Proxy Host](./proxy-host.md)

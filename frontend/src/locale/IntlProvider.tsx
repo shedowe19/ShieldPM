@@ -1,4 +1,5 @@
 import { createIntl, createIntlCache } from "react-intl";
+import { readPreference, writePreference } from "src/lib/preferenceStorage";
 import { useLocaleRevision } from "../context/LocaleContext";
 import langEn from "./lang/en.json";
 import langList from "./lang/lang-list.json";
@@ -80,7 +81,7 @@ const getFlagCodeForLocale = (locale?: string) => {
 };
 
 const getLocale = (short = false) => {
-	let loc = window.localStorage.getItem("locale");
+	let loc = readPreference("locale");
 	if (!loc) {
 		loc = navigator.language || navigator.languages?.[0] || document.documentElement.lang;
 	}
@@ -112,7 +113,7 @@ const changeLocale = async (locale: string): Promise<void> => {
 	const messages = await loadMessages(locale);
 	if (request !== localeRequest) return;
 	intl = createIntl({ locale, messages }, cache);
-	window.localStorage.setItem("locale", locale);
+	writePreference("locale", locale);
 	document.documentElement.lang = locale;
 };
 

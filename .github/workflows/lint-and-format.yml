@@ -94,12 +94,10 @@ jobs:
       - name: Enforce compressed frontend bundle budget
         run: node frontend/scripts/ci/check-bundle-budget.cjs --dist frontend/dist --budget frontend/performance-budget.json
 
-      - name: "Audit backend dependencies (advisory: high and critical)"
-        continue-on-error: true
+      - name: "Audit backend dependencies (high and critical)"
         run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/backend" audit --level high
 
-      - name: "Audit frontend dependencies (advisory: high and critical)"
-        continue-on-error: true
+      - name: "Audit frontend dependencies (high and critical)"
         run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/frontend" audit --level high
 
   mariadb-migration:

@@ -447,45 +447,56 @@ const internalAccessList = {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 
-		// 1. update row to be deleted
-		// 2. update any proxy hosts that were using it (ignoring permissions)
-		// 3. reconfigure those hosts
-		// 4. audit log
-
-		// 1. update row to be deleted
-		await accessListModel.query().where("id", row.id).patch({
-			is_deleted: 1,
-		});
-
-		// 2. update any proxy hosts that were using it (ignoring permissions)
-		if (row.proxy_hosts) {
-			await proxyHostModel
-				.query()
-				.where("access_list_id", "=", row.id)
-				.patch({ access_list_id: 0, upload_relay_enabled: 0 });
-
-			// 3. reconfigure those hosts, then reload nginx
-			// set the access_list_id to zero for these items
-			row.proxy_hosts.map((_val, idx) => {
-				row.proxy_hosts[idx].access_list_id = 0;
-				row.proxy_hosts[idx].upload_relay_enabled = 0;
-				return true;
+		await internalNginx.withConfigurationLock(async () => {
+			// Snapshot inside the same lock used by renderers. Authentication dependencies
+			// remain present until every detached listener has actually been activated.
+			const hosts = await proxyHostModel.query().where("access_list_id", row.id).where("is_deleted", 0);
+			await accessListModel.transaction(async (trx) => {
+				await accessListModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
+				await proxyHostModel
+					.query(trx)
+					.where("access_list_id", row.id)
+					.whereIn(
+						"id",
+						hosts.map((host) => host.id),
+					)
+					.patch({
+						access_list_id: 0,
+						upload_relay_enabled: 0,
+					});
 			});
+			try {
+				await internalNginx.bulkGenerateConfigGroupsLocked(
+					[{ model: proxyHostModel, hostType: "proxy_host", hosts }],
+					{ throwOnError: true, reload: true },
+				);
+			} catch (err) {
+				await accessListModel.transaction(async (trx) => {
+					await accessListModel.query(trx).where("id", row.id).patch({ is_deleted: 0 });
+					for (const host of hosts) {
+						// Preserve a newer explicit assignment if another writer changed the row.
+						await proxyHostModel.query(trx).where("id", host.id).where("access_list_id", 0).patch({
+							access_list_id: row.id,
+							upload_relay_enabled: host.upload_relay_enabled,
+						});
+					}
+				});
+				throw err;
+			}
 
-			await internalNginx.bulkGenerateConfigs(proxyHostModel, "proxy_host", row.proxy_hosts);
-		}
-
-		await internalNginx.withConfigurationLock(() => internalNginx.reload());
-
-		// delete the htpasswd file
-		try {
-			await fs.promises.unlink(internalAccessList.getFilename(row));
-		} catch (_err) {
-			// do nothing
-		}
-
-		// Stop OAuth2 Proxy if running
-		await internalOAuth2Proxy.stop(row.id);
+			// These are obsolete only after successful activation. Cleanup failures leave
+			// harmless resources to retry, rather than invalidating an activated deletion.
+			try {
+				await fs.promises.unlink(internalAccessList.getFilename(row));
+			} catch (err) {
+				if (err.code !== "ENOENT") logger.warn(`Access-list password cleanup failed: ${err.message}`);
+			}
+			try {
+				await internalOAuth2Proxy.stop(row.id);
+			} catch (err) {
+				logger.warn(`Access-list OAuth2 cleanup failed: ${err.message}`);
+			}
+		});
 
 		// 4. audit log
 		await internalAuditLog.add(access, {
