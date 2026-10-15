@@ -425,8 +425,10 @@ describe("Upload relay", () => {
 
 		expect(scheduled).toHaveLength(1);
 		scheduled.shift()();
+		await vi.waitFor(() =>
+			expect(JSON.parse(fs.readFileSync(join(directory, "upload.json"), "utf8")).state).toBe("failed"),
+		);
 		await relay.stop();
-		expect(JSON.parse(fs.readFileSync(join(directory, "upload.json"), "utf8")).state).toBe("failed");
 		expect(fetchImpl).not.toHaveBeenCalled();
 		expect(fs.readFileSync(canary, "utf8")).toBe("BAD");
 	});

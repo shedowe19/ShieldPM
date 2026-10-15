@@ -376,6 +376,12 @@
 			"description": "Terminal SSH Port",
 			"example": 22
 		},
+		"terminal_host_fingerprint": {
+			"type": ["string", "null"],
+			"description": "Confirmed OpenSSH SHA256 server-key fingerprint. Unconfigured hosts cannot connect.",
+			"pattern": "^(?:SHA256:[A-Za-z0-9+/]{43})?$",
+			"maxLength": 50
+		},
 		"terminal_username": {
 			"type": ["string", "null"],
 			"description": "Terminal SSH Username",

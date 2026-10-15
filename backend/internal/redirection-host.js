@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import _ from "lodash";
+import { translateDomainReservationError } from "../lib/domain-reservations.js";
 import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
 import { sanitizeHostMeta } from "../lib/host-response.js";
@@ -75,7 +76,8 @@ const internalRedirectionHost = {
 
 		let row = await redirectionHostModel
 			.query()
-			.insertAndFetch(/** @type {any} */ ({ ...thisData, meta: sanitizeHostMeta(thisData.meta) }));
+			.insertAndFetch(/** @type {any} */ ({ ...thisData, meta: sanitizeHostMeta(thisData.meta) }))
+			.catch(translateDomainReservationError);
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
@@ -197,6 +199,7 @@ const internalRedirectionHost = {
 		const _saved_row = await redirectionHostModel
 			.query()
 			.patchAndFetchById(thisData.id, /** @type {any} */ (thisData))
+			.catch(translateDomainReservationError)
 			.then(/** @type {any} */ (utils.omitRow(omissions()))); // Ensure we omit rows here if needed, though patchAndFetchById returns object
 
 		// Add to audit log

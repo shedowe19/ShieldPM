@@ -53,4 +53,24 @@ describe("Access.load authenticates accounts before exposing a token", () => {
 		await expect(access.can("users:create", {})).resolves.toBe(true);
 		expect(state.query).not.toHaveBeenCalled();
 	});
+
+	it("keeps ordinary certificate management separate from global client identity issuance", async () => {
+		state.user.permissions = { visibility: "user", certificates: "manage" };
+		const access = new Access("signed-token");
+		await expect(access.can("certificates:create", {})).resolves.toBeTruthy();
+		await expect(access.can("certificates:create-client", {})).rejects.toThrow("Permission Denied");
+	});
+
+	it("allows the shared CA client identity only with the current administrator role", async () => {
+		state.user.roles = ["admin"];
+		await expect(new Access("signed-token").can("certificates:create-client", {})).resolves.toBeTruthy();
+	});
+
+	it("does not trust an old administrator claim after the account role changes", async () => {
+		state.payload.attrs.roles = ["admin"];
+		state.user.permissions = { visibility: "all", certificates: "manage" };
+		await expect(new Access("old-admin-token").can("certificates:create-client", {})).rejects.toThrow(
+			"Permission Denied",
+		);
+	});
 });

@@ -6,7 +6,14 @@ import { global as logger } from "../logger.js";
 import { migrateUp } from "../migrate.js";
 import { isSqlite } from "./config.js";
 
-const INTERNAL_TABLES = new Set(["migrations", "migrations_lock", "knex_migrations", "knex_migrations_lock"]);
+// Domain reservations are rebuilt by destination triggers, never copied as independent application data.
+const INTERNAL_TABLES = new Set([
+	"migrations",
+	"migrations_lock",
+	"knex_migrations",
+	"knex_migrations_lock",
+	"host_domain_reservation",
+]);
 const isApplicationTable = (name) => !name.startsWith("sqlite_") && !INTERNAL_TABLES.has(name);
 const schemaError = () =>
 	new Error("SQLite schema differs from the destination. Start this ShieldPM version with SQLite first, then retry.");

@@ -28,6 +28,7 @@ vi.mock("src/api/backend", () => ({
 vi.mock("src/api/backend/base", () => ({ post: mocks.post }));
 
 vi.mock("src/modules/AuthStore", () => ({
+	AUTHENTICATION_CHANGED_EVENT: "shieldpm:authentication-changed",
 	AUTHENTICATION_EXPIRED_EVENT: "shieldpm:authentication-expired",
 	default: {
 		add: mocks.authStoreAdd,

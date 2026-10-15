@@ -6,7 +6,7 @@ vi.mock("isomorphic-git", () => ({ default: { clone: state.clone, log: async () 
 vi.mock("isomorphic-git/http/node", () => ({ default: {} }));
 vi.mock("../../lib/config.js", () => ({ isDemoMode: () => false }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: (value) => value, decrypt: (value) => value }));
-vi.mock("../../internal/nginx.js", () => ({ default: {} }));
+vi.mock("../../internal/nginx.js", () => ({ default: { withConfigurationLock: (callback) => callback() } }));
 vi.mock("../../models/proxy_host.js", () => ({
 	default: {
 		query: () => {
@@ -18,6 +18,7 @@ vi.mock("../../models/proxy_host.js", () => ({
 					return query;
 				},
 				findById: (id) => query.where("id", id),
+				withGraphFetched: () => query,
 				patch: async (data) => {
 					state.patch(data);
 					for (const row of rows()) Object.assign(row, data);

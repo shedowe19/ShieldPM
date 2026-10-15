@@ -59,7 +59,7 @@ describe("certificate issuance and download routes", () => {
 	beforeEach(() => vi.clearAllMocks());
 	afterEach(() => vi.restoreAllMocks());
 
-	it("requires certificate create permission before generating a trusted client identity", async () => {
+	it("requires global client certificate permission before generating a trusted client identity", async () => {
 		const mkdir = vi.spyOn(fs, "mkdtemp").mockResolvedValue("/mock/client");
 		const can = vi.fn().mockRejectedValue(new Error("Permission Denied"));
 		await expect(
@@ -69,7 +69,10 @@ describe("certificate issuance and download routes", () => {
 				vi.fn(),
 			),
 		).rejects.toThrow("Permission Denied");
-		expect(can).toHaveBeenCalledWith("certificates:create", expect.objectContaining({ common_name: "Client" }));
+		expect(can).toHaveBeenCalledWith(
+			"certificates:create-client",
+			expect.objectContaining({ common_name: "Client" }),
+		);
 		expect(mocks.createClientCert).not.toHaveBeenCalled();
 		expect(mkdir).not.toHaveBeenCalled();
 	});

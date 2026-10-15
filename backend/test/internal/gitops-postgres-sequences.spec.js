@@ -45,6 +45,8 @@ vi.mock("../../internal/proxy-host-monitor.js", () => ({
 }));
 
 import gitops from "../../internal/gitops.js";
+import internalHost from "../../internal/host.js";
+import { translateDomainReservationError } from "../../lib/domain-reservations.js";
 import { withImportedIdSequence } from "../../lib/gitops-sequences.js";
 import AccessList from "../../models/access_list.js";
 import FirewallList from "../../models/firewall_list.js";
@@ -176,7 +178,7 @@ describe("GitOps PostgreSQL restore sequences", () => {
 			const data = JSON.parse(mocks.files.get(`/data/gitops/shieldpm-config/${directory}/1.yaml`));
 			const nextData = gitops.sanitizeImportData(model.name, { ...data, id: undefined });
 			if (model === ProxyHost) {
-				nextData.host_domains = nextData.domain_names.map((domain_name) => ({ domain_name }));
+				nextData.host_domains = [{ domain_name: "next.example.test" }];
 				delete nextData.domain_names;
 			}
 			const next = await model.query().insertGraph(nextData);
@@ -186,6 +188,61 @@ describe("GitOps PostgreSQL restore sequences", () => {
 			expect(await mocks.database(table).orderBy("id").pluck("id")).toEqual(overwrite ? [2, 3] : [1, 2]);
 		}
 		expect((await mocks.database("host_domain").first()).domain_name).toBe("restored.example.test");
+	});
+	it("rejects a losing graph write after two callers both observed the domain as available", async () => {
+		expect(
+			await Promise.all([
+				internalHost.isHostnameTaken("raced.example.test"),
+				internalHost.isHostnameTaken("RACED.example.test"),
+			]),
+		).toEqual([
+			{ hostname: "raced.example.test", is_taken: false },
+			{ hostname: "RACED.example.test", is_taken: false },
+		]);
+		const writes = await Promise.allSettled(
+			["raced.example.test", "RACED.example.test"].map((domain, index) =>
+				ProxyHost.transaction((transaction) =>
+					ProxyHost.query(transaction).insertGraph({
+						id: index + 1,
+						owner_user_id: 1,
+						forward_host: "127.0.0.1",
+						forward_port: 80,
+						forward_scheme: "http",
+						advanced_config: "",
+						host_domains: [{ domain_name: domain }],
+					}),
+				).catch(translateDomainReservationError),
+			),
+		);
+		expect(writes.filter(({ status }) => status === "fulfilled")).toHaveLength(1);
+		const rejected = writes.filter(({ status }) => status === "rejected");
+		expect(rejected).toHaveLength(1);
+		expect(rejected[0].reason).toMatchObject({ name: "ValidationError", status: 400 });
+		expect(await mocks.database("proxy_host")).toHaveLength(1);
+		expect(await mocks.database("host_domain")).toHaveLength(1);
+		expect(await mocks.database("host_domain_reservation")).toHaveLength(1);
+	});
+	it("rejects conflicting imported graph domains atomically and retains the original host", async () => {
+		const host = {
+			id: 1,
+			owner_user_id: 1,
+			domain_names: ["original.example.test"],
+			forward_host: "127.0.0.1",
+			forward_port: 80,
+			forward_scheme: "http",
+			advanced_config: "",
+		};
+		file("proxy-hosts", host);
+		expect(await gitops.importConfig(access)).toMatchObject({ success: true, imported: 1, errors: [] });
+		file("proxy-hosts", { ...host, id: 2, domain_names: ["new.example.test", "ORIGINAL.example.test"] });
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result).toMatchObject({ success: false, imported: 0 });
+		expect(result.errors).toHaveLength(1);
+		expect(await mocks.database("proxy_host").orderBy("id").pluck("id")).toEqual([1]);
+		expect(await mocks.database("host_domain").pluck("domain_name")).toEqual(["original.example.test"]);
+		expect(await mocks.database("host_domain_reservation")).toEqual([
+			{ domain_name: "original.example.test", host_type: "proxy_host", host_id: 1 },
+		]);
 	});
 	it("locks the restore table before writing and keeps failed writes atomic", async () => {
 		const queries = [];
@@ -224,22 +281,23 @@ describe("GitOps PostgreSQL restore sequences", () => {
 		try {
 			const write = vi.fn((transaction) => WithoutSequence.query(transaction).insert({ id: 7 }));
 			expect((await withImportedIdSequence(WithoutSequence, write)).id).toBe(7);
-			expect(write).toHaveBeenCalledExactlyOnceWith();
-			const settingWrite = vi.fn(() =>
-				Setting.query().insert({ id: "restore-test", name: "test", description: "", value: "test" }),
+			expect(write).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ isTransaction: true }));
+			const settingWrite = vi.fn((transaction) =>
+				Setting.query(transaction).insert({ id: "restore-test", name: "test", description: "", value: "test" }),
 			);
 			await withImportedIdSequence(Setting, settingWrite);
-			expect(settingWrite).toHaveBeenCalledExactlyOnceWith();
+			expect(settingWrite).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ isTransaction: true }));
 		} finally {
 			await mocks.database.schema.dropTable("import_without_sequence");
 			await Setting.query().deleteById("restore-test");
 		}
 	});
-	it.each(["better-sqlite3", "mysql", "mysql2"])("leaves %s writes unchanged", async (client) => {
-		const database = { client: { config: { client } }, transaction: vi.fn() };
+	it.each(["better-sqlite3", "mysql", "mysql2"])("wraps %s graph writes in a transaction", async (client) => {
+		const transaction = { isTransaction: true };
+		const database = { client: { config: { client } }, transaction: vi.fn((write) => write(transaction)) };
 		const write = vi.fn().mockResolvedValue("restored");
 		expect(await withImportedIdSequence({ knex: () => database }, write)).toBe("restored");
-		expect(write).toHaveBeenCalledExactlyOnceWith();
-		expect(database.transaction).not.toHaveBeenCalled();
+		expect(write).toHaveBeenCalledExactlyOnceWith(transaction);
+		expect(database.transaction).toHaveBeenCalledOnce();
 	});
 });

@@ -400,12 +400,39 @@ describe("GitOps import sanitization and safe restore", () => {
 		expect(mocks.rows.ProxyHost[0].is_deleted).toBe(1);
 		expect(mocks.rows.FirewallList[0].is_deleted).toBe(1);
 	});
+	it("queues host pruning behind an already running renderer", async () => {
+		const { default: realNginx } = await vi.importActual("../../internal/nginx.js");
+		vi.mocked(nginx.withConfigurationLock).mockImplementation(realNginx.withConfigurationLock);
+		const entered = Promise.withResolvers();
+		const release = Promise.withResolvers();
+		let rendererFinished = false;
+		const rendering = realNginx.withConfigurationLock(async () => {
+			entered.resolve();
+			await release.promise;
+			rendererFinished = true;
+		});
+		await entered.promise;
+		mocks.rows.ProxyHost = [{ id: 9, is_deleted: 0, meta: {} }];
+		mocks.files.set("/data/gitops/shieldpm-config/proxy-hosts/.gitkeep", "");
+		vi.mocked(nginx.deleteConfig).mockImplementationOnce(async () => {
+			expect(rendererFinished).toBe(true);
+		});
+		const importing = gitops.importConfig(access, { overwrite: true });
+		await vi.waitFor(() => expect(nginx.withConfigurationLock).toHaveBeenCalled());
+		expect(nginx.deleteConfig).not.toHaveBeenCalled();
+		expect(mocks.rows.ProxyHost[0].is_deleted).toBe(0);
+		release.resolve();
+		await rendering;
+		expect(await importing).toMatchObject({ success: true, deleted: 1 });
+		expect(mocks.rows.ProxyHost[0].is_deleted).toBe(1);
+	});
+
 	it("retains stale firewall lists if activation of the restored host fails", async () => {
 		mocks.rows.FirewallList = [{ id: 1, name: "A", entries: "203.0.113.10", enabled: true, is_deleted: 0 }];
 		mocks.rows.ProxyHost = [{ id: 9, is_deleted: 0, meta: { ip_firewall: { enabled: true, list_ids: [1] } } }];
 		file("firewall-lists", { id: 2, name: "B", reason: "Replacement list", entries: "198.51.100.0/24" });
 		file("proxy-hosts", { id: 9, meta: { ip_firewall: { enabled: true, list_ids: [2] } } });
-		vi.mocked(nginx.reload).mockRejectedValueOnce(new Error("Nginx reload failed"));
+		vi.mocked(nginx.bulkGenerateConfigGroups).mockRejectedValueOnce(new Error("Nginx reload failed"));
 
 		const result = await gitops.importConfig(access, { overwrite: true });
 
@@ -427,7 +454,8 @@ describe("GitOps import sanitization and safe restore", () => {
 			staged.push(stage);
 			return stage;
 		});
-		const test = vi.spyOn(realNginx, "test").mockRejectedValueOnce(failure);
+		const test = vi.spyOn(realNginx, "test").mockRejectedValueOnce(failure).mockResolvedValue("");
+		const reload = vi.spyOn(realNginx, "reload").mockImplementation(() => realNginx.test());
 		const rollback = vi.spyOn(realNginx, "rollbackStagedConfig").mockResolvedValue({ nginx_online: false });
 		const commit = vi.spyOn(realNginx, "commitStagedConfig");
 		vi.mocked(nginx.bulkGenerateConfigGroups).mockImplementationOnce(realNginx.bulkGenerateConfigGroups);
@@ -436,8 +464,12 @@ describe("GitOps import sanitization and safe restore", () => {
 
 			expect(result.success).toBe(false);
 			expect(result.errors).toContain(failure.message);
-			expect(nginx.bulkGenerateConfigGroups).toHaveBeenCalledWith(expect.any(Array), { throwOnError: true });
-			expect(test).toHaveBeenCalledOnce();
+			expect(nginx.bulkGenerateConfigGroups).toHaveBeenCalledWith(expect.any(Array), {
+				throwOnError: true,
+				reload: true,
+			});
+			expect(test).toHaveBeenCalledTimes(2);
+			expect(reload).toHaveBeenCalledTimes(2);
 			expect(rollback).toHaveBeenCalledExactlyOnceWith(staged[0], failure);
 			expect(commit).not.toHaveBeenCalled();
 			expect(nginx.reload).not.toHaveBeenCalled();
@@ -445,6 +477,7 @@ describe("GitOps import sanitization and safe restore", () => {
 			expect(mocks.prunes.some(({ name }) => name === "FirewallList")).toBe(false);
 		} finally {
 			configure.mockRestore();
+			reload.mockRestore();
 			test.mockRestore();
 			rollback.mockRestore();
 			commit.mockRestore();

@@ -1006,5 +1006,12 @@
 	"firewall.host.countries.placeholder": "Search for a country name or ISO code…",
 	"firewall.host.countries.noMatches": "No countries found",
 	"proxy-host.config-preview.firewall-rule-summaries": "Firewall rule tables are summarized by entry count and a fingerprint so large lists stay readable. Changes to the rules change the fingerprint. All rules are enforced when you save.",
-	"firewall.host.asn.remove": "Remove ASN rule {row}"
+	"firewall.host.asn.remove": "Remove ASN rule {row}",
+	"terminal.host-fingerprint": "Trusted SSH host fingerprint",
+	"terminal.host-fingerprint.help": "Enter the SHA256 fingerprint verified through a trusted channel or directly on the SSH server. Verify a changed server key independently before replacing this pin. Existing terminals cannot connect until a trusted fingerprint is saved.",
+	"terminal.host-fingerprint.invalid": "Enter a verified OpenSSH SHA256 fingerprint (SHA256: followed by 43 Base64 characters, without padding).",
+	"proxy-host.git-sync.root-conflict": "Git sync activated a different web root while this draft also changed the root or forwarding type. Choose which root to save before continuing.",
+	"proxy-host.git-sync.use-synced-root": "Use synced root",
+	"proxy-host.git-sync.keep-draft-root": "Keep my draft root",
+	"proxy-host.git-sync.in-progress": "Git sync is running. Wait for its result before saving."
 }

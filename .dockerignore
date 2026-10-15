@@ -15,3 +15,7 @@ data
 *.tar
 *.tar.gz
 *.zip
+
+# Test sources stay in the checkout for CI; deployment payloads contain runtime code only.
+backend/test
+backend/fixtures

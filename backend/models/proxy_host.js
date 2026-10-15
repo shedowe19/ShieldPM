@@ -146,6 +146,8 @@ class ProxyHost extends Model {
 	// Terminal fields (for forward_scheme: 'terminal')
 	/** @type {string|null} */
 	terminal_host;
+	/** @type {string|null} Confirmed OpenSSH SHA256 server-key fingerprint. */
+	terminal_host_fingerprint;
 	/** @type {number|null} */
 	terminal_port;
 	/** @type {string|null} */

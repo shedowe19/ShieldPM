@@ -11,6 +11,7 @@ import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { useSetSetting, useSetting } from "src/hooks";
 import { intl, T } from "src/locale";
+import { useFreshFormData } from "src/modals/useFreshFormData";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
@@ -22,7 +23,9 @@ interface DefaultSiteValues {
 }
 
 export default function DefaultSite() {
-	const { data, isLoading, error } = useSetting("default-site");
+	const settingQuery = useSetting("default-site", { refetchOnMount: "always" });
+	const { data, isLoading, error: openingError } = useFreshFormData("default-site", settingQuery);
+	const error = openingError || settingQuery.error;
 	const { mutate: setSetting } = useSetSetting();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);

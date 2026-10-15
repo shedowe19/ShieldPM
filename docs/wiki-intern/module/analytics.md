@@ -71,6 +71,10 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 
 Hostbezogene Abfragen prüfen zuerst die aktuelle serverseitige `analytics:list`-Berechtigung. Ohne globale Analytics-Berechtigung muss `proxy_hosts:get` erfolgreich sein und der Host dem aktuellen Benutzer gehören, sofern dieser kein aktuell berechtigter Administrator ist. Eine alte Admin-Rolle aus dem JWT ersetzt keine aktuelle Berechtigungsprüfung. Unerwartete Datenbank- oder Berechtigungsfehler lösen keinen schwächeren Fallback aus.
 
+## Bestätigte offene Grenzen
+
+Die [Gesamtprüfung vom 15. Oktober](../entwicklung/gesamtpruefung-2026-10-15.md) bestätigt drei offene Grenzen: Ein nach Beginn eines Flushs entstandener Folgepuffer wird bei Stop nicht zuverlässig geschrieben; die Detailspalte `analytics_logs.bytes` überläuft auf PostgreSQL bei mehr als 2 GiB; die UI-Hostauswahl bindet globale Analytics-Rechte fälschlich an die Proxy-Verwaltungsliste. Diese Nachweise ändern die oben beschriebenen Berechtigungsverträge nicht und sind noch nicht behoben.
+
 ## Abhängigkeiten
 
 - `recharts` — Chart-Bibliothek im Frontend

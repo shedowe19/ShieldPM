@@ -45,6 +45,10 @@ Frühe gültige Resize-Ereignisse werden bis zur Shell-Erzeugung gespeichert und
 
 Der Terminal-Service registriert pro HTTP-Server nur einen Upgrade-Listener und einen WebSocket-Server. Wiederholt die Backend-Startsequenz die Initialisierung, bleibt die vorhandene Instanz erhalten; doppelte WebSocket-Upgrades werden dadurch vermieden.
 
+### Bestätigte offene Grenzen
+
+Der SSH-Client prüft aktuell keinen gespeicherten Server-Fingerprint; die Identität des Zielservers ist vor der Anmeldung deshalb nicht abgesichert. Außerdem fehlt ein Terminal-Stop, der bestehende WebSocket-/SSH-Verbindungen beim Backend-Shutdown schließt. Ein offener Terminal-WebSocket kann den `server.close()`-Callback und damit die nachgelagerte Bereinigung verhindern. Beide Fälle sind in der [Gesamtprüfung vom 15. Oktober](../entwicklung/gesamtpruefung-2026-10-15.md#a02--ssh-zielserver-wird-vor-der-anmeldung-nicht-verifiziert) mit aktuellen isolierten Nachweisen dokumentiert; die zentrale TODO-Liste führt sie als offen.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

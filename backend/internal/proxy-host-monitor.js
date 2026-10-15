@@ -749,6 +749,8 @@ const internalProxyHostMonitor = {
 						.whereNull("proxy_host_monitor.next_check_at")
 						.orWhere("proxy_host_monitor.next_check_at", "<=", new Date().toISOString()),
 				)
+				.orderBy("proxy_host_monitor.next_check_at", "asc", "first")
+				// MySQL/SQLite implement NULLS FIRST as a boolean key; retain due-time ordering too.
 				.orderBy("proxy_host_monitor.next_check_at", "asc")
 				.orderBy("proxy_host_monitor.host_id", "asc")
 				.limit(MAX_SCHEDULED_CHECKS_PER_TICK + active.size);

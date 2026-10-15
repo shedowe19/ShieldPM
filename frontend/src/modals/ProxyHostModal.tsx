@@ -17,6 +17,7 @@ import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import ProxyHostConfigPreview from "./ProxyHostConfigPreview";
 import ProxyHostFormTabs from "./ProxyHostFormTabs";
+import { ProxyHostGitSyncFeedback } from "./ProxyHostGitSyncFeedback";
 import { createProxyHostInitialValues, type ProxyHostFormValues } from "./ProxyHostModalFormValues";
 import { createProxyHostPayload } from "./ProxyHostModalSubmission";
 import { useFreshFormData } from "./useFreshFormData";
@@ -40,7 +41,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const onSubmit = async (values: ProxyHostFormValues, { setSubmitting }: FormikHelpers<ProxyHostFormValues>) => {
-		if (isSubmitting) return;
+		if (isSubmitting || values.gitSyncPending || values.gitSyncConflict) {
+			setSubmitting(false);
+			return;
+		}
 		setIsSubmitting(true);
 		setErrorMsg(null);
 
@@ -96,7 +100,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 							};
 						}}
 					>
-						{({ isValid }) => (
+						{({ isValid, values }) => (
 							<Form className="flex flex-col h-full overflow-hidden">
 								<DialogHeader className="px-6 py-4 border-b">
 									<DialogTitle className="flex items-center gap-2 text-xl">
@@ -110,6 +114,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 								<div className="px-6 pt-4">
 									<NoteWarning content={data?.note} />
+								</div>
+
+								<div className="px-6">
+									<ProxyHostGitSyncFeedback />
 								</div>
 
 								<ProxyHostFormTabs
@@ -131,7 +139,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											type="submit"
 											variant="default"
 											className="bg-lime-600/90 text-white hover:bg-lime-600 shadow-sm"
-											disabled={isSubmitting || !isValid}
+											disabled={isSubmitting || !isValid || values.gitSyncPending}
 										>
 											{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 											<T id="save" />

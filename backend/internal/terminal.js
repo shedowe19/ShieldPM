@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { StringDecoder } from "node:string_decoder";
 import { Client } from "ssh2";
 import { WebSocketServer } from "ws";
@@ -8,14 +9,19 @@ import ProxyHost from "../models/proxy_host.js";
 
 const internalTerminal = {
 	wss: null,
-	servers: new WeakSet(),
+	servers: new Map(),
+	sessions: new Set(),
+	stopping: false,
+	stopPromise: null,
 
 	init: (server) => {
 		if (internalTerminal.servers.has(server)) return;
-		internalTerminal.wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
-		internalTerminal.servers.add(server);
+		internalTerminal.stopping = false;
+		internalTerminal.stopPromise = null;
+		const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
+		internalTerminal.wss = wss;
 
-		server.on("upgrade", (request, socket, head) => {
+		const onUpgrade = (request, socket, head) => {
 			const pathname = request.url;
 
 			// Check for terminal WebSocket paths:
@@ -27,23 +33,68 @@ const internalTerminal = {
 				pathname.match(/^\/(?:api\/)?nginx\/proxy-hosts\/\d+\/terminal\/ws/) ||
 				pathname.match(/^\/(?:api\/)?nginx\/terminal\/ws/)
 			) {
-				internalTerminal.handleUpgrade(request, socket, head);
+				internalTerminal.handleUpgrade(request, socket, head, wss);
 			}
-		});
+		};
+		server.on("upgrade", onUpgrade);
+		internalTerminal.servers.set(server, { wss, onUpgrade });
 
-		internalTerminal.wss.on("connection", internalTerminal.handleConnection);
+		wss.on("connection", internalTerminal.handleConnection);
 		debug(logger, "WebSocket Server for Terminal initialized");
 	},
 
-	handleUpgrade: (request, socket, head) => {
-		internalTerminal.wss.handleUpgrade(request, socket, head, (ws) => {
-			internalTerminal.wss.emit("connection", ws, request);
+	/** Stop accepting terminal upgrades and bound the lifetime of existing SSH/WebSocket connections. */
+	stop: () => {
+		if (internalTerminal.stopPromise) return internalTerminal.stopPromise;
+		internalTerminal.stopping = true;
+		const sessions = [...internalTerminal.sessions];
+		for (const session of sessions) session.close();
+		const servers = [...internalTerminal.servers.values()].map(({ wss }) => wss);
+		internalTerminal.stopPromise = (async () => {
+			let deadline;
+			const closed = Promise.all(
+				servers.map((wss) => new Promise((resolve) => wss.close(() => resolve(undefined)))),
+			);
+			const timeout = new Promise((resolve) => {
+				deadline = setTimeout(resolve, 1000);
+			});
+			for (const wss of servers) {
+				for (const ws of wss.clients) ws.close(1001, "Backend shutting down");
+			}
+			await Promise.race([closed, timeout]);
+			clearTimeout(deadline);
+			// An SSH handshake or unresponsive browser must not retain the HTTP shutdown callback.
+			for (const session of sessions) session.destroy();
+			for (const wss of servers) {
+				for (const ws of wss.clients) ws.terminate();
+			}
+			for (const [server, { onUpgrade }] of internalTerminal.servers) {
+				server.removeListener("upgrade", onUpgrade);
+			}
+			internalTerminal.servers.clear();
+			internalTerminal.sessions.clear();
+			internalTerminal.wss = null;
+		})();
+		return internalTerminal.stopPromise;
+	},
+
+	handleUpgrade: (request, socket, head, wss = internalTerminal.wss) => {
+		if (internalTerminal.stopping || !wss) {
+			socket.destroy();
+			return;
+		}
+		wss.handleUpgrade(request, socket, head, (ws) => {
+			wss.emit("connection", ws, request);
 		});
 	},
 
 	handleConnection: async (ws, request) => {
 		// Protocol errors are emitted even while an unauthenticated socket is closing.
 		ws.on("error", () => ws.close());
+		if (internalTerminal.stopping) {
+			ws.close(1001, "Backend shutting down");
+			return;
+		}
 		let hostId = null;
 
 		// Parse host ID from URL path or query params
@@ -74,10 +125,22 @@ const internalTerminal = {
 		let disconnected = false;
 		const disconnect = () => {
 			disconnected = true;
+			sshStream?.end();
 			sshClient?.end();
 		};
+		const session = {
+			close: () => {
+				disconnect();
+				ws.close(1001, "Backend shutting down");
+			},
+			destroy: () => sshClient?.destroy(),
+		};
+		internalTerminal.sessions.add(session);
 		// Register before database access: a browser may disconnect or send its size while it is pending.
-		ws.on("close", disconnect);
+		ws.on("close", () => {
+			disconnect();
+			internalTerminal.sessions.delete(session);
+		});
 		ws.on("error", disconnect);
 		// Listen for messages early to capture initial resize from frontend
 		ws.on("message", (data) => {
@@ -121,6 +184,16 @@ const internalTerminal = {
 		}
 
 		if (disconnected) return;
+		if (!/^SHA256:[A-Za-z0-9+/]{43}$/.test(host.terminal_host_fingerprint || "")) {
+			ws.send(
+				JSON.stringify({
+					type: "error",
+					message: "Configure and independently verify the SSH server SHA256 fingerprint before connecting.",
+				}),
+			);
+			ws.close(1008, "SSH server fingerprint required");
+			return;
+		}
 		sshClient = new Client();
 
 		sshClient.on("ready", () => {
@@ -171,6 +244,22 @@ const internalTerminal = {
 			host: host.terminal_host,
 			port: host.terminal_port || 22,
 			username: host.terminal_username,
+			hostVerifier: (key) => {
+				const actual = `SHA256:${createHash("sha256").update(key).digest("base64").replace(/=+$/, "")}`;
+				const expected = host.terminal_host_fingerprint;
+				const verified =
+					actual.length === expected.length && timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
+				if (!verified && !disconnected) {
+					ws.send(
+						JSON.stringify({
+							type: "error",
+							message:
+								"SSH server fingerprint mismatch. Verify the server key independently before updating the saved fingerprint.",
+						}),
+					);
+				}
+				return verified;
+			},
 		};
 
 		try {

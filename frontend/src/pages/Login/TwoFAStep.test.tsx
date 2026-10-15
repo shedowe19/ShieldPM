@@ -17,6 +17,7 @@ vi.mock("src/api/backend", () => ({
 }));
 
 vi.mock("src/modules/AuthStore", () => ({
+	AUTHENTICATION_CHANGED_EVENT: "shieldpm:authentication-changed",
 	default: { set: vi.fn(), setCsrfToken: vi.fn() },
 }));
 

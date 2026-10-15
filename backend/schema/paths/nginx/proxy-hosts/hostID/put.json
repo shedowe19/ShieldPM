@@ -190,6 +190,9 @@
 						"terminal_host": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/terminal_host"
 						},
+						"terminal_host_fingerprint": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/terminal_host_fingerprint"
+						},
 						"terminal_port": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/terminal_port"
 						},

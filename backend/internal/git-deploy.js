@@ -94,7 +94,7 @@ const internalGitDeploy = {
 	 * Sync a proxy host from its Git repository
 	 * @param {import("../lib/types.js").Access | null | undefined} access
 	 * @param {number} hostId
-	 * @returns {Promise<{success: boolean, commit?: string, message?: string}>}
+	 * @returns {Promise<{success: boolean, commit?: string, message?: string, forward_host?: string, forward_scheme?: string}>}
 	 */
 	sync: async (access, hostId) => {
 		if (isDemoMode()) {
@@ -217,33 +217,47 @@ const internalGitDeploy = {
 					}
 				}
 
-				// Update host status
-
-				await ProxyHost.query()
-					.findById(hostId)
-					.patch({
-						git_last_sync: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-						git_last_commit: latestCommit,
-						git_last_error: null,
-					});
-
-				// Update forward_host to point to the website directory
-				if (currentHost.forward_host !== dir) {
-					await ProxyHost.query().findById(hostId).patch({
-						forward_host: dir,
-					});
-
-					// Trigger Nginx reload to apply the new root path
-					const updatedHost = await ProxyHost.query()
+				const activatedHost = await internalNginx.withConfigurationLock(async () => {
+					const latestHost = await ProxyHost.query()
 						.findById(hostId)
+						.where("is_deleted", 0)
 						.withGraphFetched("[host_domains, certificate, access_list.[items,clients]]");
-					await internalNginx.configure(ProxyHost, "proxy_host", updatedHost);
-
-					logger.info(`[git-deploy] Updated forward_host for host ${hostId} to ${dir} and reloaded Nginx`);
-				}
+					if (
+						latestHost?.forward_scheme !== "path" ||
+						latestHost.git_repo_url !== host.git_repo_url ||
+						(latestHost.git_branch || "main") !== (host.git_branch || "main") ||
+						latestHost.git_credentials !== host.git_credentials
+					) {
+						throw new errs.ValidationError("Host Git configuration changed during synchronization");
+					}
+					const activationRequired =
+						latestHost.forward_host !== dir ||
+						Boolean(latestHost.git_last_error) ||
+						(Boolean(latestHost.enabled) && latestHost.meta?.nginx_online === false);
+					await ProxyHost.query()
+						.findById(hostId)
+						.patch({
+							git_last_sync: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+							git_last_commit: latestCommit,
+							...(activationRequired
+								? { forward_host: dir, git_last_error: "Nginx activation pending" }
+								: { git_last_error: null }),
+						});
+					if (activationRequired) {
+						// Persist the pending state with the root before starting activation. A
+						// failed reload or process restart must retry even though the root matches.
+						const status = await internalNginx.configureHost(ProxyHost, "proxy_host", latestHost);
+						if (latestHost.enabled && !status.nginx_online) {
+							throw new errs.ConfigurationError(status.nginx_err || "Git deployment activation failed");
+						}
+						await ProxyHost.query().findById(hostId).where("is_deleted", 0).patch({ git_last_error: null });
+						logger.info(`[git-deploy] Activated web root for host ${hostId}: ${dir}`);
+					}
+					return { forward_host: dir, forward_scheme: "path" };
+				});
 
 				logger.info(`[git-deploy] Sync complete for host ${hostId}, commit: ${latestCommit}`);
-				return { success: true, commit: latestCommit };
+				return { success: true, commit: latestCommit, ...activatedHost };
 			} catch (err) {
 				const errorMessage = err instanceof Error ? err.message : "Unknown error";
 				logger.error(`[git-deploy] Sync failed for host ${hostId}:`, err);

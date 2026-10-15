@@ -428,9 +428,23 @@ const createUploadRelay = ({
 		return { count, reservedBytes };
 	};
 
-	const getConfig = async (hostId) => {
-		const host = await resolveHost(hostId);
-		const config = await validateRelayConfigForHost(host);
+	const waitForPreparation = (pending, signal) => {
+		if (!signal) return pending;
+		signal.throwIfAborted();
+		return new Promise((resolve, reject) => {
+			const aborted = () => reject(signal.reason);
+			signal.addEventListener("abort", aborted, { once: true });
+			Promise.resolve(pending)
+				.then(resolve, reject)
+				.finally(() => signal.removeEventListener("abort", aborted));
+		});
+	};
+	const getConfig = async (hostId, signal) => {
+		signal?.throwIfAborted();
+		const host = await waitForPreparation(resolveHost(hostId), signal);
+		signal?.throwIfAborted();
+		const config = await waitForPreparation(validateRelayConfigForHost(host), signal);
+		signal?.throwIfAborted();
 		if (!host?.enabled) throw new errs.ItemNotFoundError("upload relay");
 		return config;
 	};
@@ -440,6 +454,12 @@ const createUploadRelay = ({
 	const runningFinalizations = new Set();
 	let activeFinalizers = 0;
 	let finalizerScheduled = false;
+	let stopped = false;
+	let lifecycleGeneration = 0;
+	let stopPromise = null;
+	const assertRunning = (generation = lifecycleGeneration) => {
+		if (stopped || generation !== lifecycleGeneration) throw new errs.InternalError("Upload relay is stopping");
+	};
 
 	const cleanupExpired = async (now = Date.now()) => {
 		let hostDirectories;
@@ -489,9 +509,11 @@ const createUploadRelay = ({
 	};
 
 	const finish = async (hostId, metadata, config, requestHeaders, signal) => {
+		signal.throwIfAborted();
 		const chunks = [...metadata.chunks].sort((a, b) => a.offset - b.offset);
 		await requireStorageDirectories(hostId, metadata.id);
 		for (const chunk of chunks) {
+			signal.throwIfAborted();
 			const stat = await fs.promises.lstat(chunkPath(hostId, metadata.id, chunk.offset));
 			if (!stat.isFile() || stat.isSymbolicLink() || stat.size !== chunk.size) {
 				throw new errs.ItemNotFoundError("upload relay chunk");
@@ -524,6 +546,7 @@ const createUploadRelay = ({
 			"x-shieldpm-upload-relay": "1",
 		};
 		Object.assign(headers, forwardedRequestHeaders(requestHeaders, config));
+		signal.throwIfAborted();
 		const response = await fetchImpl(
 			config.origin,
 			/** @type {RequestInit} */ ({
@@ -549,10 +572,17 @@ const createUploadRelay = ({
 	};
 
 	const scheduleFinalizers = () => {
-		if (finalizerScheduled || activeFinalizers >= MAX_CONCURRENT_FINALIZERS || finalizationQueue.length === 0)
+		if (
+			stopped ||
+			finalizerScheduled ||
+			activeFinalizers >= MAX_CONCURRENT_FINALIZERS ||
+			finalizationQueue.length === 0
+		)
 			return;
 		finalizerScheduled = true;
+		const generation = lifecycleGeneration;
 		schedule(() => {
+			if (stopped || generation !== lifecycleGeneration) return;
 			finalizerScheduled = false;
 			while (activeFinalizers < MAX_CONCURRENT_FINALIZERS && finalizationQueue.length > 0) {
 				const job = finalizationQueue.shift();
@@ -569,125 +599,136 @@ const createUploadRelay = ({
 		});
 	};
 
-	const enqueueFinalizer = (hostId, uploadId, requestHeaders) => {
-		finalizationQueue.push({ hostId, requestHeaders, uploadId });
+	const enqueueFinalizer = (hostId, uploadId, requestHeaders, generation = lifecycleGeneration) => {
+		if (stopped || generation !== lifecycleGeneration) return;
+		finalizationQueue.push({ generation, hostId, requestHeaders, uploadId });
 		scheduleFinalizers();
 	};
 
-	const finalizeInBackground = async ({ hostId, requestHeaders, uploadId }) => {
+	const finalizeInBackground = async ({ generation, hostId, requestHeaders, uploadId }) => {
 		const key = `${hostId}:${uploadId}`;
-		const prepared = await withLock(key, async () => {
-			const metadata = await loadMetadata(hostId, uploadId);
-			if (metadata.state !== "queued") return null;
-			let config;
-			try {
-				config = await getConfig(hostId);
-			} catch {
-				metadata.failureCode = "relay-disabled";
-				metadata.state = "failed";
-				metadata.updatedAt = new Date().toISOString();
-				await writeMetadata(hostId, uploadId, metadata);
-				return null;
-			}
-			if (metadata.config.originFingerprint !== config.originFingerprint) {
-				metadata.failureCode = "configuration-changed";
-				metadata.state = "failed";
-				metadata.updatedAt = new Date().toISOString();
-				await writeMetadata(hostId, uploadId, metadata);
-				return null;
-			}
-			const controller = new AbortController();
-			const leaseId = crypto.randomUUID();
-			metadata.attempts = (metadata.attempts || 0) + 1;
-			metadata.failureCode = undefined;
-			metadata.leaseId = leaseId;
-			metadata.state = "forwarding";
-			metadata.updatedAt = new Date().toISOString();
-			await writeMetadata(hostId, uploadId, metadata);
-			activeFinalizationControllers.set(key, controller);
-			return { config, controller, leaseId, metadata };
-		});
-		if (!prepared) return;
-		let dispatchConfig;
-		let dispatchFailureCode;
+		const isCurrent = () => !stopped && generation === lifecycleGeneration;
+		if (!isCurrent()) return;
+		const controller = new AbortController();
+		// Register before any lock or host lookup can suspend preparation.
+		activeFinalizationControllers.set(key, controller);
 		try {
-			dispatchConfig = await getConfig(hostId);
-			if (dispatchConfig.originFingerprint !== prepared.config.originFingerprint) {
-				dispatchFailureCode = "configuration-changed";
-			}
-		} catch {
-			dispatchFailureCode = "relay-disabled";
-		}
-		if (dispatchFailureCode) {
-			activeFinalizationControllers.delete(key);
-			await withLock(key, async () => {
+			const prepared = await withLock(key, async () => {
+				if (!isCurrent()) return null;
 				const metadata = await loadMetadata(hostId, uploadId);
+				if (!isCurrent()) return null;
+				if (metadata.state !== "queued") return null;
+				let config;
+				try {
+					config = await getConfig(hostId, controller.signal);
+				} catch {
+					if (!isCurrent()) return null;
+					metadata.failureCode = "relay-disabled";
+					metadata.state = "failed";
+					metadata.updatedAt = new Date().toISOString();
+					await writeMetadata(hostId, uploadId, metadata);
+					return null;
+				}
+				if (!isCurrent()) return null;
+				if (metadata.config.originFingerprint !== config.originFingerprint) {
+					metadata.failureCode = "configuration-changed";
+					metadata.state = "failed";
+					metadata.updatedAt = new Date().toISOString();
+					await writeMetadata(hostId, uploadId, metadata);
+					return null;
+				}
+				const leaseId = crypto.randomUUID();
+				metadata.attempts = (metadata.attempts || 0) + 1;
+				metadata.failureCode = undefined;
+				metadata.leaseId = leaseId;
+				metadata.state = "forwarding";
+				metadata.updatedAt = new Date().toISOString();
+				await writeMetadata(hostId, uploadId, metadata);
+				return { config, controller, leaseId, metadata };
+			});
+			if (!prepared || !isCurrent()) return;
+			let dispatchConfig;
+			let dispatchFailureCode;
+			try {
+				dispatchConfig = await getConfig(hostId, controller.signal);
+				if (dispatchConfig.originFingerprint !== prepared.config.originFingerprint) {
+					dispatchFailureCode = "configuration-changed";
+				}
+			} catch {
+				dispatchFailureCode = "relay-disabled";
+			}
+			if (!isCurrent()) return;
+			if (dispatchFailureCode) {
+				await withLock(key, async () => {
+					const metadata = await loadMetadata(hostId, uploadId);
+					if (metadata.state === "cancelled") {
+						await removeUploadDirectory(hostId, uploadId);
+						return;
+					}
+					if (metadata.state !== "forwarding" || metadata.leaseId !== prepared.leaseId) return;
+					metadata.failureCode = dispatchFailureCode;
+					metadata.state = "failed";
+					metadata.updatedAt = new Date().toISOString();
+					await writeMetadata(hostId, uploadId, metadata);
+				});
+				return;
+			}
+
+			let upstreamStatus;
+			let failureCode;
+			try {
+				upstreamStatus = await finish(
+					hostId,
+					prepared.metadata,
+					dispatchConfig,
+					requestHeaders,
+					prepared.controller.signal,
+				);
+			} catch {
+				failureCode = "origin-rejected";
+			}
+
+			await withLock(key, async () => {
+				let metadata;
+				try {
+					metadata = await loadMetadata(hostId, uploadId);
+				} catch (err) {
+					if (err instanceof errs.ItemNotFoundError) return;
+					throw err;
+				}
 				if (metadata.state === "cancelled") {
 					await removeUploadDirectory(hostId, uploadId);
 					return;
 				}
 				if (metadata.state !== "forwarding" || metadata.leaseId !== prepared.leaseId) return;
-				metadata.failureCode = dispatchFailureCode;
-				metadata.state = "failed";
 				metadata.updatedAt = new Date().toISOString();
+				if (failureCode) {
+					metadata.failureCode = failureCode;
+					metadata.state = "failed";
+					await writeMetadata(hostId, uploadId, metadata);
+					return;
+				}
+				metadata.completedAt = metadata.updatedAt;
+				metadata.failureCode = undefined;
+				metadata.state = "completed";
+				metadata.upstreamStatus = upstreamStatus;
 				await writeMetadata(hostId, uploadId, metadata);
+				try {
+					await removeChunks(hostId, metadata);
+					metadata.chunks = [];
+					await writeMetadata(hostId, uploadId, metadata);
+				} catch {
+					metadata.failureCode = "chunk-cleanup-pending";
+					await writeMetadata(hostId, uploadId, metadata);
+				}
 			});
-			return;
-		}
-
-		let upstreamStatus;
-		let failureCode;
-		try {
-			upstreamStatus = await finish(
-				hostId,
-				prepared.metadata,
-				dispatchConfig,
-				requestHeaders,
-				prepared.controller.signal,
-			);
-		} catch {
-			failureCode = "origin-rejected";
 		} finally {
-			activeFinalizationControllers.delete(key);
+			if (activeFinalizationControllers.get(key) === controller) activeFinalizationControllers.delete(key);
 		}
-
-		await withLock(key, async () => {
-			let metadata;
-			try {
-				metadata = await loadMetadata(hostId, uploadId);
-			} catch (err) {
-				if (err instanceof errs.ItemNotFoundError) return;
-				throw err;
-			}
-			if (metadata.state === "cancelled") {
-				await removeUploadDirectory(hostId, uploadId);
-				return;
-			}
-			if (metadata.state !== "forwarding" || metadata.leaseId !== prepared.leaseId) return;
-			metadata.updatedAt = new Date().toISOString();
-			if (failureCode) {
-				metadata.failureCode = failureCode;
-				metadata.state = "failed";
-				await writeMetadata(hostId, uploadId, metadata);
-				return;
-			}
-			metadata.completedAt = metadata.updatedAt;
-			metadata.failureCode = undefined;
-			metadata.state = "completed";
-			metadata.upstreamStatus = upstreamStatus;
-			await writeMetadata(hostId, uploadId, metadata);
-			try {
-				await removeChunks(hostId, metadata);
-				metadata.chunks = [];
-				await writeMetadata(hostId, uploadId, metadata);
-			} catch {
-				metadata.failureCode = "chunk-cleanup-pending";
-				await writeMetadata(hostId, uploadId, metadata);
-			}
-		});
 	};
 
-	const queueFinalization = async (hostId, metadata, config, requestHeaders) => {
+	const queueFinalization = async (hostId, metadata, config, requestHeaders, generation) => {
+		assertRunning(generation);
 		if (metadata.state === "completed" || metadata.state === "queued" || metadata.state === "forwarding") {
 			return publicMetadata(metadata);
 		}
@@ -700,12 +741,14 @@ const createUploadRelay = ({
 		metadata.state = "queued";
 		metadata.updatedAt = new Date().toISOString();
 		await writeMetadata(hostId, metadata.id, metadata);
-		enqueueFinalizer(hostId, metadata.id, headers);
+		assertRunning(generation);
+		enqueueFinalizer(hostId, metadata.id, headers, generation);
 		return publicMetadata(metadata);
 	};
 
-	const recoverInterruptedFinalizations = async () => {
+	const recoverInterruptedFinalizations = async (generation = lifecycleGeneration) => {
 		let recovered = 0;
+		if (stopped || generation !== lifecycleGeneration) return recovered;
 		let hostDirectories;
 		try {
 			await requireStorageDirectories();
@@ -715,6 +758,7 @@ const createUploadRelay = ({
 			throw err;
 		}
 		for (const hostDirectory of hostDirectories) {
+			if (stopped || generation !== lifecycleGeneration) return recovered;
 			if (!hostDirectory.isDirectory() || !/^host-\d+$/.test(hostDirectory.name)) continue;
 			const hostId = Number(hostDirectory.name.slice("host-".length));
 			if (!Number.isSafeInteger(hostId) || hostId < 1 || `host-${hostId}` !== hostDirectory.name) continue;
@@ -723,6 +767,7 @@ const createUploadRelay = ({
 				if (!entry.isDirectory()) continue;
 				if (!isUploadId(entry.name)) continue;
 				await withLock(`${hostId}:${entry.name}`, async () => {
+					if (stopped || generation !== lifecycleGeneration) return;
 					let metadata;
 					try {
 						metadata = await loadMetadata(hostId, entry.name);
@@ -730,6 +775,7 @@ const createUploadRelay = ({
 						if (err instanceof errs.ItemNotFoundError) return;
 						throw err;
 					}
+					if (stopped || generation !== lifecycleGeneration) return;
 					if (metadata.state === "cancelled") {
 						await removeUploadDirectory(hostId, metadata.id);
 						return;
@@ -756,7 +802,7 @@ const createUploadRelay = ({
 					metadata.state = "queued";
 					metadata.updatedAt = new Date().toISOString();
 					await writeMetadata(hostId, metadata.id, metadata);
-					enqueueFinalizer(hostId, metadata.id, {});
+					enqueueFinalizer(hostId, metadata.id, {}, generation);
 				});
 			}
 		}
@@ -784,6 +830,7 @@ const createUploadRelay = ({
 		 * @param {{filename?: string, length?: number, mediaType?: string}} [upload]
 		 */
 		async create(hostId, { filename, length, mediaType } = {}) {
+			assertRunning();
 			return await withLock(`${hostId}:create`, async () => {
 				safeHostId(hostId);
 				const config = await getConfig(hostId);
@@ -822,6 +869,8 @@ const createUploadRelay = ({
 		},
 
 		async append(hostId, uploadId, { contentLength, headers, offset, stream }) {
+			const generation = lifecycleGeneration;
+			assertRunning(generation);
 			return await withLock(`${hostId}:${uploadId}`, async () => {
 				const config = await getConfig(hostId);
 				const metadata = await loadMetadata(hostId, uploadId);
@@ -846,14 +895,20 @@ const createUploadRelay = ({
 				if (normalizedOffset !== metadata.offset && !isFinalChunkRetry) throw offsetConflict(metadata.offset);
 				if (isFinalChunkRetry) {
 					await consumeRetryChunk(stream, normalizedLength);
-					return { completed: true, ...(await queueFinalization(hostId, metadata, config, headers)) };
+					return {
+						completed: true,
+						...(await queueFinalization(hostId, metadata, config, headers, generation)),
+					};
 				}
 				if (normalizedLength === 0) {
 					if (metadata.offset !== metadata.length)
 						throw new errs.ValidationError(
 							"Zero-length chunks are only valid when finalizing a complete upload",
 						);
-					return { completed: true, ...(await queueFinalization(hostId, metadata, config, headers)) };
+					return {
+						completed: true,
+						...(await queueFinalization(hostId, metadata, config, headers, generation)),
+					};
 				}
 				if (metadata.offset + normalizedLength > metadata.length) {
 					throw new errs.ValidationError("Chunk exceeds the declared upload length");
@@ -878,16 +933,18 @@ const createUploadRelay = ({
 				await writeMetadata(hostId, uploadId, metadata);
 				if (metadata.offset !== metadata.length)
 					return { completed: false, offset: metadata.offset, state: metadata.state };
-				return { completed: true, ...(await queueFinalization(hostId, metadata, config, headers)) };
+				return { completed: true, ...(await queueFinalization(hostId, metadata, config, headers, generation)) };
 			});
 		},
 
 		async finalize(hostId, uploadId, headers) {
+			const generation = lifecycleGeneration;
+			assertRunning(generation);
 			return await withLock(`${hostId}:${uploadId}`, async () => {
 				const config = await getConfig(hostId);
 				const metadata = await loadMetadata(hostId, uploadId);
 				if (metadata.offset !== metadata.length) throw new errs.ValidationError("Upload is incomplete");
-				return { completed: true, ...(await queueFinalization(hostId, metadata, config, headers)) };
+				return { completed: true, ...(await queueFinalization(hostId, metadata, config, headers, generation)) };
 			});
 		},
 
@@ -911,22 +968,37 @@ const createUploadRelay = ({
 
 		recoverInterruptedFinalizations,
 
-		init() {
+		async init() {
+			if (stopPromise) await stopPromise;
 			if (cleanupTimer) return;
+			stopped = false;
+			const generation = lifecycleGeneration;
 			const logMaintenanceError = (error) => logger.error("Upload relay maintenance failed:", error);
 			void (async () => {
 				await cleanupExpired();
-				await recoverInterruptedFinalizations();
+				if (stopped || generation !== lifecycleGeneration) return;
+				await recoverInterruptedFinalizations(generation);
 			})().catch(logMaintenanceError);
 			cleanupTimer = setInterval(() => void cleanupExpired().catch(logMaintenanceError), 60 * 60 * 1000);
 			cleanupTimer.unref?.();
 		},
 
 		async stop() {
+			if (stopPromise) return stopPromise;
+			stopped = true;
+			lifecycleGeneration++;
+			finalizationQueue.length = 0;
+			finalizerScheduled = false;
 			if (cleanupTimer) clearInterval(cleanupTimer);
 			cleanupTimer = null;
 			for (const controller of activeFinalizationControllers.values()) controller.abort();
-			await Promise.allSettled([...runningFinalizations]);
+			const stopping = Promise.allSettled([...runningFinalizations]);
+			stopPromise = stopping;
+			try {
+				await stopping;
+			} finally {
+				if (stopPromise === stopping) stopPromise = null;
+			}
 		},
 	};
 };

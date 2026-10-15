@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,10 +8,15 @@ const mocks = vi.hoisted(() => ({
 	useProxyHost: vi.fn(),
 	useSetProxyHost: vi.fn(),
 	useUser: vi.fn(),
+	triggerGitSync: vi.fn(),
 }));
 
 vi.mock("@tabler/icons-react", () => ({
 	IconBolt: () => null,
+	IconCheck: () => null,
+	IconGitCommit: () => null,
+	IconRefresh: () => null,
+	IconX: () => null,
 	IconGitBranch: () => null,
 	IconNote: () => null,
 	IconSettings: () => null,
@@ -28,8 +33,8 @@ vi.mock("ez-modal-react", () => ({
 
 vi.mock("lucide-react", () => ({ AlertCircle: () => null, Loader2: () => null }));
 
-vi.mock("src/components", () => ({
-	GitSyncTab: () => null,
+vi.mock("src/components", async () => ({
+	GitSyncTab: (await import("src/components/GitSyncTab")).GitSyncTab,
 	HasPermission: ({ children }: PropsWithChildren) => <>{children}</>,
 	Loading: () => <div>loading</div>,
 	LocationsFields: () => null,
@@ -44,6 +49,11 @@ vi.mock("src/components/ui/dialog", () => ({
 	DialogTitle: ({ children }: PropsWithChildren) => <h2>{children}</h2>,
 }));
 
+vi.mock("src/hooks/useGitSync", () => ({
+	useGitSyncStatus: () => ({ data: {}, isLoading: false }),
+	useTriggerGitSync: () => ({ mutateAsync: mocks.triggerGitSync, isPending: false }),
+}));
+
 vi.mock("src/hooks", () => ({
 	useProxyHost: mocks.useProxyHost,
 	useSetProxyHost: mocks.useSetProxyHost,
@@ -54,7 +64,15 @@ vi.mock("./ProxyHostAdvancedTab", () => ({ default: () => null }));
 vi.mock("./ProxyHostConfigPreview", () => ({ default: () => null }));
 vi.mock("./ProxyHostDetailsTab", async () => {
 	const { Field } = await import("formik");
-	return { default: () => <Field name="forwardHost" aria-label="forward host" /> };
+	return {
+		default: () => (
+			<>
+				<Field name="forwardHost" aria-label="forward host" />
+				<Field name="forwardScheme" aria-label="forward scheme" />
+				<Field name="note" aria-label="draft note" />
+			</>
+		),
+	};
 });
 vi.mock("./ProxyHostMaintenanceTab", () => ({ default: () => null }));
 vi.mock("./ProxyHostNotesTab", () => ({ default: () => null }));
@@ -84,6 +102,7 @@ vi.mock("./ProxyHostSslTab", () => ({ default: () => null }));
 
 beforeEach(async () => {
 	mocks.show.mockClear();
+	mocks.triggerGitSync.mockReset();
 	mocks.useProxyHost.mockReturnValue({ data: undefined, error: null, isLoading: true });
 	mocks.useSetProxyHost.mockReturnValue({ mutate: vi.fn() });
 	mocks.useUser.mockReturnValue({ data: undefined, error: null, isLoading: false });
@@ -167,3 +186,54 @@ describe("ProxyHostModal", () => {
 		await waitFor(() => expect(save).not.toBeDisabled());
 	});
 });
+
+it.each(["leave tab", "change scheme"] as const)(
+	"blocks saving during Git sync and resolves results after %s",
+	async (action) => {
+		let finish!: (result: { success: boolean; forwardHost: string; forwardScheme: string }) => void;
+		mocks.triggerGitSync.mockReturnValue(
+			new Promise((resolve) => {
+				finish = resolve;
+			}),
+		);
+		const mutate = vi.fn();
+		mocks.useSetProxyHost.mockReturnValue({ mutate });
+		mocks.useProxyHost.mockReturnValue({
+			data: { id: 73, forwardScheme: "path", forwardHost: "/old", gitRepoUrl: "https://example.test/repo" },
+			isLoading: false,
+		});
+		mocks.useUser.mockReturnValue({ data: { id: 1 }, isLoading: false });
+		const { showProxyHostModal } = await import("./ProxyHostModal");
+		showProxyHostModal(73);
+		const Modal = mocks.show.mock.calls[0][0];
+		render(<Modal id={73} remove={vi.fn()} visible />);
+		fireEvent.mouseDown(screen.getAllByRole("tab")[7], { button: 0, ctrlKey: false });
+		fireEvent.click(await screen.findByRole("button", { name: "Jetzt synchronisieren" }));
+		const save = screen.getByRole("button", { name: "Speichern" });
+		await waitFor(() => expect(save).toBeDisabled());
+		fireEvent.click(save);
+		expect(mutate).not.toHaveBeenCalled();
+		fireEvent.mouseDown(screen.getAllByRole("tab")[0], { button: 0, ctrlKey: false });
+		fireEvent.change(screen.getByLabelText("draft note"), { target: { value: "keep this note" } });
+		if (action === "change scheme")
+			fireEvent.change(screen.getByLabelText("forward scheme"), { target: { value: "http" } });
+		await act(async () => finish({ success: true, forwardHost: "/data/websites/host-73", forwardScheme: "path" }));
+		if (action === "change scheme") {
+			await screen.findByText(
+				"Git-Sync hat ein anderes Webroot aktiviert, während in diesem Entwurf ebenfalls Webroot oder Weiterleitungsart geändert wurden. Wähle vor dem Speichern aus, welches Webroot gelten soll.",
+			);
+			expect(save).toBeDisabled();
+			fireEvent.click(screen.getByRole("button", { name: "Mein Webroot beibehalten" }));
+		} else await waitFor(() => expect(screen.getByLabelText("forward host")).toHaveValue("/data/websites/host-73"));
+		await waitFor(() => expect(save).toBeEnabled());
+		fireEvent.click(save);
+		await waitFor(() => expect(mutate).toHaveBeenCalledOnce());
+		expect(mutate.mock.calls[0][0]).toMatchObject({
+			note: "keep this note",
+			forwardHost: action === "change scheme" ? "/old" : "/data/websites/host-73",
+			forwardScheme: action === "change scheme" ? "http" : "path",
+		});
+		for (const key of ["gitSyncPending", "gitSyncConflict", "gitSyncedRoot"])
+			expect(mutate.mock.calls[0][0]).not.toHaveProperty(key);
+	},
+);

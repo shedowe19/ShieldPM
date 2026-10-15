@@ -127,7 +127,7 @@ Bei `NPM_LISTEN_LOCALHOST=true` beziehungsweise `GOA_LISTEN_LOCALHOST=true` verw
 
 Die Wiederanlaufschleifen für PHP 8.2/8.3/8.4 und GoAccess warten nach einem beendeten Prozess eine Sekunde. Ein sofortiger Startfehler erzeugt dadurch keine ungebremste Schleife aus Prozessen und Logmeldungen. Fehlende GoAccess-Eingangslogs werden weiterhin nach zehn Sekunden erneut geprüft.
 
-Kann das Backend seinen Unix-Socket nicht binden, protokolliert es den Fehler und beendet sich mit Status 1. `launch.sh` überwacht Nginx und Backend als kritische Kinder: Endet einer unerwartet, beendet der Launcher den anderen und verlässt den Container, damit der Orchestrator den Zustand sichtbar behandelt statt einen ungebremsten Prozess-Loop zu betreiben. Der Express-5-Listen-Callback erhält auch Bindefehler; nur ein erfolgreicher Aufruf meldet Bereitschaft und initialisiert das Terminal. Bei `SIGTERM` schließt der gestartete HTTP-Server, leert vor dem Beenden die wartenden Analytics-Batches und beendet den Backend-Prozess. Der Entwicklungsstart behandelt einen belegten TCP-Port ebenso als Fehler und beendet sich mit Status 1.
+Kann das Backend seinen Unix-Socket nicht binden, protokolliert es den Fehler und beendet sich mit Status 1. `launch.sh` überwacht Nginx und Backend als kritische Kinder: Endet einer unerwartet, beendet der Launcher den anderen und verlässt den Container, damit der Orchestrator den Zustand sichtbar behandelt statt einen ungebremsten Prozess-Loop zu betreiben. Der Express-5-Listen-Callback erhält auch Bindefehler; nur ein erfolgreicher Aufruf meldet Bereitschaft und initialisiert das Terminal. Bei `SIGTERM` wird der HTTP-Server geschlossen; sein Abschlusscallback soll Analytics und Upload-Relay stoppen und den Prozess beenden. Offene Terminal-WebSockets können diesen Callback jedoch zurückhalten; ein bereits laufender Analytics-Flush schreibt außerdem einen danach entstandenen Folgepuffer nicht erneut. Diese bestätigten offenen Fälle stehen in der [Gesamtprüfung vom 15. Oktober](../entwicklung/gesamtpruefung-2026-10-15.md). Der Entwicklungsstart behandelt einen belegten TCP-Port ebenso als Fehler und beendet sich mit Status 1.
 
 ## Konfigurationsdateien (`rootfs/etc/`)
 
@@ -146,7 +146,7 @@ Referenz-Datei für alle verfügbaren Umgebungsvariablen (2.9 KB). Wird als Vorl
 
 Die gleiche Datei existiert als `rootfs/data/.env` für den Container.
 
-Beispielwerte mit Leerzeichen oder Shell-Sonderzeichen sind gequotet und können durch Entfernen des Kommentarpräfixes übernommen werden. Installer und Updater aktivieren Anubis beziehungsweise OpenAppSec nur über den exakten Variablennamen; gleichnamige Textteile in anderen Werten bleiben erhalten.
+Beispielwerte mit Leerzeichen oder Shell-Sonderzeichen sind gequotet und können durch Entfernen des Kommentarpräfixes übernommen werden. Der Installer bearbeitet vollständige Literalzuweisungen. Beim Updater sind noch zeilenbasierte Sonderpfade offen: Anubis-Aktivierung kann zuweisungsähnliche Zeilen innerhalb eines mehrzeiligen Passworts verändern; die Datenbankerkennung für den Recoverycheckpoint kann solche Zeilen irrtümlich als echte PostgreSQL-Konfiguration behandeln. Die [Gesamtprüfung vom 15. Oktober](../entwicklung/gesamtpruefung-2026-10-15.md#a10--updater-verwechselt-zeilen-innerhalb-mehrzeiliger-env-werte) dokumentiert beide bestätigten Fälle. Die frühere pauschale Aussage, alle gleichnamigen Textteile blieben erhalten, gilt daher nicht für den Updater.
 
 ## HTML-Seiten (`rootfs/html/`)
 

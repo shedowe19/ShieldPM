@@ -9,6 +9,7 @@ export const useGitOpsConfig = () => {
 	return useQuery({
 		queryKey: ["gitops-config"],
 		queryFn: () => gitopsApi.getGitOpsConfig(),
+		refetchOnMount: "always",
 		retry: false,
 	});
 };

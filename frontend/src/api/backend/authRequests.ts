@@ -14,31 +14,54 @@ interface SharedIdentity {
 	impersonating: boolean;
 }
 
+let lastStorageIdentity: string | null = null;
+let identityChannel: BroadcastChannel | undefined;
+function applyIdentity(serialized: string) {
+	if (serialized === lastIdentity) return;
+	try {
+		const identity = JSON.parse(serialized) as SharedIdentity;
+		if (typeof identity.revision !== "string" || typeof identity.impersonating !== "boolean") return;
+		const expires = typeof identity.expires === "string" ? Date.parse(identity.expires) : identity.expires;
+		if (expires !== null && (typeof expires !== "number" || !Number.isFinite(expires))) return;
+		lastIdentity = serialized;
+		identityRevision += 1;
+		if (expires === null || expires <= Date.now()) AuthStore.clear();
+		else
+			AuthStore.add(
+				{ expires, user: identity.userId ? { id: identity.userId } : undefined },
+				identity.impersonating,
+			);
+		window.dispatchEvent(new Event(AUTHENTICATION_CHANGED_EVENT));
+	} catch {
+		/* Ignore malformed browser synchronization metadata. */
+	}
+}
 export function synchronizeAuthIdentity() {
 	try {
 		const stored = window.localStorage.getItem(sharedIdentityKey);
-		if (!stored || stored === lastIdentity) return;
-		const identity = JSON.parse(stored) as SharedIdentity;
-		if (typeof identity.revision !== "string" || typeof identity.impersonating !== "boolean") return;
-		lastIdentity = stored;
-		identityRevision += 1;
-		if (identity.expires === null) AuthStore.clear();
-		else if (typeof identity.expires === "number" || typeof identity.expires === "string") {
-			AuthStore.add(
-				{ expires: identity.expires, user: identity.userId ? { id: identity.userId } : undefined },
-				identity.impersonating,
-			);
-		} else return;
-		window.dispatchEvent(new Event(AUTHENTICATION_CHANGED_EVENT));
+		if (!stored || stored === lastStorageIdentity) return;
+		lastStorageIdentity = stored;
+		applyIdentity(stored);
 	} catch {
-		// Storage may be disabled; the in-tab queue and Web Lock remain usable.
+		/* Browser storage can be unavailable. */
 	}
 }
 if (typeof window !== "undefined") {
 	window.addEventListener("storage", (event) => {
 		if (event.key === sharedIdentityKey) synchronizeAuthIdentity();
 	});
+	try {
+		if (window.BroadcastChannel) {
+			identityChannel = new window.BroadcastChannel("shieldpm:authentication");
+			identityChannel.onmessage = (event: MessageEvent<unknown>) => {
+				if (typeof event.data === "string") applyIdentity(event.data);
+			};
+		}
+	} catch {
+		/* Keep the in-tab queue when browser tab messaging is disabled. */
+	}
 }
+
 function publishIdentity(endpoint: string, response: unknown) {
 	const result =
 		response && typeof response === "object"
@@ -54,10 +77,16 @@ function publishIdentity(endpoint: string, response: unknown) {
 	const serialized = JSON.stringify(identity);
 	try {
 		window.localStorage.setItem(sharedIdentityKey, serialized);
-		lastIdentity = serialized;
+		lastStorageIdentity = serialized;
 	} catch {
 		/* In-memory operation remains available. */
 	}
+	try {
+		identityChannel?.postMessage(serialized);
+	} catch {
+		/* Metadata cannot fail a completed login. */
+	}
+	applyIdentity(serialized);
 }
 
 export function serializeAuthRequest<T>(url: string, operation: () => Promise<T>): Promise<T> {

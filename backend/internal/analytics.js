@@ -22,6 +22,13 @@ const PROCESS_LINE_BATCH_SIZE = 250;
 const INSERT_CHUNK_SIZE = 250;
 const DROP_LOG_INTERVAL_MS = 60 * 1000;
 
+// Nginx byte counts must remain exact JSON numbers and fit the signed BIGINT column.
+const normalizeBytes = (value) => {
+	const number = typeof value === "number" || typeof value === "string" ? Number(value) : 0;
+	return Number.isSafeInteger(number) && number >= 0 ? number : 0;
+};
+const addBytes = (left, right) => Math.min(Number.MAX_SAFE_INTEGER, left + right);
+
 const aggregationKeyFor = (hostId) => (hostId === 0 ? "global" : `host:${hostId}`);
 
 export class AnalyticsService {
@@ -48,6 +55,8 @@ export class AnalyticsService {
 		this.flushPromise = null;
 		this.initializationPromise = null;
 		this.isInitialized = false;
+		this.acceptingLines = true;
+		this.stopPromise = null;
 		this.lastDropLogAt = 0;
 		this.lineQueue = [];
 		this.lineDrainScheduled = false;
@@ -56,18 +65,20 @@ export class AnalyticsService {
 	}
 
 	async init() {
-		if (this.isInitialized) {
-			return;
-		}
-		if (this.initializationPromise) {
-			return this.initializationPromise;
-		}
+		if (this.stopPromise) await this.stopPromise;
+		this.acceptingLines = true;
+		if (this.isInitialized) return;
+		if (this.initializationPromise) return this.initializationPromise;
 
-		this.initializationPromise = this.initialize();
+		const generation = this.domainGeneration;
+		const initializing = this.initialize().then((initialized) => {
+			if (generation === this.domainGeneration) this.isInitialized = initialized;
+		});
+		this.initializationPromise = initializing;
 		try {
-			this.isInitialized = await this.initializationPromise;
+			await initializing;
 		} finally {
-			this.initializationPromise = null;
+			if (this.initializationPromise === initializing) this.initializationPromise = null;
 		}
 	}
 
@@ -180,6 +191,7 @@ export class AnalyticsService {
 	}
 
 	enqueueLine(line) {
+		if (!this.acceptingLines) return;
 		if (this.lineQueue.length >= PENDING_LINE_BUFFER_LIMIT) {
 			this.droppedLineCount++;
 			this.logDroppedAnalyticsData({ detailedLogsDropped: 1, aggregationsDropped: 0 });
@@ -201,23 +213,41 @@ export class AnalyticsService {
 	}
 
 	async stop() {
+		if (this.stopPromise) return this.stopPromise;
+		this.acceptingLines = false;
 		clearInterval(this.domainRefreshTimer);
 		this.domainRefreshTimer = null;
 		this.unsubscribeDomains?.();
 		this.unsubscribeDomains = null;
 		this.domainGeneration++;
 		this.domainLoadPromise = null;
+		this.initializationPromise = null;
 		clearInterval(this.flushTimer);
 		clearInterval(this.retentionTimer);
 		this.tail?.unwatch?.();
 		this.tail = null;
 		this.lineDrainScheduled = false;
-		for (const line of this.lineQueue.splice(0)) this.processLine(line);
-		await this.flush();
-		this.isInitialized = false;
+		for (const line of this.lineQueue.splice(0)) this.processBufferedLine(line);
+		const stopping = (async () => {
+			// An in-flight flush owns a detached snapshot. Its successor buffer needs
+			// a separate flush after it settles, including any failed rows it restores.
+			if (this.flushPromise) await this.flushPromise;
+			await this.flush();
+			this.isInitialized = false;
+		})();
+		this.stopPromise = stopping;
+		try {
+			await stopping;
+		} finally {
+			if (this.stopPromise === stopping) this.stopPromise = null;
+		}
 	}
 
 	processLine(line) {
+		if (this.acceptingLines) this.processBufferedLine(line);
+	}
+
+	processBufferedLine(line) {
 		try {
 			if (!line.trim()) return;
 			// Fix common Nginx JSON log errors if any (e.g. unquoted country code)
@@ -234,7 +264,7 @@ export class AnalyticsService {
 			const hostId = this.hostCache.get(normalizedHost) || 0; // 0 for unknown/unmatched
 
 			const status = Number.parseInt(data.status, 10) || 0;
-			const bytes = Number.parseInt(data.body_bytes_sent, 10) || 0;
+			const bytes = normalizeBytes(data.body_bytes_sent);
 			// Nginx time is usually ISO8601
 			const dayjsTime = dayjs(data.time_iso8601 || new Date());
 			if (!dayjsTime.isValid()) return;
@@ -262,7 +292,7 @@ export class AnalyticsService {
 
 			const aggEntry = this.aggregationBuffer.get(aggKey);
 			aggEntry.count++;
-			aggEntry.bytes += bytes;
+			aggEntry.bytes = addBytes(aggEntry.bytes, bytes);
 
 			if (status >= 200 && status < 300) aggEntry.status_2xx++;
 			else if (status >= 300 && status < 400) aggEntry.status_3xx++;
@@ -447,7 +477,7 @@ export class AnalyticsService {
 					const existing = this.aggregationBuffer.get(key);
 					if (existing) {
 						existing.count += entry.count;
-						existing.bytes += entry.bytes;
+						existing.bytes = addBytes(existing.bytes, entry.bytes);
 						existing.status_2xx += entry.status_2xx;
 						existing.status_3xx += entry.status_3xx;
 						existing.status_4xx += entry.status_4xx;
@@ -516,6 +546,22 @@ export class AnalyticsService {
 		}
 
 		return host;
+	}
+
+	/** Return only host identifiers/domains authorized for analytics selection. */
+	async getHosts(access) {
+		let ownHostsOnly = false;
+		try {
+			await access.can("analytics:list");
+		} catch (error) {
+			if (!(error instanceof errs.PermissionError)) throw error;
+			const permission = await access.can("proxy_hosts:get");
+			ownHostsOnly = !permission.roles?.includes("admin");
+		}
+		const query = ProxyHost.query().select("id").where("is_deleted", 0);
+		if (ownHostsOnly) query.where("owner_user_id", access?.token?.getUserId?.(0) || 0);
+		const hosts = await query.orderBy("id").withGraphFetched("host_domains");
+		return hosts.map((host) => ({ id: host.id, domain_names: host.domain_names || [] }));
 	}
 
 	async getHostSummary(access, hostId, requestedRange) {

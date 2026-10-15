@@ -8,9 +8,10 @@ const state = vi.hoisted(() => ({ destination: null, migrateUp: vi.fn(), isSqlit
 vi.mock("../../db.js", () => ({ default: () => state.destination }));
 vi.mock("../../migrate.js", () => ({ migrateUp: state.migrateUp }));
 vi.mock("../../lib/config.js", () => ({ isSqlite: state.isSqlite }));
-vi.mock("../../logger.js", () => ({ global: { info: vi.fn(), error: vi.fn() } }));
+vi.mock("../../logger.js", () => ({ global: { info: vi.fn(), error: vi.fn() }, migrate: { info: vi.fn() } }));
 
 import migrateFromSqliteToNewDb, { convertRow, importSqliteDatabase } from "../../lib/db-migrate.js";
+import * as domainReservations from "../../migrations/20261015000003_reserve_active_host_domains.js";
 
 let directory;
 let source;
@@ -170,6 +171,32 @@ describe("SQLite database import", () => {
 		await importSqliteDatabase(source, destination);
 		expect(await destination("auth_sessions").orderBy("id")).toEqual(sessions);
 		expect(await destination.raw("PRAGMA foreign_key_check")).toEqual([]);
+	});
+
+	it("rebuilds derived domain reservations through destination triggers instead of copying them twice", async () => {
+		for (const database of [source, destination]) {
+			await database.schema.alterTable("proxy_host", (table) => {
+				table.integer("is_deleted").notNullable().defaultTo(0);
+			});
+			for (const name of ["redirection_host", "dead_host"]) {
+				await database.schema.createTable(name, (table) => {
+					table.increments("id");
+					table.integer("is_deleted").notNullable().defaultTo(0);
+					table.json("domain_names").notNullable();
+				});
+			}
+			await domainReservations.up(database);
+		}
+		await populateSource();
+		await source("dead_host").insert({ id: 3, domain_names: JSON.stringify(["dead.test"]) });
+		await importSqliteDatabase(source, destination);
+		expect(await destination("host_domain_reservation").orderBy("domain_name")).toEqual([
+			{ domain_name: "dead.test", host_type: "dead_host", host_id: 3 },
+			{ domain_name: "example.test", host_type: "proxy_host", host_id: 9 },
+		]);
+		expect(await source("host_domain_reservation").orderBy("domain_name")).toEqual(
+			await destination("host_domain_reservation").orderBy("domain_name"),
+		);
 	});
 
 	it("rolls back every imported row and settings update after an invalid source reference", async () => {

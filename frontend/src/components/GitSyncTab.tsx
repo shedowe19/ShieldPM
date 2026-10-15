@@ -25,7 +25,8 @@ export function GitSyncTab({ hostId }: Props) {
 	const { mutateAsync: triggerSync, isPending: isSyncing } = useTriggerGitSync();
 
 	const handleSync = async () => {
-		if (!hostId) return;
+		if (!hostId || values.gitSyncPending) return;
+		setValues((current) => ({ ...current, gitSyncPending: true }));
 		try {
 			// Await the mutation promise so switching tabs cannot discard the
 			// reconciliation while the enclosing host draft is still open.
@@ -42,47 +43,24 @@ export function GitSyncTab({ hostId }: Props) {
 					const unchanged =
 						current.forwardHost === initialValues.forwardHost &&
 						current.forwardScheme === initialValues.forwardScheme;
-					return unchanged || matchesResult
-						? { ...current, ...root, gitSyncConflict: undefined }
+					const matchesPreviousSync =
+						current.gitSyncedRoot?.forwardHost === current.forwardHost &&
+						current.gitSyncedRoot?.forwardScheme === current.forwardScheme;
+					return unchanged || matchesResult || matchesPreviousSync
+						? { ...current, ...root, gitSyncedRoot: root, gitSyncConflict: undefined }
 						: { ...current, gitSyncConflict: root };
 				});
 			}
 			showSuccess(intl.formatMessage({ id: "proxy-host.git-sync.success" }));
 		} catch (error) {
 			showError(error instanceof Error ? error.message : String(error));
+		} finally {
+			setValues((current) => ({ ...current, gitSyncPending: false }));
 		}
 	};
 
 	return (
 		<div className="space-y-4">
-			{values.gitSyncConflict && (
-				<Alert variant="destructive">
-					<AlertDescription>
-						<T id="proxy-host.git-sync.root-conflict" />
-					</AlertDescription>
-					<div className="flex gap-2 mt-2">
-						<Button
-							type="button"
-							onClick={() =>
-								setValues((current) => ({
-									...current,
-									...current.gitSyncConflict,
-									gitSyncConflict: undefined,
-								}))
-							}
-						>
-							<T id="proxy-host.git-sync.use-synced-root" />
-						</Button>
-						<Button
-							type="button"
-							variant="outline"
-							onClick={() => setValues((current) => ({ ...current, gitSyncConflict: undefined }))}
-						>
-							<T id="proxy-host.git-sync.keep-draft-root" />
-						</Button>
-					</div>
-				</Alert>
-			)}
 			<Alert
 				variant="default"
 				className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
@@ -241,7 +219,7 @@ export function GitSyncTab({ hostId }: Props) {
 								variant="default"
 								size="sm"
 								onClick={handleSync}
-								disabled={isSyncing || isLoading}
+								disabled={isSyncing || isLoading || values.gitSyncPending}
 							>
 								{isSyncing ? (
 									<Loader2 className="mr-2 h-3 w-3 animate-spin" />

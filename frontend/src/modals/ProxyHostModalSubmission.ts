@@ -3,7 +3,7 @@ import { type ProxyHostFormValues, parseProxyHostMeta } from "./ProxyHostModalFo
 
 export type ProxyHostPayload = Omit<
 	ProxyHostFormValues,
-	"crowdsecEnabled" | "advLimitReqRate" | "advLimitReqBurst" | "gitSyncConflict"
+	"crowdsecEnabled" | "advLimitReqRate" | "advLimitReqBurst" | "gitSyncConflict" | "gitSyncPending" | "gitSyncedRoot"
 > & {
 	id?: number;
 	advLimitReqRate?: number | null;
@@ -27,7 +27,15 @@ const normalizeRateLimit = (value: number | string | undefined): number | null |
 };
 
 export const createProxyHostPayload = ({ id, values }: CreateProxyHostPayloadParams): ProxyHostPayload => {
-	const { crowdsecEnabled, advLimitReqRate, advLimitReqBurst, gitSyncConflict: _gitSyncConflict, ...rest } = values;
+	const {
+		crowdsecEnabled,
+		advLimitReqRate,
+		advLimitReqBurst,
+		gitSyncConflict: _gitSyncConflict,
+		gitSyncPending: _gitSyncPending,
+		gitSyncedRoot: _gitSyncedRoot,
+		...rest
+	} = values;
 	const payload: ProxyHostPayload = {
 		...rest,
 		terminalHostFingerprint: values.terminalHostFingerprint?.trim(),

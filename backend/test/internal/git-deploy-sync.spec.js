@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
 	query: vi.fn(),
 	host: {},
 	patch: vi.fn(),
+	configure: vi.fn(),
 }));
 vi.mock("node:fs", () => ({
 	default: {
@@ -36,7 +37,9 @@ vi.mock("../../lib/config.js", () => ({ isDemoMode: () => false }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: vi.fn(), decrypt: vi.fn() }));
 vi.mock("../../logger.js", () => ({ global: { info: vi.fn(), debug: vi.fn(), error: vi.fn() } }));
 vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.query } }));
-vi.mock("../../internal/nginx.js", () => ({ default: {} }));
+vi.mock("../../internal/nginx.js", () => ({
+	default: { withConfigurationLock: (callback) => callback(), configureHost: mocks.configure },
+}));
 
 import gitDeploy from "../../internal/git-deploy.js";
 
@@ -54,13 +57,15 @@ describe("Git Deploy synchronization", () => {
 			const query = {
 				findById: () => query,
 				where: () => query,
+				withGraphFetched: () => query,
 				patch: mocks.patch,
 				// biome-ignore lint/suspicious/noThenProperty: Objection query builders are intentionally thenable.
 				then: (resolve) => Promise.resolve(mocks.host).then(resolve),
 			};
 			return query;
 		});
-		mocks.patch.mockResolvedValue();
+		mocks.patch.mockImplementation(async (patch) => Object.assign(mocks.host, patch));
+		mocks.configure.mockResolvedValue({ nginx_online: true });
 		mocks.clone.mockResolvedValue();
 		mocks.currentBranch.mockResolvedValue("main");
 		mocks.getConfig.mockResolvedValue("https://git.example/old.git");
@@ -109,4 +114,27 @@ describe("Git Deploy synchronization", () => {
 			expect(mocks.patch).not.toHaveBeenCalled();
 		},
 	);
+	it("persists failed activation and retries the already stored root on the next sync", async () => {
+		mocks.host.forward_host = "/var/www/old";
+		mocks.host.enabled = true;
+		mocks.configure.mockResolvedValueOnce({ nginx_online: false, nginx_err: "Nginx rejected root" });
+		await expect(gitDeploy.sync(null, 7)).resolves.toMatchObject({
+			success: false,
+			message: "Nginx rejected root",
+		});
+		expect(mocks.host.forward_host).toBe("/data/websites/host-7");
+		expect(mocks.host.git_last_error).toBe("Nginx rejected root");
+		expect(mocks.configure).toHaveBeenCalledOnce();
+
+		await expect(gitDeploy.sync(null, 7)).resolves.toMatchObject({ success: true });
+		expect(mocks.configure).toHaveBeenCalledTimes(2);
+		expect(mocks.host.git_last_error).toBeNull();
+	});
+	it("retries a durable pending activation after a process interruption", async () => {
+		mocks.host.enabled = true;
+		mocks.host.git_last_error = "Nginx activation pending";
+		await expect(gitDeploy.sync(null, 7)).resolves.toMatchObject({ success: true });
+		expect(mocks.configure).toHaveBeenCalledOnce();
+		expect(mocks.host.git_last_error).toBeNull();
+	});
 });

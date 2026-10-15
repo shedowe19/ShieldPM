@@ -11,7 +11,17 @@ const router = express.Router();
 // Apply auth to all analytics endpoints
 router.use(jwtdecode());
 
-// Enforce global admin access for platform-wide analytics
+// Host selection shares the per-host analytics ownership fallback. Other
+// platform-wide endpoints below continue to require global analytics access.
+router.get("/hosts", async (_req, res, next) => {
+	try {
+		res.json(await analyticsService.getHosts(res.locals.access));
+	} catch (error) {
+		next(error);
+	}
+});
+
+// Enforce global analytics access for platform-wide analytics
 router.use(async (_req, res, next) => {
 	await res.locals.access.can("analytics:list");
 	next();

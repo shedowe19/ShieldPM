@@ -44,6 +44,7 @@ beforeEach(() => {
 				cookieIdentity = 1;
 				return json(token(1));
 			}
+			if (input === "/api/tokens/2fa/duo/complete") return json(token(1));
 			if (input === "/api/users/2/login") {
 				cookieIdentity = 2;
 				return json(token(2));
@@ -98,3 +99,60 @@ it.each(["impersonation", "logout"] as const)(
 		if (action === "logout") expect(screen.getByText("signed out")).toBeInTheDocument();
 	},
 );
+
+it.each(["expired", "wrong cookie"] as const)(
+	"verifies a persisted impersonation on reload and recovers an %s marker",
+	async (reason) => {
+		window.localStorage.setItem(
+			"shieldpm:cookie-identity",
+			JSON.stringify({
+				revision: reason,
+				expires: Date.now() + (reason === "expired" ? -1 : 900_000),
+				userId: 2,
+				impersonating: true,
+			}),
+		);
+		render(
+			<QueryClientProvider client={client}>
+				<AuthProvider>
+					<Probe />
+				</AuthProvider>
+			</QueryClientProvider>,
+		);
+		await screen.findByText("signed in");
+		expect(AuthStore.userId).toBe(1);
+		expect(AuthStore.isImpersonating).toBe(false);
+		if (reason === "wrong cookie") expect(requests[0]).toBe("/api/users/me");
+		expect(requests).toContain("/api/tokens/refresh");
+	},
+);
+
+it("finishes a trusted login callback even when its cookie-identity verification is still pending", async () => {
+	render(
+		<QueryClientProvider client={client}>
+			<AuthProvider>
+				<Probe />
+			</AuthProvider>
+		</QueryClientProvider>,
+	);
+	await screen.findByText("signed in");
+	let finishIdentity!: (response: Response) => void;
+	const identity = new Promise<Response>((resolve) => {
+		finishIdentity = resolve;
+	});
+	const original = vi.mocked(fetch).getMockImplementation();
+	if (!original) throw new Error("Missing fetch fixture");
+	vi.mocked(fetch).mockImplementation((input, options) =>
+		input === "/api/users/me" ? identity : original(input, options),
+	);
+	await act(async () => {
+		const response = await api.post<{ expires: number }>({ url: "/tokens/2fa/duo/complete" });
+		auth.completeLogin(response);
+	});
+	expect(screen.getByText("signed in")).toBeInTheDocument();
+	await act(async () => {
+		finishIdentity(json({ id: 1 }));
+		await identity;
+	});
+	expect(screen.getByText("signed in")).toBeInTheDocument();
+});

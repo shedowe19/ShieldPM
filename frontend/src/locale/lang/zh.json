@@ -1006,5 +1006,12 @@
 	"firewall.host.asn.reasonHint": "原因会显示在拦截页面上。留空则使用此 ASN 的标准说明。",
 	"firewall.host.asn.reasonInvalid": "公开原因不得超过 1000 个字符，且不能包含空字符。",
 	"firewall.host.asn.rulesRetained": "已保存的 ASN 规则保持不变。ASN 数据不可用时，您仍可移除这些规则。",
-	"firewall.host.asn.title": "ASN 拦截"
+	"firewall.host.asn.title": "ASN 拦截",
+	"terminal.host-fingerprint": "Trusted SSH host fingerprint",
+	"terminal.host-fingerprint.help": "Enter the SHA256 fingerprint verified through a trusted channel or directly on the SSH server. Verify a changed server key independently before replacing this pin. Existing terminals cannot connect until a trusted fingerprint is saved.",
+	"terminal.host-fingerprint.invalid": "Enter a verified OpenSSH SHA256 fingerprint (SHA256: followed by 43 Base64 characters, without padding).",
+	"proxy-host.git-sync.root-conflict": "Git sync activated a different web root while this draft also changed the root or forwarding type. Choose which root to save before continuing.",
+	"proxy-host.git-sync.use-synced-root": "Use synced root",
+	"proxy-host.git-sync.keep-draft-root": "Keep my draft root",
+	"proxy-host.git-sync.in-progress": "Git sync is running. Wait for its result before saving."
 }

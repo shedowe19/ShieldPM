@@ -9,6 +9,8 @@ export interface ProxyHostFormValues extends Omit<Partial<ProxyHost>, "advLimitR
 	anubisEnabled?: boolean;
 	anubisRules?: ProxyHost["anubisRules"];
 	gitCredentials?: string;
+	gitSyncPending?: boolean;
+	gitSyncedRoot?: { forwardHost: string; forwardScheme: ProxyHost["forwardScheme"] };
 	gitSyncConflict?: { forwardHost: string; forwardScheme: ProxyHost["forwardScheme"] };
 }
 

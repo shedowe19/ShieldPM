@@ -1006,5 +1006,12 @@
 	"firewall.host.asn.reasonHint": "De reden verschijnt op de blokkeerpagina. Laat deze leeg om de standaarduitleg voor dit ASN te gebruiken.",
 	"firewall.host.asn.reasonInvalid": "Gebruik een openbare reden van maximaal 1000 tekens zonder nultekens.",
 	"firewall.host.asn.rulesRetained": "Opgeslagen ASN-regels blijven ongewijzigd. Je kunt ze verwijderen zolang ASN-gegevens niet beschikbaar zijn.",
-	"firewall.host.asn.title": "ASN-blokkeringen"
+	"firewall.host.asn.title": "ASN-blokkeringen",
+	"terminal.host-fingerprint": "Trusted SSH host fingerprint",
+	"terminal.host-fingerprint.help": "Enter the SHA256 fingerprint verified through a trusted channel or directly on the SSH server. Verify a changed server key independently before replacing this pin. Existing terminals cannot connect until a trusted fingerprint is saved.",
+	"terminal.host-fingerprint.invalid": "Enter a verified OpenSSH SHA256 fingerprint (SHA256: followed by 43 Base64 characters, without padding).",
+	"proxy-host.git-sync.root-conflict": "Git sync activated a different web root while this draft also changed the root or forwarding type. Choose which root to save before continuing.",
+	"proxy-host.git-sync.use-synced-root": "Use synced root",
+	"proxy-host.git-sync.keep-draft-root": "Keep my draft root",
+	"proxy-host.git-sync.in-progress": "Git sync is running. Wait for its result before saving."
 }

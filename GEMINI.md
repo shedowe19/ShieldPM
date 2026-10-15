@@ -200,6 +200,8 @@ The [October 13 optimization review](./docs/wiki-intern/entwicklung/optimierungs
 
 The [October 13 test-quality review](./docs/wiki-intern/entwicklung/tests.md#testqualität-und-dependency-kompatibilität-vom-13-oktober) fixes dependency-update editor compatibility using Refractor 5 public exports and rehype-prism-plus 2.0.2. Dependency verification runs backend types/tests, frontend locales/tests/build and the compressed bundle budget through `scripts/ci/verify-dependencies.sh`; update inputs survive failed runs as artifacts. Backend regression checks call actual functions, restore globals and use controlled clocks; frontend fixtures reset implementations and browser smokes reject uncaught errors. Dockerlint preserves diagnostics and fails real linter/process errors through the tested CI helper.
 
+The [October 15 full review](./docs/wiki-intern/entwicklung/gesamtpruefung-2026-10-15.md) records 18 open defect groups on merged PR #152, including global client-certificate authorization, missing SSH host verification, configuration/lifecycle consistency and integration-test timeouts. This review changes documentation only; green baseline tests do not imply these additional cases are fixed. Fresh CI attempts and their limits are recorded separately from the original successful merge validation.
+
 ### 6.1 Nginx Configuration Engine (`backend/internal/nginx.js`)
 
 - **Core Logic**: Reads DB state -> Renders Liquid templates (`backend/templates/`) -> Writes `.conf` files to `/data/nginx/`.

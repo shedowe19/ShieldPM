@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Field, Form, Formik, useFormikContext } from "formik";
+import { ProxyHostGitSyncFeedback } from "src/modals/ProxyHostGitSyncFeedback";
 import type { ProxyHostFormValues } from "src/modals/ProxyHostModalFormValues";
 import { createProxyHostPayload } from "src/modals/ProxyHostModalSubmission";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -115,6 +116,7 @@ it.each([false, true])(
 			>
 				<Form>
 					<GitSyncTab hostId={7} />
+					<ProxyHostGitSyncFeedback />
 					<Field name="forwardHost" aria-label="Root" />
 					<Field name="note" aria-label="Note" />
 					<DraftProbe />
@@ -134,6 +136,8 @@ it.each([false, true])(
 		await waitFor(() => expect(screen.getByLabelText("Root")).toHaveValue("/data/websites/host-7"));
 		expect(screen.getByLabelText("Note")).toHaveValue("unsaved note");
 		expect(screen.getByTestId("draft")).not.toHaveTextContent("gitSyncConflict");
+		expect(screen.getByTestId("draft")).not.toHaveTextContent("gitSyncedRoot");
+		expect(screen.getByTestId("draft")).not.toHaveTextContent("gitSyncPending");
 		expect(screen.getByTestId("draft")).toHaveTextContent('"forwardHost":"/data/websites/host-7"');
 	},
 );

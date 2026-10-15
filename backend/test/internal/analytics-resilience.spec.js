@@ -76,6 +76,56 @@ describe("analytics input and transaction resilience", () => {
 			setImmediateSpy.mockRestore();
 		}
 	});
+	it("stops input, waits for the detached flush and persists its successor buffer exactly once", async () => {
+		const service = new AnalyticsService();
+		const pending = Promise.withResolvers();
+		const details = [];
+		const totals = [];
+		vi.spyOn(service, "flushDetailedLogs").mockImplementation(async (batch) => {
+			details.push(...batch);
+			if (details.length === 1) await pending.promise;
+		});
+		vi.spyOn(service, "flushAggregations").mockImplementation(async (batch) => totals.push(...batch));
+		const line = (path) => JSON.stringify({ request_uri: path, status: 200, body_bytes_sent: 20 });
+		service.processLine(line("/first"));
+		const initialFlush = service.flush();
+		service.processLine(line("/successor"));
+		service.enqueueLine(line("/already-queued"));
+		const stopping = service.stop();
+		service.enqueueLine(line("/too-late-queued"));
+		service.processLine(line("/too-late-direct"));
+		const repeatedStop = service.stop();
+		expect(details.map((row) => row.path)).toEqual(["/first"]);
+		pending.resolve();
+		await Promise.all([initialFlush, stopping, repeatedStop]);
+		expect(details.map((row) => row.path)).toEqual(["/first", "/successor", "/already-queued"]);
+		expect(totals.reduce((sum, row) => sum + row.count, 0)).toBe(3);
+		expect(service.getStatus()).toMatchObject({
+			detailedBufferSize: 0,
+			aggregationBufferSize: 0,
+			lineQueueSize: 0,
+		});
+	});
+
+	it("normalizes unsafe or malformed byte counts without discarding neighboring requests", () => {
+		const service = new AnalyticsService();
+		for (const bytes of [3 * 1024 ** 3, "4294967296", -1, "12garbage", "1e309", "9007199254740993", null]) {
+			service.processLine(
+				JSON.stringify({ body_bytes_sent: bytes, status: 200, time_iso8601: "2026-10-15T12:00:00Z" }),
+			);
+		}
+		expect(service.detailedLogBuffer.map((row) => row.bytes)).toEqual([3221225472, 4294967296, 0, 0, 0, 0, 0]);
+		expect([...service.aggregationBuffer.values()][0]).toMatchObject({ count: 7, bytes: 7516192768 });
+		service.processLine(
+			JSON.stringify({
+				body_bytes_sent: Number.MAX_SAFE_INTEGER,
+				status: 200,
+				time_iso8601: "2026-10-15T12:00:00Z",
+			}),
+		);
+		expect([...service.aggregationBuffer.values()][0].bytes).toBe(Number.MAX_SAFE_INTEGER);
+	});
+
 	it("rolls back earlier chunks if a later aggregation chunk fails, so retry cannot double count", async () => {
 		const committed = [];
 		mocks.transaction.mockImplementation(async (callback) => {

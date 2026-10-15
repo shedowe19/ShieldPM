@@ -91,7 +91,8 @@ class NativeMaintenanceTests(unittest.TestCase):
         payload = live_app / "unpacked"
         payload.mkdir(parents=True)
         for filename in ("app/package.json", "html/frontend/index.html", "usr/local/nginx/sbin/nginx",
-                         "rootfs/usr/local/bin/start.sh", "rootfs/usr/local/bin/update-geoip.py"):
+                         "rootfs/usr/local/bin/start.sh", "rootfs/usr/local/bin/update-geoip.py",
+                         "rootfs/usr/local/bin/shieldpm-env.py"):
             path = payload / filename
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("packaged artifact")
@@ -230,6 +231,10 @@ cp() {
             directory.mkdir(parents=True, exist_ok=True)
         shutil.copy(STAGER, source / "rootfs/usr/local/bin/stage-native-binaries.py")
         (source / "backend/package.json").write_text("new backend")
+        for path in ("test/internal/example.spec.js", "fixtures/large-test-input.json", "scripts/ci/runtime-helper.js"):
+            fixture = source / "backend" / path
+            fixture.parent.mkdir(parents=True, exist_ok=True)
+            fixture.write_text("fixture")
         (source / "frontend/dist/index.html").write_text("new frontend")
         (live / "app/old.js").write_text("old backend")
         (live / "html/frontend/old.html").write_text("old frontend")
@@ -296,6 +301,9 @@ curl() {
         self.assertEqual((live / "usr/local/bin/anubis").read_bytes(), elf())
         self.assertEqual((live / "usr/local/bin/oauth2-proxy").read_bytes(), elf())
         self.assertEqual((live / "app/package.json").read_text(), "new backend")
+        self.assertFalse((live / "app/test").exists())
+        self.assertFalse((live / "app/fixtures").exists())
+        self.assertTrue((live / "app/scripts/ci/runtime-helper.js").is_file())
 
     def test_download_failure_leaves_service_and_application_untouched(self):
         result, live = self.update_fixture("download")
