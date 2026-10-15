@@ -49,6 +49,7 @@ const cases = [
 		Component: DefaultSite,
 		key: ["setting", "default-site"],
 		label: "settings.default-site.html",
+		selector: "textarea",
 		cached: { id: "default-site", value: "html", meta: { html: "<h1>Cached page</h1>" } },
 		fresh: { id: "default-site", value: "html", meta: { html: "<h1>Current page</h1>" } },
 		freshValue: "<h1>Current page</h1>",
@@ -61,6 +62,7 @@ const cases = [
 		Component: GitOps,
 		key: ["gitops-config"],
 		label: "settings.gitops.repository_url",
+		selector: "input",
 		cached: gitOpsConfig,
 		fresh: { ...gitOpsConfig, repositoryUrl: "https://current.example/config.git" },
 		freshValue: "https://current.example/config.git",
@@ -109,10 +111,12 @@ it.each(cases.flatMap((testCase) => [0, 120_000].map((cacheAge) => ({ ...testCas
 		mocks.getData.mockReturnValue(pending.promise);
 		mountSettings(testCase, testCase.cacheAge);
 		await waitFor(() => expect(mocks.getData).toHaveBeenCalled());
-		expect(screen.queryByLabelText(testCase.label)).not.toBeInTheDocument();
+		expect(screen.queryByLabelText(testCase.label, { selector: testCase.selector })).not.toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "save" })).not.toBeInTheDocument();
 		await act(async () => pending.resolve(testCase.fresh));
-		expect(await screen.findByLabelText(testCase.label)).toHaveValue(testCase.freshValue);
+		expect(await screen.findByLabelText(testCase.label, { selector: testCase.selector })).toHaveValue(
+			testCase.freshValue,
+		);
 		fireEvent.click(screen.getByRole("button", { name: "save" }));
 		await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
 		expect(mocks.submit.mock.calls[0][0]).toMatchObject(testCase.freshPayload);
@@ -130,19 +134,21 @@ it.each(cases)("blocks cached $name values after an opening failure and permits 
 	expect(mocks.submit).not.toHaveBeenCalled();
 	mocks.getData.mockResolvedValue(testCase.fresh);
 	await act(async () => client.refetchQueries({ queryKey: testCase.key }));
-	expect(await screen.findByLabelText(testCase.label)).toHaveValue(testCase.freshValue);
+	expect(await screen.findByLabelText(testCase.label, { selector: testCase.selector })).toHaveValue(
+		testCase.freshValue,
+	);
 });
 
 it.each(cases)("preserves an open $name draft across later refetch failure and recovery", async (testCase) => {
 	mocks.getData.mockResolvedValue(testCase.fresh);
 	const client = mountSettings(testCase);
-	const input = await screen.findByLabelText(testCase.label);
+	const input = await screen.findByLabelText(testCase.label, { selector: testCase.selector });
 	fireEvent.change(input, { target: { value: testCase.draftValue } });
 	act(() => client.setQueryData(testCase.key, testCase.cached));
 	expect(input).toHaveValue(testCase.draftValue);
 	mocks.getData.mockRejectedValue(new Error("Background settings failed"));
 	await act(async () => client.refetchQueries({ queryKey: testCase.key }));
-	expect(screen.getByLabelText(testCase.label)).toBe(input);
+	expect(screen.getByLabelText(testCase.label, { selector: testCase.selector })).toBe(input);
 	expect(input).toHaveValue(testCase.draftValue);
 	mocks.getData.mockResolvedValue(testCase.fresh);
 	await act(async () => client.refetchQueries({ queryKey: testCase.key }));
@@ -161,7 +167,7 @@ it("allows GitOps operations after the edited configuration has been saved and r
 		return saved;
 	});
 	mountSettings(testCase);
-	const input = await screen.findByLabelText(testCase.label);
+	const input = await screen.findByLabelText(testCase.label, { selector: testCase.selector });
 	fireEvent.change(input, { target: { value: testCase.draftValue } });
 	expect(screen.getByRole("button", { name: "settings.gitops.test_connection" })).toBeDisabled();
 	fireEvent.click(screen.getByRole("button", { name: "save" }));

@@ -1,6 +1,7 @@
 import { IconCheck, IconGitBranch, IconGitCommit, IconRefresh, IconX } from "@tabler/icons-react";
 import { Field, type FieldProps, useFormikContext } from "formik";
 import { Loader2 } from "lucide-react";
+import type { GitSyncResult } from "src/api/backend/gitSync";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent } from "src/components/ui/card";
@@ -27,36 +28,39 @@ export function GitSyncTab({ hostId }: Props) {
 	const handleSync = async () => {
 		if (!hostId || values.gitSyncPending) return;
 		setValues((current) => ({ ...current, gitSyncPending: true }));
+		let result: GitSyncResult;
 		try {
 			// Await the mutation promise so switching tabs cannot discard the
 			// reconciliation while the enclosing host draft is still open.
-			const result = await triggerSync(hostId);
-			if (!result.success) {
-				showError(result.message || intl.formatMessage({ id: "notification.error" }));
-				return;
-			}
-			if (result.forwardHost && result.forwardScheme) {
-				const root = { forwardHost: result.forwardHost, forwardScheme: result.forwardScheme };
-				setValues((current) => {
-					const matchesResult =
-						current.forwardHost === root.forwardHost && current.forwardScheme === root.forwardScheme;
-					const unchanged =
-						current.forwardHost === initialValues.forwardHost &&
-						current.forwardScheme === initialValues.forwardScheme;
-					const matchesPreviousSync =
-						current.gitSyncedRoot?.forwardHost === current.forwardHost &&
-						current.gitSyncedRoot?.forwardScheme === current.forwardScheme;
-					return unchanged || matchesResult || matchesPreviousSync
-						? { ...current, ...root, gitSyncedRoot: root, gitSyncConflict: undefined }
-						: { ...current, gitSyncConflict: root };
-				});
-			}
-			showSuccess(intl.formatMessage({ id: "proxy-host.git-sync.success" }));
+			result = await triggerSync(hostId);
+			if (!result.success) throw new Error(result.message || intl.formatMessage({ id: "notification.error" }));
 		} catch (error) {
-			showError(error instanceof Error ? error.message : String(error));
-		} finally {
 			setValues((current) => ({ ...current, gitSyncPending: false }));
+			showError(error instanceof Error ? error.message : String(error));
+			return;
 		}
+		const root =
+			result.forwardHost && result.forwardScheme
+				? { forwardHost: result.forwardHost, forwardScheme: result.forwardScheme }
+				: undefined;
+		// Formik resolves functional setters against its current snapshot. Two
+		// setters in the same tick do not compose: settle and reconcile together.
+		setValues((current) => {
+			const settled = { ...current, gitSyncPending: false };
+			if (!root) return settled;
+			const matchesResult =
+				current.forwardHost === root.forwardHost && current.forwardScheme === root.forwardScheme;
+			const unchanged =
+				current.forwardHost === initialValues.forwardHost &&
+				current.forwardScheme === initialValues.forwardScheme;
+			const matchesPreviousSync =
+				current.gitSyncedRoot?.forwardHost === current.forwardHost &&
+				current.gitSyncedRoot?.forwardScheme === current.forwardScheme;
+			return unchanged || matchesResult || matchesPreviousSync
+				? { ...settled, ...root, gitSyncedRoot: root, gitSyncConflict: undefined }
+				: { ...settled, gitSyncConflict: root };
+		});
+		showSuccess(intl.formatMessage({ id: "proxy-host.git-sync.success" }));
 	};
 
 	return (
