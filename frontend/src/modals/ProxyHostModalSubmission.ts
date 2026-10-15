@@ -1,7 +1,10 @@
 import { serializeMaintenanceDateTime } from "src/lib/maintenanceDateTime";
 import { type ProxyHostFormValues, parseProxyHostMeta } from "./ProxyHostModalFormValues";
 
-export type ProxyHostPayload = Omit<ProxyHostFormValues, "crowdsecEnabled" | "advLimitReqRate" | "advLimitReqBurst"> & {
+export type ProxyHostPayload = Omit<
+	ProxyHostFormValues,
+	"crowdsecEnabled" | "advLimitReqRate" | "advLimitReqBurst" | "gitSyncConflict"
+> & {
 	id?: number;
 	advLimitReqRate?: number | null;
 	advLimitReqBurst?: number | null;
@@ -24,9 +27,10 @@ const normalizeRateLimit = (value: number | string | undefined): number | null |
 };
 
 export const createProxyHostPayload = ({ id, values }: CreateProxyHostPayloadParams): ProxyHostPayload => {
-	const { crowdsecEnabled, advLimitReqRate, advLimitReqBurst, ...rest } = values;
+	const { crowdsecEnabled, advLimitReqRate, advLimitReqBurst, gitSyncConflict: _gitSyncConflict, ...rest } = values;
 	const payload: ProxyHostPayload = {
 		...rest,
+		terminalHostFingerprint: values.terminalHostFingerprint?.trim(),
 		advLimitReqRate: normalizeRateLimit(advLimitReqRate),
 		advLimitReqBurst: normalizeRateLimit(advLimitReqBurst),
 		maintenanceStart: serializeMaintenanceDateTime(values.maintenanceStart),

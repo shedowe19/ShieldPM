@@ -2,6 +2,7 @@ import { camelize, decamelize } from "humps";
 import queryString, { type StringifiableRecord } from "query-string";
 import { queryClient } from "src/api/queryClient";
 import AuthStore, { AUTHENTICATION_EXPIRED_EVENT } from "src/modules/AuthStore";
+import { serializeAuthRequest } from "./authRequests";
 
 const contentTypeHeader = "Content-Type";
 
@@ -271,7 +272,11 @@ export async function downloadPost({ url, params, data, noAuth, silentAuth }: Po
 	window.URL.revokeObjectURL(u);
 }
 
-export async function post<T = DynamicResponse>(
+export function post<T = DynamicResponse>(args: PostArgs, abortController?: AbortController): Promise<T> {
+	return serializeAuthRequest(args.url, () => postRequest<T>(args, abortController));
+}
+
+async function postRequest<T = DynamicResponse>(
 	{ url, params, data, noAuth, silentAuth, rawKeys, rawResponse }: PostArgs,
 	abortController?: AbortController,
 ): Promise<T> {
@@ -332,7 +337,11 @@ export async function put<T = DynamicResponse>(
 	return processResponse(response, sessionRevision, silentAuth);
 }
 
-export async function del<T = DynamicResponse>(
+export function del<T = DynamicResponse>(args: DeleteArgs, abortController?: AbortController): Promise<T> {
+	return serializeAuthRequest(args.url, () => deleteRequest<T>(args, abortController));
+}
+
+async function deleteRequest<T = DynamicResponse>(
 	{ url, params, silentAuth }: DeleteArgs,
 	abortController?: AbortController,
 ): Promise<T> {

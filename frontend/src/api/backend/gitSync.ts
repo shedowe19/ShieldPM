@@ -15,6 +15,8 @@ export interface GitSyncStatus {
 
 export interface GitSyncResult {
 	success: boolean;
+	forwardHost?: string;
+	forwardScheme?: import("src/types/enums").ForwardScheme;
 	commit?: string;
 	message?: string;
 }

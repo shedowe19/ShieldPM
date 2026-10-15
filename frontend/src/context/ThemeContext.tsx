@@ -1,5 +1,6 @@
 import type React from "react";
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import { readPreference, writePreference } from "src/lib/preferenceStorage";
 
 const StorageKey = "tabler-theme";
 export const Light = "light";
@@ -24,7 +25,7 @@ interface ThemeProviderProps {
 }
 
 const getBrowserDefault = (): Theme => {
-	if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+	if (typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches) {
 		return APP_THEME.DARK;
 	}
 	return APP_THEME.LIGHT;
@@ -34,8 +35,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 	const [theme, setThemeState] = useState<Theme>(() => {
 		// Try to read theme from localStorage or use 'light' as default
 		if (typeof window !== "undefined") {
-			const stored = localStorage.getItem(StorageKey) as Theme | null;
-			return stored || getBrowserDefault();
+			const stored = readPreference(StorageKey);
+			return stored === APP_THEME.LIGHT || stored === APP_THEME.DARK ? stored : getBrowserDefault();
 		}
 		return getBrowserDefault();
 	});
@@ -44,7 +45,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 		document.body.dataset.theme = theme;
 		document.body.classList.remove(theme === APP_THEME.LIGHT ? APP_THEME.DARK : APP_THEME.LIGHT);
 		document.body.classList.add(theme);
-		localStorage.setItem(StorageKey, theme);
+		writePreference(StorageKey, theme);
 	}, [theme]);
 
 	const toggleTheme = () => {

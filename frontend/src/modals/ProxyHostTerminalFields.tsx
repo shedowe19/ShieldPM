@@ -4,7 +4,8 @@ import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { Textarea } from "src/components/ui/textarea";
-import { T } from "src/locale";
+import { terminalFingerprintError } from "src/lib/terminalFingerprint";
+import { intl, T } from "src/locale";
 import { FORWARD_SCHEME, TERMINAL_AUTH_TYPE } from "src/types/enums";
 
 const privateKeyPlaceholder = ["-----BEGIN", "OPENSSH", "PRIVATE", "KEY-----"].join(" ");
@@ -54,6 +55,45 @@ const ProxyHostTerminalFields = () => (
 												}
 												{...field}
 											/>
+										</div>
+									)}
+								</Field>
+							</div>
+							<div className="md:col-span-12">
+								<Field
+									name="terminalHostFingerprint"
+									validate={(value: string) =>
+										terminalFingerprintError(FORWARD_SCHEME.TERMINAL, value)
+									}
+								>
+									{({ field, form }: FieldProps) => (
+										<div className="space-y-2">
+											<Label htmlFor="terminalHostFingerprint">
+												<T id="terminal.host-fingerprint" />
+											</Label>
+											<Input
+												id="terminalHostFingerprint"
+												{...field}
+												required
+												autoComplete="off"
+												placeholder="SHA256:…"
+												aria-describedby="terminalHostFingerprint-help"
+												className="font-mono"
+											/>
+											<p
+												id="terminalHostFingerprint-help"
+												className="text-sm text-muted-foreground"
+											>
+												<T id="terminal.host-fingerprint.help" />
+											</p>
+											{form.errors.terminalHostFingerprint &&
+												form.touched.terminalHostFingerprint && (
+													<p role="alert" className="text-sm text-destructive">
+														{intl.formatMessage({
+															id: String(form.errors.terminalHostFingerprint),
+														})}
+													</p>
+												)}
 										</div>
 									)}
 								</Field>

@@ -10,6 +10,7 @@ import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { useProxyHost, useSetProxyHost, useUser } from "src/hooks";
 import { firewallAsnRuleError } from "src/lib/firewallAsn";
+import { terminalFingerprintError } from "src/lib/terminalFingerprint";
 import { T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
@@ -84,7 +85,15 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 						validateOnMount
 						validate={(values) => {
 							const asnError = firewallAsnRuleError(values.meta?.ipFirewall?.asnDenylist);
-							return asnError ? { meta: { ipFirewall: { asnDenylist: asnError } } } : {};
+							const fingerprintError = terminalFingerprintError(
+								values.forwardScheme,
+								values.terminalHostFingerprint,
+							);
+							return {
+								...(fingerprintError ? { terminalHostFingerprint: fingerprintError } : {}),
+								...(asnError ? { meta: { ipFirewall: { asnDenylist: asnError } } } : {}),
+								...(values.gitSyncConflict ? { forwardHost: "proxy-host.git-sync.root-conflict" } : {}),
+							};
 						}}
 					>
 						{({ isValid }) => (

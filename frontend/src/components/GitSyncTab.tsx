@@ -1,7 +1,6 @@
 import { IconCheck, IconGitBranch, IconGitCommit, IconRefresh, IconX } from "@tabler/icons-react";
 import { Field, type FieldProps, useFormikContext } from "formik";
 import { Loader2 } from "lucide-react";
-import type { ProxyHost } from "src/api/backend";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent } from "src/components/ui/card";
@@ -11,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "s
 import { Switch } from "src/components/ui/switch";
 import { useGitSyncStatus, useTriggerGitSync } from "src/hooks/useGitSync";
 import { intl, T } from "src/locale";
+import type { ProxyHostFormValues } from "src/modals/ProxyHostModalFormValues";
 import { validateString } from "src/modules/Validations";
 import { showError, showSuccess } from "src/notifications";
 import { TIME_UNIT } from "src/types/enums";
@@ -20,28 +20,69 @@ interface Props {
 }
 
 export function GitSyncTab({ hostId }: Props) {
-	const { values } = useFormikContext<ProxyHost>();
+	const { values, initialValues, setValues } = useFormikContext<ProxyHostFormValues>();
 	const { data: status, isLoading, isError, error } = useGitSyncStatus(hostId);
-	const { mutate: triggerSync, isPending: isSyncing } = useTriggerGitSync();
+	const { mutateAsync: triggerSync, isPending: isSyncing } = useTriggerGitSync();
 
-	const handleSync = () => {
-		if (hostId) {
-			triggerSync(hostId, {
-				onSuccess: (result) => {
-					if (result.success) {
-						showSuccess(intl.formatMessage({ id: "proxy-host.git-sync.success" }));
-					} else {
-						showError(result.message || intl.formatMessage({ id: "notification.error" }));
-					}
-					// Status reload happens via hook invalidation
-				},
-				onError: (error) => showError(error.message),
-			});
+	const handleSync = async () => {
+		if (!hostId) return;
+		try {
+			// Await the mutation promise so switching tabs cannot discard the
+			// reconciliation while the enclosing host draft is still open.
+			const result = await triggerSync(hostId);
+			if (!result.success) {
+				showError(result.message || intl.formatMessage({ id: "notification.error" }));
+				return;
+			}
+			if (result.forwardHost && result.forwardScheme) {
+				const root = { forwardHost: result.forwardHost, forwardScheme: result.forwardScheme };
+				setValues((current) => {
+					const matchesResult =
+						current.forwardHost === root.forwardHost && current.forwardScheme === root.forwardScheme;
+					const unchanged =
+						current.forwardHost === initialValues.forwardHost &&
+						current.forwardScheme === initialValues.forwardScheme;
+					return unchanged || matchesResult
+						? { ...current, ...root, gitSyncConflict: undefined }
+						: { ...current, gitSyncConflict: root };
+				});
+			}
+			showSuccess(intl.formatMessage({ id: "proxy-host.git-sync.success" }));
+		} catch (error) {
+			showError(error instanceof Error ? error.message : String(error));
 		}
 	};
 
 	return (
 		<div className="space-y-4">
+			{values.gitSyncConflict && (
+				<Alert variant="destructive">
+					<AlertDescription>
+						<T id="proxy-host.git-sync.root-conflict" />
+					</AlertDescription>
+					<div className="flex gap-2 mt-2">
+						<Button
+							type="button"
+							onClick={() =>
+								setValues((current) => ({
+									...current,
+									...current.gitSyncConflict,
+									gitSyncConflict: undefined,
+								}))
+							}
+						>
+							<T id="proxy-host.git-sync.use-synced-root" />
+						</Button>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => setValues((current) => ({ ...current, gitSyncConflict: undefined }))}
+						>
+							<T id="proxy-host.git-sync.keep-draft-root" />
+						</Button>
+					</div>
+				</Alert>
+			)}
 			<Alert
 				variant="default"
 				className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"

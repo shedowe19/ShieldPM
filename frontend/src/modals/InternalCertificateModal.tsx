@@ -14,7 +14,9 @@ import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { Textarea } from "src/components/ui/textarea";
+import { useUser } from "src/hooks/useUser";
 import { intl, T } from "src/locale";
+import { isAdmin } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE, INTERNAL_CERT_TYPE, type InternalCertType } from "src/types/enums";
 
@@ -31,6 +33,8 @@ interface InternalCertificateValues {
 
 const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerModalProps) => {
 	const queryClient = useQueryClient();
+	const { data: currentUser } = useUser("me");
+	const canIssueClient = isAdmin(currentUser?.roles);
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -44,6 +48,7 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 
 		try {
 			if (values.type === INTERNAL_CERT_TYPE.CLIENT) {
+				if (!canIssueClient) throw new Error("no-permission-error");
 				await downloadPost(
 					{
 						url: "nginx/certificates/internal/client",
@@ -144,9 +149,11 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 												<SelectItem value={INTERNAL_CERT_TYPE.SERVER}>
 													<T id="certificates.internal.type.server" />
 												</SelectItem>
-												<SelectItem value={INTERNAL_CERT_TYPE.CLIENT}>
-													<T id="certificates.internal.type.client" />
-												</SelectItem>
+												{canIssueClient && (
+													<SelectItem value={INTERNAL_CERT_TYPE.CLIENT}>
+														<T id="certificates.internal.type.client" />
+													</SelectItem>
+												)}
 											</SelectContent>
 										</Select>
 									</div>

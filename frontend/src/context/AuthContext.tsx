@@ -2,8 +2,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createContext, Fragment, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useIntervalWhen } from "rooks";
 import { getToken, loginAsUser, refreshToken, restoreSession, type TokenResponse } from "src/api/backend";
+import { synchronizeAuthIdentity } from "src/api/backend/authRequests";
 import * as api from "src/api/backend/base";
-import AuthStore, { AUTHENTICATION_EXPIRED_EVENT } from "src/modules/AuthStore";
+import AuthStore, { AUTHENTICATION_CHANGED_EVENT, AUTHENTICATION_EXPIRED_EVENT } from "src/modules/AuthStore";
 import { showError } from "src/notifications";
 
 // Context
@@ -52,6 +53,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 
 	// On mount, try to refresh token (via cookie) to restore session
 	useEffect(() => {
+		synchronizeAuthIdentity();
 		// Locale changes remount this provider. The retained refresh cookie belongs
 		// to the administrator, so keep an in-memory impersonated session intact.
 		if (AuthStore.isImpersonating) {
@@ -98,6 +100,13 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 			setAuthenticated(false);
 		};
 
+		const handleAuthenticationChanged = () => {
+			sessionGeneration.current += 1;
+			queryClient.clear();
+			setAuthenticated(AuthStore.active);
+			setSessionVersion((version) => version + 1);
+		};
+		window.addEventListener(AUTHENTICATION_CHANGED_EVENT, handleAuthenticationChanged);
 		window.addEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
 		return () => {
 			// A locale change replaces this provider while its requests may still be pending.
@@ -105,8 +114,9 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 			logoutRequest.current += 1;
 			sessionGeneration.current += 1;
 			window.removeEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
+			window.removeEventListener(AUTHENTICATION_CHANGED_EVENT, handleAuthenticationChanged);
 		};
-	}, []);
+	}, [queryClient]);
 
 	const login = async (identity: string, secret: string) => {
 		const generation = ++sessionGeneration.current;
