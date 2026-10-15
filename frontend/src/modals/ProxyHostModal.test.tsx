@@ -31,7 +31,7 @@ vi.mock("ez-modal-react", () => ({
 	},
 }));
 
-vi.mock("lucide-react", () => ({ AlertCircle: () => null, Loader2: () => null }));
+vi.mock("lucide-react", () => ({ AlertCircle: () => null, Check: () => null, Loader2: () => null }));
 
 vi.mock("src/components", async () => ({
 	GitSyncTab: (await import("src/components/GitSyncTab")).GitSyncTab,
