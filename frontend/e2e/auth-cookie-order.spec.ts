@@ -43,7 +43,8 @@ async function installCookieApi(page: Page) {
 		if (!url.pathname.startsWith("/api/")) return route.continue();
 		const path = url.pathname;
 		const method = request.method();
-		const id = Number(/(?:^|;\s*)e2e_identity=(\d+)/.exec(request.headers().cookie || "")?.[1] || 0);
+		const cookie = await request.headerValue("cookie");
+		const id = Number(/(?:^|;\s*)e2e_identity=(\d+)/.exec(cookie || "")?.[1] || 0);
 		if (method === "GET" && path === "/api/")
 			return reply(route, { setup: true, status: "OK", version: "4.4.1-e2e" });
 		if (method === "POST" && path === "/api/oidc/claim")
@@ -76,6 +77,7 @@ async function installCookieApi(page: Page) {
 			verifiedUsers.push(id);
 			return reply(route, user(id));
 		}
+		if (method === "GET" && path === "/api/e2e-cookie-barrier") return reply(route, {});
 		if (method === "GET" && path === "/api/users") return reply(route, [user(1), user(2)]);
 		if (method === "GET" && /^\/api\/users\/\d+$/.test(path))
 			return reply(route, user(Number(path.split("/").pop())));
@@ -135,6 +137,11 @@ for (const action of ["impersonation", "logout"] as const) {
 			await page.getByRole("button", { name: "Toggle user menu" }).click();
 			await page.getByRole("menuitem", { name: "Logout", exact: true }).click();
 		}
+		// This independent request crosses the browser/network boundary after the
+		// click. An eagerly dispatched identity POST would already be intercepted.
+		await page.evaluate(async () => {
+			await fetch("/api/e2e-cookie-barrier", { credentials: "include" });
+		});
 		expect(api.cookieActions).toEqual([]);
 		api.release();
 		if (action === "impersonation") {

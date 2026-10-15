@@ -51,6 +51,10 @@ Access-Lists können an Proxy-Hosts gebunden werden, um den Zugriff einzuschrän
 - `internal/audit-log.js` — Protokollierung
 - `bcryptjs` — Passwort-Hashing
 
+## Korrekturen der Gesamtprüfung vom 15. Oktober
+
+Löschung hält die gemeinsame Konfigurationssperre über DB-Detach und validierte Aktivierung. Bei Render-, Reload-, Status- oder DB-Fehler bleiben ursprüngliche Zuweisungen und benötigte Passwortdateien/OAuth2-Prozesse erhalten. Der bedingte Detach überschreibt keine zwischenzeitlich ausdrücklich gewählte andere ACL. Erst nach erfolgreicher Aktivierung folgen die Auth-Bereinigungen. Host-Expansionen verwenden dieselbe normalisierende Secretredaktion wie direkte ACL-Antworten, einschließlich Legacy-JSON-Strings. Siehe [Umsetzung und Nachweise](../entwicklung/gesamtpruefung-2026-10-15.md).
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

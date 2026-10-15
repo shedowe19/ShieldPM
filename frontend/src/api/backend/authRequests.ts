@@ -9,21 +9,38 @@ const sharedIdentityKey = "shieldpm:cookie-identity";
 let lastIdentity: string | null = null;
 interface SharedIdentity {
 	revision: string;
+	sequence: number;
 	expires: number | string | null;
 	userId?: number;
 	impersonating: boolean;
 }
 
+let lastSequence = 0;
+let lastRevision = "";
 let lastStorageIdentity: string | null = null;
 let identityChannel: BroadcastChannel | undefined;
-function applyIdentity(serialized: string) {
-	if (serialized === lastIdentity) return;
+function applyIdentity(serialized: string, currentResponse = false) {
+	if (!currentResponse && serialized === lastIdentity) return;
 	try {
 		const identity = JSON.parse(serialized) as SharedIdentity;
-		if (typeof identity.revision !== "string" || typeof identity.impersonating !== "boolean") return;
+		if (
+			typeof identity.revision !== "string" ||
+			typeof identity.impersonating !== "boolean" ||
+			!Number.isSafeInteger(identity.sequence) ||
+			identity.sequence < 1
+		)
+			return;
+		if (
+			!currentResponse &&
+			(identity.sequence < lastSequence ||
+				(identity.sequence === lastSequence && identity.revision <= lastRevision))
+		)
+			return;
 		const expires = typeof identity.expires === "string" ? Date.parse(identity.expires) : identity.expires;
 		if (expires !== null && (typeof expires !== "number" || !Number.isFinite(expires))) return;
 		lastIdentity = serialized;
+		lastSequence = identity.sequence;
+		lastRevision = identity.revision;
 		identityRevision += 1;
 		if (expires === null || expires <= Date.now()) AuthStore.clear();
 		else
@@ -54,7 +71,15 @@ if (typeof window !== "undefined") {
 		if (window.BroadcastChannel) {
 			identityChannel = new window.BroadcastChannel("shieldpm:authentication");
 			identityChannel.onmessage = (event: MessageEvent<unknown>) => {
-				if (typeof event.data === "string") applyIdentity(event.data);
+				if (typeof event.data !== "string") return;
+				let serialized = event.data;
+				try {
+					const stored = window.localStorage.getItem(sharedIdentityKey);
+					if (stored && JSON.parse(stored).sequence >= JSON.parse(serialized).sequence) serialized = stored;
+				} catch {
+					/* Channel metadata remains available when storage is blocked. */
+				}
+				applyIdentity(serialized);
 			};
 		}
 	} catch {
@@ -70,6 +95,7 @@ function publishIdentity(endpoint: string, response: unknown) {
 	if (endpoint !== "tokens/logout" && !result?.expires) return;
 	const identity: SharedIdentity = {
 		revision: `${Date.now()}:${Math.random()}`,
+		sequence: lastSequence + 1,
 		expires: endpoint === "tokens/logout" ? null : (result?.expires ?? null),
 		userId: result?.user?.id,
 		impersonating: /^users\/\d+\/login$/.test(endpoint),
@@ -86,7 +112,18 @@ function publishIdentity(endpoint: string, response: unknown) {
 	} catch {
 		/* Metadata cannot fail a completed login. */
 	}
-	applyIdentity(serialized);
+	lastIdentity = serialized;
+	lastSequence = identity.sequence;
+	lastRevision = identity.revision;
+	// Let the caller finish its login/2FA/OIDC navigation before reconciling.
+	// If a cross-tab update invalidated that caller, its response still changed
+	// the cookie: recover only when no newer state or response consumed it.
+	const responseRevision = AuthStore.sessionRevision;
+	if (typeof identity.userId === "number")
+		setTimeout(() => {
+			if (lastIdentity === serialized && AuthStore.sessionRevision === responseRevision)
+				applyIdentity(serialized, true);
+		}, 0);
 }
 
 export function serializeAuthRequest<T>(url: string, operation: () => Promise<T>): Promise<T> {

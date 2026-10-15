@@ -12,16 +12,17 @@
 
 ## Offene Fragen
 
-- TODO: Die 18 bestätigten Defektgruppen der [Gesamtprüfung vom 15. Oktober](./entwicklung/gesamtpruefung-2026-10-15.md) beheben. Höchste Priorität haben die globale mTLS-Ausstellung über gewöhnliche Zertifikatsrechte und die fehlende SSH-Serververifikation; zusätzlich die reproduzierten Integrationstest-Timeouts stabilisieren. Der Bericht trennt zehn weiter offene Produktpunkte von acht neu bestätigten Gruppen und benennt die Grenzen der Nachweise. Dieser Scan hat nur Dokumentation geändert.
 - TODO: Die vom nativen Installer in `scripts/install.sh` erzeugte OpenAppSec-`local_policy.yaml` an das Schema der installierten Agent-Version anpassen: Derzeit stehen Inline-Objekte in `policies.default.practices` und `triggers`; das dokumentierte v1beta1-Schema erwartet dort Verweise auf separat definierte Practices und Log-Trigger. Anschließend `open-appsec-ctl --apply-policy`, aktive Policy und Erkennung mit dem Agent prüfen ([OpenAppSec](./module/openappsec.md)).
 - TODO: Den Native/LXC-Pfad für das optionale OpenAppSec-Advanced-Modell im Installer überprüfen und funktionsfähig machen. `scripts/install.sh` kopiert das Archiv derzeit nur nach `/etc/cp/conf/open-appsec-advanced-model.tgz` und bestätigt die Modellaktivierung nicht; die OpenAppSec-Anleitung für Linux Embedded beschreibt eine Bereitstellung unter `/advanced-model` sowie Entpacken und einen Agent-Neustart für bestehende Installationen. Die Aktivierung am laufenden Agent nachweisen ([OpenAppSec](./module/openappsec.md)).
 - TODO: End-to-End-Beispiel mit Authentik (Auth-Typ `AUTHENTIK_PROXY`) für [OAuth2-Proxy](./module/oauth2-proxy.md) ergänzen — der Auth-Typ ist parallel zu oauth2-proxy verfügbar, ein konkretes Setup-Beispiel fehlt aber noch.
 - TODO: IP-Ranges-Quellen für andere CDNs (z. B. Fastly, Akamai) prüfen ([IP-Ranges](./module/ip-ranges.md)).
-- TODO: `backend/schema/swagger.json` um die vorhandenen Analytics-, OIDC-, GitOps- und Upload-Relay-Routen ergänzen. Die generierte OpenAPI/Swagger-Ansicht bildet derzeit nicht alle Express-Endpunkte ab ([API-Schemas](./api/schemas.md)).
+- TODO: `backend/schema/swagger.json` um die weiteren vorhandenen Analytics-, OIDC-, GitOps- und Upload-Relay-Routen ergänzen. Die generierte OpenAPI/Swagger-Ansicht bildet derzeit nicht alle Express-Endpunkte ab ([API-Schemas](./api/schemas.md)).
 
 ## Gelöste Fragen
 
 ### Aktuelle Session
+
+- ~~18 Defektgruppen der Gesamtprüfung vom 15. Oktober~~ → In PR #154 mit Administratorgrenze für Clientzertifikate, SSH-Hostpins, Auth-Serialisierung, Konfigurations-/Shutdownkonsistenz, atomarer Domainreservierung, Env-Parser und getesteter Digest-Promotion umgesetzt. Regressionen, Upgradehinweise und die weiter unbestätigten Prüfgrenzen stehen im [Bericht](./entwicklung/gesamtpruefung-2026-10-15.md).
 
 - ~~13 Befunde der Optimierungsprüfung vom 13. Oktober~~ → Umgesetzt mit Secret-Antwortbereinigung und transaktionaler Erhaltung, Nginx-Batch-Rollback, dauerhaftem Wartungs-Retry, frischen Firewall-Snapshots, Monitorworkern, Analytics-Lifecycle, nativen Wartungssperren und Latest-Smokes. Einzelne Nachweise und die unveränderten Betriebsgrenzen stehen im [Prüfbericht](./entwicklung/optimierungspruefung-2026-10-13.md).
 - ~~FTP-PAC-Listing-Befunde und unbehandelte Transferablehnungen~~ → `basic-ftp` 6.2.2 ist direkt gepinnt und für `get-uri` gezielt aufgelöst. Der eigene FTP-Handler propagiert Transferfehler an den Stream und schließt den Client; der gemeinsame ProxyAgent-Wrapper bindet ihn in den produktiven PAC-Pfad ein. Lokale FTP-Tests prüfen Metadaten-Fallback, Cache, Abbrüche, manipulierte Antworten und den erhaltenen Transferhost-Schutz. Der Backend-Audit meldet danach 0 bekannte Befunde bei 522 Abhängigkeiten. Dokumentiert unter [FTP-Korrektur](./architektur/externe-abhaengigkeiten.md#ftp-korrektur-in-pr-150) und [Tests](./entwicklung/tests.md).

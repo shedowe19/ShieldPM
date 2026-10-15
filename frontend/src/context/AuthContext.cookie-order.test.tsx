@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import * as api from "src/api/backend/base";
 import AuthStore from "src/modules/AuthStore";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -107,6 +107,7 @@ it.each(["expired", "wrong cookie"] as const)(
 			"shieldpm:cookie-identity",
 			JSON.stringify({
 				revision: reason,
+				sequence: Date.now(),
 				expires: Date.now() + (reason === "expired" ? -1 : 900_000),
 				userId: 2,
 				impersonating: true,
@@ -155,4 +156,53 @@ it("finishes a trusted login callback even when its cookie-identity verification
 		await identity;
 	});
 	expect(screen.getByText("signed in")).toBeInTheDocument();
+});
+
+it("reconciles its delivered login cookie after a different tab invalidates the original login callback", async () => {
+	render(
+		<QueryClientProvider client={client}>
+			<AuthProvider>
+				<Probe />
+			</AuthProvider>
+		</QueryClientProvider>,
+	);
+	await screen.findByText("signed in");
+	let deliverLogin!: () => void;
+	const loginResponse = new Promise<Response>((resolve) => {
+		deliverLogin = () => {
+			cookieIdentity = 2;
+			resolve(json(token(2)));
+		};
+	});
+	const original = vi.mocked(fetch).getMockImplementation();
+	if (!original) throw new Error("Missing fetch fixture");
+	vi.mocked(fetch).mockImplementation((input, options) =>
+		input === "/api/tokens" ? loginResponse : original(input, options),
+	);
+	let login!: Promise<void>;
+	act(() => {
+		login = auth.login("target@example.test", "password");
+	});
+	cookieIdentity = 3;
+	window.localStorage.setItem(
+		"shieldpm:cookie-identity",
+		JSON.stringify({
+			revision: "other-tab-login",
+			sequence: Date.now(),
+			expires: Date.now() + 900_000,
+			userId: 3,
+			impersonating: false,
+		}),
+	);
+	await act(async () => {
+		window.dispatchEvent(new StorageEvent("storage", { key: "shieldpm:cookie-identity" }));
+	});
+	expect(AuthStore.userId).toBe(3);
+	await act(async () => {
+		deliverLogin();
+		await login;
+	});
+	await screen.findByText("signed in");
+	await waitFor(() => expect(AuthStore.userId).toBe(2));
+	expect(await api.get({ url: "/users/me" })).toEqual({ id: 2 });
 });

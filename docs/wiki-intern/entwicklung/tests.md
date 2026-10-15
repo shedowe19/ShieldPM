@@ -123,9 +123,15 @@ Die Testbestandsprüfung unterscheidet Strukturprüfung und vertiefte Funktionsp
 
 Der [isolierte Kompatibilitätslauf](https://github.com/shedowe19/ShieldPM/actions/runs/38466520461) prüft die korrigierten Quellen getrennt mit der festgehaltenen und der neuesten Dependency-Linie: beide Jobs erfolgreich, jeweils 2.161 bestandene Backendtests mit vier beabsichtigten Skips, 931 Frontendtests und sieben Browser-Smokes. Typen, Locales, Produktionsbuild und Bundlebudget sowie 73 Scanner-Integrationstests bestehen ebenfalls. Die Infrastruktur schließt lokal 164 Fälle mit 21 Umgebungsskips ab; in CI bleiben zwei erwartete Skips, die echten Containersmokes decken die entsprechenden Laufzeitpfade ab. Die nur für diesen Nachweis angelegte read-only Pipeline wird nach dem Abruf der generierten Lockfiles und Paketnachweise entfernt; die regulären PR-Checks bleiben aktiv.
 
-## Erneute Gesamtprüfung vom 15. Oktober
+## Gesamtprüfung und Korrekturen vom 15. Oktober
 
-Die [Gesamtprüfung auf dem Merge von PR #152](./gesamtpruefung-2026-10-15.md) unterscheidet frische Läufe von vorhandener commitgebundener CI-Evidenz. Die lokale vollständige Backendsuite und der erste frische Quality-Versuch zeigen jeweils einen Integrationstimeout, jedoch in unterschiedlichen Dateien: `migrations/maintenance-pending.spec.js` startet PGlite innerhalb des Standardlimits von fünf Sekunden; `lib/nginx-smoke-endpoints.spec.js` bündelt mehrere Childprocess-/Cleanupfristen innerhalb desselben äußeren Limits. Unveränderte gezielte Wiederholungen belegen die übrigen Assertions; ein späterer grüner Retry beseitigt die Zeitvertragsfehler nicht. Begrenzte spezifische Integrationstimeouts und sauber getrennte Childprocess-Fixtures sind noch umzusetzen. Der Scan selbst verändert keine Tests.
+Die [Gesamtprüfung](./gesamtpruefung-2026-10-15.md) bewahrt die ursprünglichen Timeoutnachweise und dokumentiert die Korrekturen aller 18 Gruppen in PR #154. PGlite- und große Dateiintegrationstests erhalten ausdrücklich begrenzte Zeitbudgets; drei echte Nginx-Childprocessszenarien laufen einzeln mit SIGQUIT-fähiger Fixture und geprüftem regulärem Exit. Ein späterer grüner Retry ersetzt diese Vertragskorrekturen nicht.
+
+Die Regressionen prüfen insbesondere reale SQLite-/PostgreSQL-Constraints und Graphrollbacks, echte MariaDB-Mehrverbindungsrennen, BIGINT-Downloads, lokale SSH-Hostverifikation, HTTP-/WebSocket-Shutdown und den Analytics-Folgepuffer. `mariadb-*.spec.js` umfasst nun auch Domainreservierung und große Detailbytes. Neue Tests verwenden dieselben produktiven Funktionen; äußere Dienste bleiben kontrolliert.
+
+`frontend/e2e/auth-cookie-order.spec.ts` ergänzt zwei echte Chromiumfälle mit verzögerten HTTP-Antworten und HttpOnly-Set-Cookie: Refresh vor Impersonation beziehungsweise Logout. Sie prüfen die nächste tatsächlich gesendete Cookieidentität. Der lokale Testserver verarbeitet nur synthetische Fixtures. Zusammen mit den vorhandenen sieben Smokes sind es neun Browserfälle. Gemountete Auth-/Git-Sync-/Settings-Tests sichern Callbacknavigation, Loading, Konfliktauflösung, Speichersperre und frische Öffnungssnapshots. Tabübergreifende Serialisierung setzt Web Locks voraus; die Browserfälle belegen das ursprüngliche Rennen innerhalb derselben Seite.
+
+Finale vollständige Headnachweise stehen in [PR #154](https://github.com/shedowe19/ShieldPM/pull/154); historische Zahlen früherer Durchgänge unten bleiben als solche erhalten.
 
 ## Typprüfung des Backends
 

@@ -48,7 +48,7 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 
 		try {
 			if (values.type === INTERNAL_CERT_TYPE.CLIENT) {
-				if (!canIssueClient) throw new Error("no-permission-error");
+				if (!canIssueClient) throw new Error(intl.formatMessage({ id: "no-permission-error" }));
 				await downloadPost(
 					{
 						url: "nginx/certificates/internal/client",

@@ -111,6 +111,10 @@ Die Tests `backend/test/migrations/full-schema.spec.js` und `data-preservation.s
 
 Der SQLite-Import in `backend/lib/db-migrate.js` ist vom Knex-Schema-Upgrade getrennt. Er setzt gleiche ausgeführte Migrationen auf Quelle und Ziel voraus und importiert Anwendungsdaten atomar. Ablauf, Schutz vor Teilimporten und erhaltene Quelldateien sind unter [Datenbank](./datenbank.md#wechsel-von-sqlite-zu-mysql-oder-postgresql) dokumentiert.
 
+## Korrekturen der Gesamtprüfung vom 15. Oktober
+
+Drei additive Migrationen folgen auf dem bisherigen Schema: `20261015000001_add_terminal_host_fingerprint.js`, `20261015000002_widen_analytics_log_bytes.js` und `20261015000003_reserve_active_host_domains.js`. Bestehende Terminalhosts erhalten NULL-Pins und müssen vor Verbindungen ausdrücklich konfiguriert werden. Der BIGINT-Down-Pfad erhält große Werte. Domainkonflikte stoppen vor DDL mit hilfreichen Hostidentitäten; MySQL/MariaDB benötigen TRIGGER-Rechte. Die Reservierungstabelle ist abgeleitet und wird beim SQLite-Datenbanktransfer nicht unabhängig kopiert; Zieltrigger bauen sie aus den Hostdaten auf. Siehe [Umsetzung und Nachweise](../entwicklung/gesamtpruefung-2026-10-15.md).
+
 ## Verwandte Seiten
 
 - [Datenmodell](./datenmodell.md)

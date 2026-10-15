@@ -10,12 +10,12 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 
 ## Wichtige Dateien
 
-- `backend/internal/analytics.js` (14 KB) — Business-Logik
+- `backend/internal/analytics.js` — Business-Logik
 - `backend/lib/proxy-host-domain-events.js` — Benachrichtigung nach persistierten Host-/Domainänderungen
-- `backend/models/analytic_count.js` (1 KB) — Zähler-Modell
-- `backend/models/analytics_logs.js` (1 KB) — Log-Modell
-- `backend/routes/analytics.js` (8 KB) — API-Routen
-- `backend/routes/nginx/analytics.js` (3 KB) — Nginx-Analytics-Routen
+- `backend/models/analytic_count.js` — Zähler-Modell
+- `backend/models/analytics_logs.js` — Log-Modell
+- `backend/routes/analytics.js` — API-Routen
+- `backend/routes/nginx/analytics.js` — Nginx-Analytics-Routen
 - `frontend/src/pages/Analytics/` — UI-Seite
 - `frontend/src/pages/Analytics/index.tsx` — URL-gesteuerte Auswahl von Host und Zeitraum
 - `frontend/src/pages/Analytics/AnalyticsFilters.tsx` — Host- und Zeitraumfilter der Seitenkopfzeile
@@ -71,10 +71,6 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 
 Hostbezogene Abfragen prüfen zuerst die aktuelle serverseitige `analytics:list`-Berechtigung. Ohne globale Analytics-Berechtigung muss `proxy_hosts:get` erfolgreich sein und der Host dem aktuellen Benutzer gehören, sofern dieser kein aktuell berechtigter Administrator ist. Eine alte Admin-Rolle aus dem JWT ersetzt keine aktuelle Berechtigungsprüfung. Unerwartete Datenbank- oder Berechtigungsfehler lösen keinen schwächeren Fallback aus.
 
-## Bestätigte offene Grenzen
-
-Die [Gesamtprüfung vom 15. Oktober](../entwicklung/gesamtpruefung-2026-10-15.md) bestätigt drei offene Grenzen: Ein nach Beginn eines Flushs entstandener Folgepuffer wird bei Stop nicht zuverlässig geschrieben; die Detailspalte `analytics_logs.bytes` überläuft auf PostgreSQL bei mehr als 2 GiB; die UI-Hostauswahl bindet globale Analytics-Rechte fälschlich an die Proxy-Verwaltungsliste. Diese Nachweise ändern die oben beschriebenen Berechtigungsverträge nicht und sind noch nicht behoben.
-
 ## Abhängigkeiten
 
 - `recharts` — Chart-Bibliothek im Frontend
@@ -82,6 +78,10 @@ Die [Gesamtprüfung vom 15. Oktober](../entwicklung/gesamtpruefung-2026-10-15.md
 - `topojson-client` — Umwandlung der gebündelten Länder-Topologie in GeoJSON-Features
 - `world-atlas` — lokal mitgelieferte 110m-Länder-Topologie für die Weltkarte
 - GoAccess (optional, externe Binary)
+
+## Korrekturen der Gesamtprüfung vom 15. Oktober
+
+Beim Stop werden neue Eingaben gesperrt, laufende Flushes abgewartet und Folgepuffer anschließend geschrieben. Initialisierung und Neustart beachten die aktuelle Generation. `analytics_logs.bytes` wird additiv auf BIGINT erweitert; der Down-Pfad verengt gültige große Werte nicht wieder. Ingestion akzeptiert nur nichtnegative sichere JavaScript-Ganzzahlen; ungültige Bytewerte werden als null Byte behandelt, In-Memory-Summen auf `Number.MAX_SAFE_INTEGER` begrenzt. `GET /api/analytics/hosts` liefert nur `id` und `domain_names`: globale Analytics-Rechte erlauben alle aktiven Hosts, ansonsten gilt der bestehende Eigenhost-Fallback. Die UI verwendet diese Liste ohne zusätzliche Proxy-Verwaltungsrechte. Siehe [Umsetzung und Nachweise](../entwicklung/gesamtpruefung-2026-10-15.md).
 
 ## Offene Fragen
 

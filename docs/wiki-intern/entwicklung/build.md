@@ -170,6 +170,10 @@ Die aktuelle Version wird in `.version` gespeichert (Plain Text, z.B. `4.4.1` oh
 | OAuth2-Proxy Binary | `/usr/local/bin/oauth2-proxy` | SSO-Proxy              |
 | rootfs-Overlay      | `/` (im Container)            | System-Konfiguration   |
 
+## Korrekturen der Gesamtprüfung vom 15. Oktober
+
+Reguläre Docker-Builds laden eindeutige Run-/Attempt-Kandidaten lokal und prüfen GeoIP, Root-/UID-1000-Runtime sowie native Installer-/LXC-Exporter vor einem Kandidatenpush. Erst ein erfolgreicher Build beider Architekturen liefert streng validierte GHCR-Digestartefakte für die Promotion öffentlicher Architektur-/Multiarch-Tags. PRs veröffentlichen weiterhin nichts; Develop-Releases und Publishing-Serialisierung bleiben erhalten. Backend-/Frontend-Audits auf high/critical sind jetzt blockierend. Docker- und native Laufzeitpakete schließen Backendtests und Fixtures aus; Runtime-Smokes prüfen benötigte Skripte und deren Abwesenheit. Siehe [Umsetzung und Nachweise](./gesamtpruefung-2026-10-15.md).
+
 ## Verwandte Seiten
 
 - [Deployment](./deployment.md)

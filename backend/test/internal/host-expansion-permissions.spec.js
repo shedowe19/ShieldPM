@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ db: null, bulk: vi.fn(), generate: vi.fn() }));
+const state = vi.hoisted(() => ({ db: null, bulk: vi.fn(), bulkLocked: vi.fn(), generate: vi.fn() }));
 vi.mock("../../db.js", async () => {
 	const { default: knex } = await import("knex");
 	state.db = knex({ client: "better-sqlite3", connection: { filename: ":memory:" }, useNullAsDefault: true });
@@ -28,6 +28,7 @@ vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: vi.fn()
 vi.mock("../../internal/nginx.js", () => ({
 	default: {
 		bulkGenerateConfigs: state.bulk,
+		bulkGenerateConfigGroupsLocked: state.bulkLocked,
 		generateConfig: state.generate,
 		withConfigurationLock: (callback) => callback(),
 		backupConfig: vi.fn(),
@@ -45,6 +46,7 @@ vi.mock("../../internal/upload-relay.js", () => ({ validateRelayConfigForHost: v
 import accessLists from "../../internal/access-list.js";
 import certificates from "../../internal/certificate.js";
 import Access from "../../lib/access.js";
+import ProxyHost from "../../models/proxy_host.js";
 
 const relations = {
 	proxy_hosts: "proxy_host",
@@ -223,7 +225,12 @@ describe("public host expansions respect real capability schemas and ownership",
 	it("detaches and rebuilds foreign hosts when an ACL owner cannot view proxy hosts", async () => {
 		vi.spyOn(fs.promises, "unlink").mockResolvedValue(undefined);
 		await accessLists.delete(await currentAccess("user", { proxy_hosts: "hidden" }), { id: 1 });
-		expect(state.bulk.mock.calls[0][2].map((host) => host.id)).toEqual([11, 12]);
+		expect(state.bulk).not.toHaveBeenCalled();
+		expect(state.bulkLocked).toHaveBeenCalledExactlyOnceWith(
+			[{ model: ProxyHost, hostType: "proxy_host", hosts: expect.any(Array) }],
+			{ throwOnError: true, reload: true },
+		);
+		expect(state.bulkLocked.mock.calls[0][0][0].hosts.map((host) => host.id)).toEqual([11, 12]);
 		expect(await state.db("proxy_host").select("id", "access_list_id").where("is_deleted", 0)).toEqual([
 			{ id: 11, access_list_id: 0 },
 			{ id: 12, access_list_id: 0 },

@@ -65,6 +65,7 @@ it("verifies BroadcastChannel identity updates when localStorage is unavailable"
 		channel.onmessage?.({
 			data: JSON.stringify({
 				revision: "other-tab",
+				sequence: 2,
 				expires: Date.now() + 900_000,
 				userId: 2,
 				impersonating: true,
@@ -75,6 +76,13 @@ it("verifies BroadcastChannel identity updates when localStorage is unavailable"
 	expect(AuthStore.userId).toBe(2);
 	expect(AuthStore.isImpersonating).toBe(true);
 	expect(client.getQueryData(["private"])).toBeUndefined();
+	await act(async () =>
+		channel.onmessage?.({
+			data: JSON.stringify({ revision: "older-logout", sequence: 1, expires: null, impersonating: false }),
+		}),
+	);
+	expect(AuthStore.userId).toBe(2);
+	expect(screen.getByText("signed in")).toBeInTheDocument();
 	const before = vi.mocked(fetch).mock.calls.length;
 	await act(async () => {
 		await mocks.useIntervalWhen.mock.lastCall?.[0]();
@@ -82,7 +90,13 @@ it("verifies BroadcastChannel identity updates when localStorage is unavailable"
 	expect(fetch).toHaveBeenCalledTimes(before);
 	await act(async () =>
 		channel.onmessage?.({
-			data: JSON.stringify({ revision: "expired", expires: Date.now() - 1, userId: 2, impersonating: true }),
+			data: JSON.stringify({
+				revision: "expired",
+				sequence: 3,
+				expires: Date.now() - 1,
+				userId: 2,
+				impersonating: true,
+			}),
 		}),
 	);
 	expect(screen.getByText("signed out")).toBeInTheDocument();

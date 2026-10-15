@@ -6,11 +6,11 @@ Erneute Prüfung des aktuellen `develop`: Commit `32a3a9d5dde3182dfc10d3700366d5
 
 Die Inventur umfasst **1.822 versionierte Dateien**: 749 Backend-, 812 Frontend-, 35 Skript-, 32 Rootfs-, 15 Workflow-/GitHub-, 146 Dokumentations- und elf Scannerdateien sowie Rootdateien. Sechs unabhängige Reviews untersuchten Authentifizierung, Integrationen und Konfigurationskonsistenz, Datenbanken und Laufzeit, Frontend, Installation/Deployment sowie Tests und Scanner. Zentrale Funktionsketten und Randfälle wurden vertieft gelesen und mit isolierten Nachweisen geprüft; keine vollständige manuelle Lektüre jeder Dateizeile wird behauptet.
 
-Ergebnis: **18 bestätigte Defektgruppen**, davon **zwei mit hoher und 16 mit mittlerer Priorität**. Zehn ältere Produktbefunde bestehen weiterhin; acht Gruppen wurden in diesem Durchgang neu bestätigt. Die zehn älteren Punkte waren nicht Bestandteil des Testfixes PR #152. Der frühere Dockerlint-Fehler ist durch diesen PR behoben und wird hier nicht erneut als offen gezählt.
+Der Ausgangsscan bestätigte **18 Defektgruppen**, davon **zwei mit hoher und 16 mit mittlerer Priorität**. Zehn ältere Produktbefunde bestanden auf dem geprüften Merge weiterhin; acht Gruppen wurden neu bestätigt. Die zehn älteren Punkte waren nicht Bestandteil des Testfixes PR #152. Der frühere Dockerlint-Fehler war durch diesen PR bereits behoben.
 
-Dieser Durchgang ändert ausschließlich Dokumentation. Es wurden keine Produktfunktionen, Tests, Abhängigkeiten oder Versionsdateien geändert und keine Images, Releases oder Produktivinstallationen ausgelöst. Vorhandene Jobs mit `contents: read` wurden erneut ausgeführt.
+Nach der Freigabe zur Umsetzung korrigiert [PR #154](https://github.com/shedowe19/ShieldPM/pull/154) alle 18 Gruppen einschließlich Regressionen und ergänzender Verbesserungen. Die Version bleibt 4.4.1. Der PR führt Tests und Imageprüfungen aus; er veröffentlicht keine Images oder Releases und verändert keine Produktivinstallation. Die nachfolgenden ursprünglichen Befunde dokumentieren den historischen Ausgangszustand; den neuen Vertrag beschreibt die Umsetzungstabelle.
 
-## Validierung und Grenzen
+## Validierung des Ausgangsstands und Grenzen
 
 | Prüfung                                                           | Ergebnis dieses Durchgangs                                                                                                                                                                                                                                    |
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -34,7 +34,7 @@ CI-Nachweise: [Quality](https://github.com/shedowe19/ShieldPM/actions/runs/38470
 
 Nachweise verwenden aktuelle Originalfunktionen sowie je nach Fall echte SQLite-/eingebettete PostgreSQL-Engines, temporäre Dateien, HTTP-/WebSocket-Verbindungen und kontrollierte äußere Abhängigkeiten. Es wurden keine fremden Systeme geprüft. Ein zusätzlicher vertiefender Sicherheitsprüfschritt wurde automatisch blockiert; dieser Schritt wird nicht als abgeschlossen ausgewiesen. Insbesondere bleibt eine weitergehende Prüfung der AI-Argumentvalidierung unbestätigt. Die bereits belegten Befunde wurden davon getrennt bewertet.
 
-## Hohe Priorität
+## Ausgangsbefunde mit hoher Priorität
 
 ### A01 — Globale mTLS-Zugangsdaten über gewöhnliche Zertifikatsrechte
 
@@ -52,7 +52,7 @@ Die SSH-Verbindung erhält entschlüsselte Zugangsdaten, aber weder einen gespei
 
 Der aktuelle Original-Verbindungsablauf akzeptierte in einer isolierten lokalen Probe einen neu erzeugten, unbekannten Server-Schlüssel und führte die Passwortanmeldung aus. Nur Hostdaten, Entschlüsselung und der interne Nginx-Handoff waren Fixtures. **Korrektur:** Bestätigten SHA-256-Fingerprint je Terminalziel speichern, strikt prüfen und einen ausdrücklichen Ablauf für erstmaliges Vertrauen und Schlüsselwechsel anbieten.
 
-## Mittlere Priorität
+## Ausgangsbefunde mit mittlerer Priorität
 
 ### A03 — Legacy-ACL-Metadaten enthalten weiterhin SSO-Secrets in Hostantworten
 
@@ -154,24 +154,60 @@ Der PostgreSQL-Migrationstest umfasst PGlite-Start, Migrationen und Cleanup inne
 
 Der frische CI-Lauf überschritt das gleiche äußere Limit im Smoke-Endpoint-Test. Dieser bündelt drei echte Childprocess-Szenarien mit eigenen Readinessfristen; das Cleanup kann je lebender Fixture zusätzlich bis zu drei Sekunden warten. Isoliert bestehen unverändert alle sieben Tests. **Korrektur:** Slow-Integrationstimeouts ausdrücklich und begrenzt festlegen; Childprocess-Fälle trennen und Fixture-Signale sauber behandeln. Assertions beibehalten. Ein späterer erfolgreicher Retry beseitigt diese Nachweise nicht.
 
-## Weitere Verbesserungen und unbestätigte Punkte
+## Umsetzung in PR #154
 
-- **P3, bestehend:** `IntlProvider.tsx:82–98,115` und `ThemeContext.tsx:37,47` greifen ungeschützt auf `localStorage` zu. Ein modellierter `SecurityError` beendet die Localeinitialisierung vor dem React-Mount. Browserrichtlinien und Speicherfehler mit In-Memory-Fallback behandeln; kein vollständiger Browsernachweis dieses Falls.
-- **P3, CI-Policy:** Die Backend-/Frontend-Audits im Quality-Workflow sind weiterhin `continue-on-error: true`. Neue hohe/kritische Paketbefunde würden den Qualitätsjob nicht blockieren. Dies ist eine überprüfbare Policyentscheidung, kein Nachweis einer aktuellen verwundbaren Abhängigkeit.
-- **P3, bestehend:** Workflowrechte je Job reduzieren und den für PRs unerreichbaren Kommentarzweig bereinigen. Notwendige Registry-/Release-Rechte erhalten.
-- **P3, bestehend:** Backend-Test-/Fixturedateien werden ins Runtime-Payload kopiert. Ein Ausschluss könnte die Pakete verkleinern; keine gemessene CPU-Einsparung behauptet.
-- **Unbestätigt:** DefaultSite-/GitOps-Formulare könnten gecachte Öffnungswerte behalten. Ohne gemountete Regression nicht als Defektgruppe gezählt.
-- **Unbestätigt:** Eine weitergehende Prüfung der AI-Argumentvalidierung blieb automatisch blockiert und ist nicht abgeschlossen.
-- **Unbestätigt:** Browserabhängige Origin-/WebSocket-Verträge benötigen einen gezielten echten Browsernachweis; kein zusätzlicher Befund gezählt.
-- Bereits dokumentierte Grenzen wie WireGuards festes `eth0`, eingeschränkte Volltunnel-/IPv6-Verträge und externe OpenAppSec-Betriebs-TODOs werden nicht als neue Defekte umetikettiert.
+Alle 18 Ausgangsgruppen sind im PR korrigiert. Die Nachweise prüfen den jeweiligen Vertrag; sie sind keine Zusicherung, dass jede externe Integration oder jeder Browser vollständig abgedeckt ist.
 
-## Empfohlene Reihenfolge
+| Gruppe | Implementierter Vertrag und Regression                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A01    | Neues `certificates:create-client` prüft die aktuellen Administratorrollen aus der Datenbank, auch im vorhandenen AI-Ausstellungspfad. Normale Serverzertifikate behalten ihre bisherigen Rechte. Echte HTTP-/JWT-/SQLite-Tests sichern erlaubte und verbotene Ausstellungen.                                                                                                                                                                         |
+| A02    | `terminal_host_fingerprint` speichert einen ausdrücklich bestätigten OpenSSH-SHA256-Pin. Ein fehlender Pin blockiert vor Entschlüsselung/Verbindung, ein falscher Pin vor SSH-Authentifizierung. Migration, Schema, Formular und tatsächliche lokale SSH-Handshakes sind geprüft.                                                                                                                                                                     |
+| A03    | Hostantworten verwenden dieselbe normalisierende Credential-Redaktion wie direkte ACL-Antworten, einschließlich mehrfach kodierter Legacy-Metadaten. Regressionen erhalten konfigurierte Indikatoren und entfernen Secrets.                                                                                                                                                                                                                           |
+| A04    | Cookieverändernde Auth-Aufträge werden bis zum vollständigen HTTP-Antwortabschluss serialisiert. Web Locks erweitern dies auf unterstützte Tabs; Storage/BroadcastChannel übertragen ausschließlich Identitätsmetadaten. Fremde oder wiederhergestellte Identitäten werden mit `/users/me` bestätigt. Zwei echte Chromiumfälle prüfen verspätete HttpOnly-Refreshcookies vor Impersonation beziehungsweise Logout und die Identität der Folgeanfrage. |
+| A05    | ACL-Detach, strikte Nginx-Aktivierung und Bereinigung laufen unter derselben Queue. Fehler stellen DB, Dateien und aktive Listener wieder her; Auth-Dateien/OAuth2 werden erst nach Erfolg entfernt. Reale temporäre Dateien und DB-Rollbackpfade prüfen dies einschließlich fehlgeschlagener Statusschreibvorgänge und konkurrierender ACL-Neuzuordnung.                                                                                             |
+| A06    | Docker-/GitOps-Finalreloads und GitOps-Pruning verwenden die gemeinsame Nginx-Queue. Locked-Bulkhelfer vermeiden verschachtelte Sperren; Konfigurationsbackups bleiben bis zum Statuscommit erhalten. Überlappende Render-/Prune-/Reloadfälle sind geprüft.                                                                                                                                                                                           |
+| A07    | Ein atomar mit dem Root gespeicherter privater Aktivierungsmarker bleibt nach fehlgeschlagenem Nginx-Configure bestehen. Derselbe Checkout wird beim nächsten Sync erneut aktiviert; erst Erfolg entfernt den Marker. Antwort und Regressionen unterscheiden gespeicherten und tatsächlich aktivierten Root.                                                                                                                                          |
+| A08    | Analytics stoppt Eingaben, leert die Parsequeue, wartet auf den aktiven Snapshotflush und schreibt anschließend den Folgepuffer. Verzögerte Initialisierung, Stop/Neustart und Flushüberlappung sind geprüft.                                                                                                                                                                                                                                         |
+| A09    | NULL-Fälligkeiten stehen ausdrücklich vor zeitlich fälligen Monitoren; eine eigene Sortierspalte erhält die Reihenfolge über Knex-Dialekte. Tatsächliche SQLite-/PostgreSQL-Abfragen prüfen begrenzte Batches und Starvation.                                                                                                                                                                                                                         |
+| A10    | Installer und Updater teilen einen Literalparser ohne Shellausführung. Mehrzeilige/CRLF-Werte bleiben erhalten; Updates schreiben atomar mit Modus 0600. Recovery folgt tatsächlicher JSON-Konfiguration vor vollständiger Env-Providerkonfiguration vor SQLite und berücksichtigt eigene Datenpfade. Python- und echte temporäre SQLite-Prüfungen sichern dies.                                                                                      |
+| A11    | Run-/Attempt-spezifische Kandidaten durchlaufen GeoIP, Root-/UID1000-Runtime sowie Installer-/LXC-Export vor dem Push. Öffentliche Tags werden erst aus den beiden validierten, auf GHCR/Repository und SHA256 geprüften Digests erzeugt. PR-Builds pushen nicht; ausführbare Workflowverträge und native Architekturjobs prüfen dies.                                                                                                                |
+| A12    | Additive BIGINT-Migration für Detailbytes, begrenzte nichtnegative sichere JS-Ganzzahlen bei der Eingabe und überlaufsichere Puffersummen. SQLite, PostgreSQL und MariaDB prüfen große Downloads. Down behält BIGINT bewusst, damit gültige Daten über 2 GiB erhalten bleiben.                                                                                                                                                                        |
+| A13    | Terminalstop sperrt neue Upgrades und schließt SSH/WebSockets vor HTTP-Close. Nach einer Sekunde werden verbleibende WebSockets beendet; Stop/Neustart ist idempotent. Echte lokale HTTP-/WebSocket-Prüfungen sichern den Abschluss.                                                                                                                                                                                                                  |
+| A14    | Datenbanktrigger reservieren aktive Domains typenübergreifend eindeutig und pflegen Soft-Delete, Restore und physisches Löschen. GitOps-Graphen schreiben auf allen drei Engines transaktional. SQLite/PGlite prüfen tatsächliche Constraints und Rollbacks; MariaDB-CI prüft mehrere echte Verbindungen. Historische Konflikte führen vor DDL zu einer Diagnose mit Domain und betroffenen Hosts.                                                    |
+| A15    | Relay registriert Abbruchcontroller vor asynchroner Vorbereitung, prüft den Lebenszyklus vor Dispatch/Recovery und sperrt neue Queuearbeit nach Stop. Lokaler Origin und echte Chunkdateien sichern, dass kein verspäteter Transfer startet. Persistierte Uploads bleiben für den nächsten Start erhalten.                                                                                                                                            |
+| A16    | `GET /api/analytics/hosts` liefert nur `id` und `domain_names`, bei globalen Analytics-Rechten alle aktiven Hosts und sonst den bestehenden Own-Host-Fallback. Die UI verwendet diese Liste; Tests prüfen Rechte ohne zusätzliche Proxy-Verwaltungsberechtigung.                                                                                                                                                                                      |
+| A17    | Eigene Sync-Ergebnisse aktualisieren ausschließlich unberührte Root-/Scheme-Felder. Während Sync ist Speichern auch im Submitpfad gesperrt; konkurrierende Änderungen sind sichtbar auflösbare Konflikte. Gemountete Dialogtests erhalten andere Entwurfsfelder.                                                                                                                                                                                      |
+| A18    | PGlite-Integrationstests verwenden explizite begrenzte Budgets; die drei Childprocess-Smokes sind einzeln begrenzt und die Fixture behandelt SIGQUIT mit geprüftem regulärem Exit. Zusätzlich erhalten die echte große GeoIP-Datei und der TLS-Migrationstest angemessene lokale Budgets. Assertions und Produktionszeitlimits bleiben erhalten.                                                                                                      |
 
-Zuerst A01/A02 absichern und A18 stabilisieren, damit weitere Änderungen zuverlässig geprüft werden. Danach die Identitäts-/Antwortgrenzen A03/A04, Konfigurations-/Aktivierungskonsistenz A05–A07/A17 sowie Daten-/Shutdownpfade A08–A10/A12–A15 bearbeiten. A11 benötigt den bereits vorhandenen Kandidaten-/Digestvertrag; A16 braucht eine zum Backend passende Hostauswahl. Alle Korrekturen benötigen gezielte Regressionen und eine erneute Gesamtvalidierung.
+### Ergänzende Verbesserungen
+
+- Locale-/Theme-Präferenzen überstehen blockiertes `localStorage` mit einem In-Memory-Fallback; entsprechende React-Regressionen sind ergänzt.
+- Hohe/kritische Backend-/Frontend-Auditbefunde blockieren den Qualityjob. Workflowrechte sind je Job reduziert, ein unerreichbarer PR-Kommentarzweig entfällt.
+- Backend-Test-/Fixturedateien fehlen im Docker-/Native-Runtimepayload. Die tatsächlichen Runtime-Smokes prüfen sowohl diesen Ausschluss als auch notwendige Startskripte und den Env-Parser. Eine CPU-Einsparung wird nicht behauptet.
+- Der zunächst unbestätigte DefaultSite-/GitOps-Formularfall ist mit neun gemounteten QueryClient-Regressionen bestätigt und korrigiert: frische Öffnungsdaten, Fehler/Retry und erhaltene laufende Entwürfe.
+
+### Validierung der Korrekturen
+
+Die vollständige PR-CI ist in [PR #154](https://github.com/shedowe19/ShieldPM/pull/154) an den jeweiligen Head gebunden. Abschließende Zahlen werden in der PR-Beschreibung dokumentiert, damit ein späterer Source-/Dokumentationscommit nicht irrtümlich durch Ergebnisse seines Vorgängers als geprüft gilt. Bereits erfolgreich auf dem integrierten Zwischenstand: neun echte Chromiumtests, vier MariaDB-Suiten mit vier Tests, 73 Scannerintegrationstests ohne neue Scannerfehler sowie 172 Infrastrukturtests mit zwei erwarteten CI-Skips. Ein veralteter Nginx-Testmock aus diesem Zwischenstand wurde korrigiert; sein fehlgeschlagener Qualityjob gilt nicht als finaler Erfolgsnachweis.
+
+Lokal bestehen Backendtypen und 172 Infrastrukturtests mit 21 ausgewiesenen Umgebungsskips. Gezielte Regressionen prüfen die Originalfunktionen und die genannten tatsächlichen lokalen Engines/Verbindungen. Die nativen Images werden auf x86_64 und ARM64 geprüft; Veröffentlichung, Release und Deployment sind nicht Teil des PRs.
+
+### Upgradehinweise und verbleibende Grenzen
+
+- Bestehende Terminalziele erhalten zunächst keinen Pin. Vor der nächsten Verbindung muss ein Administrator den Hostfingerprint über einen vertrauenswürdigen Weg prüfen und speichern; es gibt kein automatisches Erstvertrauen.
+- Bereits ausgestellte Clientzertifikate und die vorhandene CA werden nicht automatisch widerrufen oder rotiert. Die neue Administratorgrenze betrifft die künftige Ausstellung; frühere Ausstellungen müssen bei Bedarf gesondert betrieblich geprüft werden.
+- Domainreservierungen benötigen auf MySQL/MariaDB `TRIGGER`-Rechte und transaktionale InnoDB-Tabellen. Historische aktive Doppelbelegungen müssen anhand der nichtdestruktiven Migrationsdiagnose bereinigt werden. Die Normalisierung ist für ASCII/Punycode geprüft; identische SQL-Unicode-Kleinschreibung oder semantische Gleichheit aller Nginx-Regexnamen über verschiedene Engines wird nicht behauptet.
+- Ohne Web Locks ist Auth-Serialisierung auf dieselbe Seite begrenzt. Storage/BroadcastChannel dienen zusätzlich dem UI-Abgleich; bei vollständig gesperrtem Storage gibt es über einen Reload hinweg keine persistente Impersonation-Metadatenkontinuität. Metadaten enthalten keine JWTs, Refresh-Tokens oder CSRF-Secrets.
+- Benutzerdefinierte DB-Provider ausschließlich in zusätzlichen Systemd-Drop-ins werden weiterhin nicht automatisch aus diesen Dateien erkannt. Der reguläre Installer verwaltet die Anwendungsumgebung selbst.
+- Die weitergehende AI-Argumentprüfung blieb automatisch blockiert und unbestätigt. Allgemeine Origin-/WebSocket-Browserverträge sowie bestehende WireGuard-/OpenAppSec-Betriebsfragen sind keine neu abgeschlossenen Defektgruppen.
 
 ## Wiki-Prüfung
 
-Geprüft wurden bestehende Audit-/Test-/Build-/Deploymentseiten, Frontend-Internas, Auth/PKI/Terminal, Analytics/Monitor, GitOps/Git-Deploy, Nginx, Upload-Relay, Rootfs und offene Fragen. Aktualisiert werden der Index, die zentrale TODO-Liste und die betroffenen Kurzverträge für Terminal/Rootfs/Analytics. Diese Seite bündelt die Nachweise, statt dieselben Details in jedem Modul zu duplizieren. Es wurden keine öffentlichen Wikiseiten oder externen Pages angelegt.
+- Geprüfte Wiki-Seiten: vorhandene Audit-/Test-/Build-/Deploymentseiten, Frontend-Internas, Auth/PKI/Terminal, Analytics/Monitor, GitOps/Git-Deploy, Nginx, ACLs, Proxy Hosts, Migrationen, Upload-Relay, Rootfs und offene Fragen.
+- Aktualisierte Wiki-Seiten: dieser Bericht, Index, offene Fragen, Tests, die betroffenen Modul-/Betriebsseiten, die öffentliche PKI-Anleitung und `GEMINI.md`.
+- Neu erstellte Wiki-Seiten: keine zusätzliche Seite in der Umsetzungsphase; dieser vorhandene Scanbericht enthält die Nachverfolgung.
+- Keine Wiki-Änderung nötig, weil: entfällt; Code-, Schema- und Betriebsverträge haben sich geändert.
+- Offene Wiki-TODOs: verbleibende unbestätigte Prüfungen und bestehende separate Betriebsfragen bleiben ausdrücklich ausgewiesen; die 18 Ausgangsgruppen sind umgesetzt.
 
 ## Verwandte Seiten
 

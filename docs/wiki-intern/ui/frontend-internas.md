@@ -396,6 +396,10 @@ Beinhaltet Hilfsfunktionen für Toast-Benachrichtigungen.
 - `frontend/src/components/Nginx/`: Modale Komponenten für Nginx-Erweiterungen — `CloudflaredTunnelModal.tsx`, `TorOnionModal.tsx`, `WireguardConfigModal.tsx`, `WireguardPeerModal.tsx`.
 - `frontend/src/components/Form/`: Wiederverwendbare Formularfelder — `AccessClientFields.tsx`, `AccessField.tsx`, `BasicAuthFields.tsx`, `DNSProviderFields.tsx`, `DomainNamesField.tsx`, `LocationsFields.tsx`, `NginxConfigField.tsx`, `SSLCertificateField.tsx`, `SSLOptionsFields.tsx`.
 
+## Korrekturen der Gesamtprüfung vom 15. Oktober
+
+Cookieverändernde Auth-POSTs werden bis zum vollständigen Antwortabschluss serialisiert; neue Refreshes warten nicht unkontrolliert hinter einem Identitätswechsel. Browser-Web-Locks ordnen dieselbe Origin zusätzlich tabübergreifend. Storage-/BroadcastChannel-Metadaten informieren andere Tabs, enthalten keine Tokens und werden vor Nutzung serverseitig über die aktuelle Identität geprüft; blockierter Browserspeicher verhindert keine In-Tab-Anmeldung. Locale-/Themepräferenzen haben einen In-Memory-Fallback. Settings-Formulare für DefaultSite und GitOps warten auf einen frischen Öffnungssnapshot und behalten danach lokale Entwürfe. Siehe [Umsetzung und Nachweise](../entwicklung/gesamtpruefung-2026-10-15.md).
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

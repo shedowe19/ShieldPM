@@ -66,6 +66,10 @@ Manueller Sync, Statusabfrage und Konfigurationsänderung laden Hosts innerhalb 
 
 Gespeicherte Polling-Intervalle bleiben in ihrer gewählten Einheit erhalten: `1m` bedeutet eine Minute und `1h` eine Stunde. Erst nach der Umrechnung in Millisekunden gilt die Mindestdauer von zehn Sekunden.
 
+## Korrekturen der Gesamtprüfung vom 15. Oktober
+
+Die erste Rootänderung speichert `git_last_error = Nginx activation pending` gemeinsam mit dem Zielroot. Abgelehnte Aktivierung liefert keinen Erfolg und bleibt für den nächsten Sync/Poll wiederholbar, auch bei bereits gespeichertem Root. Erst erfolgreiche Aktivierung entfernt den Pendingstatus. Die Erfolgsantwort enthält den maßgeblichen `forward_host` und `forward_scheme`. Der offene Dialog gleicht diese eigenen Resultate gezielt ab, sperrt Save während Sync und zeigt einen Konflikt bei gleichzeitig manuell verändertem Root, ohne andere Entwurfsfelder zurückzusetzen. Siehe [Umsetzung und Nachweise](../entwicklung/gesamtpruefung-2026-10-15.md).
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

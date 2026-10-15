@@ -42,6 +42,10 @@ Die Root-CA und ihre Schlüssel werden im persistenten `/data/`-Volume gespeiche
 - Node-Crypto (`node:crypto`) für klassische Algorithmen
 - OpenSSL CLI im Backend-Image für ECDSA-Zertifikatserstellung und PKCS#12-Export
 
+## Korrekturen der Gesamtprüfung vom 15. Oktober
+
+Die globale Client-Ausstellung erfordert die neue Admin-only-Capability `certificates:create-client`; HTTP und der vorhandene AI-Aufruf verwenden dieselbe aktuelle Datenbankberechtigung. Gewöhnliche Zertifikatsverwaltung erlaubt weiterhin eigene Serverzertifikate, jedoch keine neuen global gültigen Clientidentitäten. Die vorhandene CA und bereits ausgestellte Clientzertifikate bleiben erhalten. Dieser Rechtefix widerruft keine früher ausgegebenen Identitäten; gegebenenfalls muss deren weiterer Einsatz gesondert geprüft werden. Siehe [Umsetzung und Nachweise](../entwicklung/gesamtpruefung-2026-10-15.md).
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
