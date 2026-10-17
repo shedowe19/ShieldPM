@@ -1,0 +1,176 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"host_id",
+		"daily",
+		"latency",
+		"mute",
+		"current"
+	],
+	"properties": {
+		"host_id": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 9007199254740991
+		},
+		"daily": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": [
+					"day",
+					"up_ms",
+					"down_ms",
+					"unknown_ms",
+					"checks",
+					"coverage_percent",
+					"uptime_percent"
+				],
+				"properties": {
+					"day": {
+						"type": "string",
+						"format": "date"
+					},
+					"up_ms": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"down_ms": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"unknown_ms": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"checks": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"coverage_percent": {
+						"type": "number"
+					},
+					"uptime_percent": {
+						"type": [
+							"number",
+							"null"
+						]
+					}
+				}
+			},
+			"maxItems": 365
+		},
+		"latency": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": [
+					"bucket",
+					"samples",
+					"avg_ms",
+					"min_ms",
+					"max_ms"
+				],
+				"properties": {
+					"bucket": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"samples": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"avg_ms": {
+						"type": "number"
+					},
+					"min_ms": {
+						"type": "number"
+					},
+					"max_ms": {
+						"type": "number"
+					}
+				}
+			},
+			"maxItems": 1441
+		},
+		"mute": {
+			"oneOf": [
+				{
+					"type": "null"
+				},
+				{
+					"type": "object",
+					"additionalProperties": false,
+					"required": [
+						"host_id",
+						"starts_at",
+						"ends_at",
+						"reason"
+					],
+					"properties": {
+						"host_id": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 9007199254740991
+						},
+						"starts_at": {
+							"type": "string",
+							"format": "date-time"
+						},
+						"ends_at": {
+							"type": "string",
+							"format": "date-time"
+						},
+						"reason": {
+							"type": "string",
+							"maxLength": 255
+						}
+					}
+				}
+			]
+		},
+		"current": {
+			"oneOf": [
+				{
+					"type": "null"
+				},
+				{
+					"type": "object",
+					"additionalProperties": false,
+					"required": [
+						"host_id",
+						"checked_at",
+						"state",
+						"interval_seconds"
+					],
+					"properties": {
+						"host_id": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 9007199254740991
+						},
+						"checked_at": {
+							"type": "string",
+							"format": "date-time"
+						},
+						"state": {
+							"enum": [
+								"up",
+								"down",
+								"unknown"
+							]
+						},
+						"interval_seconds": {
+							"type": "integer",
+							"minimum": 15,
+							"maximum": 3600
+						}
+					}
+				}
+			]
+		}
+	}
+}

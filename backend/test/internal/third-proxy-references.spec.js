@@ -30,6 +30,8 @@ vi.mock("../../models/redirection_host.js", () => ({ default: { query: mocks.que
 vi.mock("../../models/stream.js", () => ({ default: { query: mocks.query } }));
 vi.mock("../../models/access_list.js", () => ({ default: {} }));
 
+vi.mock("../../internal/host-revisions.js", () => ({ default: { record: vi.fn() } }));
+
 import dead from "../../internal/dead-host.js";
 import host from "../../internal/host.js";
 import proxy from "../../internal/proxy-host.js";

@@ -19,7 +19,7 @@ describe("Audit object type labels", () => {
 		const calls = sources.flatMap((source) =>
 			Array.from(
 				source.matchAll(
-					/\binternalAuditLog\.add\([\s\S]*?\{\s*action:\s*"([^"]+)",\s*object_type:\s*"([^"]+)"/g,
+					/\binternalAuditLog\.add\([^,]+,\s*\{\s*(?:action:\s*([^,\n]+)|action)\s*,\s*object_type:\s*"([^"]+)"/g,
 				),
 			),
 		);
@@ -29,9 +29,28 @@ describe("Audit object type labels", () => {
 		);
 		expect(callCount).toBeGreaterThan(0);
 		expect(calls).toHaveLength(callCount);
-		for (const [, action, objectType] of calls) {
-			expect(Object.values(AUDIT_LOG_ACTION), `Backend action ${action}`).toContain(action);
+		for (const [, expression, objectType] of calls) {
 			expect(isKnownAuditLogObjectType(objectType), `Backend object type ${objectType}`).toBe(true);
+			if (expression) {
+				// A literal or a conditional with two literal branches stays statically exhaustive.
+				expect(expression).toMatch(/^(?:"[^"]+"|[\w.]+\s*\?\s*"[^"]+"\s*:\s*"[^"]+")$/);
+				for (const [, action] of expression.matchAll(/"([^"]+)"/g))
+					expect(Object.values(AUDIT_LOG_ACTION), `Backend action ${action}`).toContain(action);
+			} else {
+				// The backup wrapper forwards its action; validate every wrapper call below.
+				expect(objectType).toBe("setting");
+			}
+		}
+		const wrappers = sources.filter((source) => /\binternalAuditLog\.add\([^,]+,\s*\{\s*action\s*,/.test(source));
+		for (const source of wrappers) {
+			expect(source).toMatch(
+				/const audit = \(access, action, operation, id, details = \{\}\) => internalAuditLog\.add/,
+			);
+			const invocations = [...source.matchAll(/\baudit\([^;\n]*?,\s*"([^"]+)",\s*"[^"]+"/g)];
+			expect(invocations.length).toBeGreaterThan(0);
+			expect(invocations).toHaveLength([...source.matchAll(/\baudit\(/g)].length);
+			for (const [, action] of invocations)
+				expect(Object.values(AUDIT_LOG_ACTION), `Backend wrapper action ${action}`).toContain(action);
 		}
 	});
 

@@ -1,0 +1,71 @@
+{
+	"type": "array",
+	"maxItems": 8,
+	"items": {
+		"type": "object",
+		"additionalProperties": false,
+		"required": [
+			"id",
+			"kind",
+			"enabled",
+			"failure_mode",
+			"config"
+		],
+		"properties": {
+			"id": {
+				"type": "string",
+				"pattern": "^[a-zA-Z0-9_-]{1,48}$"
+			},
+			"kind": {
+				"enum": [
+					"api_key",
+					"request_header",
+					"response_header",
+					"local_response"
+				]
+			},
+			"enabled": {
+				"type": "boolean"
+			},
+			"failure_mode": {
+				"enum": [
+					"closed",
+					"open"
+				]
+			},
+			"config": {
+				"type": "object",
+				"additionalProperties": false,
+				"properties": {
+					"header": {
+						"type": "string",
+						"pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]{1,128}$"
+					},
+					"value": {
+						"type": "string",
+						"maxLength": 4096,
+						"pattern": "^[^\\r\\n\\u0000]*$"
+					},
+					"has_secret": {
+						"type": "boolean"
+					},
+					"operation": {
+						"enum": [
+							"set",
+							"remove"
+						]
+					},
+					"status": {
+						"type": "integer",
+						"minimum": 200,
+						"maximum": 599
+					},
+					"body": {
+						"type": "string",
+						"maxLength": 4096
+					}
+				}
+			}
+		}
+	}
+}

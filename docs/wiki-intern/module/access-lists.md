@@ -74,16 +74,6 @@ Ausgelassene oder leere SSO-Secrets erhalten beim Update den Wert des innerhalb 
 
 Der Dialog initialisiert die drei Secretfelder leer und erkennt anhand von `credentials_configured`, welche Pflichtwerte bereits hinterlegt sind. Er verlangt bei unverändertem SSO keine erneute Eingabe und sendet nur ausdrücklich eingegebene Ersatzwerte. Die vorhandene Öffnungsaktualisierung bleibt Voraussetzung für das Bearbeitungsformular; spätere Cacheänderungen ersetzen den geöffneten Entwurf nicht. `backend/test/routes/service-credentials.spec.js`, `AccessListModal.test.tsx` und `AccessListModalFormValues.test.ts` prüfen diese Verträge.
 
-## Verwandte Seiten
-
-- [Proxy-Host](./proxy-host.md)
-- [Zertifikate](./zertifikate.md)
-- [Interne PKI](./pki.md)
-- [IP-Ranges](./ip-ranges.md)
-- [Benutzer & Auth](./benutzer-auth.md)
-- [OAuth2-Proxy (SSO)](./oauth2-proxy.md)
-- [Modulübersicht](./README.md)
-
 ## Zweite Prüfung: Erstellung, Dateien und Expansionen
 
 Auch beim Erstellen werden Liste, Credentials und Clientregeln in einer Transaktion geschrieben. `items` ist optional, etwa für reine IP- oder SSO-Listen. Als bereits gehasht gelten nur vollständige bcrypt-Hashes; ein Passwort mit bloßem `$2`-Präfix wird weiterhin gehasht.
@@ -95,3 +85,26 @@ Neugenerierung nach Änderungen lädt `host_domains`, Zertifikate und komplette 
 Öffentlich expandierte Proxy-Hosts und die Hostdetails in Erstellungs-/Änderungsantworten beachten zusätzlich die Proxy-Host-Berechtigung: `hidden` liefert keine Hosts, Sichtbarkeit `user` nur eigene aktive Hosts und `all` alle aktiven Zuordnungen. Die Listenübersicht erlaubt weiterhin keine Host-Expansion. Interne Konfigurationsabfragen sind ausdrücklich getrennt davon: Aktualisierung und Löschen einer Liste bearbeiten weiterhin alle betroffenen Hosts, auch wenn der Listenbesitzer sie nicht anzeigen darf. `host-expansion-permissions.spec.js` prüft diese Grenzen mit den tatsächlichen Berechtigungsschemata und SQLite.
 
 Tests: `access-list.spec.js` und `access-list-files.spec.js`, einschließlich echter temporärer Dateien und fehlgeschlagener Dateiersetzung.
+
+## Gemeinsame Aktivierung und Sidecar-Rollback
+
+Erstellen, Ändern und Löschen einer Access List halten die globale Nginx-Konfigurationssperre über Datenbankänderungen, Passwort-/CA-Dateien, Host-Neuaufbau, Prüfung und Reload. Der interne Helfer `bulkGenerateConfigGroupsUnlocked` darf dabei ausschließlich unter einer bereits gehaltenen Sperre aufgerufen werden; ein erneuter Aufruf des gesperrten Bulk-Helfers würde die Queue blockieren.
+
+Für neue Aktivierungen werden htpasswd- und CA-Inhalte unter unveränderlichen SHA-256-Dateinamen gespeichert. Das interne Metadatum `authorization_revision` wählt diese Pfade ausschließlich als geprüften Hex-Digest aus. Alte laufende Nginx-Worker lesen bis zum erfolgreichen Reload weiter ihre bisherigen Dateien; ein wartender oder abgelehnter Kandidat verändert deren Zugangsdaten nicht. Vorhandene Hosts ohne Versionsmetadatum behalten die bisherigen festen Pfade.
+
+Externe mTLS-CA-Bundles werden vollständig mit `X509Certificate` geprüft, bevor eine Passwort- oder CA-Datei veröffentlicht wird. Auch die direkte `build`-Funktion stellt bei einem Veröffentlichungsfehler beide vorherigen Dateien atomar wieder her. Bei fehlgeschlagener Aktivierung werden die vorherigen Listeneinstellungen, Passwort-Hashes, Client-Regeln und Host-Zuordnungen sowie die exakten aktiven Konfigurations-/Passwort-/CA-Dateien einschließlich Dateirechten kompensiert. Erst eine erfolgreich aktivierte Änderung erzeugt den entsprechenden Audit-Eintrag.
+
+`access-list-activation.spec.js` prüft diese Abläufe mit SQLite und PostgreSQL/PGlite. Der zusätzliche Test mit laufenden Nginx-Workern hält die Ablehnung eines Kandidaten gezielt offen: Die bisherigen Zugangsdaten liefern weiter HTTP 200, die Kandidatenzugangsdaten HTTP 401. Danach wird die ursprüngliche Konfiguration weiter bedient.
+
+Mit `SHIELDPM_NGINX_TEST_BINARY` als Pfad zur Testbinärdatei führt der zusätzliche Integrationstest einen echten `nginx -tq` aus: Ein syntaktisch ungültiger Kandidat wird abgelehnt, während die wiederhergestellte alte Konfiguration ihre gültige CA- und Passwortdatei behält.
+
+## Verwandte Seiten
+
+- [Proxy-Host](./proxy-host.md)
+- [Zertifikate](./zertifikate.md)
+- [Interne PKI](./pki.md)
+- [IP-Ranges](./ip-ranges.md)
+- [Benutzer & Auth](./benutzer-auth.md)
+- [OAuth2-Proxy (SSO)](./oauth2-proxy.md)
+- [Modulübersicht](./README.md)
+- [Host-Revisionen](../features/host-revisionen.md)

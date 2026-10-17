@@ -12,6 +12,7 @@ let timer = null;
 let startupTimer = null;
 let runningProcess = null;
 let forcePending = false;
+const providerUpdates = new Map();
 const INTERVAL = 1000 * 60; // 60 seconds
 
 /**
@@ -101,12 +102,16 @@ export const requestPublicUrl = (url) => {
 
 // Track last known IPs to avoid log spam
 let lastKnownIps = { ipv4: null, ipv6: null };
+let wanGeneration = 0;
+let latestWan = { generation: 0, ips: null };
+const wanSnapshots = new WeakMap();
 
 /**
  * Get current WAN IPs (v4 and v6)
  * @returns {Promise<{ipv4: string|null, ipv6: string|null}>}
  */
 export const getWanIps = async () => {
+	const generation = ++wanGeneration;
 	const result = { ipv4: null, ipv6: null };
 
 	// Fetch IPv4
@@ -141,7 +146,9 @@ export const getWanIps = async () => {
 		logger.debug("DDNS: Failed to fetch WAN IPv6", err.message);
 	}
 
-	return result;
+	wanSnapshots.set(result, generation);
+	if (generation > latestWan.generation) latestWan = { generation, ips: result };
+	return latestWan.ips;
 };
 
 const providers = {
@@ -323,6 +330,28 @@ export const updateProvider = async (provider, ips) => {
 	}
 };
 
+/** Serialize scheduled and manual writes, re-reading credentials after earlier work completes. */
+export const runProvider = (providerId, options = {}) => {
+	const key = String(providerId);
+	const task = (providerUpdates.get(key) || Promise.resolve())
+		.catch(() => {})
+		.then(async () => {
+			const rows = await DdnsProvider.query().where("id", providerId);
+			const provider = rows.find((row) => Number(row.id) === Number(providerId));
+			if (!provider) throw new errs.ItemNotFoundError(providerId);
+			if (options.scheduled && provider.enabled !== undefined && !provider.enabled)
+				return { success: true, skipped: true };
+			const ips = options.ips || (await getWanIps());
+			const currentIps = latestWan.generation > (wanSnapshots.get(ips) || 0) ? latestWan.ips : ips;
+			return { ...(await updateProvider(provider, currentIps)), ips: currentIps };
+		});
+	providerUpdates.set(key, task);
+	task.finally(() => {
+		if (providerUpdates.get(key) === task) providerUpdates.delete(key);
+	}).catch(() => {});
+	return task;
+};
+
 /**
  * Main Process
  * @param {boolean} force - Force update even if IP hasn't changed
@@ -348,7 +377,11 @@ const processOnce = async (force) => {
 
 			if (force || provider.last_error || v4Changed || v6Changed) {
 				logger.info(`DDNS: IP changed for ${provider.name} (IP Ver: ${provider.ip_ver}) or Force Update`);
-				await updateProvider(provider, currentIps);
+				try {
+					await runProvider(provider.id, { ips: currentIps, scheduled: true });
+				} catch (error) {
+					logger.warn?.(`DDNS provider #${provider.id} could not be refreshed: ${error.message}`);
+				}
 			}
 		}
 	} catch (err) {
@@ -396,4 +429,5 @@ export default {
 	process,
 	getWanIps,
 	updateProvider,
+	runProvider,
 };

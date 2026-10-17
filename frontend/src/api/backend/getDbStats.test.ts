@@ -20,6 +20,6 @@ describe("getDbStats", () => {
 		api.get.mockResolvedValue(dbStats);
 
 		await expect(getDbStats()).resolves.toEqual(dbStats);
-		expect(api.get).toHaveBeenCalledWith({ url: "/analytics/db-stats" });
+		expect(api.get).toHaveBeenCalledWith({ url: "/analytics/db-stats" }, undefined);
 	});
 });

@@ -1,17 +1,32 @@
 import type { ColumnVisibilityState } from "@tanstack/react-table";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type React from "react";
 import type { ProxyHost } from "src/api/backend";
-import { changeLocale } from "src/locale";
+import { changeLocale, intl } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Table from "./Table";
 
 const monitorMocks = vi.hoisted(() => ({
 	useProxyHostMonitorStatuses: vi.fn(),
+	revisions: vi.fn(),
 }));
 
 vi.mock("src/hooks/useProxyHostMonitor", () => ({
 	useProxyHostMonitorStatuses: monitorMocks.useProxyHostMonitorStatuses,
+}));
+
+vi.mock("./HostRevisionsDialog", () => ({
+	HostRevisionsDialog: (props: { hostId: number; domain: string; onClose: () => void }) => {
+		monitorMocks.revisions(props);
+		return (
+			<section data-testid="host-revisions">
+				<span>{props.domain}</span>
+				<button type="button" onClick={props.onClose}>
+					close-history
+				</button>
+			</section>
+		);
+	},
 }));
 
 vi.mock("src/components", () => ({
@@ -120,6 +135,22 @@ describe("Proxy hosts table", () => {
 
 		expect(screen.getByRole("menuitem", { name: "Host diagnostizieren" })).toBeInTheDocument();
 		expect(screen.getByRole("menuitem", { name: "Host-Überwachung" })).toBeInTheDocument();
+	});
+	it("opens host-scoped revision history from its row and closes the dialog", async () => {
+		render(<Table data={[proxyHost]} onEditAccessList={vi.fn()} />);
+		fireEvent.pointerDown(screen.getByRole("button", { name: "Aktionsmenü öffnen" }), {
+			button: 0,
+			ctrlKey: false,
+		});
+		fireEvent.click(
+			screen.getByRole("menuitem", { name: intl.formatMessage({ id: "proxy-host.revisions.title" }) }),
+		);
+		await waitFor(() => expect(screen.getByTestId("host-revisions")).toBeInTheDocument());
+		expect(monitorMocks.revisions).toHaveBeenCalledWith(
+			expect.objectContaining({ hostId: 1, domain: "example.test" }),
+		);
+		fireEvent.click(screen.getByRole("button", { name: "close-history" }));
+		expect(screen.queryByTestId("host-revisions")).not.toBeInTheDocument();
 	});
 	it("reports an enabled proxy with failed Nginx activation as offline", () => {
 		render(

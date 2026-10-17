@@ -20,6 +20,9 @@
 
 ### Key Features
 
+- **Proxy platform extensions**: Trusted API7 Wasm policies, weighted upstream pools, independent WAF/cache controls, encrypted host revisions and personal host tags/views/security profiles. See the [implementation evidence](./docs/wiki-intern/entwicklung/feature-implementation-2026-10-17.md).
+- **Operations**: Incident center with measured coverage, durable notifications and alarm mutes; browser session revocation; encrypted full-instance backups with verified next-start restore.
+
 - **Proxy Management**: HTTP/HTTPS/HTTP3, Streams (TCP/UDP), Redirections, 404 Hosts.
 - **Proxy Host Observability**: Optional HTTP(S)/TCP upstream checks with bounded history and Telegram status alerts; on-demand DNS, TLS, route, upstream, auth, and WebSocket diagnostics.
 - **Configuration Preview**: Read-only Nginx draft and active-config diff while creating or editing a proxy host. Saving performs the Nginx syntax check and reload.
@@ -68,6 +71,7 @@ The Agent must be aware of these specific versions and libraries:
   - `ngx_http_geoip2_module` (GeoIP)
   - `lua-nginx-module` (Scripting)
   - `brotli`, `zstd` (Compression)
+  - `api7/wasm-nginx-module` 0.7.0 with Wasmtime 49.0.2 (verified in the current Nginx 1.31.6 release). Compiled and shipped with Lua bindings, but no ShieldPM filter management or default `wasm_vm` activation yet. Runtime execution proof and integration limits: [October 17 feature review](./docs/wiki-intern/entwicklung/feature-review-2026-10-17.md).
 * **Security Integrations**:
   - **CrowdSec**: IPS via Lua Bouncer.
   - **OpenAppSec**: AI WAF via Attachment Module.

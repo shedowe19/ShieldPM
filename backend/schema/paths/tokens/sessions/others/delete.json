@@ -1,0 +1,26 @@
+{
+	"operationId": "deleteTokensSessionsOthers",
+	"summary": "Revoke other browser refresh sessions",
+	"tags": [
+		"tokens"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"authenticated"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Successful operation",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object"
+					}
+				}
+			}
+		}
+	}
+}

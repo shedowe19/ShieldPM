@@ -34,11 +34,19 @@ vi.mock("../../lib/gitops-files.js", () => ({
 vi.mock("../../internal/nginx.js", () => ({
 	default: {
 		withConfigurationLock: (callback) => callback(),
+		getConfigName: (_type, id) => `/data/nginx/proxy_host/${id}.conf`,
+		bulkGenerateConfigGroupsUnlocked: vi.fn(),
 		bulkGenerateConfigGroups: vi.fn(),
 		reload: vi.fn(),
 		deleteConfig: vi.fn(),
 	},
 }));
+vi.mock("../../internal/host-revisions.js", async (importOriginal) => {
+	const actual = await importOriginal();
+	return { ...actual, default: { ...actual.default, record: vi.fn() } };
+});
+vi.mock("../../internal/git-deploy.js", () => ({ default: { startPollingForHost: vi.fn(), stopPolling: vi.fn() } }));
+vi.mock("../../internal/oauth2-proxy.js", () => ({ default: { start: vi.fn(), stop: vi.fn() } }));
 vi.mock("../../internal/proxy-host-monitor.js", () => ({
 	assertMonitorConfig: vi.fn(),
 	default: { resetHost: vi.fn() },
@@ -80,7 +88,7 @@ describe("GitOps PostgreSQL restore sequences", () => {
 		vi.clearAllMocks();
 		mocks.files.clear();
 		await mocks.database.raw(
-			'TRUNCATE "firewall_list", "proxy_host", "host_domain", "user", "user_permission", "access_list", "access_list_auth", "access_list_client" RESTART IDENTITY CASCADE',
+			'TRUNCATE "host_domain_claim_owner", "host_domain_claim", "firewall_list", "proxy_host", "host_domain", "user", "user_permission", "access_list", "access_list_auth", "access_list_client" RESTART IDENTITY CASCADE',
 		);
 	});
 	it.each([false, true])(

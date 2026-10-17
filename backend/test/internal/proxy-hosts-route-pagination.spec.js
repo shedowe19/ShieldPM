@@ -10,6 +10,7 @@ vi.mock("express", () => ({
 	default: {
 		Router: () => {
 			const router = {
+				use: vi.fn(),
 				route: (path) => {
 					const route = {
 						all: () => route,
@@ -29,6 +30,8 @@ vi.mock("express", () => ({
 		},
 	},
 }));
+vi.mock("../../routes/nginx/host_traffic_policy.js", () => ({ default: () => {} }));
+vi.mock("../../routes/nginx/proxy_host_revisions.js", () => ({ default: () => {} }));
 vi.mock("../../internal/git-deploy.js", () => ({ default: {} }));
 vi.mock("../../internal/proxy-host.js", () => ({ default: { getAll: mocks.getAll } }));
 vi.mock("../../internal/proxy-host-preview.js", () => ({ default: {} }));

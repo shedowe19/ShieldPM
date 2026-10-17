@@ -71,6 +71,14 @@
 		{
 			"name": "firewall-lists",
 			"description": "IP/CIDR lists selected independently per proxy host"
+		},
+		{
+			"name": "instance-backups",
+			"description": "Administrator-only encrypted full instance backups and verified offline restores"
+		},
+		{
+			"name": "incidents",
+			"description": "Host incidents, measured availability, alarm mutes and notification delivery"
 		}
 	],
 	"paths": {
@@ -604,6 +612,191 @@
 		"/nginx/firewall-lists/{listID}/refresh": {
 			"post": {
 				"$ref": "./paths/nginx/firewall-lists/listID/refresh/post.json"
+			}
+		},
+		"/tokens/sessions": {
+			"get": {
+				"$ref": "./paths/tokens/sessions/get.json"
+			}
+		},
+		"/tokens/sessions/others": {
+			"delete": {
+				"$ref": "./paths/tokens/sessions/others/delete.json"
+			}
+		},
+		"/tokens/sessions/{familyID}": {
+			"delete": {
+				"$ref": "./paths/tokens/sessions/familyID/delete.json"
+			}
+		},
+		"/nginx/wasm": {
+			"get": {
+				"$ref": "./paths/nginx/wasm/get.json"
+			}
+		},
+		"/nginx/wasm/self-test": {
+			"post": {
+				"$ref": "./paths/nginx/wasm/self-test/post.json"
+			}
+		},
+		"/nginx/wasm/hosts/{hostID}": {
+			"get": {
+				"$ref": "./paths/nginx/wasm/hosts/hostID/get.json"
+			}
+		},
+		"/nginx/proxy-hosts/{hostID}/revisions": {
+			"get": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/revisions/get.json"
+			}
+		},
+		"/nginx/proxy-hosts/{hostID}/revisions/{revisionID}/plan": {
+			"get": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/revisions/revisionID/plan/get.json"
+			}
+		},
+		"/nginx/proxy-hosts/{hostID}/revisions/{revisionID}/restore": {
+			"post": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/revisions/revisionID/restore/post.json"
+			}
+		},
+		"/nginx/proxy-hosts/{hostID}/upstream-pool/status": {
+			"get": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/upstream-pool-status/get.json"
+			}
+		},
+		"/nginx/proxy-hosts/{hostID}/cache/status": {
+			"get": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/cache-status/get.json"
+			}
+		},
+		"/nginx/proxy-hosts/{hostID}/cache": {
+			"delete": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/cache/delete.json"
+			}
+		},
+		"/nginx/host-workspace/options": {
+			"get": {
+				"$ref": "./paths/nginx/host-workspace/options/get.json"
+			}
+		},
+		"/nginx/host-workspace/hosts": {
+			"get": {
+				"$ref": "./paths/nginx/host-workspace/hosts/get.json"
+			}
+		},
+		"/nginx/host-workspace/hosts/{hostID}/tags": {
+			"put": {
+				"$ref": "./paths/nginx/host-workspace/hosts/hostID/tags/put.json"
+			}
+		},
+		"/nginx/host-workspace/items": {
+			"get": {
+				"$ref": "./paths/nginx/host-workspace/items/get.json"
+			},
+			"post": {
+				"$ref": "./paths/nginx/host-workspace/items/post.json"
+			}
+		},
+		"/nginx/host-workspace/items/{itemID}": {
+			"put": {
+				"$ref": "./paths/nginx/host-workspace/items/itemID/put.json"
+			},
+			"delete": {
+				"$ref": "./paths/nginx/host-workspace/items/itemID/delete.json"
+			}
+		},
+		"/nginx/host-workspace/bulk/preview": {
+			"post": {
+				"$ref": "./paths/nginx/host-workspace/bulk/preview/post.json"
+			}
+		},
+		"/nginx/host-workspace/bulk/apply": {
+			"post": {
+				"$ref": "./paths/nginx/host-workspace/bulk/apply/post.json"
+			}
+		},
+		"/backups": {
+			"get": {
+				"$ref": "./paths/backups/get.json"
+			},
+			"post": {
+				"$ref": "./paths/backups/post.json"
+			}
+		},
+		"/backups/upload": {
+			"post": {
+				"$ref": "./paths/backups/upload/post.json"
+			}
+		},
+		"/backups/pending": {
+			"delete": {
+				"$ref": "./paths/backups/pending/delete.json"
+			}
+		},
+		"/backups/{backupID}": {
+			"delete": {
+				"$ref": "./paths/backups/backupID/delete.json"
+			}
+		},
+		"/backups/{backupID}/download": {
+			"get": {
+				"$ref": "./paths/backups/backupID/download/get.json"
+			}
+		},
+		"/backups/{backupID}/preflight": {
+			"post": {
+				"$ref": "./paths/backups/backupID/preflight/post.json"
+			}
+		},
+		"/backups/{backupID}/restore": {
+			"post": {
+				"$ref": "./paths/backups/backupID/restore/post.json"
+			}
+		},
+		"/incidents": {
+			"get": {
+				"$ref": "./paths/incidents/get.json"
+			}
+		},
+		"/incidents/hosts": {
+			"get": {
+				"$ref": "./paths/incidents/hosts/get.json"
+			}
+		},
+		"/incidents/hosts/{hostID}": {
+			"get": {
+				"$ref": "./paths/incidents/hosts/hostID/get.json"
+			}
+		},
+		"/incidents/hosts/{hostID}/mute": {
+			"put": {
+				"$ref": "./paths/incidents/hosts/hostID/mute/put.json"
+			}
+		},
+		"/incidents/targets": {
+			"get": {
+				"$ref": "./paths/incidents/targets/get.json"
+			},
+			"post": {
+				"$ref": "./paths/incidents/targets/post.json"
+			}
+		},
+		"/incidents/targets/{targetID}": {
+			"put": {
+				"$ref": "./paths/incidents/targets/targetID/put.json"
+			},
+			"delete": {
+				"$ref": "./paths/incidents/targets/targetID/delete.json"
+			}
+		},
+		"/incidents/deliveries": {
+			"get": {
+				"$ref": "./paths/incidents/deliveries/get.json"
+			}
+		},
+		"/incidents/deliveries/{deliveryID}/retry": {
+			"post": {
+				"$ref": "./paths/incidents/deliveries/deliveryID/retry/post.json"
 			}
 		}
 	}

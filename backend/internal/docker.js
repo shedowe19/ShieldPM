@@ -1,6 +1,7 @@
 import Docker from "dockerode";
 import { SYSTEM_USER_ID } from "../lib/constants.js";
 import errs from "../lib/error.js";
+import { withHostDomainClaims } from "../lib/host-domain-claims.js";
 import { notifyProxyHostDomainsChanged } from "../lib/proxy-host-domain-events.js";
 import { global as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
@@ -41,11 +42,14 @@ class DockerService {
 		this.initialized = false;
 		this.initializationPromise = null;
 		this.pendingHostIds = new Set();
+		this.stopped = false;
+		this.generation = 0;
 	}
 
 	async init() {
 		if (this.initialized) return;
 		if (this.initializationPromise) return this.initializationPromise;
+		this.stopped = false;
 		this.initializationPromise = this.initialize();
 		try {
 			await this.initializationPromise;
@@ -56,6 +60,11 @@ class DockerService {
 
 	async initialize() {
 		try {
+			this.generation++;
+			for (const client of this.clients) {
+				clearTimeout(client.reconnectTimer);
+				client.stream?.destroy();
+			}
 			this.clients = [];
 
 			// 1. Local Docker Socket (Always included)
@@ -89,6 +98,7 @@ class DockerService {
 				} catch (err) {
 					logger.warn(`Docker Auto-Discovery: Could not connect to ${clientObj.name}: ${err.message}`);
 					clientObj.isConnected = false;
+					this.scheduleReconnect(clientObj);
 				}
 			}
 
@@ -153,77 +163,154 @@ class DockerService {
 	/**
 	 * Syncs all currently running containers across all clients
 	 */
+	async createHostIndex() {
+		const hosts = await ProxyHost.query().where("is_deleted", 0).withGraphFetched("host_domains");
+		const index = { byContainer: new Map(), byDomain: new Map(), manualDomains: new Map() };
+		for (const host of hosts) this.indexHost(index, host);
+		return index;
+	}
+
+	indexHost(index, host) {
+		for (const map of [index.byContainer, index.byDomain, index.manualDomains]) {
+			for (const [key, value] of map) if (value.id === host.id) map.delete(key);
+		}
+		if (host.meta?.auto_discovered) index.byContainer.set(host.meta.docker_container_id, host);
+		for (const domain of host.domain_names || host.host_domains?.map((row) => row.domain_name) || []) {
+			(host.meta?.auto_discovered ? index.byDomain : index.manualDomains).set(domain, host);
+		}
+	}
+
+	async syncClient(client, index) {
+		const containers = await client.docker.listContainers();
+		logger.info(`Docker Auto-Discovery [${client.name}]: Syncing ${containers.length} running containers`);
+		// A single indexed snapshot bounds host graph reads independently of the container count.
+		// Writes still claim domains through the authoritative database path.
+		for (const container of containers) {
+			if (this.stopped) break;
+			await this.processContainer(container, client, index);
+		}
+	}
+
 	async sync() {
+		let index;
 		for (const client of this.clients) {
 			if (!client.isConnected) continue;
-
 			try {
-				const containers = await client.docker.listContainers();
-				logger.info(
-					`Docker Auto-Discovery [${client.name}]: Found ${containers.length} running containers. Syncing...`,
-				);
-
-				const syncPromises = containers.map((containerInfo) => this.processContainer(containerInfo, client));
-				await Promise.allSettled(syncPromises);
+				index ||= await this.createHostIndex();
+				await this.syncClient(client, index);
 			} catch (err) {
 				logger.error(`Docker Auto-Discovery [${client.name}]: Sync failed`, err);
 			}
 		}
 	}
 
-	/**
-	 * Listen to Docker Events
-	 */
-	async watch() {
-		for (const client of this.clients) {
-			if (!client.isConnected) continue;
+	scheduleReconnect(client) {
+		if (this.stopped || client.reconnectTimer) return;
+		client.isConnected = false;
+		const generation = this.generation;
+		const delay = Math.min(30000, 1000 * 2 ** Math.min(client.reconnectAttempts || 0, 5));
+		client.reconnectAttempts = (client.reconnectAttempts || 0) + 1;
+		client.reconnectTimer = setTimeout(async () => {
+			client.reconnectTimer = null;
+			if (this.stopped || generation !== this.generation) return;
+			try {
+				await client.docker.ping();
+				if (this.stopped || generation !== this.generation) return;
+				client.isConnected = true;
+				await this.syncClient(client, await this.createHostIndex());
+				if (this.stopped || generation !== this.generation) return;
+				this.watchClient(client);
+			} catch (error) {
+				logger.warn(`Docker Auto-Discovery [${client.name}]: Reconnect failed: ${error.message}`);
+				this.scheduleReconnect(client);
+			}
+		}, delay);
+		client.reconnectTimer.unref?.();
+	}
 
-			client.docker.getEvents(
-				{ filters: { type: ["container"], event: ["start", "die", "pause", "unpause", "rename"] } },
-				(err, stream) => {
-					if (err) {
-						logger.error(`Docker Auto-Discovery [${client.name}]: Error getting events`, err);
-						return;
+	watchClient(client) {
+		if (this.stopped || client.watching || !client.isConnected) return;
+		client.watching = true;
+		const generation = this.generation;
+		client.docker.getEvents(
+			{ filters: { type: ["container"], event: ["start", "die", "pause", "unpause", "rename"] } },
+			(err, stream) => {
+				if (this.stopped || generation !== this.generation) {
+					stream?.destroy();
+					return;
+				}
+				if (err) {
+					client.watching = false;
+					logger.warn(`Docker Auto-Discovery [${client.name}]: Event connection failed: ${err.message}`);
+					this.scheduleReconnect(client);
+					return;
+				}
+				client.stream = stream;
+				const connectedAt = Date.now();
+				let buffer = "";
+				let pendingEvent = Promise.resolve();
+				const current = () => !this.stopped && generation === this.generation && client.stream === stream;
+				const ended = () => {
+					if (!current()) return;
+					// Briefly accepted streams can still flap; reset backoff after a stable connection.
+					if (Date.now() - connectedAt >= 30000) client.reconnectAttempts = 0;
+					client.stream = null;
+					client.watching = false;
+					stream.destroy();
+					this.scheduleReconnect(client);
+				};
+				const handleEvent = async (line) => {
+					if (!current()) return;
+					try {
+						const event = JSON.parse(line);
+						const containerId = event.Actor.ID;
+						if (["start", "unpause", "rename"].includes(event.Action)) {
+							const container = await client.docker.getContainer(containerId).inspect();
+							if (current()) await this.processContainer(container, client);
+						} else if (["die", "pause"].includes(event.Action)) {
+							await this.disableContainerHost(containerId);
+						}
+					} catch (error) {
+						logger.warn(`Docker Auto-Discovery [${client.name}]: Event failed: ${error.message}`);
 					}
+				};
+				stream.setEncoding("utf8");
+				stream.on("data", (chunk) => {
+					buffer += chunk;
+					while (buffer.includes("\n")) {
+						const newline = buffer.indexOf("\n");
+						const line = buffer.slice(0, newline);
+						buffer = buffer.slice(newline + 1);
+						if (line.trim()) pendingEvent = pendingEvent.then(() => handleEvent(line));
+					}
+					// Docker events are small JSON records; a broken stream must not grow memory indefinitely.
+					if (buffer.length > 1024 * 1024) ended();
+				});
+				stream.on("error", ended);
+				stream.on("end", ended);
+				stream.on("close", ended);
+			},
+		);
+	}
 
-					logger.info(`Docker Auto-Discovery [${client.name}]: Listening for Docker events...`);
+	async watch() {
+		for (const client of this.clients) this.watchClient(client);
+	}
 
-					let buffer = "";
-					let pendingEvent = Promise.resolve();
-					const handleEvent = async (line) => {
-						try {
-							const event = JSON.parse(line);
-							const containerId = event.Actor.ID;
-
-							if (["start", "unpause", "rename"].includes(event.Action)) {
-								try {
-									const container = await client.docker.getContainer(containerId).inspect();
-									await this.processContainer(container, client);
-								} catch (_inspectErr) {
-									// Container might have stopped immediately
-								}
-							} else if (["die", "pause"].includes(event.Action)) {
-								await this.disableContainerHost(containerId);
-							}
-						} catch (e) {
-							logger.error(`Docker Auto-Discovery [${client.name}]: Error parsing event`, e);
-						}
-					};
-					stream.setEncoding("utf8");
-					stream.on("data", (chunk) => {
-						buffer += chunk;
-						while (buffer.includes("\n")) {
-							const newline = buffer.indexOf("\n");
-							const line = buffer.slice(0, newline);
-							buffer = buffer.slice(newline + 1);
-							if (line.trim()) pendingEvent = pendingEvent.then(() => handleEvent(line));
-						}
-					});
-					stream.on("error", (streamError) =>
-						logger.error(`Docker event stream failed [${client.name}]`, streamError),
-					);
-				},
-			);
+	stop() {
+		this.stopped = true;
+		this.initialized = false;
+		this.generation++;
+		clearTimeout(this.reloadTimer);
+		this.reloadTimer = null;
+		this.pendingHostIds.clear();
+		for (const client of this.clients) {
+			clearTimeout(client.reconnectTimer);
+			client.reconnectTimer = null;
+			client.watching = false;
+			client.isConnected = false;
+			client.stream?.destroy();
+			client.stream = null;
 		}
 	}
 
@@ -270,7 +357,7 @@ class DockerService {
 	 * @param {Object} container - Container Info (from list or inspect)
 	 * @param {Object} client - The client object {docker, hostIp, isRemote, ...}
 	 */
-	async processContainer(container, client) {
+	async processContainer(container, client, hostIndex = undefined) {
 		// Normalize labels
 		const labels = container.Labels || (container.Config ? container.Config.Labels : {}) || {};
 
@@ -388,20 +475,11 @@ class DockerService {
 				if (value && (!/^\d+$/.test(value) || Number(value) > maximum))
 					throw new errs.ConfigurationError("Invalid Docker numeric label");
 			}
-			const allHosts = await ProxyHost.query().where("is_deleted", 0).withGraphFetched("host_domains");
+			const index = hostIndex || (await this.createHostIndex());
 			const existingHost =
-				allHosts.find((host) => host.meta?.auto_discovered && host.meta.docker_container_id === container.Id) ||
-				allHosts.find(
-					(host) =>
-						host.meta?.auto_discovered && host.domain_names.some((domain) => domains.includes(domain)),
-				);
-			// Inspect every host, even when the matching container appears first in the result.
-			const collisionHost = allHosts.find(
-				(host) =>
-					host.id !== existingHost?.id &&
-					!host.meta?.auto_discovered &&
-					host.domain_names.some((domain) => domains.includes(domain)),
-			);
+				index.byContainer.get(container.Id) ||
+				domains.map((domain) => index.byDomain.get(domain)).find(Boolean);
+			const collisionHost = domains.map((domain) => index.manualDomains.get(domain)).find(Boolean);
 			if (collisionHost) {
 				logger.error(
 					`Docker Auto-Discovery: Domains [${domains.join(", ")}] collide with manual host #${collisionHost.id}. Skipping.`,
@@ -512,24 +590,28 @@ class DockerService {
 			if (existingHost) {
 				// Update
 				let upstreamChanged = false;
-				const updatedHost = await ProxyHost.transaction(async (trx) => {
-					// Certificate requests can outlive user edits. Merge only after locking the current row.
-					const current = await ProxyHost.query(trx)
-						.findById(existingHost.id)
-						.where("is_deleted", 0)
-						.forUpdate();
-					if (!current) return null;
-					upstreamChanged =
-						current.forward_scheme !== payload.forward_scheme ||
-						current.forward_host !== payload.forward_host ||
-						Number(current.forward_port) !== payload.forward_port;
-					return ProxyHost.query(trx).upsertGraphAndFetch({
-						id: current.id,
-						...payload,
-						meta: { ...current.meta, ...payload.meta },
-					});
-				});
+				const updatedHost = await withHostDomainClaims(
+					{ hostType: "proxy", hostId: existingHost.id, domainNames: domains },
+					async (trx) => {
+						// Certificate requests can outlive user edits. Merge only after locking the current row.
+						const current = await ProxyHost.query(trx)
+							.findById(existingHost.id)
+							.where("is_deleted", 0)
+							.forUpdate();
+						if (!current) throw new errs.ItemNotFoundError(existingHost.id);
+						upstreamChanged =
+							current.forward_scheme !== payload.forward_scheme ||
+							current.forward_host !== payload.forward_host ||
+							Number(current.forward_port) !== payload.forward_port;
+						return ProxyHost.query(trx).upsertGraphAndFetch({
+							id: current.id,
+							...payload,
+							meta: { ...current.meta, ...payload.meta },
+						});
+					},
+				);
 				if (!updatedHost) return;
+				this.indexHost(index, updatedHost);
 				await notifyProxyHostDomainsChanged();
 				if (upstreamChanged) {
 					// A previous health result belongs to the old target. Disable HTTP
@@ -544,7 +626,10 @@ class DockerService {
 				payload.owner_user_id = SYSTEM_USER_ID;
 				payload.locations = [];
 
-				const newHost = await ProxyHost.query().insertGraphAndFetch(payload);
+				const newHost = await withHostDomainClaims({ hostType: "proxy", domainNames: domains }, (trx) =>
+					ProxyHost.query(trx).insertGraphAndFetch(payload),
+				);
+				this.indexHost(index, newHost);
 				await notifyProxyHostDomainsChanged();
 				// RELOAD NGINX via Helper
 				await this.configureNginx(newHost.id);

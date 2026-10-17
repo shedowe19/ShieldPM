@@ -1,0 +1,29 @@
+{
+	"operationId": "getNginxHostWorkspaceItems",
+	"summary": "List personal saved views and security profiles",
+	"tags": [
+		"proxy-hosts"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.view"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Successful operation",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "array",
+						"items": {
+							"type": "object"
+						}
+					}
+				}
+			}
+		}
+	}
+}

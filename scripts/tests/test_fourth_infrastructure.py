@@ -295,7 +295,7 @@ SECONDS=0
         if "configure_database_environment() {" in self.installer:
             helper = "configure_database_environment() {" + self.installer.split("configure_database_environment() {", 1)[1].split("\n}\n", 1)[0] + "\n}\n"
         setter = "set_env_value() {" + self.installer.split("set_env_value() {", 1)[1].split("\n}\n", 1)[0] + "\n}\n"
-        case = self.installer.split('case "$db_choice" in', 1)[1].split("\nesac", 1)[0]
+        case = self.installer.split("# 10. Database Configuration", 1)[1].split('case "$db_choice" in', 1)[1].split("\nesac", 1)[0]
         branches = {
             "postgres": case.split("    3)", 1)[1].split("        # Update .env", 1)[1].split("        ;;", 1)[0],
             "mysql": case.split("    2)", 1)[1].split("        # Update .env", 1)[1].split("        ;;", 1)[0],

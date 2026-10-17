@@ -1,0 +1,45 @@
+{
+	"operationId": "createNotificationTarget",
+	"summary": "Create a public HTTPS webhook, ntfy or Discord channel",
+	"tags": [
+		"incidents"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.manage"
+			]
+		}
+	],
+	"responses": {
+		"201": {
+			"description": "Success",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/notification-target.json"
+					}
+				}
+			}
+		},
+		"400": {
+			"description": "Invalid input or stale configuration"
+		},
+		"403": {
+			"description": "Permission denied"
+		},
+		"404": {
+			"description": "Object not found within caller scope"
+		}
+	},
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"$ref": "../../../components/notification-target-input.json"
+				}
+			}
+		}
+	}
+}

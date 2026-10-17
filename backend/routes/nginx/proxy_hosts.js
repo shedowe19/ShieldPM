@@ -10,12 +10,17 @@ import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
 import { getValidationSchema } from "../../schema/index.js";
+import hostTrafficRouter from "./host_traffic_policy.js";
+import hostRevisionsRouter from "./proxy_host_revisions.js";
 
 const router = express.Router({
 	caseSensitive: true,
 	strict: true,
 	mergeParams: true,
 });
+
+router.use("/:host_id/revisions", hostRevisionsRouter);
+router.use("/:host_id", hostTrafficRouter);
 
 const diagnosisLimiter = rateLimit({
 	windowMs: 60 * 1000,

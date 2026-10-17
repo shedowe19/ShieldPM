@@ -2,6 +2,41 @@
 
 # These files survive native service and Docker container restarts. Always
 # replace the current value, rather than matching only the shipped default.
+configure_wasm_runtime() {
+    wasm_config=$1
+    wasm_binary=${2:-nginx}
+    wasm_supported=false
+    wasm_build=$("$wasm_binary" -V 2>&1) || wasm_build=""
+    case "$wasm_build" in *--add-module=*/wasm-nginx-module*) wasm_supported=true ;; esac
+    python3 - "$wasm_config" "$wasm_supported" <<'PY'
+import os
+from pathlib import Path
+import re
+import sys
+import tempfile
+
+filename = Path(sys.argv[1])
+content = filename.read_text()
+start = "    # ShieldPM managed Wasm runtime begin"
+end = "    # ShieldPM managed Wasm runtime end"
+content = re.sub(r"(?m)^" + re.escape(start) + r"\n.*?^" + re.escape(end) + r"\n?", "", content, flags=re.DOTALL)
+if sys.argv[2] == "true" and not re.search(r"(?m)^\s*wasm_vm\s+[^;]+;", content):
+    block = start + "\n    wasm_vm wasmtime;\n" + end
+    content, count = re.subn(r"(?m)^([ \t]*http[ \t]*\{)", lambda match: match[0] + "\n" + block, content, count=1)
+    if count != 1:
+        sys.exit("Cannot locate Nginx HTTP context for the Wasm runtime")
+descriptor, temporary = tempfile.mkstemp(prefix=".shieldpm-wasm-", dir=filename.parent)
+try:
+    with os.fdopen(descriptor, "w") as handle:
+        handle.write(content)
+        os.fchmod(handle.fileno(), filename.stat().st_mode & 0o777)
+    os.replace(temporary, filename)
+finally:
+    if os.path.exists(temporary):
+        os.unlink(temporary)
+PY
+}
+
 prepare_runtime_directory() {
     runtime_root=$1
     runtime_uid=$2

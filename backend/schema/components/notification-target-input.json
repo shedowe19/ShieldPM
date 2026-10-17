@@ -1,0 +1,50 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"name",
+		"type",
+		"enabled",
+		"host_ids"
+	],
+	"properties": {
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 100,
+			"pattern": "\\S"
+		},
+		"type": {
+			"enum": [
+				"webhook",
+				"ntfy",
+				"discord"
+			]
+		},
+		"enabled": {
+			"type": "boolean"
+		},
+		"host_ids": {
+			"type": "array",
+			"items": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 9007199254740991
+			},
+			"maxItems": 1000,
+			"uniqueItems": true
+		},
+		"url": {
+			"type": "string",
+			"maxLength": 2048
+		},
+		"token": {
+			"type": "string",
+			"maxLength": 4096
+		},
+		"version": {
+			"type": "integer",
+			"minimum": 1
+		}
+	}
+}

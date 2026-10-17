@@ -1,0 +1,120 @@
+{
+	"date": "2026-10-17",
+	"scope": "B01-B12, O01-O07, F01-F08 implementation",
+	"analytics": {
+		"node": "v26.12.0",
+		"engine": "SQLite :memory:",
+		"rows": 500,
+		"flushes_per_sample": 2,
+		"warmups": 1,
+		"results": {
+			"individual": {
+				"samples_ms": [
+					121.59828400000004,
+					80.92157500000002,
+					83.47816800000004,
+					97.30601300000001,
+					62.01247000000001,
+					64.88989800000002,
+					90.30417399999999
+				],
+				"median_ms": 83.47816800000004,
+				"inserts_for_two_flushes": [
+					1000,
+					1000,
+					1000,
+					1000,
+					1000,
+					1000,
+					1000
+				]
+			},
+			"batch": {
+				"samples_ms": [
+					10.170181999999954,
+					7.996102999999948,
+					7.045804000000089,
+					10.543108999999959,
+					6.928199000000063,
+					7.336629000000016,
+					10.33253400000001
+				],
+				"median_ms": 7.996102999999948,
+				"inserts_for_two_flushes": [
+					4,
+					4,
+					4,
+					4,
+					4,
+					4,
+					4
+				]
+			}
+		}
+	},
+	"validation": {
+		"node": "26.12.0",
+		"backend": {
+			"passed": 2405,
+			"skipped": 31,
+			"passed_files": 257,
+			"skipped_files": 5,
+			"seconds": 95.92
+		},
+		"frontend": {
+			"passed": 986,
+			"passed_files": 223,
+			"seconds": 114.88
+		},
+		"browser": {
+			"cases_passed": 10,
+			"engine": "Chromium 153.0.8010.0",
+			"seconds": 44.3,
+			"unhandled_errors": 0
+		},
+		"python": {
+			"passed": 149,
+			"skipped": 21,
+			"total": 170,
+			"seconds": 23.123
+		},
+		"backend_types": "pass",
+		"frontend_types": "pass",
+		"locales": "pass",
+		"biome": "pass",
+		"added_diff_secret_scan": "pass",
+		"nginx_runtime": {
+			"binary_version": "ShieldPM/1.31.6",
+			"wasm_tests": 15,
+			"traffic_tests": 9,
+			"backup_containment_tests": 6,
+			"wasm_policy_sha256": "1909012204c72bde2ada72537bc0cd404f7b58be65f7d6ecbb2823a30b8c4ba0"
+		},
+		"limits": [
+			"No live external MySQL/PostgreSQL restore",
+			"PGlite PostgreSQL coverage is single-connection",
+			"No actual WireGuard interface",
+			"No ARM64 or non-root UID execution in local runtime",
+			"Backups are trusted administrator archives, not a hostile SQL sandbox"
+		],
+		"bundle_gzip_bytes": {
+			"largest_javascript": 106550,
+			"total_javascript": 1192082,
+			"total_stylesheet": 16462,
+			"limits": {
+				"largest_javascript": 299000,
+				"total_javascript": 1290000,
+				"total_stylesheet": 16600
+			},
+			"pass": true
+		},
+		"locale_catalogs": 13,
+		"tscanner": {
+			"workspace_files": 746,
+			"staged_files": 110,
+			"new_errors": 0,
+			"advisories": 0,
+			"pass": true
+		}
+	}
+}

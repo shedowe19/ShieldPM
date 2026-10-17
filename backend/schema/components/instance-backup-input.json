@@ -1,0 +1,24 @@
+{
+	"$id": "instance-backup-input",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"password"
+	],
+	"properties": {
+		"password": {
+			"type": "string",
+			"minLength": 12,
+			"maxLength": 1024,
+			"writeOnly": true
+		},
+		"name": {
+			"type": "string",
+			"maxLength": 80
+		},
+		"confirmation": {
+			"type": "string",
+			"maxLength": 80
+		}
+	}
+}

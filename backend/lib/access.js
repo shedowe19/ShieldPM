@@ -12,7 +12,6 @@ import { fileURLToPath } from "node:url";
 import Ajv from "ajv/dist/2020.js";
 import _ from "lodash";
 import { access as logger } from "../logger.js";
-import proxyHostModel from "../models/proxy_host.js";
 import TokenModel from "../models/token.js";
 import userModel from "../models/user.js";
 import permsSchema from "./access/permissions.json" with { type: "json" };
@@ -22,13 +21,44 @@ import errs from "./error.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const permissionSchemaCache = {};
+// User identity is validation data, never embedded in cached schemas.
+const permissionAjv = new /** @type {any} */ (Ajv)({
+	verbose: true,
+	allErrors: true,
+	coerceTypes: true,
+	$data: true,
+	schemas: [
+		roleSchema,
+		permsSchema,
+		{
+			$id: "objects",
+			type: "object",
+			properties: { users: { type: "number", minimum: 1, const: { $data: "/actor_user_id" } } },
+		},
+	],
+});
+const permissionValidators = new Map();
+
+const getPermissionValidator = (permission) => {
+	if (!permissionValidators.has(permission)) {
+		const pending = fs.readFile(`${__dirname}/access/${permission.replaceAll(":", "-")}.json`, "utf8").then((raw) =>
+			permissionAjv.compile({
+				$async: true,
+				type: "object",
+				additionalProperties: false,
+				properties: { actor_user_id: { type: "number" }, [permission]: JSON.parse(raw) },
+			}),
+		);
+		permissionValidators.set(permission, pending);
+		pending.catch(() => permissionValidators.delete(permission));
+	}
+	return permissionValidators.get(permission);
+};
 
 export default function (tokenString) {
 	const Token = TokenModel();
 	let tokenData = null;
 	let initialised = false;
-	const objectCache = {};
 	let allowInternalAccess = false;
 	let userRoles = [];
 	let permissions = {};
@@ -92,106 +122,10 @@ export default function (tokenString) {
 		initialised = true;
 	};
 
-	/**
-	 * Fetches the object ids from the database, only once per object type, for this token.
-	 * This only applies to USER token scopes, as all other tokens are not really bound
-	 * by object scopes
-	 *
-	 * @param   {String} objectType
-	 * @returns {Promise}
-	 */
-	this.loadObjects = async (objectType) => {
-		let objects = null;
-
-		if (Token.hasScope("user")) {
-			if (typeof tokenData.attrs.id === "undefined" || !tokenData.attrs.id) {
-				throw new errs.AuthError("User Token supplied without a User ID");
-			}
-
-			const tokenUserId = tokenData.attrs.id ? tokenData.attrs.id : 0;
-
-			if (typeof objectCache[objectType] !== "undefined") {
-				objects = objectCache[objectType];
-			} else {
-				switch (objectType) {
-					// USERS - should only return yourself
-					case "users":
-						objects = tokenUserId ? [tokenUserId] : [];
-						break;
-
-					// Proxy Hosts
-					case "proxy_hosts": {
-						const query = proxyHostModel.query().select("id").andWhere("is_deleted", 0);
-
-						if (permissions.visibility === "user") {
-							query.andWhere("owner_user_id", tokenUserId);
-						}
-
-						const rows = await query;
-						objects = [];
-						_.forEach(rows, (ruleRow) => {
-							objects.push(ruleRow.id);
-						});
-
-						// enum should not have less than 1 item
-						if (!objects.length) {
-							objects.push(0);
-						}
-						break;
-					}
-				}
-				objectCache[objectType] = objects;
-			}
-		}
-		return objects;
-	};
-
-	/**
-	 * Creates a schema object on the fly with the IDs and other values required to be checked against the permissionSchema
-	 *
-	 * @param   {String} permissionLabel
-	 * @returns {Promise<Object>}
-	 */
-	this.getObjectSchema = async (permissionLabel) => {
-		const baseObjectType = permissionLabel.split(":").shift();
-
-		const schema = {
-			$id: "objects",
-			description: "Actor Properties",
-			type: "object",
-			additionalProperties: false,
-			properties: {
-				user_id: {
-					anyOf: [
-						{
-							type: "number",
-							enum: [Token.get("attrs").id],
-						},
-					],
-				},
-				scope: {
-					type: "string",
-					pattern: `^${Token.get("scope")}$`,
-				},
-			},
-		};
-
-		const result = await this.loadObjects(baseObjectType);
-		if (typeof result === "object" && result !== null) {
-			schema.properties[baseObjectType] = {
-				type: "number",
-				enum: result,
-				minimum: 1,
-			};
-		} else {
-			schema.properties[baseObjectType] = {
-				type: "number",
-				minimum: 1,
-			};
-		}
-
-		return schema;
-	};
+	// Kept for internal compatibility. Proxy ownership is checked in each
+	// resource service; no proxy permission schema consumes an ID enumeration.
+	this.loadObjects = async (objectType) =>
+		objectType === "users" && Token.hasScope("user") ? [Token.getUserId(0)] : null;
 
 	// here:
 
@@ -229,9 +163,9 @@ export default function (tokenString) {
 
 			try {
 				await this.init();
-				const objectSchema = await this.getObjectSchema(permission);
 
 				const dataSchema = {
+					actor_user_id: tokenData.attrs?.id || 0,
 					[permission]: {
 						data: data,
 						scope: Token.get("scope"),
@@ -252,33 +186,8 @@ export default function (tokenString) {
 					},
 				};
 
-				const permissionSchema = {
-					$async: true,
-					$id: "permissions",
-					type: "object",
-					additionalProperties: false,
-					properties: {},
-				};
-
-				if (!permissionSchemaCache[permission]) {
-					const rawData = await fs.readFile(
-						`${__dirname}/access/${permission.replace(/:/gim, "-")}.json`,
-						"utf8",
-					);
-					permissionSchemaCache[permission] = JSON.parse(rawData);
-				}
-
-				permissionSchema.properties[permission] = permissionSchemaCache[permission];
-
-				const ajv = new /** @type {any} */ (Ajv)({
-					verbose: true,
-					allErrors: true,
-					breakOnError: true,
-					coerceTypes: true,
-					schemas: [roleSchema, permsSchema, objectSchema, permissionSchema],
-				});
-
-				const valid = await ajv.validate("permissions", dataSchema);
+				const validate = await getPermissionValidator(permission);
+				const valid = await validate(dataSchema);
 				return valid && dataSchema[permission];
 			} catch (err) {
 				err.permission = permission;

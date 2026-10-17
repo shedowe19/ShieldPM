@@ -1,9 +1,11 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID, X509Certificate } from "node:crypto";
 import fs from "node:fs";
 import { isIP } from "node:net";
 import bcrypt from "bcryptjs";
 import ipaddr from "ipaddr.js";
 import _ from "lodash";
+import { accessListFiles } from "../lib/access-list-files.js";
+import { captureConfigurationFiles, restoreConfigurationFiles } from "../lib/configuration-files.js";
 import errs from "../lib/error.js";
 import { normalizeAddress } from "../lib/firewall-addresses.js";
 import { filterHostExpansions, restrictHostExpansions } from "../lib/host-expansions.js";
@@ -109,6 +111,95 @@ const validateListInput = (data) => {
 	}
 };
 
+const listFields = [
+	"name",
+	"satisfy_any",
+	"pass_auth",
+	"mtls_enabled",
+	"mtls_use_internal",
+	"mtls_certificate",
+	"meta",
+	"is_deleted",
+	"owner_user_id",
+];
+
+/** Validate the whole bundle before publishing either authorization file. */
+const validateCaBundle = (list) => {
+	if (!list.mtls_enabled || list.mtls_use_internal) return;
+	const pem = list.mtls_certificate || "";
+	const certificates = pem.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g) || [];
+	if (
+		!certificates.length ||
+		pem.replace(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g, "").trim()
+	) {
+		throw new errs.ValidationError("mTLS requires a valid PEM certificate bundle");
+	}
+	try {
+		for (const certificate of certificates) new X509Certificate(certificate);
+	} catch {
+		throw new errs.ValidationError("mTLS requires a valid PEM certificate bundle");
+	}
+};
+
+/** Compensate DB and all mutable sidecars together before another activation can start. */
+const activateList = (access, data, operation) =>
+	internalNginx.withConfigurationLock(async () => {
+		const previous = await internalAccessList.get(
+			access,
+			{
+				id: data.id,
+				expand: ["items", "clients", "proxy_hosts.[host_domains,certificate]"],
+			},
+			true,
+			{ includeAllHosts: true },
+		);
+		if (operation === "updateUnlocked") validateCaBundle({ ...previous, ...data });
+		const referenced = accessListFiles(previous, internalAccessList.getFilename(previous));
+		const files = await captureConfigurationFiles([
+			referenced.auth,
+			referenced.ca,
+			internalAccessList.getFilename(previous),
+			`${internalAccessList.getFilename(previous)}.crt`,
+			...(previous.proxy_hosts || []).map((host) => internalNginx.getConfigName("proxy_host", host.id)),
+		]);
+		previous.is_deleted = 0;
+		const activation = { changed: false, previous: _.cloneDeep(previous) };
+		try {
+			return await internalAccessList[operation](access, data, activation);
+		} catch (error) {
+			if (!activation.changed) throw error;
+			await accessListModel.transaction(async (trx) => {
+				await accessListModel.query(trx).where("id", previous.id).patch(_.pick(previous, listFields));
+				await accessListAuthModel.query(trx).delete().where("access_list_id", previous.id);
+				for (const item of previous.items || [])
+					await accessListAuthModel
+						.query(trx)
+						.insert(_.pick(item, ["id", "access_list_id", "username", "password"]));
+				await accessListClientModel.query(trx).delete().where("access_list_id", previous.id);
+				for (const client of previous.clients || [])
+					await accessListClientModel
+						.query(trx)
+						.insert(_.pick(client, ["id", "access_list_id", "address", "directive"]));
+				for (const host of previous.proxy_hosts || [])
+					await proxyHostModel
+						.query(trx)
+						.where("id", host.id)
+						.patch(_.pick(host, ["access_list_id", "upload_relay_enabled", "meta"]));
+			});
+			await restoreConfigurationFiles(files);
+			if (previous.meta?.auth_type === "oauth2_proxy") await internalOAuth2Proxy.restart(previous);
+			else await internalOAuth2Proxy.stop(previous.id);
+			try {
+				await internalNginx.reload();
+			} catch (rollbackError) {
+				throw new errs.ConfigurationError(
+					`Access-list activation failed; previous files and database restored, reload failed: ${rollbackError.message}`,
+				);
+			}
+			throw error;
+		}
+	});
+
 const internalAccessList = {
 	/**
 	 * @param   {import("../lib/types.js").Access}  access
@@ -126,7 +217,27 @@ const internalAccessList = {
 	 * @param   {number} [data.id]
 	 * @returns {Promise}
 	 */
-	create: async (access, data) => {
+	create: (access, data) =>
+		internalNginx.withConfigurationLock(async () => {
+			await access.can("access_lists:create", data);
+			validateCaBundle(data);
+			try {
+				return await internalAccessList.createUnlocked(access, data);
+			} catch (error) {
+				if (data.id) {
+					await accessListModel.transaction(async (trx) => {
+						await accessListAuthModel.query(trx).delete().where("access_list_id", data.id);
+						await accessListClientModel.query(trx).delete().where("access_list_id", data.id);
+						await accessListModel.query(trx).delete().where("id", data.id);
+					});
+					await fs.promises.rm(internalAccessList.getFilename({ id: data.id }), { force: true });
+					await fs.promises.rm(`${internalAccessList.getFilename({ id: data.id })}.crt`, { force: true });
+				}
+				throw error;
+			}
+		}),
+
+	createUnlocked: async (access, data) => {
 		await access.can("access_lists:create", data);
 		validateListInput(data);
 		const row = await accessListModel.transaction(async (trx) => {
@@ -192,10 +303,17 @@ const internalAccessList = {
 
 		// Audit log
 		data.meta = _.assign({}, data.meta || {}, freshRow.meta);
-		await internalAccessList.build(freshRow);
+		const artifacts = await internalAccessList.build(freshRow, { immutable: true });
+		if (artifacts?.revision) {
+			freshRow.meta = { ...freshRow.meta, authorization_revision: artifacts.revision };
+			await accessListModel.query().where("id", freshRow.id).patch({ meta: freshRow.meta });
+		}
 
 		if (Number.parseInt(freshRow.proxy_host_count, 10)) {
-			await internalNginx.bulkGenerateConfigs(proxyHostModel, "proxy_host", freshRow.proxy_hosts);
+			await internalNginx.bulkGenerateConfigGroupsUnlocked(
+				[{ model: proxyHostModel, hostType: "proxy_host", hosts: freshRow.proxy_hosts }],
+				{ throwOnError: true, reload: true },
+			);
 		}
 
 		// Manage OAuth2 Proxy
@@ -235,15 +353,23 @@ const internalAccessList = {
 	update: async (access, data) => {
 		await access.can("access_lists:update", data);
 		validateListInput(data);
-		const row = await internalAccessList.get(
-			access,
-			{
-				id: data.id,
-				expand: ["items", "clients", "proxy_hosts.[host_domains,certificate]"],
-			},
-			true,
-			{ includeAllHosts: true }, // validate every affected host's configuration
-		);
+		return activateList(access, data, "updateUnlocked");
+	},
+
+	updateUnlocked: async (access, data, activation) => {
+		await access.can("access_lists:update", data);
+		validateListInput(data);
+		const row =
+			activation.previous ||
+			(await internalAccessList.get(
+				access,
+				{
+					id: data.id,
+					expand: ["items", "clients", "proxy_hosts.[host_domains,certificate]"],
+				},
+				true,
+				{ includeAllHosts: true }, // validate every affected host's configuration
+			));
 		if (row.id !== data.id) {
 			// Sanity check that something crazy hasn't happened
 			throw new errs.InternalValidationError(
@@ -325,13 +451,7 @@ const internalAccessList = {
 			}
 		});
 
-		// Add to audit log
-		await internalAuditLog.add(access, {
-			action: "updated",
-			object_type: "access-list",
-			object_id: data.id,
-			meta: auditData(data),
-		});
+		activation.changed = true;
 
 		// re-fetch with expansions
 		const freshRow = await internalAccessList.get(
@@ -349,9 +469,16 @@ const internalAccessList = {
 			{ includeAllHosts: true }, // trusted configuration rebuild
 		);
 
-		await internalAccessList.build(freshRow);
+		const artifacts = await internalAccessList.build(freshRow, { immutable: true });
+		if (artifacts?.revision) {
+			freshRow.meta = { ...freshRow.meta, authorization_revision: artifacts.revision };
+			await accessListModel.query().where("id", freshRow.id).patch({ meta: freshRow.meta });
+		}
 		if (Number.parseInt(freshRow.proxy_host_count, 10)) {
-			await internalNginx.bulkGenerateConfigs(proxyHostModel, "proxy_host", freshRow.proxy_hosts);
+			await internalNginx.bulkGenerateConfigGroupsUnlocked(
+				[{ model: proxyHostModel, hostType: "proxy_host", hosts: freshRow.proxy_hosts }],
+				{ throwOnError: true },
+			);
 		}
 
 		// Manage OAuth2 Proxy
@@ -362,7 +489,15 @@ const internalAccessList = {
 			await internalOAuth2Proxy.stop(freshRow.id);
 		}
 
-		await internalNginx.withConfigurationLock(() => internalNginx.reload());
+		await internalNginx.reload();
+
+		// Add to audit log
+		await internalAuditLog.add(access, {
+			action: "updated",
+			object_type: "access-list",
+			object_id: data.id,
+			meta: auditData(data),
+		});
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("access-list");
@@ -431,23 +566,29 @@ const internalAccessList = {
 	 * @param   {String}  [data.reason]
 	 * @returns {Promise}
 	 */
-	delete: async (access, data) => {
+	delete: (access, data) => activateList(access, data, "deleteUnlocked"),
+
+	deleteUnlocked: async (access, data, activation) => {
 		await access.can("access_lists:delete", data.id);
-		const row = await internalAccessList.get(
-			access,
-			{
-				id: data.id,
-				expand: ["proxy_hosts.[host_domains,certificate]"],
-			},
-			true,
-			{ includeAllHosts: true }, // detach the list from every affected host
-		);
+		const row =
+			activation.previous ||
+			(await internalAccessList.get(
+				access,
+				{
+					id: data.id,
+					expand: ["proxy_hosts.[host_domains,certificate]"],
+				},
+				true,
+				{ includeAllHosts: true }, // detach the list from every affected host
+			));
 
 		if (!row?.id) {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 
 		// 1. update row to be deleted
+		activation.changed = true;
+
 		// 2. update any proxy hosts that were using it (ignoring permissions)
 		// 3. reconfigure those hosts
 		// 4. audit log
@@ -472,10 +613,13 @@ const internalAccessList = {
 				return true;
 			});
 
-			await internalNginx.bulkGenerateConfigs(proxyHostModel, "proxy_host", row.proxy_hosts);
+			await internalNginx.bulkGenerateConfigGroupsUnlocked(
+				[{ model: proxyHostModel, hostType: "proxy_host", hosts: row.proxy_hosts }],
+				{ throwOnError: true },
+			);
 		}
 
-		await internalNginx.withConfigurationLock(() => internalNginx.reload());
+		await internalNginx.reload();
 
 		// delete the htpasswd file
 		try {
@@ -613,9 +757,10 @@ const internalAccessList = {
 	 * @param   {string}  [list.mtls_certificate]
 	 * @returns {Promise}
 	 */
-	build: async (list) => {
+	build: async (list, options = {}) => {
 		logger.info(`Building Access file #${list.id} for: ${list.name}`);
 
+		validateCaBundle(list);
 		const htpasswdFile = internalAccessList.getFilename(list);
 
 		// Assemble first, then atomically replace: readers never see a partial htpasswd file.
@@ -628,28 +773,59 @@ const internalAccessList = {
 			}
 			lines.push(`${item.username}:${finalPass}\n`);
 		}
-		const temporaryFile = `${htpasswdFile}.${randomUUID()}.tmp`;
+		if (options.immutable) {
+			const authContent = lines.join("");
+			const caContent = list.mtls_enabled && !list.mtls_use_internal ? list.mtls_certificate || "" : "";
+			const revision = createHash("sha256")
+				.update(JSON.stringify({ auth: authContent, ca: caContent }))
+				.digest("hex");
+			const paths = accessListFiles({ id: list.id, meta: { authorization_revision: revision } }, htpasswdFile);
+			const publish = async (filename, content) => {
+				const temporary = `${filename}.${randomUUID()}.tmp`;
+				try {
+					await fs.promises.writeFile(temporary, content, { encoding: "utf8", mode: 0o600 });
+					try {
+						await fs.promises.link(temporary, filename);
+					} catch (error) {
+						if (error.code !== "EEXIST") throw error;
+						if ((await fs.promises.readFile(filename, "utf8")) !== content)
+							throw new errs.ConfigurationError("Immutable authorization artifact is corrupt");
+					}
+				} finally {
+					await fs.promises.rm(temporary, { force: true });
+				}
+			};
+			await publish(paths.auth, authContent);
+			if (caContent) await publish(paths.ca, caContent);
+			return { revision, ...paths };
+		}
+		const previousFiles = await captureConfigurationFiles([htpasswdFile, `${htpasswdFile}.crt`]);
 		try {
-			await fs.promises.writeFile(temporaryFile, lines.join(""), { encoding: "utf8", mode: 0o600 });
-			await fs.promises.rename(temporaryFile, htpasswdFile);
-		} finally {
-			await fs.promises.rm(temporaryFile, { force: true });
-		}
-
-		// mTLS write errors must abort the update instead of silently retaining an old CA.
-		const crtFile = `${htpasswdFile}.crt`;
-		if (list.mtls_enabled && !list.mtls_use_internal && list.mtls_certificate) {
-			const temporaryCrt = `${crtFile}.${randomUUID()}.tmp`;
+			const temporaryFile = `${htpasswdFile}.${randomUUID()}.tmp`;
 			try {
-				await fs.promises.writeFile(temporaryCrt, list.mtls_certificate, { encoding: "utf8", mode: 0o600 });
-				await fs.promises.rename(temporaryCrt, crtFile);
+				await fs.promises.writeFile(temporaryFile, lines.join(""), { encoding: "utf8", mode: 0o600 });
+				await fs.promises.rename(temporaryFile, htpasswdFile);
 			} finally {
-				await fs.promises.rm(temporaryCrt, { force: true });
+				await fs.promises.rm(temporaryFile, { force: true });
 			}
-		} else {
-			await fs.promises.rm(crtFile, { force: true });
-		}
 
+			// mTLS write errors must abort the update instead of silently retaining an old CA.
+			const crtFile = `${htpasswdFile}.crt`;
+			if (list.mtls_enabled && !list.mtls_use_internal && list.mtls_certificate) {
+				const temporaryCrt = `${crtFile}.${randomUUID()}.tmp`;
+				try {
+					await fs.promises.writeFile(temporaryCrt, list.mtls_certificate, { encoding: "utf8", mode: 0o600 });
+					await fs.promises.rename(temporaryCrt, crtFile);
+				} finally {
+					await fs.promises.rm(temporaryCrt, { force: true });
+				}
+			} else {
+				await fs.promises.rm(crtFile, { force: true });
+			}
+		} catch (error) {
+			await restoreConfigurationFiles(previousFiles);
+			throw error;
+		}
 		logger.success(`Built Access file #${list.id} for: ${list.name}`);
 	},
 };

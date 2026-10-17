@@ -122,6 +122,21 @@ Kandidaten. `backend/test/internal/proxy-host-monitor.spec.js` prüft die begren
   GitOps exportiert nur Monitor-Einstellungen und keine historischen Messergebnisse. Backups vor Einführung dieses
   Features besitzen keinen Monitor-Ordner; ihr Import lässt lokal vorhandene Monitore unberührt.
 
+## Upstream-Pools und Incident-Center
+
+Bei einem aktivierten Upstream-Pool prüft der Monitor dessen Ziele anstelle des historischen Einzelziels.
+Primäre Ziele werden vor Backups geprüft; ein erfolgreiches Ziel genügt für den Gesamtzustand `up`.
+Die Probes laufen innerhalb desselben begrenzten Worker-Slots nacheinander und teilen sich das konfigurierte
+Zeitbudget. Eine ausgeschöpfte Teilzeit bleibt `unknown`, weil sie keinen vollständigen Ziel-Timeout beweist.
+Explizite Verbindungsfehler oder unerwartete HTTP-Statuswerte bleiben `down`. Host-Header und TLS-Servername
+folgen der Pool-Identität; ausdrücklich gesetzte Monitor-CA-, SNI- und Zertifikatsoptionen haben Vorrang.
+
+Der Pool-Tab zeigt die letzten zielbezogenen Monitor-Beobachtungen getrennt von den dort abgefragten
+TCP-Snapshots. Sie verfallen nach fünf Minuten und passen nur zur unveränderten Pool-Konfiguration.
+Das [Incident-Center](./incident-center.md) speichert akzeptierte Zustandswechsel, tägliche Verfügbarkeit,
+Latenzen und Benachrichtigungsaufträge dauerhaft. Seine Alarm-Stummschaltung pausiert weder die Checks
+noch die Wartungsseite und wird auch von Telegram-Alarmen berücksichtigt.
+
 ## Schnittstellen
 
 Der Dialog lädt beim Öffnen aktuelle Einstellungen, bevor das Bearbeitungsformular erscheint. Ein Fehler dieses
@@ -142,6 +157,13 @@ simulierten API-Antworten.
 - [Proxy-Host](./proxy-host.md) — Ziel und Besitzer
 - [ChatOps](./chatops.md) — Telegram-Integration
 - [Datenmodell](../daten/datenmodell.md) — Datenbanktabellen
+
+### Dauerhafte Vorfälle und zusätzliche Kanäle
+
+Akzeptierte Messungen aktualisieren zusätzlich das [Incident-Center](./incident-center.md) in derselben
+Transaktion. Vorfälle, tägliche Verfügbarkeit und Latenzminuten überleben die 100er-Checkhistorie; fehlende
+Messungen zählen als unbekannt. Geplante Alarm-Stummschaltung wirkt auf neue und erneut versuchte
+Kanalzustellungen sowie Telegram, ohne die bestehende Wartungsseite oder Checks anzuhalten.
 
 ## Offene Fragen
 

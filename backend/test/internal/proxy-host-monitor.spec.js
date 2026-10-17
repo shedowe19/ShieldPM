@@ -1,3 +1,12 @@
+vi.mock("../../internal/incidents.js", () => ({
+	default: {
+		isMuted: async () => false,
+		recordCheck: async () => {},
+		resetHost: async () => {},
+		removeHost: async () => {},
+	},
+}));
+
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import http from "node:http";
@@ -28,6 +37,7 @@ import monitor, {
 	formatHostMonitorAlert,
 	networkMessage,
 	probeHttp,
+	probePool,
 	probeTcp,
 } from "../../internal/proxy-host-monitor.js";
 import { up } from "../../migrations/20260923000000_add_proxy_host_monitor.js";
@@ -701,6 +711,27 @@ describe("proxy host upstream monitor", () => {
 				});
 				expect(requests).toHaveBeenCalledTimes(2);
 				expect(state.alerts).not.toHaveBeenCalled();
+				const pooled = await probePool(
+					{
+						id: 11,
+						forward_scheme: "https",
+						forward_host: "127.0.0.1",
+						domain_names: ["public.example.test"],
+						meta: {
+							upstream_pool: {
+								enabled: true,
+								host_header: "application.example.test",
+								tls_server_name: "wrong.example.test",
+								targets: [{ id: "tls", host: "127.0.0.1", port: secureServer.address().port }],
+							},
+						},
+					},
+					settings({ upstream_ca: ca, upstream_server_name: "private.example.test" }),
+				);
+				expect(pooled).toMatchObject({ state: "up", status_code: 200 });
+				expect(requests.mock.calls[requests.mock.calls.length - 1][0].headers.host).toBe(
+					"application.example.test",
+				);
 			} finally {
 				if (secureServer?.listening) await new Promise((resolve) => secureServer.close(resolve));
 				rmSync(directory, { recursive: true, force: true });

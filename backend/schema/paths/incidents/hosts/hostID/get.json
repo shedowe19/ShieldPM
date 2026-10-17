@@ -1,0 +1,57 @@
+{
+	"operationId": "getIncidentHostDetail",
+	"summary": "Read measured daily coverage, latency and alarm mute",
+	"tags": [
+		"incidents"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.view"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../components/incident-host-detail.json"
+					}
+				}
+			}
+		},
+		"400": {
+			"description": "Invalid input or stale configuration"
+		},
+		"403": {
+			"description": "Permission denied"
+		},
+		"404": {
+			"description": "Object not found within caller scope"
+		}
+	},
+	"parameters": [
+		{
+			"in": "path",
+			"name": "hostID",
+			"required": true,
+			"schema": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 9007199254740991
+			}
+		},
+		{
+			"in": "query",
+			"name": "days",
+			"schema": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 365,
+				"default": 30
+			}
+		}
+	]
+}

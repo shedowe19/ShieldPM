@@ -109,8 +109,8 @@ describe("useAnalyticsData", () => {
 			expect(result.current.loading).toBe(false);
 		});
 
-		expect(getAnalyticsSummary).toHaveBeenCalledWith(42, "24h");
-		expect(getAnalyticsSeries).toHaveBeenCalledWith(42, "24h");
+		expect(getAnalyticsSummary).toHaveBeenCalledWith(42, "24h", expect.any(AbortSignal));
+		expect(getAnalyticsSeries).toHaveBeenCalledWith(42, "24h", expect.any(AbortSignal));
 		expect(result.current.summary).toEqual({ count: 3 });
 		expect(result.current.series).toEqual([
 			{
@@ -164,7 +164,7 @@ describe("useAnalyticsData", () => {
 			}),
 		);
 		const { result } = renderHook(() => useAnalyticsData("1", "24h"));
-		expect(getAnalyticsSeries).toHaveBeenCalledWith(1, "24h");
+		expect(getAnalyticsSeries).toHaveBeenCalledWith(1, "24h", expect.any(AbortSignal));
 		expect(result.current.summary).toBeNull();
 		await act(async () => {
 			complete({ count: 55 });
@@ -194,5 +194,60 @@ describe("useAnalyticsData", () => {
 		const { result } = renderHook(() => useAnalyticsData("42", "30d"));
 		await waitFor(() => expect(result.current.loading).toBe(false));
 		expect(result.current.series[0]?.timeDisplay).toBe("Jan 1");
+	});
+});
+
+describe("analytics request cancellation", () => {
+	afterEach(() => {
+		cleanup();
+		vi.restoreAllMocks();
+	});
+	it("shares one generation signal, aborts host/range changes and cancels the final generation on unmount", () => {
+		vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+		vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+		vi.mocked(getAnalyticsSummary)
+			.mockReset()
+			.mockImplementation(() => new Promise(() => {}));
+		vi.mocked(getAnalyticsSeries)
+			.mockReset()
+			.mockImplementation(() => new Promise(() => {}));
+		const { rerender, unmount } = renderHook(({ host, range }) => useAnalyticsData(host, range), {
+			initialProps: { host: "1", range: "24h" },
+		});
+		const first = vi.mocked(getAnalyticsSummary).mock.calls[0][2] as AbortSignal;
+		expect(first).toBeInstanceOf(AbortSignal);
+		expect(vi.mocked(getAnalyticsSeries).mock.calls[0][2]).toBe(first);
+		expect(first.aborted).toBe(false);
+		rerender({ host: "2", range: "7d" });
+		expect(first.aborted).toBe(true);
+		const second = vi.mocked(getAnalyticsSummary).mock.calls[1][2] as AbortSignal;
+		expect(second).not.toBe(first);
+		expect(second.aborted).toBe(false);
+		unmount();
+		expect(second.aborted).toBe(true);
+	});
+	it.each(["hidden", "offline"])("aborts obsolete analytics requests when becoming %s", (reason) => {
+		const online = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+		const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+		vi.mocked(getAnalyticsSummary)
+			.mockReset()
+			.mockImplementation(() => new Promise(() => {}));
+		vi.mocked(getAnalyticsSeries)
+			.mockReset()
+			.mockImplementation(() => new Promise(() => {}));
+		const { result } = renderHook(() => useAnalyticsData("1", "24h"));
+		const signal = vi.mocked(getAnalyticsSummary).mock.calls[0][2] as AbortSignal;
+		act(() => {
+			if (reason === "hidden") {
+				visibility.mockReturnValue("hidden");
+				document.dispatchEvent(new Event("visibilitychange"));
+			} else {
+				online.mockReturnValue(false);
+				window.dispatchEvent(new Event("offline"));
+			}
+		});
+		expect(signal.aborted).toBe(true);
+		expect(result.current.loading).toBe(false);
+		expect(result.current.error).toBeNull();
 	});
 });

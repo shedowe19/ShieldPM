@@ -51,6 +51,21 @@ describe("Nginx bulk validation outcome", () => {
 		await fs.promises.rm(directory, { recursive: true, force: true });
 	});
 
+	it("reactivates previous listeners when status persistence fails after a successful batch reload", async () => {
+		const activations = [];
+		vi.spyOn(nginx, "reload").mockImplementation(async () => {
+			activations.push(await Promise.all(rows.map((host) => fs.promises.readFile(filename(host.id), "utf8"))));
+		});
+		vi.spyOn(nginx, "commitStagedConfig").mockRejectedValueOnce(new Error("Status write failed"));
+		await expect(nginx.bulkGenerateConfigGroups(groups(), { reload: true, throwOnError: true })).rejects.toThrow(
+			"Status write failed",
+		);
+		expect(activations).toEqual([
+			["replacement 1", "replacement 2"],
+			["working 1", "working 2"],
+		]);
+	});
+
 	it("throws a failed strict validation only after restoring every staged config and status", async () => {
 		const failure = new Error("Nginx rejected replacement");
 		test.mockRejectedValueOnce(failure);

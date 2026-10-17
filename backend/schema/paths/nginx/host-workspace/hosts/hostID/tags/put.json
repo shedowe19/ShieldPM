@@ -1,0 +1,62 @@
+{
+	"operationId": "putNginxHostWorkspaceHosts{Hostid}Tags",
+	"summary": "Replace tags after per-host authorization",
+	"tags": [
+		"proxy-hosts"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.manage"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Successful operation",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object"
+					}
+				}
+			}
+		}
+	},
+	"parameters": [
+		{
+			"in": "path",
+			"name": "hostID",
+			"required": true,
+			"schema": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 9007199254740991
+			}
+		}
+	],
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"type": "object",
+					"required": [
+						"tags"
+					],
+					"additionalProperties": false,
+					"properties": {
+						"tags": {
+							"type": "array",
+							"maxItems": 20,
+							"items": {
+								"type": "string",
+								"maxLength": 32
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

@@ -84,6 +84,8 @@ COPY rootfs /
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     libmaxminddb0 \
+    mariadb-client \
+    postgresql-client \
     wireguard-tools \
     iproute2 \
     iptables \

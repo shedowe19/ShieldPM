@@ -7,7 +7,10 @@ const state = vi.hoisted(() => ({
 	patchAndFetch: vi.fn(),
 	reads: vi.fn(),
 }));
-vi.mock("node:child_process", () => ({ execSync: () => "", spawn: vi.fn() }));
+vi.mock("node:child_process", async () => {
+	const { legacyWireguardExecFile } = await import("../helpers/legacy-wireguard-exec.js");
+	return { execSync: () => "", spawn: vi.fn(), execFile: legacyWireguardExecFile(() => "") };
+});
 vi.mock("node:fs", () => ({
 	default: { existsSync: () => true, readFileSync: () => "server-key", writeFileSync: state.write },
 }));

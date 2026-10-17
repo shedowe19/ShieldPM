@@ -2,12 +2,13 @@ import {
 	IconActivityHeartbeat,
 	IconDotsVertical,
 	IconEdit,
+	IconHistory,
 	IconPower,
 	IconStethoscope,
 	IconTrash,
 } from "@tabler/icons-react";
 import { type ColumnVisibilityState, createColumnHelper, useTable } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import type { ProxyHost, ProxyHostMonitorSummary } from "src/api/backend";
 import {
 	CertificateFormatter,
@@ -17,6 +18,7 @@ import {
 	ServiceIcon,
 	UserAvatar,
 } from "src/components";
+import { RouteErrorBoundary } from "src/components/RouteErrorBoundary";
 import { AccessListFormatter } from "src/components/Table/Formatter/AccessListformatter";
 import { TableLayout } from "src/components/Table/TableLayout";
 import { shieldTableFeatures } from "src/components/Table/tableFeatures";
@@ -51,6 +53,9 @@ interface Props {
 }
 
 const defaultColumnVisibility: ColumnVisibilityState = {};
+const LazyHostRevisionsDialog = lazy(() =>
+	import("./HostRevisionsDialog").then((module) => ({ default: module.HostRevisionsDialog })),
+);
 
 export default function Table({
 	data,
@@ -64,6 +69,7 @@ export default function Table({
 	isFiltered,
 }: Props) {
 	const [diagnosticsHost, setDiagnosticsHost] = useState<{ id: number; domain: string } | null>(null);
+	const [revisionsHost, setRevisionsHost] = useState<{ id: number; domain: string } | null>(null);
 	const [monitorHost, setMonitorHost] = useState<ProxyHost | null>(null);
 	const monitorColumnsVisible = columnVisibility.monitor !== false || columnVisibility.latency !== false;
 	const ids = useMemo(
@@ -210,6 +216,19 @@ export default function Table({
 										<IconActivityHeartbeat className="mr-2 h-4 w-4" />
 										<T id="proxy-host.monitor.title" />
 									</DropdownMenuItem>
+									<DropdownMenuItem
+										onClick={() =>
+											setRevisionsHost({
+												id: info.row.original.id,
+												domain:
+													info.row.original.domainNames?.join(", ") ||
+													`#${info.row.original.id}`,
+											})
+										}
+									>
+										<IconHistory className="mr-2 h-4 w-4" />
+										<T id="proxy-host.revisions.title" />
+									</DropdownMenuItem>
 									<DropdownMenuSeparator />
 									<HasPermission section={PROXY_HOSTS} permission={MANAGE} hideError>
 										<DropdownMenuItem onClick={() => onEdit?.(info.row.original.id)}>
@@ -278,6 +297,24 @@ export default function Table({
 					domain={diagnosticsHost.domain}
 					onClose={() => setDiagnosticsHost(null)}
 				/>
+			)}
+			{revisionsHost && (
+				<RouteErrorBoundary resetKey={String(revisionsHost.id)}>
+					<Suspense
+						fallback={
+							<p role="status">
+								<T id="loading" />
+							</p>
+						}
+					>
+						<LazyHostRevisionsDialog
+							key={revisionsHost.id}
+							hostId={revisionsHost.id}
+							domain={revisionsHost.domain}
+							onClose={() => setRevisionsHost(null)}
+						/>
+					</Suspense>
+				</RouteErrorBoundary>
 			)}
 			{monitorHost && (
 				<MonitorDialog

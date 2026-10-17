@@ -78,7 +78,21 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 
 Nach einem erfolgreichen `configure()` wird `internalAnubis.generatePolicy()` **asynchron** aufgerufen (non-blocking). Dies aktualisiert die Anubis-Sicherheitspolicy basierend auf der neuen Nginx-Konfiguration, ohne den Configure-Flow zu blockieren. Fehler werden separat protokolliert und rollen eine bereits akzeptierte Nginx-Konfiguration nicht zurück.
 
-## Abhängigkeiten
+## Wasm-Lieferumfang und fehlende Produktanbindung
+
+Die am 17. Oktober 2026 geprüfte Nginx-Runtime 1.31.6 enthält statisch API7s `wasm-nginx-module` 0.7.0
+mit Wasmtime 49.0.2. Lua-Helfer und Runtime-Bibliothek werden auch im nativen Archiv ausgeliefert.
+Die reguläre Basiskonfiguration setzt bisher kein `wasm_vm`; ShieldPM hat noch keine Filterverwaltung
+oder Hostzuweisung. Die Anbindung erfolgt über `resty.proxy-wasm` und gemeinsame Lua-Phasen.
+
+Ein isolierter echter Filter prüfte API-Key, Request-/Response-Header, Trap und ungültige Datei erfolgreich.
+`nginx -t` führt Filter jedoch nicht aus und akzeptiert die ungültige Datei. Eine spätere Aktivierung muss
+zusätzlich echte Ausführung prüfen. Allgemeines Body-Umschreiben und Shared-State-/Zeit-APIs fehlen;
+Pluginmetriken sind Stubs. Allgemeine Uploads benötigen zuvor CPU-/Speichergrenzen
+und eine eingeschränkte WASI-Umgebung. Technischer Stand, Nachweise und Feature-Umfang stehen im
+[Gesamtprüfbericht](../entwicklung/feature-review-2026-10-17.md#wasm-vorhandene-technik-und-tatsächlicher-test).
+
+## Abhängigkeiten der Konfigurationsengine
 
 - `lib/utils.js` — Render-Engine (`getRenderEngine()`, Liquid-basiert)
 - `internal/proxy-host.js`, `internal/redirection-host.js`, `internal/dead-host.js`, `internal/stream.js` — rufen die Engine bei CRUD auf

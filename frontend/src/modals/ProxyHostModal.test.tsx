@@ -80,6 +80,9 @@ vi.mock("./ProxyHostSecurityTab", async () => {
 	};
 	return { default: SecurityDraft };
 });
+vi.mock("./ProxyHostWasmTab", () => ({ default: () => null }));
+vi.mock("./ProxyHostUpstreamPoolTab", () => ({ default: () => null }));
+vi.mock("./ProxyHostCacheTab", () => ({ default: () => null }));
 vi.mock("./ProxyHostSslTab", () => ({ default: () => null }));
 
 beforeEach(async () => {
@@ -154,7 +157,7 @@ describe("ProxyHostModal", () => {
 		const Modal = mocks.show.mock.calls[0][0];
 		render(<Modal id={73} remove={vi.fn()} visible />);
 		const save = screen.getByRole("button", { name: "Speichern" });
-		fireEvent.mouseDown(screen.getAllByRole("tab")[3], { button: 0, ctrlKey: false });
+		fireEvent.mouseDown(screen.getByRole("tab", { name: "Sicherheit" }), { button: 0, ctrlKey: false });
 		fireEvent.click(await screen.findByRole("button", { name: "Add invalid ASN" }));
 		await waitFor(() => expect(save).toBeDisabled());
 		fireEvent.mouseDown(screen.getAllByRole("tab")[0], { button: 0, ctrlKey: false });
@@ -162,7 +165,7 @@ describe("ProxyHostModal", () => {
 		expect(save).toBeDisabled();
 		fireEvent.click(save);
 		expect(mutate).not.toHaveBeenCalled();
-		fireEvent.mouseDown(screen.getAllByRole("tab")[3], { button: 0, ctrlKey: false });
+		fireEvent.mouseDown(screen.getByRole("tab", { name: "Sicherheit" }), { button: 0, ctrlKey: false });
 		fireEvent.click(await screen.findByRole("button", { name: "Remove ASN" }));
 		await waitFor(() => expect(save).not.toBeDisabled());
 	});

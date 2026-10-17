@@ -1,0 +1,84 @@
+# Umsetzung der Gesamtprüfung vom 17. Oktober 2026
+
+Die [ursprüngliche Gesamtprüfung](./feature-review-2026-10-17.md) ist ein unveränderter Befundbericht vor der Implementierung. Dieses Dokument beschreibt die anschließende Umsetzung von B01–B12, O01–O07 und F01–F08 mit dem erneut geladenen deepen-prompt-Skill. Grundlage sind derselbe ShieldPM-Stand einschließlich [PR #155](https://github.com/shedowe19/ShieldPM/pull/155), reale Datenbank-/HTTP-Tests und das veröffentlichte ShieldPM-Nginx-Binary 1.31.6 mit API7 Wasm 0.7.0/Wasmtime 49.0.2. Ein Versionswechsel ist nicht Bestandteil dieser Änderung.
+
+## Neue Funktionen
+
+| ID  | Umsetzung                                                                                                                                                                                                   | Oberfläche und Dokumentation                                                  |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| F01 | Geordnete vertrauenswürdige Wasm-Filter für API-Schlüssel, Anfrage-/Antwortheader und lokale Antworten; Runtime-Erkennung, echter Selbsttest, unveränderliche Artefakte, geprüfte Aktivierung und Rücknahme | Proxy-Host → Wasm; [Wasm-Filter](../module/wasm-filter.md)                    |
+| F02 | Gewichtete Upstream-Pools, Backup-Ziele, passive Ausfallbehandlung, sichere Wiederholungsregeln, Host-/SNI-/TLS-Konfiguration und getrennte TCP-/Monitorbeobachtung                                         | Proxy-Host → Upstreams; [Upstream-Pools](../module/upstream-pools.md)         |
+| F03 | Verschlüsselte Host-Versionen, redigierter Vergleich, Schutz vor veralteten Zuständen, begrenzte Aufbewahrung und Wiederherstellung mit geprüfter Aktivierung                                               | Host-Menü → Versionen; [Host-Versionen](../features/host-revisionen.md)       |
+| F04 | Störungen, gemessene Verfügbarkeit/Abdeckung, Latenzverlauf, geplante Alarmunterdrückung und dauerhafte Webhook-/ntfy-/Discord-Zustellung mit Wiederholungen                                                | Störungszentrale; [Incident Center](../module/incident-center.md)             |
+| F05 | Tags, persönliche Ansichten, Sicherheits-/Ratenprofile und geprüfte Mehrfachänderungen mit Ergebnissen je Host                                                                                              | Host-Arbeitsbereich; [Arbeitsbereich](../features/host-arbeitsbereich.md)     |
+| F06 | Tatsächlicher Proxy-Cache mit TTL, Routen, Größenlimit, Auth-/Cookie-/Methoden-Bypass, Löschung und begrenzter HIT/MISS-Stichprobe; WAF-Auswahl unabhängig vom Cache                                        | Proxy-Host → Cache und Sicherheit; [Proxy-Cache](../module/proxy-cache.md)    |
+| F07 | Eigene Browser-Sitzungen anzeigen und einzelne oder alle anderen Geräte abmelden                                                                                                                            | Profil → Sitzungen; [Auth-Session-Service](../module/auth-session-service.md) |
+| F08 | Verschlüsselte vollständige Instanzbackups einschließlich Datenbank, Zertifikaten, Schlüsseln und Konfiguration; Upload/Download, Integritätsprüfung und geprüfte Wiederherstellung beim nächsten Start     | Einstellungen → Backups; [Instanzbackups](../module/instance-backups.md)      |
+
+Wasm führt den gebündelten, begrenzten Policy-Filter aus. Ein beliebiger Upload fremder Wasm-Binaries, ein Plugin-Marktplatz und unbelegte JWT-/Body-Rewrite-Funktionen werden nicht angeboten. Für diese Funktionen wäre eine gesonderte Runtime- und Ressourcenprüfung erforderlich.
+
+## Fehlerkorrekturen
+
+| ID  | Änderung und Absicherung                                                                                                                                                                                                                 |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B01 | Access-List-Dateien erhalten inhaltsadressierte Namen; laufende alte Worker lesen weiterhin die alten Passwort-/CA-Dateien. Ungültige CA wird vor Veröffentlichung verworfen. Gemeinsamer Rollback umfasst Datenbank, Dateien und Nginx. |
+| B02 | Begrenzter kanonischer Validator-Cache entfernt auch AJV-Einträge bei Verdrängung; konstante Schemas werden wiederverwendet.                                                                                                             |
+| B03 | Transaktionales gemeinsames Domainregister verhindert konkurrierende Proxy-/Redirect-/404-Belegungen auch über mehrere Datenbankverbindungen. Alte und neue Namen bleiben während einer Aktivierung für deren Rollback reserviert.       |
+| B04 | Docker-Eventstream verbindet mit begrenztem exponentiellem Backoff neu und gleicht den Bestand erneut ab; Stop beendet Stream und Timer.                                                                                                 |
+| B05 | GitOps aktiviert neue/geänderte Cloudflared-Tunnel und meldet Prozessfehler. Proxy-Importe berücksichtigen die neuen Policy- und Aktivierungsregeln.                                                                                     |
+| B06 | Manueller DDNS-Test und Scheduler verwenden dieselbe Provider-Queue und lesen aktuelle Konfiguration innerhalb der Queue.                                                                                                                |
+| B07 | Die ACME-Registrierung erfolgt erst bei der ersten tatsächlichen Zertifikatsanforderung unter dem vorhandenen Prozess-Lock. Ein nicht erreichbares ACME blockiert die Oberfläche nicht beim Start.                                       |
+| B08 | Installer und Runtime berücksichtigen die effektive Legacy-Datenbankquelle; eine widersprüchliche Providerwahl wird nicht mehr als erfolgreicher Wechsel ausgegeben.                                                                     |
+| B09 | Alle Proxy-Tabs haben zugängliche übersetzte Namen, einschließlich der bisherigen Symbol-Tabs.                                                                                                                                           |
+| B10 | Das gemeinsame React-Select-Domainfeld verwendet `inputId`, damit Label und tatsächliche Eingabe verbunden sind.                                                                                                                         |
+| B11 | Der Cache-Schalter erzeugt echte Cache-Direktiven. Eine Migration bewahrt die bisher effektive WAF-Auswahl unabhängig davon.                                                                                                             |
+| B12 | Upload-Relay kapselt IPv6-Ziele über den vorhandenen Upstream-Host-Filter; echte IPv4-/IPv6-/Pool-Anfragen prüfen den Datenpfad.                                                                                                         |
+
+## Optimierungen
+
+| ID  | Umsetzung und Messgrenze                                                                                                                                                               |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| O01 | Wiederverwendete Access-Validatoren mit aktuellen Actor-/Owner-Daten; keine vollständige Proxy-ID-Liste für eine reine Capability-Prüfung.                                             |
+| O02 | Transaktionale Analytics-Sammel-Upserts in 250er-Chunks mit gleichen Zählern, Mehrfachschlüsseln und atomarem Rollback auf SQLite/PostgreSQL. MySQL-Ausdrücke sind kompiliert geprüft. |
+| O03 | Owner-/Access-List-/Zertifikatsexpansionen folgen den sichtbaren Tabellenspalten. Ein Bearbeitungsdialog lädt weiterhin eigene vollständige Details.                                   |
+| O04 | Schlanke Hostauswahl und echte Request-Abbrüche bei Analytics-Auswahlwechsel, unsichtbarer Seite, Offline-Zustand und Unmount.                                                         |
+| O05 | Stündliche begrenzte Bereinigung abgelaufener Auth-Sessions nach sieben Tagen zusätzlicher Aufbewahrung; gültige Replay-Erkennung bleibt erhalten.                                     |
+| O06 | Asynchrone WireGuard-Abfragen mit zwei Sekunden gemeinsamem Snapshot, Singleflight, Invalidierung und Datenbank-Writes nur bei geänderten Statuswerten.                                |
+| O07 | Ein indexierter Docker-Ausgangsbestand mit atomarer Prüfung beim Schreiben; native Installer-Vorbereitung und Downloads vor dem Anhalten der laufenden Instanz.                        |
+
+### Reproduzierbarer Analytics-Vergleich
+
+`node backend/scripts/benchmarks/analytics-upsert.mjs` vergleicht 500 einzelne Upserts mit der tatsächlichen neuen Produktionshilfe. Ein Sample umfasst zwei Flushes mit Zählerprüfung, nach einem Warmup folgen sieben Samples. Im lokalen SQLite-Speicherlauf mit Node 26.12.0 sinkt die Anzahl der INSERTs von 1.000 auf 4; der Median beträgt 83,48 statt 8,00 ms. Das sind synthetische lokale Werte während weiterer Prüfungen, kein Versprechen für Produktionslatenz.
+
+Die [JSON-Rohwerte](./feature-implementation-2026-10-17.json) enthalten alle Samples und den abschließenden Prüfstand. Weitere Optimierungen haben funktionale und instrumentierte Nachweise; ein ungemessener Produktivgewinn wird nicht behauptet.
+
+## Abschließende Validierung
+
+- Backend: 2.405 Tests bestanden, 31 konfigurierte Skips; keine Fehler. PostgreSQL-Verhalten wird zusätzlich mit PGlite geprüft.
+- Frontend: 986 Tests bestanden; TypeScript, Übersetzungen, Produktionbuild und komprimiertes Größenbudget bestanden.
+- Echter Chromium-Browser: zehn vollständige Abläufe einschließlich der neuen Bedienwege bestanden; keine unbehandelten Browserfehler.
+- Skripte/Betrieb: 170 Python-Tests, davon 149 bestanden und 21 umgebungsabhängig übersprungen; Shellsyntax geprüft.
+- Zusätzlich tatsächliches ShieldPM-Nginx: Wasm/Cache-Kombination, Header-Fehlerstrategie, Pool-Failover, IPv4/DNS/IPv6-Uploads, weiterlaufende Access-List-Worker und Backup-Containment.
+- Statische Konventionen, Diff-/Secretprüfung und Schema-Auflösung bestanden auf dem endgültigen Stand.
+
+## Integrationsregeln und Prüfgrenzen
+
+Neue und vorhandene Hosts verwenden dieselben Policy-Normalisierungen. Öffentliche API und GitOps akzeptieren keine als lokale Geheimnisse ausgegebenen Wasm-Ciphertexte. Ein leeres Schlüsselfeld erhält den aktuellen gespeicherten Schlüssel desselben Hosts und Filters. Exporte, Vorschauen, Revisionsvergleiche und Audit-Metadaten geben Schlüssel nicht preis. Vollständige Instanzbackups enthalten die zur Wiederherstellung benötigten Schlüssel ausschließlich innerhalb des verschlüsselten Archivs.
+
+Die funktionalen Prüfungen verwenden SQLite und PostgreSQL über PGlite, tatsächliche lokale HTTP-/TLS-Server und das veröffentlichte x86_64-Nginx. Wasm-Ausführung, Cache, IPv6, WebSocket, Pool-Failover und weiterlaufende Access-List-Worker werden tatsächlich ausgeführt. In der eingeschränkten Testumgebung ersetzt ein ausschließlich für den Selbsttest aktivierter TCP-Schalter die sonst verwendete Unix-Socket-Verbindung.
+
+Ein produktiver externer MySQL-/PostgreSQL-Server, ARM64, eine echte WireGuard-Schnittstelle, Docker-Daemon, Cloudflare-/ACME-Konten und öffentliche Benachrichtigungsdienste stehen lokal nicht vollständig zur Verfügung. Deren Grenzen werden durch echte lokale Gegenstellen, kontrollierte Prozessgrenzen und CI-Prüfungen abgesichert; die jeweilige externe Betriebsprüfung wird dadurch nicht ersetzt. Eine produktive Instanz wurde nicht verändert.
+
+## Wiki-Prüfung
+
+- Geprüfte Wiki-Seiten: ursprüngliche Gesamtprüfung, betroffene Backend-/UI-/Betriebsseiten und API-Übersicht.
+- Aktualisierte Wiki-Seiten: Auth, Access Lists, Host-Lifecycle, Docker, DDNS, GitOps, WireGuard sowie zentrale Index-/Kontextseiten.
+- Neu erstellte Wiki-Seiten: Wasm, Upstream-Pools, Proxy-Cache, Host-Versionen, Host-Arbeitsbereich, Störungszentrale und Instanzbackups einschließlich API-Nachweis.
+- Keine Wiki-Änderung nötig: entfällt; sämtliche neuen Funktionsbereiche sind dokumentiert.
+- Offene Wiki-TODOs: externe Betriebsprüfungen und die beschriebenen Plattformgrenzen; keine erfundenen Produktivmessungen.
+
+## Verwandte Seiten
+
+- [Ursprüngliche Gesamtprüfung](./feature-review-2026-10-17.md)
+- [Interner Wiki-Index](../index.md)
+- [Rohwerte und Prüfstand](./feature-implementation-2026-10-17.json)

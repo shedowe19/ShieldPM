@@ -6,6 +6,14 @@ if ! echo "$ENABLE_PRERUN" | grep -q "^true$\|^false$"; then
     sleep inf
 fi
 
+# A verified restore is an offline operation. Apply it exactly once, before
+# migrations, user prerun scripts or environment loading can touch instance data.
+# The existence guard keeps application-only rollback to older releases usable.
+if [ -f /app/backup-restore.js ]; then
+    [ -d /data ] || mkdir -p /data || exit 1
+    node /app/backup-restore.js --apply || exit 1
+fi
+
 # Migration from npmplus to shieldpm folder structure
 if [ -d "/data/npmplus" ] && [ ! -d "/data/shieldpm" ]; then
     echo "Migrating data directory from npmplus to shieldpm..."

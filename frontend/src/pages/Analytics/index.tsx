@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Loading } from "src/components";
 import { Alert, AlertDescription } from "src/components/ui/alert";
-import { useHealth, useProxyHosts } from "src/hooks";
+import { useHealth } from "src/hooks";
+import { useHostOptions } from "src/hooks/useHostOptions";
 import { intl, T } from "src/locale";
 import { AnalyticsCharts } from "./AnalyticsCharts";
 import { AnalyticsFilters, analyticsRanges } from "./AnalyticsFilters";
@@ -15,7 +16,7 @@ import { useAnalyticsData } from "./useAnalyticsData";
 import { useAnalyticsLiveMetrics } from "./useAnalyticsLiveMetrics";
 
 const Analytics = () => {
-	const { data: hosts, isLoading: hostsLoading, error: hostsError } = useProxyHosts();
+	const { data: hosts, isLoading: hostsLoading, error: hostsError } = useHostOptions();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const requestedHostId = searchParams.get("host") ?? "";
 	const requestedRange = searchParams.get("range") ?? "";
