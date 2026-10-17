@@ -5,9 +5,60 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { Ajv } from "ajv";
 import errs from "../lib/error.js";
+import { inspectWasmModule } from "../lib/wasm-module-inspection.js";
 
 export const MAX_MODULE_BYTES = 16 * 1024 * 1024;
 const MAX_CATALOG_ITEMS = 512;
+// API7's Wasmtime linker defines WASI Preview 1 for SDK support in otherwise
+// valid Proxy-Wasm HTTP modules. This does not admit standalone WASI programs.
+const wasiPreview1Functions = new Set([
+	"args_get",
+	"args_sizes_get",
+	"environ_get",
+	"environ_sizes_get",
+	"clock_res_get",
+	"clock_time_get",
+	"fd_advise",
+	"fd_allocate",
+	"fd_close",
+	"fd_datasync",
+	"fd_fdstat_get",
+	"fd_fdstat_set_flags",
+	"fd_fdstat_set_rights",
+	"fd_filestat_get",
+	"fd_filestat_set_size",
+	"fd_filestat_set_times",
+	"fd_pread",
+	"fd_prestat_get",
+	"fd_prestat_dir_name",
+	"fd_pwrite",
+	"fd_read",
+	"fd_readdir",
+	"fd_renumber",
+	"fd_seek",
+	"fd_sync",
+	"fd_tell",
+	"fd_write",
+	"path_create_directory",
+	"path_filestat_get",
+	"path_filestat_set_times",
+	"path_link",
+	"path_open",
+	"path_readlink",
+	"path_remove_directory",
+	"path_rename",
+	"path_symlink",
+	"path_unlink_file",
+	"poll_oneoff",
+	"proc_exit",
+	"proc_raise",
+	"sched_yield",
+	"random_get",
+	"sock_accept",
+	"sock_recv",
+	"sock_send",
+	"sock_shutdown",
+]);
 const root = () => path.resolve(process.env.DATA_PATH || "/data", "wasm");
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const validMetadata = new Ajv({ strict: false }).compile({
@@ -21,18 +72,20 @@ const validMetadata = new Ajv({ strict: false }).compile({
 });
 
 export function moduleIdentifier(id) {
-	if (typeof id !== "string" || !/^[a-f0-9]{64}$/.test(id))
+	if (typeof id !== "string" || id.length !== 64 || !/^[a-f0-9]{64}$/.test(id))
 		throw new errs.ValidationError("Invalid Wasm module identifier");
 	return id;
 }
 
 /** Refuse symlink directory components, including a substituted DATA_PATH. */
 export async function wasmDirectory(directory) {
-	const resolved = path.resolve(directory);
-	const dataRoot = path.resolve(process.env.DATA_PATH || "/data");
-	if (resolved !== root() && !resolved.startsWith(`${root()}${path.sep}`))
-		throw new errs.ConfigurationError("Unsafe Wasm storage directory");
-	await fs.mkdir(dataRoot, { recursive: true, mode: 0o700 });
+	const requested = path.resolve(directory);
+	const storageRoot = root();
+	const resolved = [
+		storageRoot,
+		...["modules", "artifacts", "hosts"].map((name) => path.join(storageRoot, name)),
+	].find((candidate) => candidate === requested);
+	if (!resolved) throw new errs.ConfigurationError("Unsafe Wasm storage directory");
 	let current = path.parse(resolved).root;
 	for (const component of resolved.slice(current.length).split(path.sep)) {
 		current = path.join(current, component);
@@ -50,8 +103,10 @@ export async function wasmDirectory(directory) {
 
 /** Read and validate one regular inode, never following a final symlink or blocking on a FIFO. */
 export async function readWasmFile(filename, maximum = MAX_MODULE_BYTES) {
-	await wasmDirectory(path.dirname(filename));
-	const handle = await fs.open(filename, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+	const resolved = path.resolve(filename);
+	if (!resolved.startsWith(`${root()}${path.sep}`)) throw new errs.ConfigurationError("Unsafe Wasm artifact path");
+	await wasmDirectory(path.dirname(resolved));
+	const handle = await fs.open(resolved, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
 	try {
 		const info = await handle.stat();
 		if (!info.isFile() || info.nlink !== 1 || info.size > maximum)
@@ -68,28 +123,30 @@ export async function readWasmFile(filename, maximum = MAX_MODULE_BYTES) {
 
 /** Publish a private, complete immutable inode, checking concurrent publication without replacement. */
 export async function writeWasmArtifact(filename, bytes) {
-	await wasmDirectory(path.dirname(filename));
+	const resolved = path.resolve(filename);
+	if (!resolved.startsWith(`${root()}${path.sep}`)) throw new errs.ConfigurationError("Unsafe Wasm artifact path");
+	await wasmDirectory(path.dirname(resolved));
 	try {
-		if (!(await readWasmFile(filename)).equals(Buffer.from(bytes)))
+		if (!(await readWasmFile(resolved)).equals(Buffer.from(bytes)))
 			throw new errs.ConfigurationError("Immutable Wasm artifact changed");
 		return;
 	} catch (error) {
 		if (error.code !== "ENOENT") throw error;
 	}
-	const temporary = `${filename}.${randomUUID()}.tmp`;
+	const temporary = `${resolved}.${randomUUID()}.tmp`;
 	try {
 		await fs.writeFile(temporary, bytes, { mode: 0o600, flag: "wx", flush: true });
 		try {
-			await fs.link(temporary, filename);
+			await fs.link(temporary, resolved);
 		} catch (error) {
 			if (error.code !== "EEXIST") throw error;
-			if (!(await readWasmFile(filename)).equals(Buffer.from(bytes)))
+			if (!(await readWasmFile(resolved)).equals(Buffer.from(bytes)))
 				throw new errs.ConfigurationError("Immutable Wasm artifact changed");
 		}
 	} finally {
 		await fs.rm(temporary, { force: true });
 	}
-	const directory = await fs.open(path.dirname(filename), "r");
+	const directory = await fs.open(path.dirname(resolved), "r");
 	try {
 		await directory.sync();
 	} finally {
@@ -97,28 +154,28 @@ export async function writeWasmArtifact(filename, bytes) {
 	}
 }
 
-/** Compile without instantiation: generic WASI programs and foreign host imports cannot become HTTP filters. */
+/** Compile without instantiation; SDK WASI support still requires the complete Proxy-Wasm HTTP contract. */
 export async function validateModuleBytes(bytes) {
-	if (!Buffer.isBuffer(bytes) || bytes.length < 8) throw new errs.ValidationError("A binary Wasm module is required");
+	if (typeof bytes !== "object" || bytes === null || !Buffer.isBuffer(bytes))
+		throw new errs.ValidationError("A binary Wasm module is required");
+	if (bytes.length < 8) throw new errs.ValidationError("A binary Wasm module is required");
 	if (bytes.length > MAX_MODULE_BYTES) throw new errs.ValidationError("Wasm modules must not exceed 16 MiB");
 	if (!bytes.subarray(0, 8).equals(Buffer.from([0, 97, 115, 109, 1, 0, 0, 0])))
 		throw new errs.ValidationError("Invalid Wasm binary header");
-	let compiled;
-	try {
-		compiled = await WebAssembly.compile(new Uint8Array(bytes));
-	} catch {
-		throw new errs.ValidationError("The uploaded Wasm module cannot be compiled");
-	}
-	const imports = WebAssembly.Module.imports(compiled);
+	const { imports, exports } = await inspectWasmModule(bytes);
 	if (
 		imports.some(
-			(entry) => entry.module !== "env" || entry.kind !== "function" || !/^proxy_[a-z0-9_]+$/.test(entry.name),
+			(entry) =>
+				entry.kind !== "function" ||
+				!(
+					(entry.module === "env" && /^proxy_[a-z0-9_]+$/.test(entry.name)) ||
+					(entry.module === "wasi_snapshot_preview1" && wasiPreview1Functions.has(entry.name))
+				),
 		)
 	)
 		throw new errs.ValidationError(
-			"Only Proxy-Wasm host imports are supported; WASI programs cannot run as HTTP filters",
+			"Only Proxy-Wasm host imports and standard WASI Preview 1 SDK functions are supported",
 		);
-	const exports = WebAssembly.Module.exports(compiled);
 	const functions = new Set(exports.filter((entry) => entry.kind === "function").map((entry) => entry.name));
 	const required = [
 		"proxy_abi_version_0_2_1",
@@ -232,6 +289,8 @@ const internalWasmModules = {
 	/** Upload requires settings administration before bytes are parsed or compiled. @param {any} access @param {Buffer} bytes @param {any} metadata */
 	async upload(access, bytes, metadata) {
 		await access.can("settings:update");
+		if (typeof bytes !== "object" || bytes === null || !Buffer.isBuffer(bytes))
+			throw new errs.ValidationError("A binary Wasm module is required");
 		if (!validMetadata(metadata))
 			throw new errs.ValidationError("A module name and plain .wasm filename are required");
 		const checkedMetadata = /** @type {{ name: string, filename: string }} */ (metadata);

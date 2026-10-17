@@ -11,11 +11,25 @@ immer ab. Andere Filter bieten explizit „ablehnen“ oder „ohne diesen Filte
 
 ## Eigene Module und Kompatibilität
 
-Der Upload akzeptiert ausschließlich binäres WebAssembly bis 16 MiB. Node kompiliert die Bytes ohne
-Instanziierung und prüft die exportierte Proxy-Wasm-ABI `0.2.1`, den exportierten Speicher, notwendige
-Lebenszyklusfunktionen und mindestens einen HTTP-Callback. Importierte Funktionen müssen aus `env`
-stammen und Proxy-Wasm-Hostfunktionen sein. WASI-Programme und andere WebAssembly-Laufzeitverträge
-sind keine HTTP-Filter für diesen Adapter. Ein passender Dateiname allein belegt keine Kompatibilität.
+Der Upload akzeptiert ausschließlich binäres WebAssembly bis 16 MiB. Ein fester Node-Worker kompiliert die
+Bytes ohne Instanziierung. Höchstens zwei Prüfungen laufen gleichzeitig, jeweils mit fünf Sekunden Zeitlimit
+und V8-Heapgrenzen von 96 MiB für alte sowie 16 MiB für junge Objekte. Diese Heapgrenzen begrenzen nicht
+sämtlichen nativen Compilerspeicher. Ein hängen gebliebener Worker wird beendet; seine Kapazität wird erst
+nach dem tatsächlichen Ende wieder freigegeben. Die Prüfung verwendet keine benutzerdefinierte Worker-Datei,
+kein JavaScript-Eval und keine hochgeladenen Startfunktionen. Anschließend prüft ShieldPM die exportierte
+Proxy-Wasm-ABI `0.2.1`, den exportierten Speicher, notwendige
+Lebenszyklusfunktionen und mindestens einen HTTP-Callback. Importierte Funktionen müssen entweder
+Proxy-Wasm-Hostfunktionen aus `env` oder Standardfunktionen aus `wasi_snapshot_preview1` sein. Dadurch
+werden SDK-Module beispielsweise mit `fd_write`, Zeit- oder Zufallsfunktionen unterstützt. Die vorhandene
+Wasmtime-Anbindung stellt diesen WASI-Kontext ausdrücklich bereit. Ein reines WASI-Kommando ohne
+Proxy-Wasm-Lebenszyklus und HTTP-Callback bleibt unzulässig; ein passender Dateiname allein belegt keine
+Kompatibilität.
+
+Die Kataloghilfe akzeptiert ausschließlich die festen Verzeichnisse `wasm`, `wasm/modules`,
+`wasm/artifacts` und `wasm/hosts` unter `DATA_PATH`. Dateioperationen verwenden den vollständig normalisierten,
+auf diesen Speicher begrenzten Pfad. Jeder Verzeichnisbestandteil wird vor weiteren Schreibzugriffen auf
+Symlinks geprüft; reguläre Artefakte werden weiterhin mit `O_NOFOLLOW` geöffnet und auf Inode, Größe und
+unveränderten Inhalt geprüft. Modulkennungen bestehen aus genau 64 kleingeschriebenen Hexadezimalzeichen.
 
 Beim Speichern des Hosts lädt und konfiguriert ein isolierter echter Nginx-Prozess die tatsächlichen
 Bytecode-Dateien. Jedes eigene Modul wird einzeln mit GET und POST geprüft, anschließend die gesamte
@@ -30,6 +44,10 @@ Hostrechten dürfen die freigegebenen Module auswählen. Eigener Bytecode ist ve
 Administrationscode: API7 bietet hier keine nachgerüsteten Fuel-/Epoch- oder generellen VM-Speichergrenzen.
 Ein Modul kann verfügbare API7-Hostfunktionen einschließlich HTTP-Callouts verwenden. Der isolierte
 Prozess ist zeitlich begrenzt, aber keine Netzwerk-Sandbox für einen absichtlich ausgehenden Callout.
+Die API7-Wasmtime-Anbindung übernimmt außerdem die Nginx-Prozessumgebung und die Standardstreams in den
+WASI-Kontext. Ein Upload darf daher ausschließlich aus einer vertrauenswürdigen Quelle stammen. Der
+[Wasmtime-Linker von API7](https://github.com/api7/wasm-nginx-module/blob/0.7.0/src/vm/wasmtime.c) ist
+für diese Laufzeitfähigkeiten maßgeblich.
 
 ### Tatsächlich unterstützte HTTP-Callbacks
 
@@ -230,7 +248,10 @@ Abschlussflags. Das Modul prüft zusätzlich dieselbe native HTTP-Kontext-ID in 
 Request-Body-, Response-Header- und Response-Body-Callbacks. Weitere Fälle decken Body-only-Module, Trap-Fehler beider Body-Phasen, Fail-open-Preflight,
 frühe lokale Replies, unveränderte akzeptierte Artefakte, HTTP/1-Chunking und HTTP/2 ohne Längenheader ab.
 Diese Belege verwenden tatsächliches Nginx/Wasmtime; sie beweisen keine vollständige Kompatibilität mit
-allen Proxy-Wasm-SDKs.
+allen Proxy-Wasm-SDKs. Eine zusätzliche [WASI-SDK-Modulquelle](../../../backend/test/fixtures/custom-proxy-wasm-wasi.wat)
+und ihr [Binary](../../../backend/test/fixtures/custom-proxy-wasm-wasi.wasm) rufen `wasi_snapshot_preview1.fd_write`
+tatsächlich während der Konfiguration auf und führen anschließend die HTTP-Callbacks aus. Ein bloß
+vorhandener, unbenutzter Import wäre dafür kein Ausführungsbeleg.
 
 ## Grenzen
 

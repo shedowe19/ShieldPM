@@ -20,6 +20,7 @@ const { prepareWasmFilters, materializeWasmHost, redactWasmFilters, prepareHost,
 );
 const bytes = await fs.readFile(new URL("../../wasm/policy.wasm", import.meta.url));
 const customBytes = await fs.readFile(new URL("../fixtures/custom-proxy-wasm.wasm", import.meta.url));
+const wasiBytes = await fs.readFile(new URL("../fixtures/custom-proxy-wasm-wasi.wasm", import.meta.url));
 const access = { can: vi.fn().mockResolvedValue(true) };
 let directory;
 beforeEach(async () => {
@@ -57,6 +58,21 @@ describe("uploaded Proxy-Wasm modules", () => {
 		const foreign = Buffer.from(customBytes);
 		foreign.write("bad", foreign.indexOf(Buffer.from("env")));
 		await expect(validateModuleBytes(foreign)).rejects.toThrow(/host imports/);
+	});
+	it("accepts SDK WASI imports only alongside the full Proxy-Wasm HTTP contract", async () => {
+		expect(await validateModuleBytes(wasiBytes)).toMatchObject({ abi: "0.2.1" });
+		const unknown = Buffer.from(wasiBytes);
+		unknown.write("fd_wrong", unknown.indexOf(Buffer.from("fd_write")));
+		await expect(validateModuleBytes(unknown)).rejects.toThrow(/standard WASI Preview 1/);
+		const nonHttp = Buffer.from(wasiBytes);
+		for (const name of [
+			"proxy_on_request_headers",
+			"proxy_on_response_headers",
+			"proxy_on_request_body",
+			"proxy_on_response_body",
+		])
+			nonHttp.write(name.replace("proxy", "other"), nonHttp.indexOf(Buffer.from(name)));
+		await expect(validateModuleBytes(nonHttp)).rejects.toThrow(/HTTP callback/);
 	});
 	it("publishes immutable private content addressed bytecode and a bounded catalog", async () => {
 		const row = await modules.upload(access, bytes, { name: "Header policy", filename: "headers.wasm" });
@@ -151,6 +167,25 @@ describe.skipIf(!process.env.SHIELDPM_WASM_NGINX_BINARY)("actual uploaded Proxy-
 		await fs.writeFile(configuration, "http {\nwasm_vm wasmtime;\n}\n");
 		vi.stubEnv("SHIELDPM_NGINX_CONF", configuration);
 	});
+	it("executes a real WASI fd_write SDK import alongside actual Proxy-Wasm HTTP callbacks", async () => {
+		const row = await modules.upload(access, wasiBytes, { name: "WASI SDK module", filename: "wasi-sdk.wasm" });
+		const configuration = { WasiSdkCompatibility: "verified" };
+		const filters = await prepareWasmFilters([
+			{
+				id: "wasi-sdk",
+				kind: "module",
+				enabled: true,
+				failure_mode: "closed",
+				config: { module_id: row.id, configuration },
+			},
+		]);
+		const prepared = await prepareHost({ id: 605, enabled: true, meta: { wasm_filters: filters } });
+		const result = await executeWasmPreflight(prepared, {}, { requestBody: "real-wasi-sdk-call" });
+		expect(result.status).toBe(200);
+		expect(result.runtime_error).toBeUndefined();
+		expect(result.body.trim()).toBe("SHIELDPM_WASM_OK:real-wasi-sdk-call");
+		expect(result.headers["x-custom-response"]).toBe(JSON.stringify(configuration));
+	}, 15000);
 	it("loads an independently uploaded module and passes exact JSON through both real HTTP phases", async () => {
 		const row = await modules.upload(access, customBytes, { name: "Own module", filename: "own-module.wasm" });
 		const configuration = { OriginalKey: "json-from-user", nested: { MixedCase: true } };

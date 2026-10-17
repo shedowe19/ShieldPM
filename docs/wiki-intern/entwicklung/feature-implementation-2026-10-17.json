@@ -55,11 +55,11 @@
 	"validation": {
 		"node": "26.12.0",
 		"backend": {
-			"passed": 2579,
-			"skipped": 74,
-			"passed_files": 266,
+			"passed": 2624,
+			"skipped": 75,
+			"passed_files": 268,
 			"skipped_files": 11,
-			"seconds": 37.01
+			"seconds": 39.64
 		},
 		"frontend": {
 			"passed": 995,
@@ -111,7 +111,7 @@
 		},
 		"locale_catalogs": 13,
 		"tscanner": {
-			"workspace_files": 744,
+			"workspace_files": 746,
 			"initial_feature_staged_files": 110,
 			"new_errors": 0,
 			"advisories": 0,
@@ -124,7 +124,7 @@
 			"traffic_policy_security_and_runtime_cases": 45,
 			"tscanner_uncommitted_files": 7,
 			"tscanner_new_errors": 0,
-			"codespell_tracked_files": 1755,
+			"codespell_tracked_files": 1767,
 			"codeql_suppressions_added": 0,
 			"backup_upload_http_and_service_cases": 19,
 			"backup_upload_cleanup_cases": 6,
@@ -182,10 +182,10 @@
 			"codeql_workflow": "pass"
 		},
 		"custom_wasm_modules": {
-			"combined_cases_passed": 58,
-			"files": 7,
+			"combined_cases_passed": 104,
+			"files": 9,
 			"skipped": 0,
-			"seconds": 7.63,
+			"seconds": 10.15,
 			"independent_binary_fixture_bytes": 1124,
 			"http_callbacks": 4,
 			"native_request_context_shared": true,
@@ -198,7 +198,15 @@
 			"known_native_runtime_limits": [
 				"API7 0.7.0 reports header end_of_stream=1 even with a following body",
 				"proxy_set_buffer_bytes is unimplemented; generic body rewriting is unavailable"
-			]
+			],
+			"storage_boundary_cases": 32,
+			"compiler_worker_cases": 12,
+			"wasi_preview_1_sdk_execution": "pass; actual fd_write and HTTP callbacks",
+			"wasi_binary_fixture_bytes": 1229,
+			"compiler_timeout_ms": 5000,
+			"compiler_maximum_active_workers": 2,
+			"compiler_old_generation_heap_mib": 96,
+			"compiler_young_generation_heap_mib": 16
 		}
 	},
 	"withdrawn_features": {

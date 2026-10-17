@@ -48,7 +48,13 @@ describe.each(["sqlite", "postgres"])("authorized proxy host selectors on %s", (
 		await state.db("host_domain").delete();
 		await state.db("proxy_host").delete();
 		await state.db("proxy_host").insert([
-			{ id: 1, owner_user_id: 1, is_deleted: 0, meta: "deliberately-not-json", git_credentials: "private-git-value" },
+			{
+				id: 1,
+				owner_user_id: 1,
+				is_deleted: 0,
+				meta: "deliberately-not-json",
+				git_credentials: "private-git-value",
+			},
 			{ id: 2, owner_user_id: 2, is_deleted: 0, terminal_password: "private-terminal-value" },
 			{ id: 3, owner_user_id: 1, is_deleted: 1 },
 		]);

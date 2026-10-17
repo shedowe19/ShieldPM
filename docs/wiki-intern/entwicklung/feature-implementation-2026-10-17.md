@@ -22,6 +22,13 @@ verschlüsselt gespeichert und nicht aus der API zurückgegeben. Das vorhandene 
 Proxy-Wasm-HTTP-ABI; allgemeine WASI-Programme werden nicht als HTTP-Filter ausgeführt. Die früheren vier
 integrierten Vorlagen sind nur noch ein eingeklappter Zusatzbereich.
 
+Die zusätzliche Upload-Prüfung läuft ohne Instanziierung in einem festen Node-Worker mit fünf Sekunden
+Zeitlimit, V8-Heapgrenzen und höchstens zwei gleichzeitig laufenden Prüfungen. Die Dateihilfe akzeptiert nur
+die vier benötigten Katalogverzeichnisse und prüft vollständig normalisierte Dateipfade sowie jeden
+Symlink-Vorfahren vor weiteren Schreibzugriffen. Standard-WASI-Preview-1-Importe gültiger Proxy-Wasm-SDKs
+werden unterstützt: Ein unabhängiger Testfilter führt tatsächlich `fd_write` und danach HTTP-Callbacks in
+der installierten API7-/Wasmtime-Runtime aus. Ein reines WASI-Programm ohne HTTP-ABI bleibt unzulässig.
+
 ## Fehlerkorrekturen
 
 | ID  | Änderung und Absicherung                                                                                                                                                                                                                           |
@@ -59,9 +66,9 @@ Die [JSON-Rohwerte](./feature-implementation-2026-10-17.json) enthalten alle Sam
 
 ## Abschließende Validierung
 
-- Backend: 2.579 Tests im abschließenden Gesamtlauf bestanden, 74 ausdrückliche Umgebungs-/Runtime-Skips; keine Fehler. PostgreSQL-Verhalten wird zusätzlich mit PGlite geprüft. Die echten MariaDB- und Nginx-Suites werden zusätzlich mit ihrer jeweiligen Runtime aktiviert.
+- Backend: 2.624 Tests im abschließenden Gesamtlauf bestanden, 75 ausdrückliche Umgebungs-/Runtime-Skips; keine Fehler. PostgreSQL-Verhalten wird zusätzlich mit PGlite geprüft. Die echten MariaDB- und Nginx-Suites werden zusätzlich mit ihrer jeweiligen Runtime aktiviert.
 - Frontend: 995 Tests bestanden; TypeScript, Übersetzungen, Produktionsbuild und komprimiertes Größenbudget bestanden. Alle neun Chromium-Abläufe einschließlich echtem Datei-Upload und Speichern der Modulkonfiguration bestanden.
-- Echter Chromium-Browser: zehn vollständige Abläufe einschließlich der neuen Bedienwege bestanden; keine unbehandelten Browserfehler.
+- Echter Chromium-Browser: neun vollständige Abläufe einschließlich der neuen Bedienwege bestanden; keine unbehandelten Browserfehler.
 - Skripte/Betrieb: 170 Python-Tests, davon 149 bestanden und 21 umgebungsabhängig übersprungen; Shellsyntax geprüft.
 - Zusätzlich tatsächliches ShieldPM-Nginx: Wasm/Cache-Kombination, Header-Fehlerstrategie, Pool-Failover, IPv4/DNS/IPv6-Uploads, weiterlaufende Access-List-Worker und Backup-Containment.
 - Statische Konventionen, Diff-/Secretprüfung und Schema-Auflösung bestanden auf dem endgültigen Stand.
@@ -121,7 +128,7 @@ Nginx-Konfigurationsfehler können weiterhin die abschließende Aktivierung verh
 
 Neue und vorhandene Hosts verwenden dieselben Policy-Normalisierungen. Öffentliche API und GitOps akzeptieren keine als lokale Geheimnisse ausgegebenen Wasm-Ciphertexte. Ein leeres Schlüsselfeld erhält den aktuellen gespeicherten Schlüssel desselben Hosts und Filters. Exporte, Vorschauen, Revisionsvergleiche und Audit-Metadaten geben Schlüssel nicht preis. Vollständige Instanzbackups enthalten die zur Wiederherstellung benötigten Schlüssel ausschließlich innerhalb des verschlüsselten Archivs.
 
-Die funktionalen Prüfungen verwenden SQLite und PostgreSQL über PGlite, tatsächliche lokale HTTP-/TLS-Server und das veröffentlichte x86_64-Nginx. Wasm-Ausführung, Cache, IPv6, WebSocket, Pool-Failover und weiterlaufende Access-List-Worker werden tatsächlich ausgeführt. In der eingeschränkten Testumgebung ersetzt ein ausschließlich für den Selbsttest aktivierter TCP-Schalter die sonst verwendete Unix-Socket-Verbindung. Die fünf tatsächlichen Master-/Worker-Fälle lesen echte Kernel-Prozessdaten; lediglich die PID-Datei des Testbeobachters übersetzt die verschachtelten lokalen PID-Namensräume. Workerzustände und Prozess-Zugangsdaten werden dabei nicht simuliert. Die bisherigen 39 kombinierten Prüfungen umfassen außerdem 18 Datei-/Prozess-Regressionsfälle und 16 echte Wasm-/Cache-/Vorprüfungsfälle. Mit Modul-Katalog, Upload-API, vier Callbacks im selben nativen Request-Kontext, HTTP/2-/Chunked-Bodies und bestätigtem gemischtem Preset-/Modul-Reload bestehen abschließend 58 kombinierte Fälle in sieben Dateien ohne Skips. Ein unabhängiger lesbarer WAT-Testfilter und dessen 1.124-Byte-Binary belegen die Ausführung eigener Module statt nur der integrierten Vorlagen. Native API7-Grenzen beim Header-Endstream-Flag und beim allgemeinen Body-Umschreiben sind auf der Wasm-Seite ausdrücklich dokumentiert.
+Die funktionalen Prüfungen verwenden SQLite und PostgreSQL über PGlite, tatsächliche lokale HTTP-/TLS-Server und das veröffentlichte x86_64-Nginx. Wasm-Ausführung, Cache, IPv6, WebSocket, Pool-Failover und weiterlaufende Access-List-Worker werden tatsächlich ausgeführt. In der eingeschränkten Testumgebung ersetzt ein ausschließlich für den Selbsttest aktivierter TCP-Schalter die sonst verwendete Unix-Socket-Verbindung. Die fünf tatsächlichen Master-/Worker-Fälle lesen echte Kernel-Prozessdaten; lediglich die PID-Datei des Testbeobachters übersetzt die verschachtelten lokalen PID-Namensräume. Workerzustände und Prozess-Zugangsdaten werden dabei nicht simuliert. Die bisherigen 39 kombinierten Prüfungen umfassen außerdem 18 Datei-/Prozess-Regressionsfälle und 16 echte Wasm-/Cache-/Vorprüfungsfälle. Mit Modul-Katalog, Upload-API, vier Callbacks im selben nativen Request-Kontext, HTTP/2-/Chunked-Bodies und bestätigtem gemischtem Preset-/Modul-Reload bestehen abschließend 104 kombinierte Fälle in neun Dateien ohne Skips. Dazu gehören 32 tatsächliche Dateisystem-Grenzfälle und zwölf Compiler-Worker-Prüfungen. Ein unabhängiger lesbarer WAT-Testfilter und dessen 1.124-Byte-Binary belegen die Ausführung eigener Module statt nur der integrierten Vorlagen. Native API7-Grenzen beim Header-Endstream-Flag und beim allgemeinen Body-Umschreiben sind auf der Wasm-Seite ausdrücklich dokumentiert.
 
 Ein produktiver externer MySQL-/PostgreSQL-Server, ARM64, eine echte WireGuard-Schnittstelle, Docker-Daemon, Cloudflare-/ACME-Konten und öffentliche Benachrichtigungsdienste stehen lokal nicht vollständig zur Verfügung. Deren Grenzen werden durch echte lokale Gegenstellen, kontrollierte Prozessgrenzen und CI-Prüfungen abgesichert; die jeweilige externe Betriebsprüfung wird dadurch nicht ersetzt. Eine produktive Instanz wurde nicht verändert.
 
