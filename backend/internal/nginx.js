@@ -1,5 +1,6 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import fs from "node:fs";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import dayjs from "dayjs";
 import _ from "lodash";
@@ -29,6 +30,56 @@ import { prepareTrafficFiles, prepareTrafficRender } from "./host-traffic-policy
 
 /** @type {Promise<unknown>} */
 let configurationQueue = Promise.resolve();
+const configurationContext = new AsyncLocalStorage();
+let wasmCleanupTimer;
+const hasWasmLifecycleFiles = () =>
+	["hosts", "active", "retirement.json"].some((name) =>
+		fs.existsSync(resolve(process.env.DATA_PATH || "/data", "wasm", name)),
+	);
+
+const scheduleWasmCleanup = () => {
+	if (wasmCleanupTimer) return;
+	wasmCleanupTimer = setTimeout(() => {
+		wasmCleanupTimer = null;
+		void internalNginx
+			.withConfigurationLock(async () => {
+				const { collectRetiredWasmConfigurations } = await import("./wasm-lifecycle.js");
+				if (await collectRetiredWasmConfigurations()) scheduleWasmCleanup();
+			})
+			.catch((error) => {
+				logger.error(`Wasm retirement failed; files retained: ${error.message}`);
+				scheduleWasmCleanup();
+			});
+	}, 1000);
+	wasmCleanupTimer.unref?.();
+};
+
+const runConfigurationOperation = async (callback) => {
+	const lifecycle = await import("./wasm-lifecycle.js");
+	let context;
+	try {
+		context = hasWasmLifecycleFiles()
+			? await lifecycle.createWasmLifecycle()
+			: { active: true, initial: new Set(), hadSignal: false, lastReloadAccepted: false, accepted: null };
+	} catch (error) {
+		throw new errs.ConfigurationError("Cannot protect existing Wasm worker configurations", error);
+	}
+	const store = { active: true, lifecycle: context };
+	try {
+		return await configurationContext.run(store, callback);
+	} finally {
+		store.active = false;
+		context.active = false;
+		try {
+			if (hasWasmLifecycleFiles() && (await lifecycle.finishWasmLifecycle(context))) scheduleWasmCleanup();
+		} catch (error) {
+			// The outer callback may already have committed claims/history. Observability
+			// and GC failures cannot turn an accepted activation into an uncompensated error.
+			logger.error(`Wasm lifecycle reconciliation failed; files retained: ${error.message}`);
+			scheduleWasmCleanup();
+		}
+	}
+};
 
 /** Merge status into current metadata under a short row lock, after slow Nginx operations finish. */
 const updateHostStatus = (model, host, status) =>
@@ -38,6 +89,12 @@ const updateHostStatus = (model, host, status) =>
 		if (current) await model.query(trx).where("id", host.id).patch({ meta });
 		return meta;
 	});
+
+const performReload = async (context) => {
+	if (context) return internalNginx._reloadCommands(context);
+	// Test doubles may replace the queue; production always supplies its live context.
+	return runConfigurationOperation(() => internalNginx._reloadCommands(configurationContext.getStore().lifecycle));
+};
 
 const internalNginx = {
 	updateHostStatus,
@@ -65,7 +122,7 @@ const internalNginx = {
 	 * @returns {Promise<T>}
 	 */
 	withConfigurationLock: (callback) => {
-		const operation = configurationQueue.then(callback);
+		const operation = configurationQueue.then(() => runConfigurationOperation(callback));
 		configurationQueue = operation.catch(() => {});
 		return operation;
 	},
@@ -105,13 +162,12 @@ const internalNginx = {
 		const current = await internalNginx.getCurrentHost(model, host_type, hostSnapshot.id);
 		const host = !current || current.is_deleted ? { ...(current || hostSnapshot), enabled: false } : current;
 
-		if (
-			internalNginx.getFileFriendlyHostType(host_type) === "proxy_host" &&
-			host.enabled &&
-			host.meta?.wasm_filters?.some((filter) => filter.enabled)
-		) {
-			const { prepareHost } = await import("./wasm.js");
-			host.wasm = await prepareHost(host);
+		if (internalNginx.getFileFriendlyHostType(host_type) === "proxy_host") {
+			host.wasm = null;
+			if (host.enabled && host.meta?.wasm_filters?.some((filter) => filter.enabled)) {
+				const { prepareHost } = await import("./wasm.js");
+				host.wasm = await prepareHost(host);
+			}
 		}
 
 		// 1. Backup existing config if it exists
@@ -204,6 +260,16 @@ const internalNginx = {
 	 * @returns {Promise}
 	 */
 	reload: async () => {
+		const store = configurationContext.getStore();
+		if (!store?.active)
+			return internalNginx.withConfigurationLock(() => performReload(configurationContext.getStore()?.lifecycle));
+		return performReload(store.lifecycle);
+	},
+
+	/**
+	 * @returns {Promise}
+	 */
+	_reloadCommands: async (context) => {
 		const promises = [];
 
 		if (process.env.ACME_OCSP_STAPLING === "true") {
@@ -239,7 +305,10 @@ const internalNginx = {
 		await Promise.all(promises);
 
 		await internalNginx.test();
+		const lifecycle = await import("./wasm-lifecycle.js");
+		const before = context && hasWasmLifecycleFiles() ? await lifecycle.beforeWasmReload(context) : null;
 		await utils.execFile("nginx", ["-s", "reload"]);
+		if (context) await lifecycle.afterWasmReload(context, before);
 	},
 
 	/**

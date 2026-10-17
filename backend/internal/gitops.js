@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import { isIP } from "node:net";
 import path from "node:path";
+import bcrypt from "bcryptjs";
 import git from "isomorphic-git";
 import http from "isomorphic-git/http/node";
 import * as yaml from "js-yaml";
 import _ from "lodash";
+import { accessListFilename } from "../lib/access-list-files.js";
 import { isDemoMode } from "../lib/config.js";
 import { captureConfigurationFiles, restoreConfigurationFiles } from "../lib/configuration-files.js";
 import { decrypt, encrypt } from "../lib/encryption.js";
@@ -226,12 +228,18 @@ const ALLOWED_IMPORT_FIELDS = {
 };
 
 const validateImportedAccessList = (accessList) => {
+	const usernames = new Set();
 	for (const item of accessList.items || []) {
+		if (item.password !== undefined && typeof item.password !== "string")
+			throw new errs.ValidationError("Imported Access List passwords must be strings");
 		if (typeof item.username !== "string" || !/^[^:\r\n\0]+$/.test(item.username)) {
 			throw new errs.ValidationError(
 				"Imported Access List usernames cannot be empty or contain colons or line breaks",
 			);
 		}
+		if (usernames.has(item.username))
+			throw new errs.ValidationError("Imported Access List usernames must be unique");
+		usernames.add(item.username);
 	}
 	for (const client of accessList.clients || []) {
 		if (!["allow", "deny"].includes(client.directive) || typeof client.address !== "string") {
@@ -285,6 +293,14 @@ const sanitizeImportData = (modelName, data) => {
 		]);
 	}
 	if (modelName === "AccessList") {
+		if (result.meta !== undefined) {
+			let meta = result.meta;
+			for (let depth = 0; depth < 2 && typeof meta === "string"; depth++) meta = JSON.parse(meta);
+			if (!meta || typeof meta !== "object" || Array.isArray(meta))
+				throw new errs.ValidationError("Imported Access List metadata must be an object");
+			// Authorization artifacts are local runtime state, never portable GitOps references.
+			result.meta = _.omit(meta, ["authorization_revision"]);
+		}
 		for (const [relation, fields] of Object.entries({
 			items: ["username", "password", "meta"],
 			clients: ["address", "directive", "meta"],
@@ -668,11 +684,10 @@ const internalGitOps = {
 			if (graph) query.withGraphFetched(graph);
 			for (const row of await query) {
 				const filePath = path.join(configDir, directory, `${row.id}.yaml`);
-				await writeConfigFile(
-					GITOPS_DIR,
-					filePath,
-					yaml.dump(internalGitOps.sanitizeForExport(row, ["is_deleted"]), { indent: 2 }),
-				);
+				const exportData = internalGitOps.sanitizeForExport(row, ["is_deleted"]);
+				if (model === AccessList && exportData.meta)
+					exportData.meta = _.omit(exportData.meta, ["authorization_revision"]);
+				await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 				exportedFiles.push(filePath);
 			}
 		}
@@ -1116,6 +1131,9 @@ const internalGitOps = {
 			const errors = [];
 			/** @type {Array<() => Promise<void>>} */
 			const deferredFirewallPrunes = [];
+			const deferredAccessListPrunes = [];
+			const accessListChanges = new Map();
+			const failedAccessListIds = new Set();
 			const cloudflaredActivations = new Set();
 			const proxyChanges = new Map();
 			let proxyActivated = false;
@@ -1158,6 +1176,66 @@ const internalGitOps = {
 				if (failures.length) throw new AggregateError(failures, "Could not restore every proxy host");
 			};
 
+			const rememberAccessList = async (id) => {
+				if (accessListChanges.has(id)) return;
+				const previous = await AccessList.query().findById(id).withGraphFetched("[items,clients]");
+				// Capture accepted host/reference files before replacing shared ACL metadata.
+				for (const host of await ProxyHost.query().where("is_deleted", 0).where("access_list_id", id))
+					await rememberProxy(host.id, true);
+				accessListChanges.set(id, {
+					previous: previous ? _.cloneDeep(previous.toJSON ? previous.toJSON() : previous) : null,
+					changed: false,
+					imported: false,
+					pruned: false,
+				});
+			};
+			const restoreAccessList = async (id) => {
+				const change = accessListChanges.get(id);
+				if (!change?.changed) return;
+				await AccessList.transaction(async (trx) => {
+					await trx("access_list_auth").where("access_list_id", id).delete();
+					await trx("access_list_client").where("access_list_id", id).delete();
+					if (change.previous) {
+						const row = change.previous;
+						await AccessList.query(trx)
+							.findById(id)
+							.patch(_.omit(row, ["id", "items", "clients"]));
+						await trx("access_list")
+							.where("id", id)
+							.update(_.pick(row, ["created_on", "modified_on"]));
+						for (const [table, children] of [
+							["access_list_auth", row.items],
+							["access_list_client", row.clients],
+						])
+							for (const child of children || [])
+								await trx(table).insert({ ...child, meta: JSON.stringify(child.meta || {}) });
+					} else await trx("access_list").where("id", id).delete();
+				});
+				change.changed = false;
+			};
+			const compensateAccessLists = async () => {
+				let failed = false;
+				for (const id of accessListChanges.keys()) {
+					try {
+						await restoreAccessList(id);
+					} catch {
+						failed = true;
+					}
+				}
+				if (failed) throw new errs.ConfigurationError("Could not restore every imported Access List");
+			};
+			const materializeAccessList = async (id) => {
+				const { default: accessLists } = await import("./access-list.js");
+				const row = await AccessList.query().findById(id).withGraphFetched("[items,clients]");
+				await fs.promises.mkdir(path.dirname(accessListFilename(id)), { recursive: true, mode: 0o700 });
+				const artifacts = await accessLists.build(row, { immutable: true });
+				if (!artifacts?.revision)
+					throw new errs.ConfigurationError("Access List authorization artifacts could not be built");
+				await AccessList.query()
+					.findById(id)
+					.patch({ meta: { ...row.meta, authorization_revision: artifacts.revision } });
+			};
+
 			/**
 			 * Helper to import standard models and DELETE missing ones (Full Sync)
 			 * @param {Object} modelClass - Objection.js Model class
@@ -1178,9 +1256,21 @@ const internalGitOps = {
 
 					await Promise.all(
 						yamlFiles.map(async (file) => {
+							let importedAccessListId;
+							let accessListWritten = false;
 							try {
 								const content = await fs.promises.readFile(path.join(dirPath, file), "utf8");
 								const data = yaml.load(content);
+								if (
+									modelClass === AccessList &&
+									data &&
+									typeof data === "object" &&
+									"id" in data &&
+									typeof data.id === "number" &&
+									Number.isSafeInteger(data.id) &&
+									data.id > 0
+								)
+									importedAccessListId = data.id;
 
 								if (data && typeof data === "object") {
 									// Apply field whitelist validation to prevent DB field injection
@@ -1198,6 +1288,11 @@ const internalGitOps = {
 										);
 									}
 
+									if (modelClass === AccessList) {
+										if (importedIds.includes(existingId))
+											throw new errs.ValidationError("Duplicate imported Access List ID");
+										importedAccessListId = existingId;
+									}
 									let existing;
 									if (existingId) {
 										importedIds.push(existingId);
@@ -1207,6 +1302,17 @@ const internalGitOps = {
 										if (existing && !options.overwrite) {
 											skipped++;
 											return;
+										}
+									}
+									if (modelClass === AccessList) {
+										await rememberAccessList(existingId);
+										for (const item of itemData.items || []) {
+											if (
+												item.password &&
+												!/^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(item.password) &&
+												!/^\$apr1\$[./A-Za-z0-9]{1,8}\$[./A-Za-z0-9]{22}$/.test(item.password)
+											)
+												item.password = await bcrypt.hash(item.password, 13);
 										}
 									}
 									const activateCloudflared =
@@ -1241,6 +1347,17 @@ const internalGitOps = {
 											depth++
 										)
 											requestedProxyMeta = JSON.parse(requestedProxyMeta);
+										const listId = itemData.access_list_id ?? existing?.access_list_id ?? 0;
+										if (!Number.isSafeInteger(listId) || listId < 0)
+											throw new errs.ValidationError("Invalid imported Access List reference");
+										if (
+											listId &&
+											(failedAccessListIds.has(listId) ||
+												!(await AccessList.query().where("is_deleted", 0).findById(listId)))
+										)
+											throw new errs.ValidationError(
+												"Referenced Access List was not imported successfully; host retained",
+											);
 										await validateHostFirewall(access, itemData, existing || {});
 										const relayCandidate = _.assign({}, existing || {}, itemData);
 										if (relayCandidate.upload_relay_enabled)
@@ -1337,6 +1454,7 @@ const internalGitOps = {
 												},
 												write,
 											);
+										else if (modelClass === AccessList) await AccessList.transaction(write);
 										else await write();
 									};
 									if (modelClass === ProxyHost)
@@ -1344,6 +1462,12 @@ const internalGitOps = {
 											lockHeld: true,
 										});
 									else await writeImported();
+									if (modelClass === AccessList) {
+										accessListChanges.get(existingId).changed = true;
+										accessListWritten = true;
+										await materializeAccessList(existingId);
+										accessListChanges.get(existingId).imported = true;
+									}
 									if (modelClass === ProxyHost) proxyChanges.get(existingId).changed = true;
 									if (activateCloudflared) cloudflaredActivations.add(existingId);
 									imported++;
@@ -1351,6 +1475,21 @@ const internalGitOps = {
 									throw new errs.ValidationError("Expected a YAML object");
 								}
 							} catch (err) {
+								if (modelClass === AccessList) {
+									if (importedAccessListId) failedAccessListIds.add(importedAccessListId);
+									try {
+										if (accessListWritten) await restoreAccessList(importedAccessListId);
+									} catch {
+										throw new errs.ConfigurationError("Access List rollback failed");
+									}
+									const message =
+										err instanceof errs.ValidationError
+											? err.message
+											: "Access List import failed; previous authorization retained";
+									logger.error(`Import failed for ${dirName}/${file}: ${message}`);
+									errors.push(`${dirName}/${file}: ${message}`);
+									return;
+								}
 								logger.error(`Import failed for ${dirName}/${file}:`, err);
 								errors.push(
 									`${dirName}/${file}: ${err instanceof Error ? err.message : "Unknown error"}`,
@@ -1383,6 +1522,18 @@ const internalGitOps = {
 										);
 									}
 								}
+								if (modelClass === AccessList) {
+									if (item.is_deleted) return;
+									const assigned = await ProxyHost.query()
+										.where("is_deleted", 0)
+										.where("access_list_id", item.id)
+										.first();
+									if (assigned)
+										throw new errs.ValidationError(
+											`Access List ${item.id} is still assigned to a proxy host`,
+										);
+									await rememberAccessList(item.id);
+								}
 								if (modelClass === ProxyHost) await rememberProxy(item.id, true);
 								// Delete Nginx config if hostType is provided
 								if (hostType) {
@@ -1414,6 +1565,8 @@ const internalGitOps = {
 										deleteRecord,
 									);
 								else await deleteRecord();
+								if (modelClass === AccessList)
+									Object.assign(accessListChanges.get(item.id), { changed: true, pruned: true });
 								if (modelClass === ProxyHost) proxyChanges.get(item.id).changed = true;
 								// Persist deletion before stopping: queued starts then see the deleted row.
 								if (modelClass === CloudflaredTunnel) await internalCloudflared.stop(item.id);
@@ -1434,6 +1587,7 @@ const internalGitOps = {
 				if (options.overwrite && errors.length === errorCountBeforeImport) {
 					// Hosts still reference the previous lists until their restore completes.
 					if (modelClass.name === "FirewallList") deferredFirewallPrunes.push(pruneMissing);
+					else if (modelClass === AccessList) deferredAccessListPrunes.push(pruneMissing);
 					else await pruneMissing();
 				}
 			};
@@ -1736,6 +1890,8 @@ const internalGitOps = {
 					}
 				}
 
+				// ACL pruning must see the final host references and may never silently remove active authorization.
+				for (const prune of deferredAccessListPrunes) await prune();
 				// Status writes in the final batch also touch hosts absent from this backup.
 				const proxyHosts = await ProxyHost.query().where("is_deleted", 0).withGraphFetched("host_domains");
 				for (const host of proxyHosts) {
@@ -1803,6 +1959,13 @@ const internalGitOps = {
 			} catch (err) {
 				const errorMessage = err instanceof Error ? err.message : "Unknown error";
 				logger.error("GitOps import failed:", err);
+				if (!proxyActivated) {
+					try {
+						await compensateAccessLists();
+					} catch {
+						errors.push("Access List rollback failed");
+					}
+				}
 				try {
 					if (!proxyActivated) await compensateProxies();
 				} catch (rollbackError) {
@@ -1814,9 +1977,19 @@ const internalGitOps = {
 					success: false,
 					imported: proxyActivated
 						? imported
-						: Math.max(0, imported - [...proxyChanges.values()].filter((change) => change.changed).length),
+						: Math.max(
+								0,
+								imported -
+									[...proxyChanges.values()].filter((change) => change.changed).length -
+									[...accessListChanges.values()].filter((change) => change.imported).length,
+							),
 					skipped,
-					deleted,
+					deleted: proxyActivated
+						? deleted
+						: Math.max(
+								0,
+								deleted - [...accessListChanges.values()].filter((change) => change.pruned).length,
+							),
 					errors: [...errors, errorMessage],
 				};
 			}

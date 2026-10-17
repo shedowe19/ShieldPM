@@ -55,16 +55,16 @@
 	"validation": {
 		"node": "26.12.0",
 		"backend": {
-			"passed": 2455,
-			"skipped": 31,
-			"passed_files": 260,
-			"skipped_files": 4,
-			"seconds": 94.64
+			"passed": 2490,
+			"skipped": 41,
+			"passed_files": 262,
+			"skipped_files": 5,
+			"seconds": 92.57
 		},
 		"frontend": {
 			"passed": 986,
 			"passed_files": 223,
-			"seconds": 114.88
+			"seconds": 109.57
 		},
 		"browser": {
 			"cases_passed": 10,
@@ -85,10 +85,12 @@
 		"added_diff_secret_scan": "pass",
 		"nginx_runtime": {
 			"binary_version": "ShieldPM/1.31.6",
-			"wasm_tests": 15,
+			"wasm_tests": 16,
 			"traffic_tests": 9,
 			"backup_containment_tests": 6,
-			"wasm_policy_sha256": "1909012204c72bde2ada72537bc0cd404f7b58be65f7d6ecbb2823a30b8c4ba0"
+			"wasm_policy_sha256": "1909012204c72bde2ada72537bc0cd404f7b58be65f7d6ecbb2823a30b8c4ba0",
+			"worker_lifecycle_tests": 5,
+			"worker_observation": "Genuine kernel process records; test observer PID file translates the nested local PID namespace only; no simulated worker state or credential shim"
 		},
 		"limits": [
 			"No live external MySQL/PostgreSQL restore",
@@ -110,8 +112,8 @@
 		},
 		"locale_catalogs": 13,
 		"tscanner": {
-			"workspace_files": 746,
-			"staged_files": 110,
+			"workspace_files": 747,
+			"initial_feature_staged_files": 110,
 			"new_errors": 0,
 			"advisories": 0,
 			"pass": true
@@ -123,11 +125,31 @@
 			"traffic_policy_security_and_runtime_cases": 45,
 			"tscanner_uncommitted_files": 7,
 			"tscanner_new_errors": 0,
-			"codespell_tracked_files": 1751,
+			"codespell_tracked_files": 1755,
 			"codeql_suppressions_added": 0,
 			"backup_upload_http_and_service_cases": 19,
 			"backup_upload_cleanup_cases": 6,
 			"tscanner_final_staged_files": 7
+		},
+		"review_regressions": {
+			"workspace_effective_monitor_state_cases": 16,
+			"gitops_acl_actual_nginx_cases": 10,
+			"gitops_existing_compatibility_cases": 80,
+			"audit_source_contract_cases": 31,
+			"wasm_lifecycle_unit_cases": 18,
+			"wasm_combined_unit_and_actual_runtime_cases": 39,
+			"nginx_concurrency_and_rollback_group_passed": 201,
+			"nginx_concurrency_and_rollback_group_skipped": 4
+		},
+		"remote_ci_verified": {
+			"commit": "8df09204b30c495629e37bfb4bbc82979797c8ce",
+			"backend_types": "pass",
+			"backend_tests": "pass",
+			"mariadb_11_8_3_migrations": "pass",
+			"chromium_workflows": "pass",
+			"codeql": "No new alerts in code changed by this pull request",
+			"frontend_source_format_failure": "fixed locally; complete frontend 986/986 rerun passed",
+			"docker_x86_64_and_aarch64_builds": "pass"
 		}
 	}
 }

@@ -6,6 +6,15 @@ Der Arbeitsbereich unter `/nginx/workspace` kombiniert Tags, persönliche Ansich
 
 `proxy_host_tag` speichert höchstens 20 eindeutige Tags je Host. Ein Tag besteht aus bis zu 32 Kleinbuchstaben, Ziffern, Punkten, Unterstrichen oder Bindestrichen. Alle angegebenen Tags müssen beim Filtern zutreffen. Weitere Filter sind Domain, Aktivierung, Monitorzustand und Zertifikatsablauf innerhalb von 0–365 Tagen. Gefiltert wird vor der Datenbank-Paginierung mit höchstens 100 Zeilen.
 
+Der Monitorfilter verwendet den aktuellen wirksamen Zustand: Ein deaktivierter Host oder
+ein ausdrücklich deaktivierter Monitor zählt als `paused`, auch wenn die letzte Messung
+noch `up`, `down` oder `unknown` gespeichert hat. `up` und `down` benötigen einen
+aktivierten Host und Monitor. `unknown` umfasst aktivierte Monitore ohne gesichertes
+Messergebnis sowie aktivierte Hosts ohne Monitor-Konfiguration. Diese besitzen noch
+keine Statusbeobachtung; die normale Hostliste zeigt sie als nicht konfiguriert.
+Deaktivierte Hosts ohne Monitor zählen ebenfalls als `paused`. Zähler, Paginierung und
+gespeicherte Ansichten verwenden dieselben Filterbedingungen.
+
 `host_workspace_item` enthält benutzereigene Ansichten (`view`) und Profile (`profile`); Name und Typ sind pro Benutzer eindeutig. Auch Administratoren sehen über diese API nur ihre eigenen gespeicherten Elemente. Die Host-Sichtbarkeit und jede Schreibberechtigung folgen den vorhandenen `proxy_hosts`-Capabilities. Tags anderer Besitzer lassen sich ohne entsprechende Host-Berechtigung nicht ändern.
 
 `GET /api/nginx/host-workspace/options` liefert für Auswahllisten ausschließlich IDs und Domains. Weder interne Metadaten noch SSH-/Git-/Wasm-Zugangsdaten werden geladen oder ausgegeben. Analytics verwendet diese Projektion.

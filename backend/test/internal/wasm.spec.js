@@ -16,6 +16,8 @@ const {
 	encodeWasmConfiguration,
 	executeWasmPreflight,
 	prepareHost,
+	getHostStatus,
+	markHostActive,
 	selfTest,
 } = await import("../../internal/wasm.js");
 const policy = (kind = "api_key", config = { header: "x-api-key", value: "a-real-key" }) => ({
@@ -202,7 +204,7 @@ describe.skipIf(!process.env.SHIELDPM_WASM_NGINX_BINARY)("actual API7 Nginx exec
 			await fs.writeFile(configPath, JSON.stringify(chain));
 			const result = await executeWasmPreflight({ ...prepared, configuration_path: configPath });
 			expect(result.status).toBe(expectedStatus);
-			const status = JSON.parse(await fs.readFile(prepared.status_path, "utf8"));
+			const status = result.runtime_error;
 			expect(status).toMatchObject({ state: "error", filter_id: "policy", phase: "request" });
 			expect(JSON.stringify(status)).not.toContain("a-real-key");
 			expect((await executeWasmPreflight(prepared)).status).toBe(200);
@@ -225,6 +227,45 @@ describe.skipIf(!process.env.SHIELDPM_WASM_NGINX_BINARY)("actual API7 Nginx exec
 		);
 		expect(await fs.readFile(prepared.configuration_path, "utf8")).toBe(original);
 		expect((await executeWasmPreflight(prepared)).status).toBe(200);
+	}, 15000);
+	it("rejects a fail-open execution error without changing the accepted policy or its status", async () => {
+		const host = {
+			id: 54,
+			enabled: true,
+			meta: { wasm_filters: [policy("request_header", { header: "x-probe", operation: "set", value: "yes" })] },
+		};
+		const accepted = await prepareHost(host);
+		await markHostActive(host.id, accepted);
+		const pointer = path.join(directory, "wasm", "active", `host-${host.id}.json`);
+		const before = await fs.readFile(pointer, "utf8");
+		const readFile = fs.readFile.bind(fs);
+		const manifestPath = path.resolve(import.meta.dirname, "../../wasm/manifest.json");
+		const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+		// The installed test bundle executes a genuine ABI-0.2.1 request callback trap.
+		const trap = Buffer.from(
+			"AGFzbQEAAAABHwZgAABgAX8Bf2ACf38AYAJ/fwF/YAF/AGADf39/AX8DCAcAAQIDAQQFBQMBAAEHqwEIBm1lbW9yeQIAF3Byb3h5X2FiaV92ZXJzaW9uXzBfMl8xAAAYcHJveHlfb25fbWVtb3J5X2FsbG9jYXRlAAEXcHJveHlfb25fY29udGV4dF9jcmVhdGUAAhJwcm94eV9vbl9jb25maWd1cmUAAw1wcm94eV9vbl9kb25lAAQPcHJveHlfb25fZGVsZXRlAAUYcHJveHlfb25fcmVxdWVzdF9oZWFkZXJzAAYKHgcCAAsFAEGAIAsCAAsEAEEBCwQAQQELAgALAwAACw==",
+			"base64",
+		);
+		const replacement = JSON.stringify({ ...manifest, sha256: createHash("sha256").update(trap).digest("hex") });
+		const artifactPath = path.join(path.dirname(manifestPath), manifest.file);
+		const read = vi.spyOn(fs, "readFile").mockImplementation((filename, options) => {
+			if (String(filename) === manifestPath) return Promise.resolve(replacement);
+			if (String(filename) === artifactPath) return Promise.resolve(trap);
+			return readFile(filename, options);
+		});
+		try {
+			host.meta.wasm_filters[0].failure_mode = "open";
+			const candidate = await materializeWasmHost(host);
+			const probe = await executeWasmPreflight(candidate);
+			expect(probe).toMatchObject({ status: 200, runtime_error: { state: "error", phase: "request" } });
+			await expect(prepareHost(host)).rejects.toThrow(/execution preflight failed/);
+			expect(await fs.readFile(pointer, "utf8")).toBe(before);
+			expect(await getHostStatus(host.id)).toMatchObject({ state: "active", sha256: accepted.sha256 });
+			await expect(fs.access(candidate.status_path)).rejects.toMatchObject({ code: "ENOENT" });
+			await expect(fs.access(accepted.status_path)).rejects.toMatchObject({ code: "ENOENT" });
+		} finally {
+			read.mockRestore();
+		}
 	}, 15000);
 	it("removes upstream secrets and cookies when a closed response policy traps", async () => {
 		const filters = [

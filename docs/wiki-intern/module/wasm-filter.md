@@ -66,12 +66,47 @@ dieses Startmodells benötigen eine passende private Gruppenberechtigung und wer
 `prepareHost(host)` erzeugt die unveränderlichen Dateien und führt die konkrete Chain in einem isolierten
 Nginx-Prozess aus. Zusätzlich muss die tatsächliche globale Nginx-Konfiguration den Wasm-HTTP-Kontext bereits aktivieren; ein isolierter Test allein würde eine fehlende Produktionsdirektive nicht erkennen. Die Prüfung erhält ausschließlich Loopback-/Unix-Socket-Verkehr und wird spätestens nach
 fünf Sekunden beendet. Erst anschließend darf die normale globale Nginx-Prüfung und Aktivierung stattfinden.
-Ein fehlendes Binary, falscher Hash oder nicht ausführbarer Filter verhindert diese Aktivierung. `nginx -t`
+Ein fehlendes Binary, falscher Hash oder nicht ausführbarer Filter verhindert diese Aktivierung. Auch ein
+bekannter Ausführungsfehler eines offenen Filters verhindert die Freigabe; dessen offenes Verhalten bleibt
+die Rückfallstrategie für spätere Laufzeitfehler. `nginx -t`
 allein instanziiert und prüft die Wasm-Filter ausdrücklich nicht.
 
-`markHostActive()` wird erst nach dem erfolgreichen gesamten Reload aufgerufen. Statusdateien unter
-`/data/wasm/status/` unterscheiden inaktiv, validiert, aktiv und Fehler. Laufzeitfehler melden Filter-ID und
-Phase ohne Credential-Wert. Request-Authentifizierung schlägt kontrolliert mit HTTP 503 fehl; ein falscher
+Die zentrale Konfigurationswarteschlange veröffentlicht den aktiven Status erst, wenn der gesamte
+Aktivierungs- oder Rollback-Vorgang einschließlich Datenbank-Statusschreibvorgängen abgeschlossen ist.
+`nginx -t` und `skip_reload` veröffentlichen keinen aktiven Status. Eine Vorbereitung verändert den bisherigen
+aktiven Status nicht; ihre Runtime-Prüfung verwendet eine eigene temporäre Statusdatei.
+
+Bei Wasm prüft der Reload anhand von Master-PID, Worker-PID und Kernel-Startzeit, dass eine neue
+Worker-Generation läuft und die vorherigen normalen Worker beendet werden. Zwei aufeinanderfolgende
+Beobachtungen bestätigen den Wechsel; ein gesendetes HUP-Signal allein reicht nicht. Ein fehlender oder
+nicht prüfbarer Master verhindert die Aktivierung. Die Wartezeit ist endlich: standardmäßig fünf Sekunden;
+`SHIELDPM_WASM_ACK_TIMEOUT_MS` ist auf 50 bis 10.000 Millisekunden begrenzt. Die übliche PID-Datei ist
+`/run/shieldpm/nginx/nginx.pid`; abweichende Tests können `SHIELDPM_WASM_NGINX_PIDFILE` verwenden.
+Kernel ohne `/proc/PID/task/PID/children` werden über die tatsächlichen Eltern-PIDs im Prozessverzeichnis geprüft.
+
+Der private aktive Zeiger unter `/data/wasm/active/host-ID.json` wird atomar veröffentlicht. Laufzeitfehler
+liegen unter `/data/wasm/status/ID-VERSION.json`; alte Worker und alte Statusdateien können daher den Status
+einer neueren Policy nicht überschreiben. API-Antworten enthalten keine internen Dateinamen. Ein späterer
+nicht bestätigter Reload meldet einen Fehler mit der letzten bestätigten Policy, statt eine Aktivierung zu behaupten.
+Eine erneut erfolgreich geprüfte und bestätigte Aktivierung derselben Policy verwirft deren bisherigen Laufzeitfehler;
+erst ein neuer Fehler nach dieser Aktivierung setzt den Status wieder auf fehlerhaft.
+Das Entfernen aller Filter, Deaktivieren oder Löschen des Hosts setzt den Zeiger nach erfolgreichem Reload auf inaktiv.
+
+Konfigurationsdateien unter `/data/wasm/hosts/` enthalten den entschlüsselten Key. Sie werden nach Rotation,
+Entfernen oder Rollback gelöscht, sobald weder aktuelle/Backup-Konfigurationen noch aktive oder auslaufende
+Worker sie benötigen. `/data/wasm/retirement.json` speichert dazu vor Konfigurationsänderungen dauerhafte
+PID-/Startzeit-Bindungen, ohne Keys zu kopieren. Eine bestätigte Generation wird vor Rückkehr zum Aufrufer
+separat festgehalten; das schützt auch Zwischen-Generationen bei Rollback, Worker-Neustart und Backend-Abbruch.
+Ein konservativer Marker schützt den Zeitraum zwischen Signal und Bestätigung. Ein später bestätigter
+Reload desselben Masters löst solche Marker in tatsächliche Worker-Bindungen auf. Bei nicht beweisbarem
+Prozesszustand werden Dateien erhalten. Bereinigung und Wiederholungen laufen unter derselben Warteschlange;
+es gibt keine zusätzliche Abschaltfrist, die langlebige Verbindungen trennt.
+
+Dieses Verhalten folgt dem [dokumentierten Nginx-HUP-Ablauf](https://nginx.org/en/docs/control.html):
+Nginx kann einen Reload vor dem Worker-Start verwerfen, während alte Worker bestehende Verbindungen
+bis zum Abschluss weiter bedienen. Das sofortige Entfernen ihrer erst bei Bedarf geladenen Wasm-Dateien wäre deshalb falsch.
+
+Laufzeitfehler melden Filter-ID und Phase ohne Credential-Wert. Request-Authentifizierung schlägt kontrolliert mit HTTP 503 fehl; ein falscher
 oder fehlender Key führt zu HTTP 401. Bei einem geschlossenen Response-Filterfehler wird Status 503 gesetzt,
 alle bisherigen Response-Header werden entfernt, `Cache-Control: no-store` wird gesetzt und der nachfolgende
 Body wird verworfen. Weitere Response-Filter laufen danach nicht mehr; insbesondere werden vertrauliche
@@ -95,6 +130,7 @@ zunächst „unverified“, bis ein neuer Test ausgeführt wird.
 ```sh
 cd backend
 node node_modules/vitest/vitest.mjs run test/internal/wasm.spec.js --maxWorkers=1
+node node_modules/vitest/vitest.mjs run test/internal/wasm-lifecycle.spec.js test/integration/wasm-lifecycle-runtime.spec.js --maxWorkers=1
 cd ../frontend
 node node_modules/vitest/vitest.mjs run src/modals/ProxyHostWasmTab.test.tsx --maxWorkers=1
 cd ..

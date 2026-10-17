@@ -5,7 +5,15 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { createPostgres } from "../helpers/postgres.js";
 import { backendSourcePath } from "../helpers/source-path.js";
 
-const mocks = vi.hoisted(() => ({ files: new Map(), database: undefined }));
+const mocks = vi.hoisted(() => ({
+	files: new Map(),
+	database: undefined,
+	buildAccessList: vi.fn(async (list) => {
+		const revision = "a".repeat(64);
+		const auth = `/mock/access/${list.id}.${revision}`;
+		return { revision, auth, ca: `${auth}.crt` };
+	}),
+}));
 vi.mock("../../db.js", () => ({ default: () => mocks.database }));
 vi.mock("../../lib/config.js", () => ({ isDemoMode: () => false, isPostgres: () => true, isSqlite: () => false }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: vi.fn(), decrypt: vi.fn() }));
@@ -18,6 +26,8 @@ vi.mock("node:fs", () => ({
 		existsSync: (filename) =>
 			mocks.files.has(filename) || [...mocks.files.keys()].some((name) => name.startsWith(`${filename}/`)),
 		promises: {
+			mkdir: vi.fn(),
+			rm: vi.fn(),
 			readdir: async (directory) =>
 				[...mocks.files.keys()]
 					.filter((filename) => filename.startsWith(`${directory}/`))
@@ -46,6 +56,8 @@ vi.mock("../../internal/host-revisions.js", async (importOriginal) => {
 	return { ...actual, default: { ...actual.default, record: vi.fn() } };
 });
 vi.mock("../../internal/git-deploy.js", () => ({ default: { startPollingForHost: vi.fn(), stopPolling: vi.fn() } }));
+// This fixture checks real PostgreSQL IDs/graphs; native ACL bytes have separate import regressions.
+vi.mock("../../internal/access-list.js", () => ({ default: { build: mocks.buildAccessList } }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: { start: vi.fn(), stop: vi.fn() } }));
 vi.mock("../../internal/proxy-host-monitor.js", () => ({
 	assertMonitorConfig: vi.fn(),
@@ -176,6 +188,18 @@ describe("GitOps PostgreSQL restore sequences", () => {
 				imported: 3,
 				errors: [],
 			});
+		expect(mocks.buildAccessList).toHaveBeenCalledTimes(overwrite ? 2 : 1);
+		for (const [list, options] of mocks.buildAccessList.mock.calls) {
+			expect(list).toBeInstanceOf(AccessList);
+			expect(list).toMatchObject({
+				id: 7,
+				items: [expect.objectContaining({ username: "restored" })],
+				clients: [expect.objectContaining({ address: "203.0.113.10", directive: "deny" })],
+			});
+			expect(list.items[0].password).toMatch(/^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/);
+			expect(options).toEqual({ immutable: true });
+		}
+		expect((await AccessList.query().findById(7)).meta.authorization_revision).toBe("a".repeat(64));
 		for (const [model, directory] of [
 			[User, "users"],
 			[AccessList, "access-lists"],

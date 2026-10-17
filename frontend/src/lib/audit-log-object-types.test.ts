@@ -44,7 +44,7 @@ describe("Audit object type labels", () => {
 		const wrappers = sources.filter((source) => /\binternalAuditLog\.add\([^,]+,\s*\{\s*action\s*,/.test(source));
 		for (const source of wrappers) {
 			expect(source).toMatch(
-				/const audit = \(access, action, operation, id, details = \{\}\) => internalAuditLog\.add/,
+				/const audit = \(access, action, operation, id, details = \{\}\) =>\s*internalAuditLog\.add/,
 			);
 			const invocations = [...source.matchAll(/\baudit\([^;\n]*?,\s*"([^"]+)",\s*"[^"]+"/g)];
 			expect(invocations.length).toBeGreaterThan(0);

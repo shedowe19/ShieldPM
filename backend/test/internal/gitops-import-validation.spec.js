@@ -836,6 +836,33 @@ describe("GitOps import sanitization and safe restore", () => {
 			{ skipAutoPush: true },
 		);
 	});
+	it("omits local ACL artifact revisions from portable exports and older imports", async () => {
+		const local = "a".repeat(64);
+		mocks.rows.AccessList = [
+			{ id: 7, meta: { authorization_revision: local, note: "portable" }, items: [], clients: [] },
+		];
+		const initialize = vi.spyOn(gitops, "initRepo").mockResolvedValue();
+		const certificates = vi.spyOn(gitops, "exportCertificateFiles").mockResolvedValue();
+		try {
+			expect(await gitops.exportConfig()).toContain("/data/gitops/shieldpm-config/access-lists/7.yaml");
+			const output = vi
+				.mocked(writeConfigFile)
+				.mock.calls.find(([, filename]) => filename.endsWith("/access-lists/7.yaml"));
+			expect(yaml.load(output[2])).toMatchObject({ meta: { note: "portable" } });
+			expect(output[2]).not.toContain("authorization_revision");
+			expect(mocks.rows.AccessList[0].meta.authorization_revision).toBe(local);
+			expect(
+				gitops.sanitizeImportData("AccessList", {
+					id: 7,
+					meta: { authorization_revision: local, note: "portable" },
+					items: [],
+				}),
+			).toMatchObject({ meta: { note: "portable" } });
+		} finally {
+			initialize.mockRestore();
+			certificates.mockRestore();
+		}
+	});
 	it("exports optional HTTPS trust settings alongside a proxy host monitor", async () => {
 		mocks.rows.ProxyHost = [{ id: 1, domain_names: ["example.test"] }];
 		mocks.rows.ProxyHostMonitor = [

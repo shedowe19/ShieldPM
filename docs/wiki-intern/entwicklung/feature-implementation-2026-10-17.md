@@ -54,8 +54,8 @@ Die [JSON-Rohwerte](./feature-implementation-2026-10-17.json) enthalten alle Sam
 
 ## Abschließende Validierung
 
-- Backend: 2.455 Tests im Gesamtlauf bestanden, 31 konfigurierte Skips; keine Fehler. Die anschließende Upload-Nachprüfung besteht zusätzlich mit 19 HTTP-/Service-Tests. PostgreSQL-Verhalten wird zusätzlich mit PGlite geprüft.
-- Frontend: 986 Tests bestanden; TypeScript, Übersetzungen, Produktionbuild und komprimiertes Größenbudget bestanden.
+- Backend: 2.490 Tests im Gesamtlauf bestanden, 41 umgebungsabhängige Skips; keine Fehler. PostgreSQL-Verhalten wird zusätzlich mit PGlite geprüft.
+- Frontend: 986 Tests bestanden; TypeScript, Übersetzungen, Produktionsbuild und komprimiertes Größenbudget bestanden.
 - Echter Chromium-Browser: zehn vollständige Abläufe einschließlich der neuen Bedienwege bestanden; keine unbehandelten Browserfehler.
 - Skripte/Betrieb: 170 Python-Tests, davon 149 bestanden und 21 umgebungsabhängig übersprungen; Shellsyntax geprüft.
 - Zusätzlich tatsächliches ShieldPM-Nginx: Wasm/Cache-Kombination, Header-Fehlerstrategie, Pool-Failover, IPv4/DNS/IPv6-Uploads, weiterlaufende Access-List-Worker und Backup-Containment.
@@ -67,11 +67,21 @@ Die echte GitHub-CI hat zusätzliche Annahmen der Testumgebung sichtbar gemacht:
 
 Die CodeQL-Nachprüfung führte zu zusätzlichen Schutzmaßnahmen und Regressionstests: Dateipfade akzeptieren nur kanonische IDs, Cache-/Logzugriffe prüfen symbolische Links, und Backup-Downloads sowie Entschlüsselung lesen über denselben geprüften Dateideskriptor. Jeder Upload besitzt ein eigenes privates temporäres Verzeichnis, das auch bei falschen Formularfeldern, mehreren Dateien, Größenlimit, Parserfehlern und Verbindungsabbruch bereinigt wird. Sechs zusätzliche echte HTTP-Fälle prüfen diese Fehlerwege, unberührte fremde Dateien und eine anschließend erfolgreiche neue Anfrage. FIFOs können die Prüfung nicht blockieren. Access-List-Dateiversionen verwenden zufällige 256-Bit-IDs unabhängig von Zugangsdaten; die Passwörter bleiben mit bcrypt-Kostenfaktor 13 geschützt. Der WireGuard-Test startet einen festen Hilfsprozess statt erzeugten JavaScript-Quelltextes. CodeQL-Regeln werden dafür nicht unterdrückt.
 
+### Nachprüfung der automatischen PR-Review
+
+Der Monitorfilter des Arbeitsbereichs berücksichtigt die aktuelle Aktivierung von Host und Monitor statt allein des letzten Messwerts. Pausierte Hosts erscheinen dadurch nicht mehr unter `up` oder `down`; aktivierte Hosts ohne Monitor werden unter `unknown` geführt. SQLite- und PostgreSQL/PGlite-Fälle prüfen Filter, Besitzergrenzen, Zähler und Paginierung.
+
+GitOps verwirft fremde Access-List-Dateirevisionen und erzeugt Passwort-/CA-Dateien unter der lokalen Listen-ID vor der Host-Aktivierung neu. Fehlende oder fehlgeschlagene Listen verhindern das Schreiben abhängiger Host-Kandidaten. Zehn Tests mit tatsächlichem Nginx prüfen Basic Auth, mTLS und Rücknahme, einschließlich eines injizierten Datenbankfehlers nach bereits erfolgreichem Reload. Möglicherweise noch von auslaufenden Workern benötigte unveränderliche ACL-Dateien bleiben erhalten.
+
+Wasm unterscheidet erfolgreiche Vorprüfung und bestätigte Aktivierung. Der gemeinsame Konfigurations-Lock führt den Status erst nach abgeschlossenem Batch beziehungsweise dessen Rücknahme fort. Alte geheime Host-Konfigurationen erhalten persistente Schutzreferenzen auf Worker-PID und Kernel-Startzeit; sie werden erst gelöscht, wenn keine aktive/gesicherte Konfiguration und kein auslaufender Worker sie mehr benötigt. Dies erzwingt keine Unterbrechung langer Verbindungen. Fehlerberichte verschiedener Filterversionen sind getrennt. Die Einzelheiten und die sichere Behandlung unbekannter Prozesszustände stehen unter [Wasm-Filter](../module/wasm-filter.md).
+
+Ein vorhandener Frontend-Quellvertrag akzeptiert außerdem Formatierungs-Leerraum nach dem Audit-Wrapper. Seine Prüfung der Audit-Objekttypen und vollständigen Aufrufabdeckung bleibt erhalten. Der Nginx-Parallelitätstest verwendet explizite Start-/Freigabebarrieren statt eines einzelnen JavaScript-Takts und prüft die vollständige Reihenfolge beider Änderungen; die zugehörigen Render-/Aktivierungs-/Rücknahmetests bestehen mit 201 Fällen.
+
 ## Integrationsregeln und Prüfgrenzen
 
 Neue und vorhandene Hosts verwenden dieselben Policy-Normalisierungen. Öffentliche API und GitOps akzeptieren keine als lokale Geheimnisse ausgegebenen Wasm-Ciphertexte. Ein leeres Schlüsselfeld erhält den aktuellen gespeicherten Schlüssel desselben Hosts und Filters. Exporte, Vorschauen, Revisionsvergleiche und Audit-Metadaten geben Schlüssel nicht preis. Vollständige Instanzbackups enthalten die zur Wiederherstellung benötigten Schlüssel ausschließlich innerhalb des verschlüsselten Archivs.
 
-Die funktionalen Prüfungen verwenden SQLite und PostgreSQL über PGlite, tatsächliche lokale HTTP-/TLS-Server und das veröffentlichte x86_64-Nginx. Wasm-Ausführung, Cache, IPv6, WebSocket, Pool-Failover und weiterlaufende Access-List-Worker werden tatsächlich ausgeführt. In der eingeschränkten Testumgebung ersetzt ein ausschließlich für den Selbsttest aktivierter TCP-Schalter die sonst verwendete Unix-Socket-Verbindung.
+Die funktionalen Prüfungen verwenden SQLite und PostgreSQL über PGlite, tatsächliche lokale HTTP-/TLS-Server und das veröffentlichte x86_64-Nginx. Wasm-Ausführung, Cache, IPv6, WebSocket, Pool-Failover und weiterlaufende Access-List-Worker werden tatsächlich ausgeführt. In der eingeschränkten Testumgebung ersetzt ein ausschließlich für den Selbsttest aktivierter TCP-Schalter die sonst verwendete Unix-Socket-Verbindung. Die fünf tatsächlichen Master-/Worker-Fälle lesen echte Kernel-Prozessdaten; lediglich die PID-Datei des Testbeobachters übersetzt die verschachtelten lokalen PID-Namensräume. Workerzustände und Prozess-Zugangsdaten werden dabei nicht simuliert. Zusammen mit 18 Datei-/Prozess-Regressionsfällen und 16 echten Wasm-/Cache-/Vorprüfungsfällen bestehen 39 kombinierte Prüfungen.
 
 Ein produktiver externer MySQL-/PostgreSQL-Server, ARM64, eine echte WireGuard-Schnittstelle, Docker-Daemon, Cloudflare-/ACME-Konten und öffentliche Benachrichtigungsdienste stehen lokal nicht vollständig zur Verfügung. Deren Grenzen werden durch echte lokale Gegenstellen, kontrollierte Prozessgrenzen und CI-Prüfungen abgesichert; die jeweilige externe Betriebsprüfung wird dadurch nicht ersetzt. Eine produktive Instanz wurde nicht verändert.
 

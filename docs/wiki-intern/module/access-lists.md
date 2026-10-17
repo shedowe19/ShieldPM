@@ -94,6 +94,13 @@ Für neue Aktivierungen werden htpasswd- und CA-Inhalte unter unveränderlichen,
 
 Externe mTLS-CA-Bundles werden vollständig mit `X509Certificate` geprüft, bevor eine Passwort- oder CA-Datei veröffentlicht wird. Auch die direkte `build`-Funktion stellt bei einem Veröffentlichungsfehler beide vorherigen Dateien atomar wieder her. Bei fehlgeschlagener Aktivierung werden die vorherigen Listeneinstellungen, Passwort-Hashes, Client-Regeln und Host-Zuordnungen sowie die exakten aktiven Konfigurations-/Passwort-/CA-Dateien einschließlich Dateirechten kompensiert. Erst eine erfolgreich aktivierte Änderung erzeugt den entsprechenden Audit-Eintrag.
 
+Auch [GitOps](./gitops.md) verwendet den unveränderlichen Builder: exportierte Laufzeitrevisionen werden
+verworfen und Passwort-/CA-Dateien für die lokale Listen-ID neu erzeugt, bevor Hosts aktiviert werden.
+Plaintext-Importe landen nur als bcrypt-13-Verifier in der Datenbank; vorhandene bcrypt-/APR1-Werte werden
+nicht erneut gehasht. Bei abgelehnter Aktivierung werden Listenfelder und Kindrelationen vor dem erneuten
+Laden der alten Hostkonfiguration wiederhergestellt. Kandidatendateien bleiben für eventuell noch auslaufende
+Worker erhalten. Fehlende, aber weiterhin zugewiesene Listen werden beim Full Sync nicht stillschweigend gelöscht.
+
 `access-list-activation.spec.js` prüft diese Abläufe mit SQLite und PostgreSQL/PGlite. Der zusätzliche Test mit laufenden Nginx-Workern hält die Ablehnung eines Kandidaten gezielt offen: Die bisherigen Zugangsdaten liefern weiter HTTP 200, die Kandidatenzugangsdaten HTTP 401. Danach wird die ursprüngliche Konfiguration weiter bedient.
 
 Mit `SHIELDPM_NGINX_TEST_BINARY` als Pfad zur Testbinärdatei führt der zusätzliche Integrationstest einen echten `nginx -tq` aus: Ein syntaktisch ungültiger Kandidat wird abgelehnt, während die wiederhergestellte alte Konfiguration ihre gültige CA- und Passwortdatei behält.

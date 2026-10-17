@@ -65,7 +65,8 @@ describe.each(["sqlite", "postgres"])("host workspace on %s", (engine) => {
 		});
 		await state.db.schema.createTable("proxy_host_monitor", (table) => {
 			table.increments("id");
-			table.integer("host_id");
+			table.integer("host_id").notNullable().unique();
+			table.boolean("enabled").notNullable().defaultTo(false);
 			table.string("state");
 		});
 		await up(state.db);
@@ -111,6 +112,79 @@ describe.each(["sqlite", "postgres"])("host workspace on %s", (engine) => {
 		const options = await service.options(user);
 		expect(options).toHaveLength(2);
 		expect(Object.keys(options[0]).sort()).toEqual(["domain_names", "id"]);
+	});
+	it("filters effective monitoring states before pagination without exposing private or deleted hosts", async () => {
+		await state.db("proxy_host").insert(
+			Array.from({ length: 10 }, (_, index) => ({
+				id: index + 4,
+				owner_user_id: 1,
+				modified_on: "2026-10-17T12:00:00Z",
+				enabled: [5, 8, 9, 11, 13].includes(index + 4) ? 0 : 1,
+				is_deleted: index + 4 === 12 ? 1 : 0,
+			})),
+		);
+		await state.db("host_domain").insert(
+			Array.from({ length: 10 }, (_, index) => ({
+				proxy_host_id: index + 4,
+				domain_name: `host-${index + 4}.example.test`,
+			})),
+		);
+		await state.db("proxy_host_monitor").insert([
+			{ host_id: 1, enabled: true, state: "up" },
+			{ host_id: 2, enabled: false, state: "up" },
+			{ host_id: 3, enabled: true, state: "down" },
+			{ host_id: 4, enabled: true, state: "unknown" },
+			{ host_id: 5, enabled: true, state: "up" },
+			{ host_id: 6, enabled: false, state: "down" },
+			{ host_id: 7, enabled: false, state: "unknown" },
+			{ host_id: 8, enabled: true, state: "down" },
+			{ host_id: 9, enabled: false, state: "up" },
+			{ host_id: 12, enabled: true, state: "up" },
+			{ host_id: 13, enabled: true, state: "unknown" },
+		]);
+		const user = access();
+		for (const [monitor, ids] of Object.entries({
+			up: [1],
+			down: [3],
+			unknown: [4, 10],
+			paused: [5, 6, 7, 8, 9, 11, 13],
+		})) {
+			const result = await service.hosts(user, { monitor });
+			expect(result.items.map((item) => item.id)).toEqual(ids);
+			expect(result.pagination.total_items).toBe(ids.length);
+		}
+		const page = await service.hosts(user, { monitor: "paused", page: 2, limit: 2 });
+		expect(page.items.map((item) => item.id)).toEqual([7, 8]);
+		expect(page.pagination).toMatchObject({ total_items: 7, total_pages: 4 });
+		expect((await service.hosts(user, { monitor: "paused", enabled: true })).items.map((item) => item.id)).toEqual([
+			6, 7,
+		]);
+		expect((await service.hosts(user, { monitor: "unknown", enabled: false })).items).toEqual([]);
+		expect((await service.hosts(access(1, true), { monitor: "paused" })).items.map((item) => item.id)).toEqual([
+			2, 5, 6, 7, 8, 9, 11, 13,
+		]);
+		await state.db("proxy_host_monitor").where("host_id", 2).delete();
+		expect((await service.hosts(user, { monitor: "unknown" })).items.map((item) => item.id)).toEqual([4, 10]);
+		expect((await service.hosts(access(1, true), { monitor: "unknown" })).items.map((item) => item.id)).toEqual([
+			2, 4, 10,
+		]);
+	});
+	it("reclassifies saved observations immediately when host or monitor switches change", async () => {
+		await state.db("proxy_host_monitor").insert({ host_id: 1, enabled: true, state: "up" });
+		const user = access();
+		expect((await service.hosts(user, { monitor: "up" })).items.map((item) => item.id)).toEqual([1]);
+		await state.db("proxy_host").where("id", 1).update({ enabled: 0 });
+		expect((await service.hosts(user, { monitor: "up" })).items).toEqual([]);
+		expect((await service.hosts(user, { monitor: "paused" })).items.map((item) => item.id)).toEqual([1]);
+		await state.db("proxy_host").where("id", 1).update({ enabled: 1 });
+		await state.db("proxy_host_monitor").where("host_id", 1).update({ enabled: false });
+		expect((await service.hosts(user, { monitor: "up" })).items).toEqual([]);
+		expect((await service.hosts(user, { monitor: "paused" })).items.map((item) => item.id)).toEqual([1]);
+		await state.db("proxy_host_monitor").where("host_id", 1).update({ enabled: true });
+		expect((await service.hosts(user, { monitor: "up" })).items.map((item) => item.id)).toEqual([1]);
+		await state.db("proxy_host_monitor").where("host_id", 1).delete();
+		expect((await service.hosts(user, { monitor: "unknown" })).items.map((item) => item.id)).toEqual([1, 3]);
+		expect((await service.hosts(user, { monitor: "paused" })).items).toEqual([]);
 	});
 	it("reports duplicate saved names consistently while keeping names private per owner and kind", async () => {
 		const user = access();

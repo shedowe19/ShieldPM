@@ -201,7 +201,8 @@ export async function materializeWasmHost(host) {
 			filter.kind === "api_key" ? decrypt(filter.config.sealed_value) : "",
 		),
 	}));
-	const statusPath = path.join(root(), "status", `host-${host.id}.json`);
+	const policyVersion = digest(JSON.stringify({ version: manifest.version, filters: entries }));
+	const statusPath = path.join(root(), "status", `${host.id}-${policyVersion}.json`);
 	await fs.mkdir(path.dirname(statusPath), { recursive: true, mode: 0o700 });
 	const contents = JSON.stringify({
 		version: 1,
@@ -213,6 +214,7 @@ export async function materializeWasmHost(host) {
 	await immutableFile(configurationPath, contents);
 	return {
 		configuration_path: configurationPath,
+		configuration_name: path.basename(configurationPath),
 		dispatcher_path: luaPath,
 		version: manifest.version,
 		sha256: manifest.sha256,
@@ -259,11 +261,16 @@ export function executeWasmPreflight(prepared, headers = {}) {
 		}
 		const listener = typeof socketPath === "number" ? `127.0.0.1:${socketPath}` : `unix:${socketPath}`;
 		const configPath = path.join(work, "nginx.conf");
+		// A candidate preflight must never mutate an accepted worker's runtime status.
+		const probeChain = JSON.parse(await fs.readFile(prepared.configuration_path, "utf8"));
+		probeChain.status_path = path.join(work, "status.json");
+		const probeConfiguration = path.join(work, "chain.json");
+		await fs.writeFile(probeConfiguration, JSON.stringify(probeChain), { mode: 0o600 });
 		const config = `user root; daemon off; master_process off; worker_processes 1; pid ${work}/pid; error_log ${work}/error.log warn;
 	events { worker_connections 32; } http { access_log off; wasm_vm wasmtime; lua_package_path ${quote(luaPath())}; ${process.env.SHIELDPM_WASM_LUA_CPATH ? `lua_package_cpath ${quote(process.env.SHIELDPM_WASM_LUA_CPATH)};` : ""}
-	init_by_lua_block { shieldpm_wasm = dofile(${quote(prepared.dispatcher_path)}); shieldpm_wasm.load(${quote(prepared.configuration_path)}); }
-	server { listen ${listener}; location / { access_by_lua_block { shieldpm_wasm.access(${quote(prepared.configuration_path)}); }
-	header_filter_by_lua_block { shieldpm_wasm.header_filter(${quote(prepared.configuration_path)}); }
+	init_by_lua_block { shieldpm_wasm = dofile(${quote(prepared.dispatcher_path)}); shieldpm_wasm.load(${quote(probeConfiguration)}); }
+	server { listen ${listener}; location / { access_by_lua_block { shieldpm_wasm.access(${quote(probeConfiguration)}); }
+	header_filter_by_lua_block { shieldpm_wasm.header_filter(${quote(probeConfiguration)}); }
 	body_filter_by_lua_block { shieldpm_wasm.body_filter(); } content_by_lua_block { ngx.say("SHIELDPM_WASM_OK:" .. (ngx.var.http_x_shieldpm_probe or "")); } } } }`;
 		await fs.mkdir(path.join(work, "logs"));
 		await fs.writeFile(configPath, config, { mode: 0o600 });
@@ -278,7 +285,12 @@ export function executeWasmPreflight(prepared, headers = {}) {
 				if (spawnError || child.exitCode !== null)
 					throw new errs.ConfigurationError("Wasm runtime failed its execution preflight");
 				try {
-					return await requestSocket(socketPath, headers);
+					const result = await requestSocket(socketPath, headers);
+					const runtimeError = await fs.readFile(probeChain.status_path, "utf8").catch((error) => {
+						if (error.code === "ENOENT") return null;
+						throw error;
+					});
+					return runtimeError ? { ...result, runtime_error: JSON.parse(runtimeError) } : result;
 				} catch (error) {
 					if (error.code !== "ENOENT" && error.code !== "ECONNREFUSED") throw error;
 					await new Promise((resolve) => setTimeout(resolve, 50));
@@ -317,12 +329,13 @@ export async function prepareHost(host) {
 	);
 	try {
 		const result = await executeWasmPreflight(prepared, headers);
+		if (result.runtime_error) throw new errs.ConfigurationError("Wasm filter chain failed its execution preflight");
 		const localResponse = filters.find((filter) => filter.kind === "local_response");
 		const authenticationIndex = filters.findIndex((filter) => filter.kind === "api_key");
 		const localIndex = filters.findIndex((filter) => filter.kind === "local_response");
 		if (authenticationIndex >= 0 && (localIndex < 0 || authenticationIndex < localIndex)) {
 			const denied = await executeWasmPreflight(prepared);
-			if (denied.status !== 401)
+			if (denied.runtime_error || denied.status !== 401)
 				throw new errs.ConfigurationError("Wasm authentication preflight did not reject missing credentials");
 		}
 
@@ -333,28 +346,8 @@ export async function prepareHost(host) {
 				: !result.body.startsWith("SHIELDPM_WASM_OK:"))
 		)
 			throw new errs.ConfigurationError("Wasm filter chain failed its execution preflight");
-		await fs.writeFile(
-			prepared.status_path,
-			JSON.stringify({
-				state: "validated",
-				version: prepared.version,
-				sha256: prepared.sha256,
-				checked_at: new Date().toISOString(),
-				filter_count: prepared.filter_count,
-			}),
-			{ mode: 0o600 },
-		);
 		return prepared;
 	} catch (error) {
-		await fs.writeFile(
-			prepared.status_path,
-			JSON.stringify({
-				state: "error",
-				message: "Wasm execution preflight failed",
-				checked_at: new Date().toISOString(),
-			}),
-			{ mode: 0o600 },
-		);
 		throw new errs.ConfigurationError("Wasm execution preflight failed; previous configuration retained", error);
 	}
 }
@@ -429,7 +422,29 @@ export async function selfTest() {
 
 export async function getHostStatus(hostId) {
 	try {
-		return JSON.parse(await fs.readFile(path.join(root(), "status", `host-${Number(hostId)}.json`), "utf8"));
+		const filename = `host-${Number(hostId)}.json`;
+		let pointer;
+		try {
+			pointer = JSON.parse(await fs.readFile(path.join(root(), "active", filename), "utf8"));
+		} catch (error) {
+			if (error.code !== "ENOENT") throw error;
+			pointer = JSON.parse(await fs.readFile(path.join(root(), "status", filename), "utf8"));
+		}
+		const { configuration_file: _configuration, runtime_status_file: runtimeStatus, ...status } = pointer;
+		if (status.state === "active" && /^[1-9]\d*-[a-f0-9]{64}\.json$/.test(runtimeStatus || "")) {
+			const failure = await fs.readFile(path.join(root(), "status", runtimeStatus), "utf8").catch((error) => {
+				if (error.code === "ENOENT") return null;
+				throw error;
+			});
+			if (failure) {
+				const details = JSON.parse(failure);
+				const failedAt =
+					typeof details.checked_at === "number" ? details.checked_at * 1000 : Date.parse(details.checked_at);
+				if (!Number.isFinite(failedAt) || failedAt >= Date.parse(status.checked_at))
+					return { ...status, ...details, version: status.version, sha256: status.sha256 };
+			}
+		}
+		return status;
 	} catch {
 		return { state: "inactive", checked_at: null };
 	}
@@ -524,22 +539,44 @@ export default {
 };
 
 /** Record activation only after the complete Nginx reload has succeeded. */
-export async function markHostActive(hostId, prepared) {
-	const statusPath = path.join(root(), "status", `host-${Number(hostId)}.json`);
+export async function markHostActive(hostId, prepared, activationError = null) {
+	const statusPath = path.join(root(), "active", `host-${Number(hostId)}.json`);
 	await fs.mkdir(path.dirname(statusPath), { recursive: true, mode: 0o700 });
-	await fs.writeFile(
-		statusPath,
-		JSON.stringify(
-			prepared
-				? {
-						state: "active",
-						checked_at: new Date().toISOString(),
-						version: prepared.version,
-						sha256: prepared.sha256,
-						filter_count: prepared.filter_count,
-					}
-				: { state: "inactive", checked_at: new Date().toISOString() },
-		),
-		{ mode: 0o600 },
-	);
+	if (prepared && !activationError) {
+		const runtimeName = path.basename(prepared.status_path);
+		if (/^[1-9]\d*-[a-f0-9]{64}\.json$/.test(runtimeName))
+			await fs.unlink(path.join(root(), "status", runtimeName)).catch((error) => {
+				if (error.code !== "ENOENT") throw error;
+			});
+	}
+	const temporary = `${statusPath}.${randomUUID()}.tmp`;
+	try {
+		await fs.writeFile(
+			temporary,
+			JSON.stringify(
+				prepared
+					? {
+							state: activationError ? "error" : "active",
+							...(activationError ? { message: activationError } : {}),
+							checked_at: new Date().toISOString(),
+							version: prepared.version,
+							sha256: prepared.sha256,
+							filter_count: prepared.filter_count,
+							configuration_file: path.basename(prepared.configuration_path),
+							runtime_status_file: path.basename(prepared.status_path),
+						}
+					: { state: "inactive", checked_at: new Date().toISOString() },
+			),
+			{ mode: 0o600, flag: "wx", flush: true },
+		);
+		await fs.rename(temporary, statusPath);
+		const directory = await fs.open(path.dirname(statusPath), "r");
+		try {
+			await directory.sync();
+		} finally {
+			await directory.close();
+		}
+	} finally {
+		await fs.rm(temporary, { force: true });
+	}
 }

@@ -138,13 +138,24 @@ const internalHostWorkspace = {
 				ProxyHostTag.query().select("id").whereColumn("host_id", "proxy_host.id").where("tag", tag),
 			);
 		if (typeof filters.enabled === "boolean") query.where("proxy_host.enabled", filters.enabled ? 1 : 0);
-		if (filters.monitor)
-			query.whereExists(
+		if (filters.monitor) {
+			const monitor = () =>
 				ProxyHost.knex()("proxy_host_monitor")
 					.select("id")
-					.where("host_id", ProxyHost.knex().ref("proxy_host.id"))
-					.where("state", filters.monitor),
-			);
+					.where("proxy_host_monitor.host_id", ProxyHost.knex().ref("proxy_host.id"));
+			if (filters.monitor === "paused") {
+				// publicStatus derives pause from current switches, not the last measured state.
+				query.where((paused) =>
+					paused.where("proxy_host.enabled", 0).orWhereExists(monitor().where("enabled", false)),
+				);
+			} else {
+				query.where("proxy_host.enabled", 1).where((active) => {
+					active.whereExists(monitor().where("enabled", true).where("state", filters.monitor));
+					// An enabled host without a monitor has no observation yet.
+					if (filters.monitor === "unknown") active.orWhereNotExists(monitor());
+				});
+			}
+		}
 		if (filters.certificate_days != null)
 			query.whereExists(
 				ProxyHost.knex()("certificate")
