@@ -14,6 +14,7 @@ const host = (overrides = {}) => ({
 	id: 12,
 	enabled: true,
 	domain_names: ["proxy.example.test"],
+	host_domains: [{ domain_name: "proxy.example.test" }],
 	forward_scheme: "http",
 	forward_host: "127.0.0.1",
 	forward_port: 8080,
@@ -23,6 +24,7 @@ const host = (overrides = {}) => ({
 	meta: {},
 	...overrides,
 });
+const persistedHost = (overrides = {}) => ({ ...host(overrides), $fetchGraph: async () => {} });
 
 describe("Nginx configuration regressions", () => {
 	beforeAll(async () => {
@@ -283,7 +285,10 @@ describe("Nginx configuration regressions", () => {
 			internalNginx.configure(
 				{
 					query: () => ({
-						findById: () => ({ withGraphFetched: async () => host(), forUpdate: async () => host() }),
+						findById: () => ({
+							withGraphJoined: async () => persistedHost(),
+							forUpdate: async () => host(),
+						}),
 					}),
 				},
 				"proxy_host",
@@ -321,7 +326,7 @@ describe("Nginx configuration regressions", () => {
 			transaction: (callback) => callback({}),
 			query: () => ({
 				findById: () => ({
-					withGraphFetched: async () => host({ enabled: false, is_deleted: false }),
+					withGraphJoined: async () => persistedHost({ enabled: false, is_deleted: false }),
 					forUpdate: async () => host({ enabled: false }),
 				}),
 				where: () => ({ patch: async () => 1 }),
@@ -350,7 +355,7 @@ describe("Nginx configuration regressions", () => {
 		const model = {
 			transaction: (callback) => callback({}),
 			query: () => ({
-				findById: () => ({ withGraphFetched: async () => host(), forUpdate: async () => host() }),
+				findById: () => ({ withGraphJoined: async () => persistedHost(), forUpdate: async () => host() }),
 				where: () => ({ patch }),
 			}),
 		};
@@ -378,7 +383,7 @@ describe("Nginx configuration regressions", () => {
 		const model = {
 			transaction: (callback) => callback({}),
 			query: () => ({
-				findById: () => ({ withGraphFetched: async () => host(), forUpdate: async () => host() }),
+				findById: () => ({ withGraphJoined: async () => persistedHost(), forUpdate: async () => host() }),
 				where: () => ({ patch }),
 			}),
 		};
@@ -404,7 +409,7 @@ describe("Nginx configuration regressions", () => {
 		const model = {
 			transaction: (callback) => callback({}),
 			query: () => ({
-				findById: () => ({ withGraphFetched: async () => host(), forUpdate: async () => host() }),
+				findById: () => ({ withGraphJoined: async () => persistedHost(), forUpdate: async () => host() }),
 				where: () => ({ patch }),
 			}),
 		};

@@ -74,6 +74,10 @@ Kandidaten. `backend/test/internal/proxy-host-monitor.spec.js` prüft die begren
   erscheint „–“. Bei einem Timeout beschreibt der Wert die Dauer der fehlgeschlagenen Probe bis zum Abbruch und
   keine bestätigte Netzwerklatenz. Im Dialog „Host-Überwachung“ bleibt die Antwortzeit beim letzten Check und im
   Verlauf sichtbar.
+- Sind Dienstprüfung und Latenz in der Host-Tabelle gleichzeitig ausgeblendet, pausiert deren Status-Polling.
+  Das erneute Einblenden einer der beiden Spalten fordert aktuelle Daten an. React Query reicht sein AbortSignal
+  bis zum API-Client weiter und bricht eine laufende Statusabfrage ab, sobald sie keinen aktiven Verbraucher mehr
+  hat. Andere Verbraucher desselben Query-Keys, der Überwachungsdialog und die Backend-Probes bleiben aktiv.
 - Die Konfiguration begrenzt Intervalle auf 15–3600 Sekunden und Timeouts auf 500–15000 Millisekunden; der Timeout
   muss kürzer als das Intervall sein. Manuelle Checks teilen sich die Begrenzung auf fünf Verbindungen und sind
   zusätzlich auf zehn Aufrufe je Minute und IP begrenzt.
@@ -82,6 +86,12 @@ Kandidaten. `backend/test/internal/proxy-host-monitor.spec.js` prüft die begren
   ebenso ein geändertes `upstream_ca`, `upstream_server_name` oder `skip_certificate_verification`. Dabei wird auch
   der Alarmstatus zurückgesetzt.
   Die Änderung von Intervall, Timeout oder Benachrichtigung erhält bisherige Messungen.
+  Speichern von Status und neuer Messung sowie Verlaufsbegrenzung gehören zu derselben Transaktion. Ein Fehler bei
+  der Bereinigung rollt den gesamten Schreibvorgang zurück; danach wird kein Alarm für diese Messung versendet.
+  Die Bereinigung liest nur die ID des hundertsten noch nicht abgelaufenen Eintrags und entfernt mit einem
+  hostbezogenen DELETE sowohl ältere IDs als auch abgelaufene Zeitstempel. Dadurch genügen zwei Abfragen, ohne
+  eine MySQL-inkompatible Unterabfrage auf dieselbe Zieltabelle zu verwenden. Die Grenze wird anhand gültiger
+  Zeitstempel ermittelt, damit später importierte, bereits abgelaufene Einträge keine gültigen Messungen verdrängen.
 - Ein täglicher Cleanup entfernt auch bei pausierten Monitoren Einträge nach 30 Tagen und beseitigt Konfigurationen,
   deren Proxy-Host inzwischen gelöscht wurde (höchstens 200 verwaiste Hosts pro Durchgang).
 - Die erste erfolgreiche Messung erzeugt keinen Telegram-Alarm; ein erster Fehler und spätere Up-/Down-Wechsel

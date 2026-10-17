@@ -65,7 +65,11 @@ export default function Table({
 }: Props) {
 	const [diagnosticsHost, setDiagnosticsHost] = useState<{ id: number; domain: string } | null>(null);
 	const [monitorHost, setMonitorHost] = useState<ProxyHost | null>(null);
-	const ids = useMemo(() => data.map((host) => host.id), [data]);
+	const monitorColumnsVisible = columnVisibility.monitor !== false || columnVisibility.latency !== false;
+	const ids = useMemo(
+		() => (monitorColumnsVisible ? data.map((host) => host.id) : []),
+		[data, monitorColumnsVisible],
+	);
 	const {
 		data: monitorStatuses,
 		isPending: monitorLoading,

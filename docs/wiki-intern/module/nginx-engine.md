@@ -101,6 +101,15 @@ Die Sicherung bleibt bis zum erfolgreichen Reload erhalten. Scheitert die Aktivi
 
 Vor der Verarbeitung eines gespeicherten Hostzustands lädt `configureHost()` innerhalb der Konfigurationssperre den vollständigen aktuellen Datensatz einschließlich Zertifikat erneut; bei Proxy-Hosts auch Domains und die vollständige Access-List. Vorab geladene Sammelaufträge können dadurch keine inzwischen geänderten Upstreams, Domains oder neu aktivierte Authentifizierung/TLS durch ihre alten Snapshots ersetzen. Inzwischen deaktivierte, gelöschte oder entfernte Hosts erhalten weiterhin keine aktiven Listener. Die zurückgegebenen und gespeicherten Nginx-Metadaten entfernen auch dabei alte DNS-Zugangsdaten.
 
+`getCurrentHost()` lädt Zertifikat und Access-List als einzelne Beziehungen gemeinsam mit dem Host. Domains sowie
+Access-List-Clients und Authentifizierungseinträge werden anschließend getrennt geladen. Sammlungen werden nicht
+in denselben Join aufgenommen; dadurch entsteht kein kartesisches Produkt und große Hostdaten werden nicht je
+Domain oder Client wiederholt übertragen. Bei einem Proxy-Host mit Zertifikat und Access-List sinkt die Zahl der
+Graph-Abfragen nach dem Aufwärmen der ORM-Metadaten von sechs auf vier. Da Objections `$fetchGraph()` den
+`$afterFind()`-Hook des Wurzelobjekts nicht erneut ausführt, bildet der Loader `domain_names` ausdrücklich aus
+den frisch geladenen Domains. Der nächste Host wird weiterhin erst unmittelbar vor seiner eigenen Erzeugung
+innerhalb der Sperre gelesen; es gibt keinen veraltbaren Vorab-Cache für den gesamten Sammelauftrag.
+
 Auch während eines langsamen Tests oder Reloads können andere Aufrufe Host-Metadaten speichern. Die Statusaktualisierung liest deshalb erst danach die aktuellen Metadaten in einer kurzen Datenbanktransaktion mit `forUpdate()` und ergänzt ausschließlich die Nginx-Statusfelder. PostgreSQL/MySQL sperren dabei die Hostzeile; SQLite verwendet seine Transaktionsserialisierung. Kein Datenbanklock wird über den Nginx-Prozessaufruf gehalten. Das gilt auch für den Fehlerstatus nach dem Rollback-Reload. `sixth-nginx-current-state.spec.js` prüft beide Rennen und die Geheimnisbereinigung mit echten SQLite- und PostgreSQL/PGlite-Modellen, Liquid-Rendering und temporären Dateien; die Prozessaufrufe sind simuliert.
 
 Das Lesen interner Nginx-Logs prüft die vorhandene Berechtigung `settings:get`. Die Regressionstests prüfen außerdem den Reload-Fehlerpfad und die Reihenfolge der Warteschlange.

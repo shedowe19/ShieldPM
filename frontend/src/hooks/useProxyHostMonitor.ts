@@ -11,8 +11,10 @@ export function useProxyHostMonitorStatuses(ids: number[]) {
 	const idsKey = ids.join(",");
 	return useQuery({
 		queryKey: ["proxy-host-monitors", "statuses", idsKey],
-		queryFn: () => getProxyHostMonitorStatuses(ids),
+		queryFn: ({ signal }) => getProxyHostMonitorStatuses(ids, signal),
 		enabled: ids.length > 0,
+		// Revealing a column must refresh even within the app's default stale window.
+		staleTime: 0,
 		refetchInterval: 30_000,
 	});
 }

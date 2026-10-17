@@ -202,6 +202,13 @@ The [October 13 test-quality review](./docs/wiki-intern/entwicklung/tests.md#tes
 
 ### 6.1 Nginx Configuration Engine (`backend/internal/nginx.js`)
 
+The [October 17 performance review](./docs/wiki-intern/entwicklung/performance-optimierung-2026-10-17.md)
+reduces status polling when both monitor columns are hidden, keeps monitor retention inside the result transaction
+with a single boundary ID and two cleanup queries, and refreshes Nginx host graphs using singleton joins plus
+separate collection fetches. Protected-host graph reads drop from six to four without caching stale batch snapshots.
+Opt-in comparisons retain exact rendered-config hashes and distinguish local persistence/embedded-database timings
+from production network performance.
+
 - **Core Logic**: Reads DB state -> Renders Liquid templates (`backend/templates/`) -> Writes `.conf` files to `/data/nginx/`.
 
 * **Reload Strategy**: Serializes host configuration writes; bulk operations use `skip_reload` and a final validated reload.

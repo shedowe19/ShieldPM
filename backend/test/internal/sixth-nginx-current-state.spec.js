@@ -73,7 +73,14 @@ describe.each(["sqlite", "postgres"])("queued Nginx jobs use current persisted h
 		vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", "true");
 		vi.spyOn(nginx, "getConfigName").mockImplementation((_kind, id) => path.join(directory, `${id}.conf`));
 		vi.spyOn(utils, "execFile").mockResolvedValue("");
-		for (const table of ["host_domain", "proxy_host", "certificate", "access_list", "access_list_auth"])
+		for (const table of [
+			"host_domain",
+			"proxy_host",
+			"certificate",
+			"access_list",
+			"access_list_auth",
+			"access_list_client",
+		])
 			await state.db(table).delete();
 		await state.db("proxy_host").insert({
 			id: 7,
@@ -135,6 +142,99 @@ describe.each(["sqlite", "postgres"])("queued Nginx jobs use current persisted h
 
 		expect(utils.execFile).toHaveBeenCalledTimes(1);
 		expect(utils.execFile).toHaveBeenCalledWith("nginx", ["-tq"]);
+	});
+
+	it("loads the complete graph with bounded reads instead of multiplying clients, users and domains", async () => {
+		await state.db("certificate").insert({ id: 3, provider: "custom", meta: "{}" });
+		await state.db("access_list").insert({ id: 4, meta: "{}" });
+		await state
+			.db("access_list_auth")
+			.insert(Array.from({ length: 7 }, (_, index) => ({ access_list_id: 4, username: `user-${index}` })));
+		await state
+			.db("access_list_client")
+			.insert(Array.from({ length: 11 }, (_, index) => ({ access_list_id: 4, username: `client-${index}` })));
+		await state.db("host_domain").insert([
+			{ proxy_host_id: 7, domain_name: "second.example.test" },
+			{ proxy_host_id: 7, domain_name: "third.example.test" },
+		]);
+		await ProxyHost.query().findById(7).patch({ access_list_id: 4, certificate_id: 3 });
+		const expected = await currentHost();
+		// Warm cached table metadata separately from normal render-graph queries.
+		await nginx.getCurrentHost(ProxyHost, "proxy_host", 7);
+		const reads = [];
+		const rows = [];
+		const recordQuery = (query) => reads.push(query.sql);
+		const recordResult = (result, query) => {
+			if (/\bleft join\b/i.test(query.sql) && Array.isArray(result)) rows.push(result.length);
+		};
+		state.db.on("query", recordQuery).on("query-response", recordResult);
+		let current;
+		try {
+			current = await nginx.getCurrentHost(ProxyHost, "proxy_host", 7);
+		} finally {
+			state.db.removeListener("query", recordQuery).removeListener("query-response", recordResult);
+		}
+		expect(current.toJSON()).toEqual(expected.toJSON());
+		expect(current.domain_names).toEqual(["old.example.test", "second.example.test", "third.example.test"]);
+		expect(current.access_list.items).toHaveLength(7);
+		expect(current.access_list.clients).toHaveLength(11);
+		expect(reads).toHaveLength(4);
+		// Only singleton relations are joined: no 3 × 7 × 11 intermediate row explosion.
+		expect(rows).toEqual([1]);
+	});
+
+	it("does not restore deleted authentication or certificate relations when refreshing the graph", async () => {
+		await state.db("certificate").insert({ id: 3, provider: "custom", meta: "{}", is_deleted: 1 });
+		await state.db("access_list").insert({ id: 4, meta: "{}", is_deleted: 1 });
+		await state.db("access_list_auth").insert({ access_list_id: 4, username: "deleted-list-user" });
+		await ProxyHost.query().findById(7).patch({ access_list_id: 4, certificate_id: 3 });
+
+		const current = await nginx.getCurrentHost(ProxyHost, "proxy_host", 7);
+
+		expect(current.certificate).toBeNull();
+		expect(current.access_list).toBeNull();
+		expect(current.domain_names).toEqual(["old.example.test"]);
+	});
+
+	it("refreshes a later host after its database settings change while an earlier host is rendering", async () => {
+		await state.db("proxy_host").insert({
+			id: 8,
+			forward_host: "second-old.test",
+			forward_scheme: "http",
+			forward_port: 8080,
+			meta: "{}",
+		});
+		await state.db("host_domain").insert({ proxy_host_id: 8, domain_name: "second-old.example.test" });
+		const enteredRender = Promise.withResolvers();
+		const releaseRender = Promise.withResolvers();
+		const generate = nginx.generateConfig;
+		vi.spyOn(nginx, "generateConfig").mockImplementation(async (kind, host) => {
+			if (host.id === 7) {
+				enteredRender.resolve();
+				await releaseRender.promise;
+			}
+			return generate(kind, host);
+		});
+		const operation = nginx.bulkGenerateConfigs(ProxyHost, "proxy_host", [{ id: 7 }, { id: 8 }]);
+		await enteredRender.promise;
+		try {
+			await state.db("certificate").insert({ id: 3, provider: "custom", meta: "{}" });
+			await state.db("access_list").insert({ id: 4, meta: "{}" });
+			await state.db("access_list_auth").insert({ access_list_id: 4, username: "new-user" });
+			await ProxyHost.query()
+				.findById(8)
+				.patch({ forward_host: "second-new.test", access_list_id: 4, certificate_id: 3 });
+			await state.db("host_domain").where("proxy_host_id", 8).update({ domain_name: "second-new.example.test" });
+		} finally {
+			releaseRender.resolve();
+		}
+		await operation;
+		const config = await fs.promises.readFile(nginx.getConfigName("proxy_host", 8), "utf8");
+		expect(config).toContain("server_name second-new.example.test;");
+		expect(config).toContain("auth_basic_user_file  /data/access/4;");
+		expect(config).toContain("/data/tls/custom/npm-3/fullchain.pem");
+		expect(config).toContain("http://second-new.test:8080");
+		expect(config).not.toContain("second-old");
 	});
 
 	it("does not return legacy DNS credentials while refreshing the stored render graph", async () => {

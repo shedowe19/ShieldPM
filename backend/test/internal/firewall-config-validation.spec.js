@@ -22,14 +22,14 @@ describe("staged firewall lookup validation before Nginx activation", () => {
 	let execute;
 	const filename = (id) => path.join(directory, `${id}.conf`);
 	const rows = () => [
-		{ id: 1, enabled: true, meta: { note: "retained" } },
-		{ id: 2, enabled: true, meta: {} },
+		{ id: 1, enabled: true, meta: { note: "retained" }, host_domains: [], $fetchGraph: async () => {} },
+		{ id: 2, enabled: true, meta: {}, host_domains: [], $fetchGraph: async () => {} },
 	];
 	const modelFor = (hosts) => ({
 		transaction: (callback) => callback({}),
 		query: () => ({
 			findById: (id) => ({
-				withGraphFetched: async () => hosts.find((host) => host.id === id),
+				withGraphJoined: async () => hosts.find((host) => host.id === id),
 				forUpdate: async () => hosts.find((host) => host.id === id),
 			}),
 			where: (_field, id) => ({
