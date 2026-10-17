@@ -46,6 +46,23 @@ const hostFields = (host) =>
 		"access_list",
 		"tor_onion",
 	]);
+
+/** Restore JSON-serialized DATETIME instants through mysql2's configured connection timezone. */
+const restoreDatabaseTimestamps = (row, trx) => {
+	const result = { ...row };
+	if (["mysql", "mysql2"].includes(trx.client.config.client)) {
+		for (const field of ["created_on", "modified_on"]) {
+			const value = result[field];
+			if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value)) {
+				const instant = new Date(value);
+				if (!Number.isFinite(instant.getTime()))
+					throw new errs.ConfigurationError(`Invalid captured ${field} timestamp`);
+				result[field] = instant;
+			}
+		}
+	}
+	return result;
+};
 const secretKey =
 	/(?:password|secret|credential|private.?key|token|advanced.?config|forward.?query|php.?override|internal.?note|note|support.?url|(?:^|_)headers?$|config(?:uration)?)/i;
 /** User-visible diffs never return free-form directives, credentials, or plugin configuration. */
@@ -126,16 +143,23 @@ export async function restoreHostState(snapshot) {
 		async (trx) => {
 			await ProxyHost.query(trx)
 				.findById(snapshot.host.id)
-				.patch({ ...hostFields(snapshot.host), is_deleted: snapshot.host.is_deleted ?? 0 });
+				.patch({
+					...hostFields(snapshot.host),
+					domain_names: snapshot.host.domain_names,
+					is_deleted: snapshot.host.is_deleted ?? 0,
+				});
 			// Compensation restores the accepted state, including timestamps. Model hooks
 			// deliberately stamp normal writes, so restore these trusted captured fields last.
-			const timestamps = _.pick(snapshot.host, ["created_on", "modified_on"]);
+			const timestamps = restoreDatabaseTimestamps(_.pick(snapshot.host, ["created_on", "modified_on"]), trx);
 			if (Object.keys(timestamps).length)
 				await trx(ProxyHost.tableName).where("id", snapshot.host.id).update(timestamps);
 			await HostDomain.query(trx).delete().where("proxy_host_id", snapshot.host.id);
 			for (const domain of snapshot.host.host_domains || [])
 				await trx(HostDomain.tableName).insert(
-					_.pick(domain, ["id", "proxy_host_id", "domain_name", "created_on", "modified_on"]),
+					restoreDatabaseTimestamps(
+						_.pick(domain, ["id", "proxy_host_id", "domain_name", "created_on", "modified_on"]),
+						trx,
+					),
 				);
 		},
 	);

@@ -79,6 +79,37 @@ Ein vorhandener Frontend-Quellvertrag akzeptiert außerdem Formatierungs-Leerrau
 
 Die erweiterte GitOps-Erreichbarkeit machte zwei CodeQL-Hinweise zur bisherigen PEM-Regex sichtbar. Die Prüfung verwendet nun einen linearen Scanner mit einer Grenze von 1 MiB, exakten Hüllen, geprüften Base64-Zeichen und weiterhin `X509Certificate` für jedes Zertifikat. Regressionsfälle mit 20.000 wiederholten BEGIN-Markern prüfen die beiden langsamen Fehlerformen innerhalb einer Sekunde. Der echte mTLS-Test vertraut seiner erzeugten CA ausdrücklich und prüft SAN/Servername `localhost`, statt die TLS-Zertifikatsprüfung auszuschalten. Die gemeinsame gezielte ACL-/GitOps-Prüfung besteht mit 100 Fällen; CodeQL-Regeln werden nicht unterdrückt.
 
+## Betriebsfehler und Wiederanlauf nach dem ersten Instanztest
+
+Die ursprünglichen SQLite-/PGlite- und Nginx-Prüfungen deckten die folgenden tatsächlichen MariaDB- und
+Startkonstellationen nicht ausreichend ab. Die nachgereichten Produktionsmeldungen wurden mit zusätzlichen
+gezielten Regressionen überprüft:
+
+- Die Historienbereinigung kann unter MariaDB-Snapshot-Isolation `ER_CHECKREAD`/1020 auslösen und die gesamte
+  Ergebnistransaktion verwerfen. Wiederholt wird deshalb ausschließlich die vollständige Datenbankarbeit in
+  höchstens drei frischen Transaktionen. Probe und externe Benachrichtigungen laufen einmal. Echte konkurrierende
+  Verbindungen reproduzieren den Fehler vor der Korrektur; Status, Historie, Vorfall und Outbox bleiben danach atomar.
+- Der implizite lokale Docker-Socket ist bei nativer/LXC-Installation optional. Sein Fehlen erzeugt eine Info und
+  Wiederholungen im Abstand von 30 bis höchstens 300 Sekunden. Explizite Ziele und andere Transportfehler bleiben
+  sichtbare Warnungen, identische Meldungen höchstens alle fünf Minuten. Später bereitgestellte Sockets werden erkannt.
+- Zertifikatsupdates binden streng geprüfte zonierte ISO-Werte als echte `Date`-Werte, damit mysql2 seine bestehende
+  Verbindungszeitzone konsistent verwendet. Tests prüfen den gemeldeten DATETIME-Fehler und Offset-/Berlin-Roundtrips.
+- Der neue manuelle Host-Updatepfad hatte den vollständigen gelesenen Relationsgraph einschließlich Zertifikats-/
+  Access-List-Daten und ISO-Zeitstempeln in den Schreibgraph übernommen. Der Schreibgraph enthält nun nur angefragte
+  Hostfelder und normalisierte Domains; gemeinsam genutzte Ressourcen und ausgelassene aktuelle Werte bleiben erhalten.
+  Der getrennte vollständige Snapshot bleibt für Revisionen und Aktivierungs-Rollback bestehen. Dessen Rückweg bindet
+  MySQL-Zeitstempel ebenfalls über den Treiber statt als unzulässige ISO-SQL-Zeichenketten.
+- Beim Start hatte ein einzelner fehlerhafter Host nach dem vorherigen Löschen der aktiven Dateien den gesamten
+  Neuaufbau zurückgerollt. Nginx konnte anschließend den leeren Include-Bestand erfolgreich prüfen, während die
+  Webseiten HTTP 404 lieferten. Eine echte Nginx-Regression reproduziert dieses Muster. Der Startup-Pfad isoliert
+  fehlerhafte Hosts und bereitet die gültigen Hosts einzeln vor; der bestehende abschließende Reload aktiviert sie.
+  Solange ein Host fehlschlägt, wird der Fingerprint nicht geschrieben, damit der nächste Start erneut versucht.
+
+Die lokalen Serverfälle verwenden echtes MariaDB 10.11.14 mit ausdrücklich aktivierter Snapshot-Isolation;
+die CI führt zusätzlich alle internen `mariadb-*.spec.js` gegen ihren vorhandenen MariaDB-11.8.3-Service aus.
+Der konkrete ursprüngliche ungültige Nginx-Hosteintrag der produktiven Instanz ist nicht bekannt. Globale
+Nginx-Konfigurationsfehler können weiterhin die abschließende Aktivierung verhindern.
+
 ## Integrationsregeln und Prüfgrenzen
 
 Neue und vorhandene Hosts verwenden dieselben Policy-Normalisierungen. Öffentliche API und GitOps akzeptieren keine als lokale Geheimnisse ausgegebenen Wasm-Ciphertexte. Ein leeres Schlüsselfeld erhält den aktuellen gespeicherten Schlüssel desselben Hosts und Filters. Exporte, Vorschauen, Revisionsvergleiche und Audit-Metadaten geben Schlüssel nicht preis. Vollständige Instanzbackups enthalten die zur Wiederherstellung benötigten Schlüssel ausschließlich innerhalb des verschlüsselten Archivs.

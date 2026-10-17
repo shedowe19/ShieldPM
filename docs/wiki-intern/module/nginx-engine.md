@@ -64,6 +64,20 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 - `bulkGenerateConfigs(model, host_type, hosts)` delegiert an `bulkGenerateConfigGroups(groups)`. Alle Hosts und Hosttypen eines Gruppenlaufs werden zunächst mit Sicherungen geschrieben und dann genau einmal mit `test()` einschließlich `nginx -tq` und Firewall-Quellenprüfung validiert. Bei einem Fehler werden die bereits geschriebenen Dateien als `.err` gesichert und auf den vorherigen Zustand zurückgesetzt; nach erfolgreicher Prüfung werden Status und Sicherungen abgeschlossen. Ein gemeinsamer Reload liegt beim Aufrufer. Die Dateiverarbeitung ist serialisiert, aber die einzelnen Schreibvorgänge sind kein atomarer Dateisystem-Commit.
 - Mit `{throwOnError: true}` gibt `bulkGenerateConfigGroups()` Render- und Syntaxfehler nach demselben Rollback als Fehler weiter. [GitOps](./gitops.md#import--und-exportkonsistenz) nutzt diesen Modus, damit eine fehlgeschlagene Sammelvalidierung weder als erfolgreicher Restore gilt noch die nachgelagerte Firewall-Listenbereinigung erreicht. Ohne diese Option bleibt der bisherige Rückgabestatus erhalten. `nginx-bulk-validation.spec.js` prüft beide Varianten mit temporären Dateien und simulierten Nginx-Prozessaufrufen.
 
+### Wiederanlauf nach fehlgeschlagener Neuerzeugung
+
+Beim Start mit `REGENERATE_ALL=true` entfernt das Startskript die bisherigen aktiven Hostdateien, bevor das
+Backend sie aus dem Datenbankzustand neu erzeugt. Schlägt die gemeinsame Prüfung anschließend fehl, können
+keine alten Dateien wiederhergestellt werden. Ein erfolgreicher `nginx -t` kann dann nur den leeren Include-Bestand
+bestätigen, während die Webseiten fehlen.
+
+Der Startup-Pfad in `backend/setup.js` isoliert deshalb nach dem fehlgeschlagenen gemeinsamen Versuch die Hosts
+und validiert sie einzeln. Gültige Konfigurationen bleiben erhalten; fehlerhafte Hosts erhalten ihren konkreten
+Fehler und blockieren die anderen Hosts nicht. Der bestehende abschließende Reload in `backend/index.js`
+aktiviert den akzeptierten Bestand. Der Regenerierungshash wird erst geschrieben, wenn alle vorgesehenen
+Hosts akzeptiert wurden; andernfalls wird beim nächsten Start erneut versucht. Diese Ausnahme gilt nur für
+die Startwiederherstellung; normale sicherheitsrelevante Sammeländerungen bleiben atomar.
+
 ### Config-Parsing
 
 - `advancedConfigHasDefaultLocation(advanced_config)` — Parst das `advanced_config`-Feld und prüft, ob ein `location /` Block definiert ist. Gibt `true` zurück, wenn vorhanden. Beeinflusst, ob der Default-Location-Block hinzugefügt wird.

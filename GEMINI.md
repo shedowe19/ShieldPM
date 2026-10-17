@@ -222,6 +222,7 @@ from production network performance.
 ### 6.1a Proxy Host Observability
 
 - **Active checks**: `backend/internal/proxy-host-monitor.js` schedules bounded HTTP(S)/TCP checks per host, stores status and limited history, and optionally sends status changes through the owner's configured Telegram integration. See [monitoring internals](./docs/wiki-intern/module/proxy-host-monitor.md).
+- **Database conflicts**: Monitor result persistence retries exact MySQL/MariaDB snapshot/deadlock/lock-timeout conflicts in up to three fresh transactions. Each attempt revalidates the locked monitor and current host; probes and external notifications run once. An absent implicitly added local Docker socket uses informational logging and 30–300 second discovery retries; explicitly configured or different failures remain rate-limited warnings. See [Docker discovery](./docs/wiki-intern/module/docker.md).
 - **On-demand diagnostics**: `backend/internal/proxy-host-diagnostics.js` checks a stored host's DNS, local TLS and route, upstream connectivity, and applicable authentication or WebSocket behavior. Results are not stored. See [diagnostics internals](./docs/wiki-intern/features/proxy-host-diagnostics.md).
 
 ### 6.1b Proxy Host IP Firewall

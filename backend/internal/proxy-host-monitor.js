@@ -2,6 +2,7 @@ import { X509Certificate } from "node:crypto";
 import http from "node:http";
 import https from "node:https";
 import net from "node:net";
+import { setTimeout as delay } from "node:timers/promises";
 import errs from "../lib/error.js";
 import { normalizeUpstreamPool } from "../lib/host-traffic-policy.js";
 import {
@@ -23,6 +24,12 @@ const MAX_HISTORY = 100;
 const RETENTION_DAYS = 30;
 const RETENTION_CLEANUP_MS = 24 * 60 * 60 * 1000;
 const ALERT_COOLDOWN_MS = 5 * 60 * 1000;
+const MAX_PERSIST_ATTEMPTS = 3;
+const MYSQL_TRANSACTION_CONFLICTS = new Map([
+	[1020, "ER_CHECKREAD"],
+	[1205, "ER_LOCK_WAIT_TIMEOUT"],
+	[1213, "ER_LOCK_DEADLOCK"],
+]);
 const SAFE_PATH = /^\/(?!\/)[A-Za-z0-9/_~.!$&'()*+,;=:-]*$/;
 // MySQL TEXT stores at most 65,535 bytes, including PEM line breaks.
 const MAX_CA_BYTES = 65_535;
@@ -307,6 +314,13 @@ function resolveTarget(host, config) {
 	if (!SAFE_PATH.test(path) || path.length > 255) return null;
 	return { forward_scheme: host.forward_scheme, forward_host: hostname, forward_port: port, path };
 }
+
+/** Include single-target addresses too: host persistence can precede the monitor version reset. */
+const probeIdentity = (host, config) =>
+	JSON.stringify([
+		poolObservationKey(host),
+		normalizeUpstreamPool(host.meta?.upstream_pool, host)?.enabled ? null : resolveTarget(host, config),
+	]);
 
 /** Validate imported settings as strictly as the API request schema (without coercion). */
 /** @param {any} data @returns {MonitorSettings} */
@@ -618,6 +632,77 @@ export async function pruneHistory(hostId, trx) {
 		.delete();
 }
 
+/** Only known, rolled-back MySQL/MariaDB write conflicts are safe to replay. */
+const retryablePersistenceError = (error) => {
+	if (!["mysql", "mysql2"].includes(ProxyHostMonitor.knex().client.config.client)) return false;
+	const native = error?.nativeError ?? error;
+	return MYSQL_TRANSACTION_CONFLICTS.get(native?.errno) === native?.code && native?.code !== undefined;
+};
+
+/**
+ * A MariaDB snapshot conflict can invalidate the whole transaction, not only DELETE.
+ * Replay only database work; the probe and external notifications must run once.
+ * @param {number} hostId
+ * @param {ProxyHostMonitor} config
+ * @param {string} identity
+ * @param {any} result
+ * @param {string} checkedAt
+ * @param {AbortSignal} signal
+ */
+async function persistCheck(hostId, config, identity, result, checkedAt, signal) {
+	for (let attempt = 0; ; attempt++) {
+		if (signal.aborted) return null;
+		try {
+			return await ProxyHostMonitor.transaction(async (trx) => {
+				const current = await ProxyHostMonitor.query(trx).findById(config.id).forUpdate();
+				const currentHost = await proxyHostModel.query(trx).findById(hostId).where("is_deleted", 0);
+				if (currentHost && normalizeUpstreamPool(currentHost.meta?.upstream_pool, currentHost)?.enabled) {
+					const domains = await currentHost
+						.$relatedQuery("host_domains", trx)
+						.select("domain_name")
+						.orderBy("id")
+						.limit(5);
+					currentHost.domain_names = domains.map((row) => row.domain_name);
+				}
+				if (
+					signal.aborted ||
+					!current?.enabled ||
+					!currentHost?.enabled ||
+					current.version !== config.version ||
+					probeIdentity(currentHost, current) !== identity
+				)
+					return null;
+				const transition = current.state !== result.state;
+				const alert = decideAlert(current, result.state, checkedAt);
+				const muted = await internalIncidents.isMuted(hostId, checkedAt, trx);
+				const patched = await ProxyHostMonitor.query(trx)
+					.where("id", config.id)
+					.where("version", config.version)
+					.patch({
+						...result,
+						checked_at: checkedAt,
+						last_alert_at: muted ? current.last_alert_at : alert.last_alert_at,
+						last_alert_state: muted ? current.last_alert_state : alert.last_alert_state,
+						next_check_at: new Date(Date.now() + config.interval_seconds * 1000).toISOString(),
+					});
+				if (!patched) return null;
+				await ProxyHostMonitorCheck.query(trx).insert({
+					host_id: hostId,
+					checked_at: checkedAt,
+					...result,
+					transition,
+				});
+				await pruneHistory(hostId, trx);
+				await internalIncidents.recordCheck(trx, currentHost, config, result, checkedAt, muted);
+				return { current, currentHost, transition, alert, muted };
+			});
+		} catch (error) {
+			if (attempt + 1 >= MAX_PERSIST_ATTEMPTS || !retryablePersistenceError(error)) throw error;
+			await delay(25 * (attempt + 1));
+		}
+	}
+}
+
 const internalProxyHostMonitor = {
 	/** @param {import("../lib/types.js").Access} access @param {number} hostId */
 	async get(access, hostId) {
@@ -734,7 +819,7 @@ const internalProxyHostMonitor = {
 				const domains = await host.$relatedQuery("host_domains").select("domain_name").orderBy("id").limit(5);
 				host.domain_names = domains.map((row) => row.domain_name);
 			}
-			const poolKey = poolObservationKey(host);
+			const identity = probeIdentity(host, config);
 			const target = pool?.enabled
 				? { forward_scheme: host.forward_scheme, pool_target_count: pool.targets.length }
 				: resolveTarget(host, config);
@@ -747,51 +832,10 @@ const internalProxyHostMonitor = {
 						: await probeHttp(target, { ...config, path: target.path }, abort.signal);
 			const { targets: poolTargets, ...result } = /** @type {any} */ (measured);
 			if (abort.signal.aborted) return null;
-			const current = await ProxyHostMonitor.query().findById(config.id);
-			const currentHost = await proxyHostModel.query().findById(hostId).where("is_deleted", 0);
-			if (pool?.enabled && currentHost) {
-				const domains = await currentHost
-					.$relatedQuery("host_domains")
-					.select("domain_name")
-					.orderBy("id")
-					.limit(5);
-				currentHost.domain_names = domains.map((row) => row.domain_name);
-			}
-			if (
-				!current?.enabled ||
-				!currentHost?.enabled ||
-				current.version !== config.version ||
-				poolObservationKey(currentHost) !== poolKey
-			)
-				return null;
 			const checkedAt = new Date().toISOString();
-			const transition = current.state !== result.state;
-			const alert = decideAlert(current, result.state, checkedAt);
-			let muted = false;
-			const persisted = await ProxyHostMonitor.transaction(async (trx) => {
-				muted = await internalIncidents.isMuted(hostId, checkedAt, trx);
-				const patched = await ProxyHostMonitor.query(trx)
-					.where("id", config.id)
-					.where("version", config.version)
-					.patch({
-						...result,
-						checked_at: checkedAt,
-						last_alert_at: muted ? current.last_alert_at : alert.last_alert_at,
-						last_alert_state: muted ? current.last_alert_state : alert.last_alert_state,
-						next_check_at: new Date(Date.now() + config.interval_seconds * 1000).toISOString(),
-					});
-				if (!patched) return false;
-				await ProxyHostMonitorCheck.query(trx).insert({
-					host_id: hostId,
-					checked_at: checkedAt,
-					...result,
-					transition,
-				});
-				await pruneHistory(hostId, trx);
-				await internalIncidents.recordCheck(trx, currentHost, config, result, checkedAt, muted);
-				return true;
-			});
+			const persisted = await persistCheck(hostId, config, identity, result, checkedAt, abort.signal);
 			if (!persisted) return null;
+			const { current, currentHost, transition, alert, muted } = persisted;
 			if (poolTargets) recordPoolObservations(host, poolTargets, checkedAt);
 			if (alert.send && !muted) {
 				let domains = [];

@@ -10,6 +10,9 @@ import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
 import internalProxyHostMonitor from "./proxy-host-monitor.js";
 
+const LOCAL_DOCKER_SOCKET = "/var/run/docker.sock";
+const CONNECTION_WARNING_INTERVAL = 300000;
+
 /**
  * @typedef {Object} AccessToken
  * @property {() => number} getUserId
@@ -59,29 +62,30 @@ class DockerService {
 	}
 
 	async initialize() {
+		const generation = ++this.generation;
 		try {
-			this.generation++;
 			for (const client of this.clients) {
 				clearTimeout(client.reconnectTimer);
-				client.stream?.destroy();
+				const stream = client.stream;
+				client.stream = null;
+				client.watching = false;
+				stream?.destroy();
 			}
 			this.clients = [];
 
-			// 1. Local Docker Socket (Always included)
-			this.addClient("/var/run/docker.sock");
-
-			const envHosts = process.env.DOCKER_HOSTS; // e.g. "tcp://10.1.1.5:2375,tcp://10.1.1.6:2375"
-
-			if (envHosts) {
-				const hosts = envHosts
-					.split(",")
-					.map((h) => h.trim())
-					.filter((h) => h);
-				for (const host of hosts) {
-					// Avoid adding local socket again if user explicitly listed it
-					if (host.includes("/var/run/docker.sock")) continue;
-					this.addClient(host);
-				}
+			const hosts = [
+				...new Set(
+					(process.env.DOCKER_HOSTS || "")
+						.split(",")
+						.map((host) => host.trim())
+						.filter(Boolean),
+				),
+			];
+			// Native/LXC and the default compose deployment need no local Docker daemon.
+			// Keep probing it so discovery recovers if the socket is mounted later.
+			this.addClient(LOCAL_DOCKER_SOCKET, !hosts.includes(LOCAL_DOCKER_SOCKET));
+			for (const host of hosts) {
+				if (host !== LOCAL_DOCKER_SOCKET) this.addClient(host);
 			}
 
 			if (this.clients.length === 0) {
@@ -93,31 +97,37 @@ class DockerService {
 			for (const clientObj of this.clients) {
 				try {
 					await clientObj.docker.ping();
+					if (this.stopped || generation !== this.generation) return;
 					clientObj.isConnected = true;
 					logger.info(`Docker Auto-Discovery: Connected to ${clientObj.name}`);
 				} catch (err) {
-					logger.warn(`Docker Auto-Discovery: Could not connect to ${clientObj.name}: ${err.message}`);
-					clientObj.isConnected = false;
+					if (this.stopped || generation !== this.generation) return;
+					this.connectionFailed(clientObj, err, "Could not connect");
 					this.scheduleReconnect(clientObj);
 				}
 			}
 
 			// Initial Sync
 			await this.sync();
+			if (this.stopped || generation !== this.generation) return;
 
 			// Start Watching
 			await this.watch();
+			if (this.stopped || generation !== this.generation) return;
 			this.initialized = this.clients.some((client) => client.isConnected);
 		} catch (err) {
-			logger.warn("Docker Auto-Discovery: Initialization failed.", err.message);
+			if (!this.stopped && generation === this.generation) {
+				logger.warn("Docker Auto-Discovery: Initialization failed.", err.message);
+			}
 		}
 	}
 
 	/**
 	 * Helper to add a docker client
 	 * @param {string} hostString - e.g. "tcp://1.2.3.4:2375" or "/var/run/docker.sock"
+	 * @param {boolean} [isOptionalLocal] - Whether the default local socket was added implicitly.
 	 */
-	addClient(hostString) {
+	addClient(hostString, isOptionalLocal = false) {
 		let docker;
 		let hostIp = "127.0.0.1";
 		let isRemote = false;
@@ -148,7 +158,7 @@ class DockerService {
 		} else {
 			// Local Socket
 			docker = new Docker({ socketPath: hostString });
-			name = "Local Socket";
+			name = hostString === LOCAL_DOCKER_SOCKET ? "Local Socket" : `Socket ${hostString}`;
 		}
 
 		this.clients.push({
@@ -156,6 +166,7 @@ class DockerService {
 			hostIp,
 			isRemote,
 			name,
+			isOptionalLocal,
 			isConnected: false,
 		});
 	}
@@ -204,25 +215,67 @@ class DockerService {
 		}
 	}
 
-	scheduleReconnect(client) {
-		if (this.stopped || client.reconnectTimer) return;
+	/**
+	 * Report changed connection failures while keeping an unconfigured, absent local daemon optional.
+	 * @param {Object} client
+	 * @param {Object} error
+	 * @param {string} phase
+	 * @param {boolean} [isTransportFailure]
+	 */
+	connectionFailed(client, error, phase, isTransportFailure = true) {
 		client.isConnected = false;
+		client.optionalSocketMissing = isTransportFailure && client.isOptionalLocal && error.code === "ENOENT";
+		const key = `${client.optionalSocketMissing ? "optional" : "required"}:${error.code || ""}:${error.message}`;
+		const previous = client.lastConnectionFailure;
+		const now = Date.now();
+		if (
+			previous?.key === key &&
+			(client.optionalSocketMissing || now - previous.loggedAt < CONNECTION_WARNING_INTERVAL)
+		) {
+			return;
+		}
+		client.lastConnectionFailure = { key, loggedAt: now };
+		if (client.optionalSocketMissing) {
+			logger.info(
+				`Docker Auto-Discovery [${client.name}]: Optional local socket is unavailable; discovery will retry automatically.`,
+			);
+		} else {
+			logger.warn(`Docker Auto-Discovery [${client.name}]: ${phase}: ${error.message}`);
+		}
+	}
+
+	scheduleReconnect(client) {
+		if (this.stopped) return;
+		client.isConnected = false;
+		if (client.reconnectTimer || client.reconnecting) return;
 		const generation = this.generation;
-		const delay = Math.min(30000, 1000 * 2 ** Math.min(client.reconnectAttempts || 0, 5));
-		client.reconnectAttempts = (client.reconnectAttempts || 0) + 1;
+		const optionalMissing = client.optionalSocketMissing;
+		const attemptKey = optionalMissing ? "optionalSocketAttempts" : "reconnectAttempts";
+		const delay = optionalMissing
+			? Math.min(300000, 30000 * 2 ** Math.min(client[attemptKey] || 0, 4))
+			: Math.min(30000, 1000 * 2 ** Math.min(client[attemptKey] || 0, 5));
+		client[attemptKey] = (client[attemptKey] || 0) + 1;
 		client.reconnectTimer = setTimeout(async () => {
 			client.reconnectTimer = null;
 			if (this.stopped || generation !== this.generation) return;
+			client.reconnecting = true;
+			let isTransportFailure = true;
 			try {
 				await client.docker.ping();
 				if (this.stopped || generation !== this.generation) return;
+				isTransportFailure = false;
 				client.isConnected = true;
 				await this.syncClient(client, await this.createHostIndex());
 				if (this.stopped || generation !== this.generation) return;
 				this.watchClient(client);
 			} catch (error) {
-				logger.warn(`Docker Auto-Discovery [${client.name}]: Reconnect failed: ${error.message}`);
-				this.scheduleReconnect(client);
+				if (!this.stopped && generation === this.generation) {
+					this.connectionFailed(client, error, "Reconnect failed", isTransportFailure);
+				}
+			} finally {
+				client.reconnecting = false;
+				if (!client.isConnected && !this.stopped && generation === this.generation)
+					this.scheduleReconnect(client);
 			}
 		}, delay);
 		client.reconnectTimer.unref?.();
@@ -241,11 +294,18 @@ class DockerService {
 				}
 				if (err) {
 					client.watching = false;
-					logger.warn(`Docker Auto-Discovery [${client.name}]: Event connection failed: ${err.message}`);
+					this.connectionFailed(client, err, "Event connection failed");
 					this.scheduleReconnect(client);
 					return;
 				}
 				client.stream = stream;
+				if (client.optionalSocketMissing) client.reconnectAttempts = 0;
+				if (client.lastConnectionFailure)
+					logger.info(`Docker Auto-Discovery [${client.name}]: Connection restored.`);
+				client.optionalSocketMissing = false;
+				client.optionalSocketAttempts = 0;
+				client.lastConnectionFailure = null;
+				this.initialized = true;
 				const connectedAt = Date.now();
 				let buffer = "";
 				let pendingEvent = Promise.resolve();

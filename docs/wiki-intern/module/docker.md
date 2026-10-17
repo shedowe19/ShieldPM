@@ -62,6 +62,19 @@ Abstand zurück; sofort wieder abbrechende Streams behalten den Backoff. Pro Cli
 verwirft verspätete Pings/Callbacks und entfernt Stream sowie Timer. Nach Wiederverbindung erfolgt vor
 weiteren Events ein vollständiger Abgleich. Ein defekter Stream ohne Zeilenende darf höchstens 1 MiB puffern.
 
+Der automatisch ergänzte lokale Socket `/var/run/docker.sock` ist optional. Fehlt er mit `ENOENT`, etwa bei
+nativer oder LXC-Installation, erscheint einmal eine Info statt wiederkehrender Warnungen. Die erneuten
+Verbindungsversuche bleiben aktiv und verwenden 30, 60, 120, 240 und anschließend höchstens 300 Sekunden Abstand.
+Damit wird auch ein später bereitgestellter Socket ohne Backend-Neustart erkannt. Eine erfolgreiche
+Ereignisverbindung setzt den Status für den fehlenden Socket zurück.
+
+Ein ausdrücklich in `DOCKER_HOSTS` genannter lokaler Socket, andere Socketpfade und Remote-APIs bleiben
+verbindliche Ziele. Ebenso bleiben Berechtigungsfehler und andere Fehler des optionalen Sockets Warnungen.
+Gleiche Verbindungsfehler werden höchstens alle fünf Minuten protokolliert; ein veränderter Fehler wird sofort
+gemeldet. Diese Log-Begrenzung ändert den normalen Reconnect-Abstand nicht. Während eines laufenden
+Reconnects entsteht kein zweiter Verbindungsversuch; Stop und erneute Initialisierung verwerfen alte Ergebnisse
+und schließen alte Streams.
+
 Der Start-/Reconnect-Abgleich lädt den vollständigen Host-/Domain-Graph einmal und führt indizierte Lookups
 für Container, automatische Domains und manuelle Domains durch. Der Index wird nach Writes aktualisiert.
 Das autoritative Domainregister beansprucht Namen innerhalb desselben Datenbank-Writes; der Index ersetzt

@@ -64,6 +64,27 @@ Dokumentation des Test-Setups und der Test-Strategien.
 
 ## Backend-Tests
 
+### Produktionsregressionen vom 17. Oktober
+
+- `internal/proxy-host-monitor-retry.spec.js` prüft den vollständigen Transaktions-Rollback, begrenzte Wiederholungen,
+  neue Versionen/Zieladressen, Stop, Stummschaltung und genau einmal ausgeführte Probe und Benachrichtigung.
+- `internal/mariadb-monitor-concurrency.spec.js` erzeugt `ER_CHECKREAD` mit zwei echten Verbindungen,
+  `REPEATABLE READ` und aktivierter Snapshot-Isolation. Der Fehler stammt vom Server, nicht aus einem Mock.
+- `internal/docker-reconnect.spec.js` prüft den optionalen fehlenden Standardsocket, begrenzte Logs,
+  Wiederverbindung nach späterer Bereitstellung und verspätete Fehler nach Stop.
+- `internal/certificate-datetime.spec.js` und `internal/mariadb-certificate-datetime.spec.js` prüfen strikte
+  DATETIME-Spalten einschließlich Offset-/Sommerzeit-Roundtrips bei unveränderter mysql2-Verbindungszeitzone.
+- `internal/mariadb-proxy-host-update.spec.js` führt den echten manuellen Host-Service aus. Geladene
+  Zertifikats-/Access-List-Relationen und serververwaltete Zeitstempel dürfen nicht in dessen Schreibgraph gelangen;
+  der vollständige verschlüsselte Snapshot bleibt für Versionen und Rollback erhalten.
+- `integration/startup-nginx-recovery-runtime.spec.js` startet echtes Nginx mit leerem Hostbestand und einer
+  ungültigen Konfiguration. Gültige manuelle und Docker-Hosts müssen anschließend HTTP 200 liefern; der fehlerhafte
+  Host bleibt ausgeschlossen, und ein später reparierter Host wird erneut erzeugt.
+
+Die internen `mariadb-*.spec.js` laufen gemeinsam mit den Migrationsfällen im vorhandenen MariaDB-11.8.3-CI-Service
+bei `SHIELDPM_TEST_MARIADB=1`. Ohne ausdrücklich bereitgestellten Testserver werden diese Serverfälle übersprungen;
+die übrigen Regressionen benötigen keine produktive Datenbank.
+
 - Pfad: `backend/test/`
 - Enthalten Unit-Tests für `backend/lib/` (z.B. helpers, user-id-from-me) und `backend/internal/` (z.B. 2fa-service, ai, auth-session-service, certificate, ddns, tokens-2fa).
 - Führen Tests über Vitest aus.

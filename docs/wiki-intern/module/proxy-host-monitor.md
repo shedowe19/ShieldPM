@@ -92,6 +92,16 @@ Kandidaten. `backend/test/internal/proxy-host-monitor.spec.js` prüft die begren
   hostbezogenen DELETE sowohl ältere IDs als auch abgelaufene Zeitstempel. Dadurch genügen zwei Abfragen, ohne
   eine MySQL-inkompatible Unterabfrage auf dieselbe Zieltabelle zu verwenden. Die Grenze wird anhand gültiger
   Zeitstempel ermittelt, damit später importierte, bereits abgelaufene Einträge keine gültigen Messungen verdrängen.
+- MariaDB-Snapshot-Konflikte (`ER_CHECKREAD`/1020), Deadlocks (1213) und Lock-Wartezeitüberschreitungen (1205)
+  wiederholen ausschließlich den Datenbank-Speichervorgang in einer neuen Transaktion: höchstens drei Versuche,
+  mit 25 beziehungsweise 50 Millisekunden Pause. Bei aktiviertem `innodb_snapshot_isolation` kann MariaDB die
+  gesamte Transaktion verwerfen; ein erneutes DELETE in derselben Transaktion wäre deshalb falsch.
+  Jeder Versuch lädt den aktuellen Monitor unter Rowlock und prüft Version, aktivierten Host, Upstream-Identität,
+  Alarmzustand und Stummschaltung erneut. Probe und externe Benachrichtigungen laufen außerhalb dieser Wiederholung.
+  Status, Historie, Vorfälle, Messwertsummen und Zustellaufträge bleiben gemeinsam atomar. Andere Fehler sowie
+  ausgeschöpfte Wiederholungen werden weiterhin gemeldet. Ein Stop oder zwischenzeitlich geänderte Einstellungen
+  verwerfen das alte Messergebnis. Die Wiederholung gilt nur für exakt zugeordnete MySQL-/MariaDB-Fehlercodes.
+  Grundlage: [MariaDB: innodb_snapshot_isolation](https://mariadb.com/docs/server/server-usage/storage-engines/innodb/innodb-system-variables#innodb_snapshot_isolation).
 - Ein täglicher Cleanup entfernt auch bei pausierten Monitoren Einträge nach 30 Tagen und beseitigt Konfigurationen,
   deren Proxy-Host inzwischen gelöscht wurde (höchstens 200 verwaiste Hosts pro Durchgang).
 - Die erste erfolgreiche Messung erzeugt keinen Telegram-Alarm; ein erster Fehler und spätere Up-/Down-Wechsel

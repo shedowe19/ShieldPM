@@ -288,7 +288,23 @@ const internalProxyHost = {
 	 * @return {Promise}
 	 */
 	update: async (access, data, options = {}) => {
-		let thisData = data;
+		// Normal updates write requested host fields, never a previously fetched graph.
+		// Domains are rebuilt below; shared resources and timestamps have their own writers.
+		let thisData = _.omit(data, [
+			"created_on",
+			"modified_on",
+			"is_deleted",
+			"owner_user_id",
+			"owner",
+			"certificate",
+			"access_list",
+			"tor_onion",
+			"host_domains",
+			"maintenance_pending",
+			"git_last_sync",
+			"git_last_commit",
+			"git_last_error",
+		]);
 		const requestedMeta = data.meta === undefined ? undefined : structuredClone(data.meta);
 		const create_certificate = thisData.certificate_id === "new";
 
@@ -330,10 +346,9 @@ const internalProxyHost = {
 			{
 				domain_names: row.domain_names,
 			},
-			data,
+			thisData,
 		);
 
-		thisData = internalHost.cleanSslHstsData(create_certificate, thisData, row);
 		const relayCandidate = _.assign({}, row, thisData);
 		if (relayCandidate.upload_relay_enabled) await validateRelayConfigForHost(relayCandidate);
 
@@ -372,7 +387,13 @@ const internalProxyHost = {
 				thisData.domain_names = previous.host.domain_names;
 				thisData.host_domains = previous.host.domain_names.map((domain_name) => ({ domain_name }));
 			}
-			thisData = internalHost.cleanSslHstsData(create_certificate, thisData, previous.host);
+			// Use fresh SSL context without copying the rollback snapshot's loaded relations,
+			// timestamps, credentials or unrelated scalar fields into upsertGraphAndFetch.
+			thisData = internalHost.cleanSslHstsData(
+				create_certificate,
+				thisData,
+				_.pick(previous.host, ["certificate_id", "ssl_forced", "hsts_enabled", "hsts_subdomains"]),
+			);
 			let written = false;
 			try {
 				await withFirewallReferences(

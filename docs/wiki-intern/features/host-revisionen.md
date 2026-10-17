@@ -29,6 +29,12 @@ Zertifikate und Access Lists sind gemeinsam genutzte Ressourcen. Eine Host-Revis
 
 Ein Kandidat wird in kurzen Datenbanktransaktionen geschrieben und anschließend mit der bestehenden Nginx-Aktivierung geprüft. Bei Fehlern werden unmittelbar vorherige Host-Felder, Domains und aktive Dateien samt Berechtigungen wiederhergestellt und erneut geladen. Die langsame Nginx-Prüfung hält keine Datenbanktransaktion offen. Erfolgreiche Wiederherstellung erzeugt eine neue Revision und einen Audit-Eintrag mit Referenz auf die ausgewählte Version.
 
+Auf MySQL/MariaDB werden JSON-serialisierte Zeitpunkte für Host- und Domain-Zeitstempel beim tatsächlichen
+Rollback wieder als `Date`-Werte gebunden. Dadurch verwendet mysql2 die bestehende Verbindungszeitzone;
+strikte DATETIME-Spalten erhalten keine ISO-Zeichenketten mit `T`/`Z`. Die Wiederherstellung erhält die
+Erstellungs-/Änderungszeitpunkte und schreibt keine gemeinsam genutzten Zertifikats- oder Access-List-Graphen.
+Ein echter MariaDB-Service-Test prüft auch den Fehler nach einer bereits gespeicherten Kandidatenänderung.
+
 ## Schnittstellen
 
 | Methode | Pfad                                       | Ergebnis                                                     |

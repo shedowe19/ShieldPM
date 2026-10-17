@@ -26,6 +26,14 @@ Proxy-Hosts leiten eingehende HTTP/HTTPS-Anfragen an Upstream-Server weiter. Sie
 4. `nginx.js` rendert Template und schreibt `.conf`
 5. Nginx wird neu geladen
 
+Manuelle Updates schreiben ausschließlich die angefragten Hostfelder und die ausdrücklich normalisierten
+Domainrelationen. Geladene Besitzer-, Zertifikats- und Access-List-Graphen sowie Erstellungs-/Änderungszeitstempel
+gehören nicht in diesen Schreibgraph. Der vollständige vorherige Zustand bleibt getrennt als verschlüsselter
+Versions-/Rollback-Snapshot erhalten. Nach dem Warten auf die Konfigurationssperre werden nur die benötigten
+aktuellen SSL-/HSTS-Felder ergänzt; ausgelassene Felder und Geheimnisse werden nicht aus einem älteren
+Lesesnapshot zurückgeschrieben. `mariadb-proxy-host-update.spec.js` prüft den tatsächlichen Service auf einem
+strikten Server einschließlich unveränderter gemeinsam genutzter Zertifikate und Access Lists.
+
 Die Bearbeitungsdialoge für Proxy-, Redirect-, 404-Hosts und Streams fragen beim Öffnen die aktuelle Host-ID
 erneut ab, auch wenn React Query noch einen Cacheeintrag besitzt. Erst die erfolgreiche Antwort initialisiert
 das Formular. Scheitert dieser Abruf, zeigt der Dialog den Fehler und erlaubt kein Speichern alter Cachewerte.

@@ -1,6 +1,13 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ db: null, generate: vi.fn(), bulk: vi.fn(), writeHash: vi.fn(), hosts: [] }));
+const state = vi.hoisted(() => ({
+	db: null,
+	generate: vi.fn(),
+	bulk: vi.fn(),
+	status: vi.fn(),
+	writeHash: vi.fn(),
+	hosts: [],
+}));
 vi.mock("../../db.js", async () => {
 	const { default: knex } = await import("knex");
 	state.db = knex({ client: "better-sqlite3", connection: { filename: ":memory:" }, useNullAsDefault: true });
@@ -8,11 +15,16 @@ vi.mock("../../db.js", async () => {
 });
 vi.mock("../../lib/config.js", () => ({ isSqlite: () => true }));
 vi.mock("../../internal/nginx.js", () => ({
-	default: { generateConfig: state.generate, bulkGenerateConfigGroups: state.bulk, bulkGenerateConfigs: state.bulk },
+	default: {
+		generateConfig: state.generate,
+		bulkGenerateConfigGroups: state.bulk,
+		bulkGenerateConfigs: state.bulk,
+		updateHostStatus: state.status,
+	},
 }));
 vi.mock("../../lib/certbot.js", () => ({ installPlugins: vi.fn() }));
 vi.mock("../../lib/utils.js", () => ({ default: { writeHash: state.writeHash } }));
-vi.mock("../../logger.js", () => ({ setup: { info: vi.fn() } }));
+vi.mock("../../logger.js", () => ({ setup: { info: vi.fn(), error: vi.fn() } }));
 vi.mock("../../models/certificate.js", () => ({ default: {} }));
 vi.mock("../../models/proxy_host.js", () => ({
 	default: { query: () => ({ where: () => ({ andWhere: () => ({ withGraphFetched: async () => [] }) }) }) },
@@ -85,6 +97,8 @@ describe("startup preserves persisted setup state", () => {
 	});
 	beforeEach(async () => {
 		vi.clearAllMocks();
+		state.bulk.mockReset();
+		state.hosts = [];
 		state.writeHash.mockReset();
 		for (const table of ["user", "auth", "user_permission", "setting"]) await state.db(table).delete();
 		vi.stubEnv("INITIAL_ADMIN_EMAIL", " ADMIN@Example.Test ");
@@ -150,9 +164,43 @@ describe("startup preserves persisted setup state", () => {
 		state.hosts = [{ id: 7, domain_names: ["dead.example.test"] }];
 		vi.stubEnv("REGENERATE_ALL", "true");
 		await regenerateAllHosts();
-		expect(state.bulk).toHaveBeenCalledWith([
-			{ model: expect.anything(), hostType: "dead_host", hosts: state.hosts },
-		]);
+		expect(state.bulk).toHaveBeenCalledWith(
+			[{ model: expect.anything(), hostType: "dead_host", hosts: state.hosts }],
+			{ throwOnError: true },
+		);
+		expect(state.bulk).toHaveBeenCalledOnce();
+		expect(state.writeHash).toHaveBeenCalledOnce();
+	});
+	it("isolates a generation failure before staging, continues later hosts and keeps the failed fingerprint pending", async () => {
+		state.hosts = [{ id: 7 }, { id: 8 }, { id: 9 }];
+		vi.stubEnv("REGENERATE_ALL", "true");
+		state.bulk
+			.mockRejectedValueOnce(new Error("batch generation failed"))
+			.mockResolvedValueOnce([])
+			.mockRejectedValueOnce(new Error("certificate file missing"))
+			.mockResolvedValueOnce([]);
+		await regenerateAllHosts();
+		expect(state.bulk).toHaveBeenCalledTimes(4);
+		for (const [index, id] of [7, 8, 9].entries())
+			expect(state.bulk.mock.calls[index + 1][0][0].hosts).toEqual([{ id }]);
+		expect(state.status).toHaveBeenCalledWith(
+			expect.anything(),
+			{ id: 8 },
+			{
+				nginx_online: false,
+				nginx_err: "Startup configuration failed: certificate file missing",
+			},
+		);
+		expect(state.writeHash).not.toHaveBeenCalled();
+	});
+	it("persists the fingerprint when every host recovers from a transient batch failure", async () => {
+		state.hosts = [{ id: 7 }, { id: 8 }];
+		vi.stubEnv("REGENERATE_ALL", "true");
+		state.bulk.mockRejectedValueOnce(new Error("transient batch failure")).mockResolvedValue([]);
+		await regenerateAllHosts();
+		expect(state.bulk).toHaveBeenCalledTimes(3);
+		expect(state.status).not.toHaveBeenCalled();
+		expect(state.writeHash).toHaveBeenCalledOnce();
 	});
 	it("keeps startup pending until the regenerated configuration fingerprint is persisted", async () => {
 		vi.stubEnv("REGENERATE_ALL", "true");
