@@ -55,11 +55,11 @@
 	"validation": {
 		"node": "26.12.0",
 		"backend": {
-			"passed": 2490,
+			"passed": 2508,
 			"skipped": 41,
 			"passed_files": 262,
 			"skipped_files": 5,
-			"seconds": 92.57
+			"seconds": 92.82
 		},
 		"frontend": {
 			"passed": 986,
@@ -139,7 +139,11 @@
 			"wasm_lifecycle_unit_cases": 18,
 			"wasm_combined_unit_and_actual_runtime_cases": 39,
 			"nginx_concurrency_and_rollback_group_passed": 201,
-			"nginx_concurrency_and_rollback_group_skipped": 4
+			"nginx_concurrency_and_rollback_group_skipped": 4,
+			"acl_pem_and_gitops_targeted_cases": 100,
+			"pem_bundle_maximum_bytes": 1048576,
+			"adversarial_pem_begin_repetitions": 20000,
+			"gitops_test_tls_verification": "Enabled; generated CA trusted explicitly, SAN and servername localhost"
 		},
 		"remote_ci_verified": {
 			"commit": "8df09204b30c495629e37bfb4bbc82979797c8ce",

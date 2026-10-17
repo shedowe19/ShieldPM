@@ -54,7 +54,7 @@ Die [JSON-Rohwerte](./feature-implementation-2026-10-17.json) enthalten alle Sam
 
 ## Abschließende Validierung
 
-- Backend: 2.490 Tests im Gesamtlauf bestanden, 41 umgebungsabhängige Skips; keine Fehler. PostgreSQL-Verhalten wird zusätzlich mit PGlite geprüft.
+- Backend: 2.508 Tests im Gesamtlauf bestanden, 41 umgebungsabhängige Skips; keine Fehler. PostgreSQL-Verhalten wird zusätzlich mit PGlite geprüft.
 - Frontend: 986 Tests bestanden; TypeScript, Übersetzungen, Produktionsbuild und komprimiertes Größenbudget bestanden.
 - Echter Chromium-Browser: zehn vollständige Abläufe einschließlich der neuen Bedienwege bestanden; keine unbehandelten Browserfehler.
 - Skripte/Betrieb: 170 Python-Tests, davon 149 bestanden und 21 umgebungsabhängig übersprungen; Shellsyntax geprüft.
@@ -76,6 +76,8 @@ GitOps verwirft fremde Access-List-Dateirevisionen und erzeugt Passwort-/CA-Date
 Wasm unterscheidet erfolgreiche Vorprüfung und bestätigte Aktivierung. Der gemeinsame Konfigurations-Lock führt den Status erst nach abgeschlossenem Batch beziehungsweise dessen Rücknahme fort. Alte geheime Host-Konfigurationen erhalten persistente Schutzreferenzen auf Worker-PID und Kernel-Startzeit; sie werden erst gelöscht, wenn keine aktive/gesicherte Konfiguration und kein auslaufender Worker sie mehr benötigt. Dies erzwingt keine Unterbrechung langer Verbindungen. Fehlerberichte verschiedener Filterversionen sind getrennt. Die Einzelheiten und die sichere Behandlung unbekannter Prozesszustände stehen unter [Wasm-Filter](../module/wasm-filter.md).
 
 Ein vorhandener Frontend-Quellvertrag akzeptiert außerdem Formatierungs-Leerraum nach dem Audit-Wrapper. Seine Prüfung der Audit-Objekttypen und vollständigen Aufrufabdeckung bleibt erhalten. Der Nginx-Parallelitätstest verwendet explizite Start-/Freigabebarrieren statt eines einzelnen JavaScript-Takts und prüft die vollständige Reihenfolge beider Änderungen; die zugehörigen Render-/Aktivierungs-/Rücknahmetests bestehen mit 201 Fällen.
+
+Die erweiterte GitOps-Erreichbarkeit machte zwei CodeQL-Hinweise zur bisherigen PEM-Regex sichtbar. Die Prüfung verwendet nun einen linearen Scanner mit einer Grenze von 1 MiB, exakten Hüllen, geprüften Base64-Zeichen und weiterhin `X509Certificate` für jedes Zertifikat. Regressionsfälle mit 20.000 wiederholten BEGIN-Markern prüfen die beiden langsamen Fehlerformen innerhalb einer Sekunde. Der echte mTLS-Test vertraut seiner erzeugten CA ausdrücklich und prüft SAN/Servername `localhost`, statt die TLS-Zertifikatsprüfung auszuschalten. Die gemeinsame gezielte ACL-/GitOps-Prüfung besteht mit 100 Fällen; CodeQL-Regeln werden nicht unterdrückt.
 
 ## Integrationsregeln und Prüfgrenzen
 

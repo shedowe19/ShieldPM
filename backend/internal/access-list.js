@@ -126,16 +126,45 @@ const listFields = [
 /** Validate the whole bundle before publishing either authorization file. */
 const validateCaBundle = (list) => {
 	if (!list.mtls_enabled || list.mtls_use_internal) return;
-	const pem = list.mtls_certificate || "";
-	const certificates = pem.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g) || [];
-	if (
-		!certificates.length ||
-		pem.replace(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g, "").trim()
-	) {
+	const pem = list.mtls_certificate;
+	const maximumBytes = 1024 * 1024;
+	if (typeof pem !== "string" || pem.length > maximumBytes || Buffer.byteLength(pem, "utf8") > maximumBytes) {
 		throw new errs.ValidationError("mTLS requires a valid PEM certificate bundle");
 	}
+	const begin = "-----BEGIN CERTIFICATE-----";
+	const end = "-----END CERTIFICATE-----";
+	const whitespace = (code) => code === 32 || (code >= 9 && code <= 13);
+	let cursor = 0;
+	let certificates = 0;
 	try {
-		for (const certificate of certificates) new X509Certificate(certificate);
+		while (cursor < pem.length) {
+			while (cursor < pem.length && whitespace(pem.charCodeAt(cursor))) cursor++;
+			if (cursor === pem.length) break;
+			if (!pem.startsWith(begin, cursor)) throw new errs.ValidationError("Invalid certificate envelope");
+			const body = cursor + begin.length;
+			const finish = pem.indexOf(end, body);
+			if (finish === -1) throw new errs.ValidationError("Unterminated certificate envelope");
+			// Scan each body once. Nested BEGIN markers and non-base64 material are
+			// rejected without retrying extraction from every attacker-supplied prefix.
+			for (let index = body; index < finish; index++) {
+				const code = pem.charCodeAt(index);
+				if (
+					!whitespace(code) &&
+					!(code >= 65 && code <= 90) &&
+					!(code >= 97 && code <= 122) &&
+					!(code >= 48 && code <= 57) &&
+					code !== 43 &&
+					code !== 47 &&
+					code !== 61
+				)
+					throw new errs.ValidationError("Invalid certificate body");
+			}
+			const next = finish + end.length;
+			new X509Certificate(pem.slice(cursor, next));
+			certificates++;
+			cursor = next;
+		}
+		if (!certificates) throw new errs.ValidationError("Empty certificate bundle");
 	} catch {
 		throw new errs.ValidationError("mTLS requires a valid PEM certificate bundle");
 	}

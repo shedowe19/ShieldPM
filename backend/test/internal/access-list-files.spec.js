@@ -21,6 +21,7 @@ describe("atomic access-list files", () => {
 	let directory;
 	let filename;
 	const hash = `$2b$12$${"A".repeat(53)}`;
+	const certificate = fs.readFileSync(new URL("../fixtures/access-list-ca.pem", import.meta.url), "utf8");
 	beforeEach(async () => {
 		directory = await fs.promises.mkdtemp(path.join(os.tmpdir(), "shieldpm-access-test-"));
 		filename = path.join(directory, "1");
@@ -45,6 +46,74 @@ describe("atomic access-list files", () => {
 		).rejects.toThrow("disk unavailable");
 		expect(await fs.promises.readFile(filename, "utf8")).toBe("previous:hash\n");
 		expect(await fs.promises.readdir(directory)).toEqual(["1"]);
+	});
+	it.each([
+		["one certificate", certificate],
+		["multiple certificates", `${certificate}\n${certificate}`],
+		["CRLF and surrounding whitespace", ` \t\r\n${certificate.replaceAll("\n", "\r\n")}\r\n\t `],
+	])("validates and publishes a complete PEM bundle: %s", async (_label, pem) => {
+		const artifacts = await service.build(
+			{ id: 1, name: "CA", items: [], mtls_enabled: true, mtls_certificate: pem },
+			{ immutable: true },
+		);
+		expect(await fs.promises.readFile(artifacts.ca, "utf8")).toBe(pem);
+		expect(await fs.promises.readFile(filename, "utf8")).toBe("previous:hash\n");
+	});
+	it.each([
+		"",
+		" \t\r\n",
+		"-----BEGIN CERTIFICATE-----\nAA==\n-----END CERTIFICATE-----",
+		`junk${certificate}`,
+		`${certificate}junk`,
+		`${certificate}junk${certificate}`,
+		`${certificate}-----BEGIN CERTIFICATE-----\n`,
+		`-----BEGIN CERTIFICATE-----\n${certificate}-----END CERTIFICATE-----`,
+		certificate.replace("-----END CERTIFICATE-----", "-----END PRIVATE KEY-----"),
+		null,
+		123,
+		{},
+	])("rejects malformed PEM bundles before writing authorization files (%#)", async (pem) => {
+		const write = vi.spyOn(fs.promises, "writeFile");
+		await expect(
+			service.build(
+				{ id: 1, name: "CA", items: [], mtls_enabled: true, mtls_certificate: pem },
+				{ immutable: true },
+			),
+		).rejects.toMatchObject({ status: 400 });
+		expect(write).not.toHaveBeenCalled();
+		expect(await fs.promises.readdir(directory)).toEqual(["1"]);
+	});
+	it.each([false, true])(
+		"rejects repeated BEGIN prefixes within a bounded time (END present: %s)",
+		async (withEnd) => {
+			const pem = "-----BEGIN CERTIFICATE-----\n".repeat(20_000) + (withEnd ? "-----END CERTIFICATE-----" : "");
+			const write = vi.spyOn(fs.promises, "writeFile");
+			const started = performance.now();
+			await expect(
+				service.build(
+					{ id: 1, name: "CA", items: [], mtls_enabled: true, mtls_certificate: pem },
+					{ immutable: true },
+				),
+			).rejects.toMatchObject({ status: 400 });
+			expect(performance.now() - started).toBeLessThan(1_000);
+			expect(write).not.toHaveBeenCalled();
+		},
+	);
+	it("rejects bundles exceeding one MiB before parsing or publication", async () => {
+		const write = vi.spyOn(fs.promises, "writeFile");
+		await expect(
+			service.build(
+				{
+					id: 1,
+					name: "CA",
+					items: [],
+					mtls_enabled: true,
+					mtls_certificate: `${certificate}${" ".repeat(1024 * 1024)}`,
+				},
+				{ immutable: true },
+			),
+		).rejects.toMatchObject({ status: 400 });
+		expect(write).not.toHaveBeenCalled();
 	});
 	it.each([
 		"../../outside",
