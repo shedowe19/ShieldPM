@@ -518,17 +518,30 @@ async function getHost(access, hostId, permission) {
 	return host;
 }
 
-async function pruneHistory(hostId) {
+/**
+ * Keep both history bounds inside the transaction that saves the check.
+ * @param {number} hostId
+ * @param {import("knex").Knex.Transaction} [trx]
+ * @returns {Promise<void>}
+ */
+export async function pruneHistory(hostId, trx) {
 	const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
-	await ProxyHostMonitorCheck.query().where("host_id", hostId).where("checked_at", "<", cutoff).delete();
-	const newest = await ProxyHostMonitorCheck.query()
+	const boundary = await ProxyHostMonitorCheck.query(trx)
 		.select("id")
 		.where("host_id", hostId)
+		.where("checked_at", ">=", cutoff)
 		.orderBy("id", "desc")
-		.limit(MAX_HISTORY);
-	if (newest.length === MAX_HISTORY) {
-		await ProxyHostMonitorCheck.query().where("host_id", hostId).where("id", "<", newest.at(-1).id).delete();
-	}
+		.offset(MAX_HISTORY - 1)
+		.limit(1)
+		.first();
+	// Separate SELECT/DELETE queries also support MySQL's same-table subquery restriction.
+	await ProxyHostMonitorCheck.query(trx)
+		.where("host_id", hostId)
+		.where((query) => {
+			query.where("checked_at", "<", cutoff);
+			if (boundary) query.orWhere("id", "<", boundary.id);
+		})
+		.delete();
 }
 
 const internalProxyHostMonitor = {
@@ -668,10 +681,10 @@ const internalProxyHostMonitor = {
 					...result,
 					transition,
 				});
+				await pruneHistory(hostId, trx);
 				return true;
 			});
 			if (!persisted) return null;
-			await pruneHistory(hostId);
 			if (alert.send) {
 				let domains = [];
 				const priorFindings = { initialFailure: null, lastFailedCheck: null };

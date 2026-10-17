@@ -98,6 +98,12 @@ Status, Dienstprüfung und Latenz. Jede ist einzeln ausblendbar, standardmäßig
 im Browser über `localStorage` für erneutes Laden gespeichert. Das Zeilen-Aktionsmenü bleibt unabhängig von der
 Auswahl erreichbar. Die Spaltenauswahl verändert keine API-Daten, Host-Konfiguration oder Monitor-Ausführung.
 
+Sind Dienstprüfung und Latenz gleichzeitig ausgeblendet, übergibt die Tabelle keine Host-IDs an die Statusabfrage.
+Dadurch pausieren deren 30-Sekunden-Abfragen. Sobald wieder eine der beiden Spalten sichtbar ist, lädt React Query
+aktuelle Werte auch innerhalb des sonst üblichen Cache-Zeitfensters. Der Abbruch einer nicht mehr beobachteten
+Abfrage reicht bis zum HTTP-Request; ein anderer sichtbarer Verbraucher derselben Statusabfrage bleibt aktiv.
+Der Überwachungsdialog und die Hintergrundprüfungen des Backends laufen unabhängig davon weiter.
+
 `frontend/src/lib/serviceIcons.ts` ordnet bekannte Hostnamen und Forward-Ports lokal einem Icon aus dem
 Homarr-Dashboard-Icons-CDN zu; zuerst wird ein passender Hostname **mit** Port versucht, dann ein reiner
 Port-Treffer. Die Formularoptionen `iconType` (`auto`, `custom`, `none`) und `iconUrl` steuern die Darstellung über

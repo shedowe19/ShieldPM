@@ -67,16 +67,39 @@ const internalNginx = {
 		return operation;
 	},
 
+	/**
+	 * Refresh one render graph immediately before staging it inside the configuration lock.
+	 * @param {Object} model
+	 * @param {string} hostType
+	 * @param {number} hostId
+	 * @returns {Promise}
+	 */
+	getCurrentHost: async (model, hostType, hostId) => {
+		const isProxy = internalNginx.getFileFriendlyHostType(hostType) === "proxy_host";
+		// Join only singleton relations. Joining domains, users or clients would
+		// multiply large host rows and can create a domains × users × clients result.
+		const current = await model
+			.query()
+			.findById(hostId)
+			.withGraphJoined(isProxy ? "[certificate,access_list]" : "certificate");
+		if (isProxy && current) {
+			await Promise.all([
+				current.$fetchGraph("host_domains"),
+				current.access_list?.$fetchGraph("[clients,items]"),
+			]);
+			// Objection's $fetchGraph skips the root $afterFind hook which normally
+			// derives this legacy render field from the domain relation.
+			current.domain_names = current.host_domains.map(({ domain_name }) => domain_name);
+		}
+		return current;
+	},
+
 	configureHost: async (model, host_type, hostSnapshot, options = {}) => {
 		const skip_reload = options.skip_reload || false;
 		let combined_meta = {};
 		// A bulk snapshot may predate a completed host, certificate or access-list change.
 		// Refresh the full render graph inside the configuration lock, not only its lifecycle flags.
-		const graph =
-			internalNginx.getFileFriendlyHostType(host_type) === "proxy_host"
-				? "[host_domains,certificate,access_list.[clients,items]]"
-				: "certificate";
-		const current = await model.query().findById(hostSnapshot.id).withGraphFetched(graph);
+		const current = await internalNginx.getCurrentHost(model, host_type, hostSnapshot.id);
 		const host = !current || current.is_deleted ? { ...(current || hostSnapshot), enabled: false } : current;
 
 		// 1. Backup existing config if it exists

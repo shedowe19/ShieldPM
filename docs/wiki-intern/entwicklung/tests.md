@@ -123,6 +123,24 @@ Die Testbestandsprüfung unterscheidet Strukturprüfung und vertiefte Funktionsp
 
 Der [isolierte Kompatibilitätslauf](https://github.com/shedowe19/ShieldPM/actions/runs/38466520461) prüft die korrigierten Quellen getrennt mit der festgehaltenen und der neuesten Dependency-Linie: beide Jobs erfolgreich, jeweils 2.161 bestandene Backendtests mit vier beabsichtigten Skips, 931 Frontendtests und sieben Browser-Smokes. Typen, Locales, Produktionsbuild und Bundlebudget sowie 73 Scanner-Integrationstests bestehen ebenfalls. Die Infrastruktur schließt lokal 164 Fälle mit 21 Umgebungsskips ab; in CI bleiben zwei erwartete Skips, die echten Containersmokes decken die entsprechenden Laufzeitpfade ab. Die nur für diesen Nachweis angelegte read-only Pipeline wird nach dem Abruf der generierten Lockfiles und Paketnachweise entfernt; die regulären PR-Checks bleiben aktiv.
 
+## Regressionen der messbaren Optimierungen vom 17. Oktober
+
+- `frontend/src/pages/Nginx/ProxyHosts/Table.monitor-polling.test.tsx` verwendet die tatsächliche Tabelle, den
+  QueryClient, den Status-Hook und den API-Client mit kontrolliertem Fetch. Die Tests zählen Requests bei
+  ausgeblendeten beziehungsweise sichtbaren Spalten, prüfen sofortiges Auffrischen trotz frischem Cache sowie
+  Abbruch, Fokus, Reconnect, Invalidierung und einen weiteren aktiven Verbraucher derselben Statusabfrage.
+- `backend/test/internal/proxy-host-monitor-history.spec.js` führt die Begrenzung auf 100 Messungen und 30 Tage
+  gegen SQLite und PostgreSQL/PGlite aus. Exakte Zeitgrenzen, später eingefügte abgelaufene IDs, Host-Isolation,
+  zwei Bereinigungsabfragen und Transaktionsrollback bleiben unabhängig von Laufzeitmessungen geprüft.
+  `proxy-host-monitor.spec.js` ergänzt fehlgeschlagene Bereinigung, konkurrierende Hosts und veraltete Probes.
+- `backend/test/internal/sixth-nginx-current-state.spec.js` prüft zusätzlich vollständige Domains, Zertifikate und
+  Access-Lists, die begrenzte Abfrageanzahl ohne Sammlungskreuzprodukt sowie Änderungen an einem späteren Host
+  während des laufenden Sammelauftrags. Die vorhandenen Batch-, Fehler- und Rollbacktests bleiben aktiv.
+- Die Opt-in-Profile für Nginx-Erzeugung und Monitorpersistenz verwenden identische synthetische Ausgangsdaten,
+  Aufwärmläufe und wechselnde Reihenfolge. Sie gehören nicht zur normalen Testlaufzeit; reguläre Tests prüfen
+  stattdessen deterministische Korrektheits- und Abfragegrenzen. Messbefehle, Ergebnisse und Grenzen stehen im
+  [Prüfbericht vom 17. Oktober](./performance-optimierung-2026-10-17.md).
+
 ## Typprüfung des Backends
 
 `cd backend && node node_modules/typescript/bin/tsc --noEmit` prüft die JavaScript-Module unter `internal/`, `lib/` und `models/` samt importierten Abhängigkeiten mit ihren JSDoc-Verträgen. Die CI führt diese Prüfung vor den Backend-Tests aus. Modellfelder, QueryBuilder-Rückgaben und asynchrone Serviceverträge sind dabei typisiert; die Standardbibliothek umfasst die bereits von Node 26 unterstützten ES2023-APIs. Die Frontend-Typprüfung bleibt Bestandteil des Produktionsbuilds.

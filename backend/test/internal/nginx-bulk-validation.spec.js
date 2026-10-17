@@ -20,14 +20,14 @@ describe("Nginx bulk validation outcome", () => {
 	beforeEach(async () => {
 		directory = await fs.promises.mkdtemp(path.join(os.tmpdir(), "shieldpm-bulk-validation-"));
 		rows = [
-			{ id: 1, enabled: true, meta: { note: "preserved" } },
-			{ id: 2, enabled: true, meta: {} },
+			{ id: 1, enabled: true, meta: { note: "preserved" }, host_domains: [], $fetchGraph: async () => {} },
+			{ id: 2, enabled: true, meta: {}, host_domains: [], $fetchGraph: async () => {} },
 		];
 		model = {
 			transaction: (callback) => callback({}),
 			query: () => ({
 				findById: (id) => ({
-					withGraphFetched: async () => rows.find((row) => row.id === id),
+					withGraphJoined: async () => rows.find((row) => row.id === id),
 					forUpdate: async () => rows.find((row) => row.id === id),
 				}),
 				where: (_field, id) => ({

@@ -1,3 +1,4 @@
+import type { ColumnVisibilityState } from "@tanstack/react-table";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type React from "react";
 import type { ProxyHost } from "src/api/backend";
@@ -96,6 +97,20 @@ describe("Proxy hosts table", () => {
 		expect(within(screen.getAllByRole("row")[1]).getAllByRole("cell")).toHaveLength(headers.length);
 		expect(screen.getByRole("button", { name: "Aktionsmenü öffnen" })).toBeInTheDocument();
 	});
+	it.each<{ columnVisibility: ColumnVisibilityState; expectedIds: number[] }>([
+		{ columnVisibility: { monitor: false, latency: false }, expectedIds: [] },
+		{ columnVisibility: { monitor: true, latency: false }, expectedIds: [1] },
+		{ columnVisibility: { monitor: false, latency: true }, expectedIds: [1] },
+		{ columnVisibility: { monitor: false }, expectedIds: [1] },
+		{ columnVisibility: { latency: false }, expectedIds: [1] },
+	])(
+		"requests only statuses used by visible monitor columns ($columnVisibility)",
+		({ columnVisibility, expectedIds }) => {
+			render(<Table data={[proxyHost]} columnVisibility={columnVisibility} onEditAccessList={vi.fn()} />);
+
+			expect(monitorMocks.useProxyHostMonitorStatuses).toHaveBeenCalledWith(expectedIds);
+		},
+	);
 	it("offers both one-time diagnostics and continuous monitoring in the same host menu", () => {
 		render(<Table data={[proxyHost]} onEditAccessList={vi.fn()} />);
 		fireEvent.pointerDown(screen.getByRole("button", { name: "Aktionsmenü öffnen" }), {
