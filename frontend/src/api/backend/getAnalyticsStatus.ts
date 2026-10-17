@@ -6,6 +6,6 @@ export interface AnalyticsStatus {
 	totalSec: number;
 }
 
-export async function getAnalyticsStatus(): Promise<AnalyticsStatus> {
-	return await api.get({ url: "/analytics/status" });
+export async function getAnalyticsStatus(signal?: AbortSignal): Promise<AnalyticsStatus> {
+	return await api.get({ url: "/analytics/status" }, signal ? { signal } : undefined);
 }

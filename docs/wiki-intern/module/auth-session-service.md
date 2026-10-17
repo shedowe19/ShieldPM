@@ -75,6 +75,30 @@ Die Authentifizierung nutzt `issueTokenPair()` für den Login und `refreshTokenP
 
 Regressionstests: `backend/test/internal/auth-session-security.spec.js`, `backend/test/routes/two-fa-authorization.spec.js` und `backend/test/routes/third-auth-logout.spec.js` (echte Refresh-Rotation und Logout mit SQLite). `third-auth-refresh.spec.js` prüft über HTTP eine erfolgreiche neue Anmeldung vor einer verspäteten Refresh-Fehlerantwort und die dabei ausgegebenen Cookies. `csrf-session-transitions.spec.js` prüft denselben Ablauf durch die vollständige App einschließlich CSRF-Middleware und anschließender geschützter Schreibanfrage.
 
+## Geräte- und Sitzungsverwaltung
+
+Die Profilseite enthält einen Reiter für Geräte und Sitzungen. `backend/internal/sessions.js` gruppiert die aktive Refresh-Kette einer Anmeldung als Gerät und liefert ausschließlich Familien-ID, aktuelle Browsermarkierung, erste noch gespeicherte Anmeldung, letzte Aktivität, Ablauf, IP und User-Agent. Rotationen erscheinen nicht als zusätzliche Geräte. Angezeigt werden höchstens 100 zuletzt aktive Familien einschließlich des aktuellen Browsers; die Antwort meldet eine darüber hinausgehende Menge ausdrücklich.
+
+Die Route `backend/routes/sessions.js` wird unter `/tokens/sessions` eingebunden:
+
+| Methode | Pfad                              | Verhalten                                               |
+| ------- | --------------------------------- | ------------------------------------------------------- |
+| GET     | `/api/tokens/sessions`            | Eigene aktive Gerätefamilien auflisten                  |
+| DELETE  | `/api/tokens/sessions/:family_id` | Eine andere eigene Gerätefamilie vollständig widerrufen |
+| DELETE  | `/api/tokens/sessions/others`     | Alle anderen eigenen Gerätefamilien widerrufen          |
+
+Der Pfad ist bewusst unter `/api/tokens`: Nur dorthin sendet der Browser den vorhandenen HTTP-only-Refresh-Cookie. Aktuelles Access-JWT und Refresh-Cookie müssen demselben aktiven Konto gehören. Eine ausstehende 2FA-Anmeldung, ein fremder Cookie oder eine gesperrte Benutzeridentität berechtigen nicht zur Verwaltung. Fremde Familien erhalten `404`; Hashes, Tokens, JTI und interne Rotationsreferenzen verlassen den Service nicht. Schreibzugriffe benötigen den normalen CSRF-Schutz und werden begrenzt sowie auditiert. Das aktuelle Gerät wird über den vorhandenen Logout abgemeldet; „alle anderen“ erhält seine gesamte Familie. Bereits ausgestellte zustandslose Access-JWTs können weiterhin bis zu 15 Minuten gültig bleiben; die Oberfläche benennt diese Grenze.
+
+`browser-sessions.spec.js` verbindet echte HTTP-Anfragen, App, RSA-JWTs, Cookies, CSRF und SQLite. Es prüft Gruppierung, Markierung, Redaction, Familienwiderruf nach Rotation, Kontentrennung, fehlende beziehungsweise fremde Cookies und deaktivierte Konten. `frontend/src/pages/Profile/Sessions.test.tsx` prüft den tatsächlichen Query-Hook, API-Wrapper und Bestätigungsdialog mit kontrolliertem Fetch, einschließlich Fehler und Abbruch beim Verlassen.
+
+## Begrenzte Aufbewahrung
+
+`backend/internal/auth-session-cleanup.js` startet nach den Migrationen und läuft anschließend stündlich. Pro Lauf werden höchstens zehn Batches mit je 1000 Zeilen entfernt, deren `expires_at` bereits mehr als sieben Tage zurückliegt. Es entfernt weder gültige aktuelle Tokens noch unablaufene rotierte Vorgänger; die Wiederverwendungserkennung bleibt für deren gesamte Gültigkeit erhalten. Die Referenzen auf entfernte Vorgänger werden in derselben Batchtransaktion auf `NULL` gesetzt, auch wenn SQLite ohne aktivierte Fremdschlüsselprüfung läuft. Die Migration `20261017190201_index_session_references.js` ergänzt dafür Indizes unter SQLite/PostgreSQL; InnoDB besitzt diese bereits durch die Fremdschlüssel.
+
+Die Oberfläche verlängert standardmäßig alle fünf Minuten. Ohne Bereinigung wächst deshalb auch eine einzige dauerhaft offene Browseranmeldung um ungefähr 288 Zeilen pro Tag. Mit der Bereinigung bleiben abgelaufene Daten nur während der zusätzlichen siebentägigen Frist erhalten; aktuelle Familien besitzen weiterhin ihre für Replay-Prüfungen benötigten Vorgänger. Die Anzeige „Erstmals gesehen“ verwendet den ältesten noch aufbewahrten Familieneintrag und ist kein dauerhaftes Geräteinventar.
+
+`auth-session-cleanup.spec.js` prüft echte SQLite-/PostgreSQL-Operationen, Batchgrenzen, Ablaufgrenze, erhaltene Replay-Erkennung und den Erhalt eines aktuellen Nachfolgers nach Entfernen seines längst abgelaufenen Vorgängers.
+
 ## Verwandte Seiten
 
 - [Benutzer & Auth](./benutzer-auth.md)

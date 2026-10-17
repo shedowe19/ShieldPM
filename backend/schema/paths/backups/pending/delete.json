@@ -1,0 +1,26 @@
+{
+	"operationId": "cancelPendingInstanceRestore",
+	"summary": "Cancel an inactive pending restore",
+	"description": "Removes its staged files and isolated external database. Already activated state cannot be canceled by a running API.",
+	"tags": [
+		"instance-backups"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"responses": {
+		"403": {
+			"description": "Administrator permission required; backups disabled in demo mode"
+		},
+		"400": {
+			"description": "Invalid input or another instance operation is running"
+		},
+		"200": {
+			"description": "Pending restore canceled"
+		}
+	}
+}

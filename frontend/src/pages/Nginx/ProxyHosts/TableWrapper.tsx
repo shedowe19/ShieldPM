@@ -74,7 +74,11 @@ export default function TableWrapper() {
 	const normalizedSearch = search.trim().toLowerCase();
 	const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(getSavedColumnVisibility);
 	const { isFetching, isLoading, isError, error, data } = useProxyHostsPage(
-		["owner", "access_list", AUDIT_LOG_OBJECT_TYPE.CERTIFICATE],
+		[
+			...(columnVisibility.owner !== false ? ["owner" as const] : []),
+			...(columnVisibility.accessList !== false ? ["access_list" as const] : []),
+			...(columnVisibility.certificate !== false ? [AUDIT_LOG_OBJECT_TYPE.CERTIFICATE] : []),
+		],
 		{
 			limit: 100,
 			page,

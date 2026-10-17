@@ -1,0 +1,53 @@
+{
+	"operationId": "importInstanceBackup",
+	"summary": "Import an encrypted instance archive",
+	"description": "Accepts one .spmb archive through bounded temporary-file streaming. Authentication and exclusive operation reservation precede body parsing. Import checks the format header; the password and cryptographic/content validation are checked by preflight.",
+	"tags": [
+		"instance-backups"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"responses": {
+		"403": {
+			"description": "Administrator permission required; backups disabled in demo mode"
+		},
+		"400": {
+			"description": "Invalid input or another instance operation is running"
+		},
+		"201": {
+			"description": "Successful response",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/instance-backup-record.json"
+					}
+				}
+			}
+		}
+	},
+	"requestBody": {
+		"required": true,
+		"content": {
+			"multipart/form-data": {
+				"schema": {
+					"type": "object",
+					"required": [
+						"archive"
+					],
+					"additionalProperties": false,
+					"properties": {
+						"archive": {
+							"type": "string",
+							"format": "binary"
+						}
+					}
+				}
+			}
+		}
+	}
+}

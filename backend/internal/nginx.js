@@ -1,9 +1,11 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import fs from "node:fs";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import dayjs from "dayjs";
 import _ from "lodash";
 import punycode from "punycode.js";
+import { accessListFiles } from "../lib/access-list-files.js";
 import errs from "../lib/error.js";
 import {
 	assertAsnFirewallAvailable,
@@ -17,15 +19,67 @@ import { buildFirewallRender } from "../lib/firewall-render.js";
 import { sanitizeHostMeta } from "../lib/host-response.js";
 import { getTerminalAccessToken } from "../lib/terminal-access.js";
 import utils from "../lib/utils.js";
+import { redactWasmFilters } from "../lib/wasm-response.js";
 import { debug, nginx as logger } from "../logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 import internalAnubis from "./anubis.js";
+import { prepareTrafficFiles, prepareTrafficRender } from "./host-traffic-policy.js";
 
 /** @type {Promise<unknown>} */
 let configurationQueue = Promise.resolve();
+const configurationContext = new AsyncLocalStorage();
+let wasmCleanupTimer;
+const hasWasmLifecycleFiles = () =>
+	["hosts", "active", "retirement.json"].some((name) =>
+		fs.existsSync(resolve(process.env.DATA_PATH || "/data", "wasm", name)),
+	);
+
+const scheduleWasmCleanup = () => {
+	if (wasmCleanupTimer) return;
+	wasmCleanupTimer = setTimeout(() => {
+		wasmCleanupTimer = null;
+		void internalNginx
+			.withConfigurationLock(async () => {
+				const { collectRetiredWasmConfigurations } = await import("./wasm-lifecycle.js");
+				if (await collectRetiredWasmConfigurations()) scheduleWasmCleanup();
+			})
+			.catch((error) => {
+				logger.error(`Wasm retirement failed; files retained: ${error.message}`);
+				scheduleWasmCleanup();
+			});
+	}, 1000);
+	wasmCleanupTimer.unref?.();
+};
+
+const runConfigurationOperation = async (callback) => {
+	const lifecycle = await import("./wasm-lifecycle.js");
+	let context;
+	try {
+		context = hasWasmLifecycleFiles()
+			? await lifecycle.createWasmLifecycle()
+			: { active: true, initial: new Set(), hadSignal: false, lastReloadAccepted: false, accepted: null };
+	} catch (error) {
+		throw new errs.ConfigurationError("Cannot protect existing Wasm worker configurations", error);
+	}
+	const store = { active: true, lifecycle: context };
+	try {
+		return await configurationContext.run(store, callback);
+	} finally {
+		store.active = false;
+		context.active = false;
+		try {
+			if (hasWasmLifecycleFiles() && (await lifecycle.finishWasmLifecycle(context))) scheduleWasmCleanup();
+		} catch (error) {
+			// The outer callback may already have committed claims/history. Observability
+			// and GC failures cannot turn an accepted activation into an uncompensated error.
+			logger.error(`Wasm lifecycle reconciliation failed; files retained: ${error.message}`);
+			scheduleWasmCleanup();
+		}
+	}
+};
 
 /** Merge status into current metadata under a short row lock, after slow Nginx operations finish. */
 const updateHostStatus = (model, host, status) =>
@@ -35,6 +89,12 @@ const updateHostStatus = (model, host, status) =>
 		if (current) await model.query(trx).where("id", host.id).patch({ meta });
 		return meta;
 	});
+
+const performReload = async (context) => {
+	if (context) return internalNginx._reloadCommands(context);
+	// Test doubles may replace the queue; production always supplies its live context.
+	return runConfigurationOperation(() => internalNginx._reloadCommands(configurationContext.getStore().lifecycle));
+};
 
 const internalNginx = {
 	updateHostStatus,
@@ -62,9 +122,36 @@ const internalNginx = {
 	 * @returns {Promise<T>}
 	 */
 	withConfigurationLock: (callback) => {
-		const operation = configurationQueue.then(callback);
+		const operation = configurationQueue.then(() => runConfigurationOperation(callback));
 		configurationQueue = operation.catch(() => {});
 		return operation;
+	},
+
+	/**
+	 * Refresh one render graph immediately before staging it inside the configuration lock.
+	 * @param {Object} model
+	 * @param {string} hostType
+	 * @param {number} hostId
+	 * @returns {Promise}
+	 */
+	getCurrentHost: async (model, hostType, hostId) => {
+		const isProxy = internalNginx.getFileFriendlyHostType(hostType) === "proxy_host";
+		// Join only singleton relations. Joining domains, users or clients would
+		// multiply large host rows and can create a domains × users × clients result.
+		const current = await model
+			.query()
+			.findById(hostId)
+			.withGraphJoined(isProxy ? "[certificate,access_list]" : "certificate");
+		if (isProxy && current) {
+			await Promise.all([
+				current.$fetchGraph("host_domains"),
+				current.access_list?.$fetchGraph("[clients,items]"),
+			]);
+			// Objection's $fetchGraph skips the root $afterFind hook which normally
+			// derives this legacy render field from the domain relation.
+			current.domain_names = current.host_domains.map(({ domain_name }) => domain_name);
+		}
+		return current;
 	},
 
 	configureHost: async (model, host_type, hostSnapshot, options = {}) => {
@@ -72,12 +159,16 @@ const internalNginx = {
 		let combined_meta = {};
 		// A bulk snapshot may predate a completed host, certificate or access-list change.
 		// Refresh the full render graph inside the configuration lock, not only its lifecycle flags.
-		const graph =
-			internalNginx.getFileFriendlyHostType(host_type) === "proxy_host"
-				? "[host_domains,certificate,access_list.[clients,items]]"
-				: "certificate";
-		const current = await model.query().findById(hostSnapshot.id).withGraphFetched(graph);
+		const current = await internalNginx.getCurrentHost(model, host_type, hostSnapshot.id);
 		const host = !current || current.is_deleted ? { ...(current || hostSnapshot), enabled: false } : current;
+
+		if (internalNginx.getFileFriendlyHostType(host_type) === "proxy_host") {
+			host.wasm = null;
+			if (host.enabled && host.meta?.wasm_filters?.some((filter) => filter.enabled)) {
+				const { prepareHost } = await import("./wasm.js");
+				host.wasm = await prepareHost(host);
+			}
+		}
 
 		// 1. Backup existing config if it exists
 		await internalNginx.backupConfig(host_type, host);
@@ -169,6 +260,16 @@ const internalNginx = {
 	 * @returns {Promise}
 	 */
 	reload: async () => {
+		const store = configurationContext.getStore();
+		if (!store?.active)
+			return internalNginx.withConfigurationLock(() => performReload(configurationContext.getStore()?.lifecycle));
+		return performReload(store.lifecycle);
+	},
+
+	/**
+	 * @returns {Promise}
+	 */
+	_reloadCommands: async (context) => {
 		const promises = [];
 
 		if (process.env.ACME_OCSP_STAPLING === "true") {
@@ -204,7 +305,10 @@ const internalNginx = {
 		await Promise.all(promises);
 
 		await internalNginx.test();
+		const lifecycle = await import("./wasm-lifecycle.js");
+		const before = context && hasWasmLifecycleFiles() ? await lifecycle.beforeWasmReload(context) : null;
 		await utils.execFile("nginx", ["-s", "reload"]);
+		if (context) await lifecycle.afterWasmReload(context, before);
 	},
 
 	/**
@@ -242,6 +346,7 @@ const internalNginx = {
 					{ hsts_enabled: host.hsts_enabled },
 					{ hsts_subdomains: host.hsts_subdomains },
 					{ access_list: host.access_list },
+					{ access_list_files: host.access_list_files },
 					{ certificate: host.certificate },
 					{ anubis_enabled: host.anubis_enabled },
 					location,
@@ -257,6 +362,11 @@ const internalNginx = {
 					locationCopy.forward_host = split.shift();
 					locationCopy.forward_path = `/${split.join("/")}`;
 				}
+				locationCopy.id = host.id;
+				locationCopy.cache = host.cache;
+				locationCopy.cache_ttl_seconds =
+					host.cache?.routes.find((route) => route.path === location.path)?.ttl_seconds ?? null;
+				locationCopy.pool = location._managed_cache_route ? host.pool : null;
 				locationCopy.env = process.env;
 				locationCopy.managed_web_root =
 					locationCopy.forward_scheme === "path" && locationCopy.forward_host.startsWith("/data/websites/");
@@ -279,6 +389,7 @@ const internalNginx = {
 		// Prevent modifying the original object:
 		const host = JSON.parse(JSON.stringify(host_row));
 		if (host.is_deleted) host.enabled = false;
+		host.access_list_files = accessListFiles({ id: host.access_list_id, meta: host.access_list?.meta });
 		const nice_host_type = internalNginx.getFileFriendlyHostType(host_type);
 		let firewallSummaries;
 		if (nice_host_type === "proxy_host" && host.enabled && host.meta?.ip_firewall?.enabled === true) {
@@ -319,6 +430,35 @@ const internalNginx = {
 			["http", "https"].indexOf(host.forward_scheme.toLowerCase()) === -1
 		) {
 			host.forward_scheme = "$scheme";
+		}
+
+		if (
+			options.preview &&
+			nice_host_type === "proxy_host" &&
+			host.enabled &&
+			host.meta?.wasm_filters?.some((filter) => filter.enabled)
+		) {
+			// Read-only previews show the hooks without creating secret files or starting a VM.
+			host.wasm = {
+				configuration_path: "/data/wasm/hosts/[DRAFT].json",
+				dispatcher_path: "/data/wasm/artifacts/[TRUSTED].lua",
+				preview_summary: JSON.stringify(redactWasmFilters(host.meta.wasm_filters)),
+			};
+		}
+
+		if (nice_host_type === "proxy_host") {
+			prepareTrafficRender(host, { preview: options.preview === true });
+			if (host.cache_extra_routes?.length)
+				host.locations = [
+					...(host.locations || []),
+					...host.cache_extra_routes.map((route) => ({
+						path: route.path,
+						forward_scheme: host.forward_scheme,
+						forward_host: host.forward_host,
+						forward_port: host.forward_port,
+						_managed_cache_route: true,
+					})),
+				];
 		}
 
 		if (host.locations) {
@@ -397,6 +537,7 @@ const internalNginx = {
 	generateConfig: async (host_type, host_row) => {
 		const filename = internalNginx.getConfigName(host_type, host_row.id);
 		try {
+			if (internalNginx.getFileFriendlyHostType(host_type) === "proxy_host") await prepareTrafficFiles(host_row);
 			const config_text = await internalNginx.renderConfig(host_type, host_row);
 			await fs.promises.writeFile(filename, config_text, { encoding: "utf8" });
 			debug(logger, "Wrote config:", filename);
@@ -541,61 +682,66 @@ const internalNginx = {
 	/**
 	 * Render multiple host types into one atomic validation batch.
 	 * @param {Array<{model: object, hostType: string, hosts: Array<object>}>} groups
-	 * @param {{throwOnError?: boolean}} [options]
+	 * @param {{throwOnError?: boolean, reload?: boolean}} [options]
 	 * @returns {Promise<Array<object>>}
 	 */
 	bulkGenerateConfigGroups: async (groups, options = {}) =>
-		internalNginx.withConfigurationLock(async () => {
-			/** @type {Array<{host: object, host_type: string, model: object}>} */
-			const stages = [];
-			try {
-				for (const { model, hostType, hosts } of groups) {
-					for (const host of hosts) {
-						const stage = await internalNginx.configureHost(model, hostType, host, {
-							defer_validation: true,
-							skip_reload: true,
-						});
-						stages.push(/** @type {{host: object, host_type: string, model: object}} */ (stage));
-					}
+		internalNginx.withConfigurationLock(() => internalNginx.bulkGenerateConfigGroupsUnlocked(groups, options)),
+
+	/** Caller must hold withConfigurationLock; used when sidecars and DB share the activation. */
+	bulkGenerateConfigGroupsUnlocked: async (groups, options = {}) => {
+		/** @type {Array<{host: object, host_type: string, model: object}>} */
+		const stages = [];
+		try {
+			for (const { model, hostType, hosts } of groups) {
+				for (const host of hosts) {
+					const stage = await internalNginx.configureHost(model, hostType, host, {
+						defer_validation: true,
+						skip_reload: true,
+					});
+					stages.push(/** @type {{host: object, host_type: string, model: object}} */ (stage));
 				}
-				await internalNginx.test();
-				// Every backup remains available until all status writes finish. A failure in
-				// another host must not turn a completed status write into a missing listener.
-				const commits = await Promise.allSettled(
-					stages.map((stage) => internalNginx.commitStagedConfig(stage, { preserveBackup: true })),
-				);
-				const statuses = commits.map((result) => {
-					if (result.status === "rejected") throw result.reason;
-					return result.value;
-				});
-				// Cleanup cannot invalidate a successfully validated group. Keep failed
-				// backup removals for later cleanup rather than attempting an unsafe rollback.
-				const cleanups = await Promise.allSettled(
-					stages.map(({ host_type, host }) => internalNginx.deleteBackupConfig(host_type, host)),
-				);
-				for (const cleanup of cleanups) {
-					if (cleanup.status === "rejected")
-						logger.error(`Nginx backup cleanup failed: ${cleanup.reason.message}`);
-				}
-				Promise.resolve()
-					.then(() => internalAnubis.generatePolicy())
-					.catch((err) => logger.error(`Anubis policy generation failed: ${err.message}`));
-				return statuses;
-			} catch (err) {
-				logger.error(`Nginx batch test failed: ${err.message}`);
-				const rollbacks = await Promise.allSettled(
-					stages.map((stage) => internalNginx.rollbackStagedConfig(stage, err)),
-				);
-				// Do not release the shared lock while another rollback can still write files.
-				const failedRollback = rollbacks.find((result) => result.status === "rejected");
-				if (failedRollback) throw failedRollback.reason;
-				if (options.throwOnError) throw err;
-				return rollbacks.map((result) => {
-					if (result.status === "rejected") throw result.reason;
-					return result.value;
-				});
 			}
-		}),
+			if (options.reload) await internalNginx.reload();
+			else await internalNginx.test();
+			// Every backup remains available until all status writes finish. A failure in
+			// another host must not turn a completed status write into a missing listener.
+			const commits = await Promise.allSettled(
+				stages.map((stage) => internalNginx.commitStagedConfig(stage, { preserveBackup: true })),
+			);
+			const statuses = commits.map((result) => {
+				if (result.status === "rejected") throw result.reason;
+				return result.value;
+			});
+			// Cleanup cannot invalidate a successfully validated group. Keep failed
+			// backup removals for later cleanup rather than attempting an unsafe rollback.
+			const cleanups = await Promise.allSettled(
+				stages.map(({ host_type, host }) => internalNginx.deleteBackupConfig(host_type, host)),
+			);
+			for (const cleanup of cleanups) {
+				if (cleanup.status === "rejected")
+					logger.error(`Nginx backup cleanup failed: ${cleanup.reason.message}`);
+			}
+			Promise.resolve()
+				.then(() => internalAnubis.generatePolicy())
+				.catch((err) => logger.error(`Anubis policy generation failed: ${err.message}`));
+			return statuses;
+		} catch (err) {
+			logger.error(`Nginx batch test failed: ${err.message}`);
+			const rollbacks = await Promise.allSettled(
+				stages.map((stage) => internalNginx.rollbackStagedConfig(stage, err)),
+			);
+			// Do not release the shared lock while another rollback can still write files.
+			const failedRollback = rollbacks.find((result) => result.status === "rejected");
+			if (options.reload) await internalNginx.reload();
+			if (failedRollback) throw failedRollback.reason;
+			if (options.throwOnError) throw err;
+			return rollbacks.map((result) => {
+				if (result.status === "rejected") throw result.reason;
+				return result.value;
+			});
+		}
+	},
 
 	/**
 	 * @param   {string}  cfg

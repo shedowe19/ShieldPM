@@ -14,6 +14,9 @@ const [
 	{ default: internalIpRanges },
 	{ default: internalNginx },
 	{ default: internalProxyHostMonitor },
+	{ default: internalIncidents },
+	{ default: internalHostTraffic },
+	{ default: internalSessionCleanup },
 	{ default: utils },
 	{ global: logger },
 	{ migrateUp },
@@ -26,6 +29,9 @@ const [
 	import("./internal/ip_ranges.js"),
 	import("./internal/nginx.js"),
 	import("./internal/proxy-host-monitor.js"),
+	import("./internal/incidents.js"),
+	import("./internal/host-traffic-policy.js"),
+	import("./internal/auth-session-cleanup.js"),
 	import("./lib/utils.js"),
 	import("./logger.js"),
 	import("./migrate.js"),
@@ -85,6 +91,7 @@ async function start() {
 		await setup();
 		logger.info("Compiling Schema...");
 		await getCompiledSchema();
+		await internalSessionCleanup.initTimer();
 
 		const port = 3000;
 		const server = app.listen(port, "127.0.0.1", (err) => {
@@ -94,6 +101,8 @@ async function start() {
 				return;
 			}
 			logger.info(`Backend listening on port ${port}`);
+			internalIncidents.init();
+			internalHostTraffic.init();
 			internalProxyHostMonitor.init();
 
 			let shuttingDown = false;
@@ -102,8 +111,12 @@ async function start() {
 				shuttingDown = true;
 				process.removeListener("SIGINT", shutdown);
 				process.removeListener("SIGTERM", shutdown);
-				internalProxyHostMonitor.stop();
+				const monitoringStopped = Promise.resolve(internalProxyHostMonitor.stop());
 				server.close(async () => {
+					await monitoringStopped;
+					await internalIncidents.stop();
+					await internalHostTraffic.stop();
+					await internalSessionCleanup.stop();
 					await analyticsService.stop();
 					process.exit(0);
 				});

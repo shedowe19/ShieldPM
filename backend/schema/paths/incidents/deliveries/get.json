@@ -1,0 +1,39 @@
+{
+	"operationId": "getNotificationDeliveries",
+	"summary": "Read own channel delivery results and retry failures",
+	"tags": [
+		"incidents"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.view"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "array",
+						"items": {
+							"$ref": "../../../components/notification-delivery.json"
+						},
+						"maxItems": 100
+					}
+				}
+			}
+		},
+		"400": {
+			"description": "Invalid input or stale configuration"
+		},
+		"403": {
+			"description": "Permission denied"
+		},
+		"404": {
+			"description": "Object not found within caller scope"
+		}
+	}
+}

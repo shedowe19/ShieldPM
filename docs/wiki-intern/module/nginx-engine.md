@@ -78,7 +78,21 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 
 Nach einem erfolgreichen `configure()` wird `internalAnubis.generatePolicy()` **asynchron** aufgerufen (non-blocking). Dies aktualisiert die Anubis-Sicherheitspolicy basierend auf der neuen Nginx-Konfiguration, ohne den Configure-Flow zu blockieren. Fehler werden separat protokolliert und rollen eine bereits akzeptierte Nginx-Konfiguration nicht zurück.
 
-## Abhängigkeiten
+## Wasm-Lieferumfang und fehlende Produktanbindung
+
+Die am 17. Oktober 2026 geprüfte Nginx-Runtime 1.31.6 enthält statisch API7s `wasm-nginx-module` 0.7.0
+mit Wasmtime 49.0.2. Lua-Helfer und Runtime-Bibliothek werden auch im nativen Archiv ausgeliefert.
+Die reguläre Basiskonfiguration setzt bisher kein `wasm_vm`; ShieldPM hat noch keine Filterverwaltung
+oder Hostzuweisung. Die Anbindung erfolgt über `resty.proxy-wasm` und gemeinsame Lua-Phasen.
+
+Ein isolierter echter Filter prüfte API-Key, Request-/Response-Header, Trap und ungültige Datei erfolgreich.
+`nginx -t` führt Filter jedoch nicht aus und akzeptiert die ungültige Datei. Eine spätere Aktivierung muss
+zusätzlich echte Ausführung prüfen. Allgemeines Body-Umschreiben und Shared-State-/Zeit-APIs fehlen;
+Pluginmetriken sind Stubs. Allgemeine Uploads benötigen zuvor CPU-/Speichergrenzen
+und eine eingeschränkte WASI-Umgebung. Technischer Stand, Nachweise und Feature-Umfang stehen im
+[Gesamtprüfbericht](../entwicklung/feature-review-2026-10-17.md#wasm-vorhandene-technik-und-tatsächlicher-test).
+
+## Abhängigkeiten der Konfigurationsengine
 
 - `lib/utils.js` — Render-Engine (`getRenderEngine()`, Liquid-basiert)
 - `internal/proxy-host.js`, `internal/redirection-host.js`, `internal/dead-host.js`, `internal/stream.js` — rufen die Engine bei CRUD auf
@@ -100,6 +114,15 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 Die Sicherung bleibt bis zum erfolgreichen Reload erhalten. Scheitert die Aktivierung, wird die vorige Konfiguration wiederhergestellt und neu geladen; die Antwort enthält `nginx_online: false`. Der Rollback-Reload erfolgt vor dem Schreiben der Fehlermetadaten, damit ein Datenbankausfall ihn nicht überspringen kann. `withConfigurationLock(callback)` stellt auch Zertifikatsaktivierungen, Default-Site-Wechsel sowie Löschen/Deaktivieren von Hosts in dieselbe Warteschlange. Der Callback darf `test()` und `reload()`, aber nicht erneut `configure()` aufrufen.
 
 Vor der Verarbeitung eines gespeicherten Hostzustands lädt `configureHost()` innerhalb der Konfigurationssperre den vollständigen aktuellen Datensatz einschließlich Zertifikat erneut; bei Proxy-Hosts auch Domains und die vollständige Access-List. Vorab geladene Sammelaufträge können dadurch keine inzwischen geänderten Upstreams, Domains oder neu aktivierte Authentifizierung/TLS durch ihre alten Snapshots ersetzen. Inzwischen deaktivierte, gelöschte oder entfernte Hosts erhalten weiterhin keine aktiven Listener. Die zurückgegebenen und gespeicherten Nginx-Metadaten entfernen auch dabei alte DNS-Zugangsdaten.
+
+`getCurrentHost()` lädt Zertifikat und Access-List als einzelne Beziehungen gemeinsam mit dem Host. Domains sowie
+Access-List-Clients und Authentifizierungseinträge werden anschließend getrennt geladen. Sammlungen werden nicht
+in denselben Join aufgenommen; dadurch entsteht kein kartesisches Produkt und große Hostdaten werden nicht je
+Domain oder Client wiederholt übertragen. Bei einem Proxy-Host mit Zertifikat und Access-List sinkt die Zahl der
+Graph-Abfragen nach dem Aufwärmen der ORM-Metadaten von sechs auf vier. Da Objections `$fetchGraph()` den
+`$afterFind()`-Hook des Wurzelobjekts nicht erneut ausführt, bildet der Loader `domain_names` ausdrücklich aus
+den frisch geladenen Domains. Der nächste Host wird weiterhin erst unmittelbar vor seiner eigenen Erzeugung
+innerhalb der Sperre gelesen; es gibt keinen veraltbaren Vorab-Cache für den gesamten Sammelauftrag.
 
 Auch während eines langsamen Tests oder Reloads können andere Aufrufe Host-Metadaten speichern. Die Statusaktualisierung liest deshalb erst danach die aktuellen Metadaten in einer kurzen Datenbanktransaktion mit `forUpdate()` und ergänzt ausschließlich die Nginx-Statusfelder. PostgreSQL/MySQL sperren dabei die Hostzeile; SQLite verwendet seine Transaktionsserialisierung. Kein Datenbanklock wird über den Nginx-Prozessaufruf gehalten. Das gilt auch für den Fehlerstatus nach dem Rollback-Reload. `sixth-nginx-current-state.spec.js` prüft beide Rennen und die Geheimnisbereinigung mit echten SQLite- und PostgreSQL/PGlite-Modellen, Liquid-Rendering und temporären Dateien; die Prozessaufrufe sind simuliert.
 

@@ -3,7 +3,7 @@ set -eo pipefail
 
 # ShieldPM Generic Installer (Linux AMD64/ARM64)
 # (c) 2026 Shedowe
-# 
+#
 # This script is bundled with the shieldpm-install-linux-*.tar.gz package.
 # The tarball already contains pre-built binaries from the nginx-binaries release.
 
@@ -218,6 +218,8 @@ apt-get install -y --no-install-recommends --fix-missing \
     libldap-common \
     liblua5.1-0 \
     libmaxminddb0 \
+    mariadb-client \
+    postgresql-client \
     libxml2 \
     liblmdb0 \
     logrotate \
@@ -250,6 +252,137 @@ install_node_26
 echo ">>> Configuring locales..."
 echo "    Please select your desired system locale (e.g., en_US.UTF-8 or de_DE.UTF-8)."
 dpkg-reconfigure locales
+
+
+# Collect every ShieldPM integration choice and fetch its payload before stopping
+# an existing instance. Failures here leave application files and service intact.
+prompt_db_creds() {
+    local default_host="127.0.0.1"
+    local default_port="$1"
+    local default_user="npm"
+    local default_pass="npm"
+    local default_name="npm"
+
+    echo "  > SELECT SETUP MODE:"
+    echo "    1) Local (Default): Install DB Server locally & use default credentials ($default_user/$default_pass)"
+    echo "    2) Manual / External: Enter connection details manually"
+    read -r -p "    Enter choice [1-2] (Default: 1): " db_mode
+
+    if [[ "$db_mode" == "2" ]]; then
+        read -r -p "    DB Host (Default: $default_host): " DB_HOST
+        DB_HOST=${DB_HOST:-$default_host}
+        read -r -p "    DB Port (Default: $default_port): " DB_PORT
+        DB_PORT=${DB_PORT:-$default_port}
+        read -r -p "    DB Name (Default: $default_name): " DB_NAME
+        DB_NAME=${DB_NAME:-$default_name}
+        read -r -p "    DB User (Default: $default_user): " DB_USER
+        DB_USER=${DB_USER:-$default_user}
+        read -r -s -p "    DB Password (Default: $default_pass): " DB_PASS
+        echo
+        DB_PASS=${DB_PASS:-$default_pass}
+
+        # Don't install server if external (unless user wants to, but assume external means existing)
+        if [[ "$DB_HOST" != "127.0.0.1" && "$DB_HOST" != "localhost" ]]; then
+             INSTALL_LOCAL_DB=false
+        else
+             INSTALL_LOCAL_DB=true
+        fi
+    else
+        DB_HOST=$default_host
+        DB_PORT=$default_port
+        DB_USER=$default_user
+        DB_PASS=$default_pass
+        DB_NAME=$default_name
+        INSTALL_LOCAL_DB=true
+    fi
+}
+
+prepare_install_inputs() {
+    echo "=== Database Configuration ==="
+    echo "1) SQLite  2) MySQL / MariaDB  3) PostgreSQL"
+    read -r -p "Enter choice [1-3] (Default: 1): " db_choice
+    db_choice=${db_choice:-1}
+    LEGACY_DATABASE=false
+    if [ -f /data/shieldpm/default.json ]; then
+        legacy_engine=$(python3 - /data/shieldpm/default.json <<'LEGACY_PY'
+import json, sys
+with open(sys.argv[1]) as handle:
+    database = json.load(handle).get("database")
+if database:
+    engine = database.get("engine")
+    if engine not in ("mysql", "mysql2", "pg", "knex-native"):
+        sys.exit("Unsupported legacy database configuration; resolve it before installation")
+    print(engine)
+LEGACY_PY
+        )
+        if [ -n "$legacy_engine" ]; then
+            case "$legacy_engine" in mysql|mysql2) legacy_choice=2 ;; pg) legacy_choice=3 ;; *) legacy_choice=1 ;; esac
+            echo "Effective database: $legacy_engine from /data/shieldpm/default.json (.env is overridden)."
+            if [ "$db_choice" != "$legacy_choice" ]; then
+                echo "ERROR: A provider switch requires a separate data migration and removal of the legacy database override." >&2
+                echo "No application files were replaced and ShieldPM was not stopped." >&2
+                exit 1
+            fi
+            LEGACY_DATABASE=true
+            echo "Keeping the effective legacy database configuration; no database credentials will be changed."
+        fi
+    fi
+    if [ "$LEGACY_DATABASE" = false ]; then
+        case "$db_choice" in 2) prompt_db_creds 3306 ;; 3) prompt_db_creds 5432 ;; esac
+    fi
+    read -r -p "Install CrowdSec? [y/N] (Default: N): " cs_choice
+    read -r -p "Install Anubis? [y/N] (Default: N): " anubis_choice
+    read -r -p "Install OAuth2 Proxy? [y/N] (Default: N): " oauth2_choice
+    read -r -p "Install OpenAppSec Agent? [y/N] (Default: N): " oas_choice
+    OAS_AGENT_TOKEN=""
+    OAS_MODEL_PATH=""
+    if [[ "$oas_choice" =~ ^[Yy]$ ]]; then
+        read -r -s -p "OpenAppSec AGENT_TOKEN (empty for local-only): " OAS_AGENT_TOKEN
+        echo
+        read -r -p "Path to Advanced Model .tgz (empty to skip): " OAS_MODEL_PATH
+        if [ -n "$OAS_MODEL_PATH" ]; then
+            [ -f "$OAS_MODEL_PATH" ] || { echo "Advanced model not found" >&2; exit 1; }
+            cp "$OAS_MODEL_PATH" "$INSTALL_TMP_DIR/open-appsec-advanced-model.tgz"
+            OAS_MODEL_PATH="$INSTALL_TMP_DIR/open-appsec-advanced-model.tgz"
+        fi
+    fi
+    local arch helper
+    arch=$(dpkg --print-architecture)
+    helper="$INSTALL_SOURCE_DIR/rootfs/usr/local/bin/stage-native-binaries.py"
+    if [[ "$anubis_choice" =~ ^[Yy]$ ]]; then
+        curl -fL --connect-timeout 10 --max-time 900 --retry 2 --retry-max-time 900 \
+            -o "$INSTALL_TMP_DIR/anubis.tar.gz" "https://github.com/TecharoHQ/anubis/releases/download/v1.27.0/anubis-1.27.0-linux-$arch.tar.gz"
+        python3 "$helper" binary "$INSTALL_TMP_DIR/anubis.tar.gz" "$INSTALL_TMP_DIR/anubis" "$arch" "anubis-1.27.0-linux-$arch/bin/anubis"
+    fi
+    if [[ "$oauth2_choice" =~ ^[Yy]$ ]]; then
+        curl -fL --connect-timeout 10 --max-time 900 --retry 2 --retry-max-time 900 \
+            -o "$INSTALL_TMP_DIR/oauth2.tar.gz" "https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v7.15.3/oauth2-proxy-v7.15.3.linux-$arch.tar.gz"
+        python3 "$helper" binary "$INSTALL_TMP_DIR/oauth2.tar.gz" "$INSTALL_TMP_DIR/oauth2-proxy" "$arch" "oauth2-proxy-v7.15.3.linux-$arch/oauth2-proxy"
+    fi
+    if [[ "$cs_choice" =~ ^[Yy]$ ]]; then
+        curl -fL --connect-timeout 10 --max-time 120 -o "$INSTALL_TMP_DIR/crowdsec-install" https://install.crowdsec.net
+        bash -n "$INSTALL_TMP_DIR/crowdsec-install"
+        bash "$INSTALL_TMP_DIR/crowdsec-install"
+        apt-get install -y crowdsec
+        cscli hub update
+        for collection in base-http-scenarios http-cve appsec-virtual-patching appsec-generic-rules modsecurity; do
+            cscli collections install "crowdsecurity/$collection" 2>/dev/null || true
+        done
+        cscli scenarios install crowdsecurity/nginx-req-limit-exceeded 2>/dev/null || true
+    fi
+    if [[ "$oas_choice" =~ ^[Yy]$ ]]; then
+        curl -fL --connect-timeout 10 --max-time 120 -o "$INSTALL_TMP_DIR/open-appsec-install" https://downloads.openappsec.io/open-appsec-install
+        bash -n "$INSTALL_TMP_DIR/open-appsec-install"
+        chmod 700 "$INSTALL_TMP_DIR/open-appsec-install"
+    fi
+    if [ "$LEGACY_DATABASE" = false ]; then
+        case "$db_choice" in
+            2) if [ "$INSTALL_LOCAL_DB" = true ]; then apt-get install -y --fix-missing mariadb-server mariadb-client libmariadb3 default-libmysqlclient-dev; else apt-get install -y --fix-missing mariadb-client libmariadb3 default-libmysqlclient-dev; fi ;;
+            3) if [ "$INSTALL_LOCAL_DB" = true ]; then apt-get install -y --fix-missing postgresql postgresql-contrib libpq-dev; else apt-get install -y --fix-missing postgresql-client libpq-dev; fi ;;
+        esac
+    fi
+}
+prepare_install_inputs
 
 # 3. Copy Pre-built Binaries (Nginx, Certbot, Cloudflared, Libs)
 # Back up the exact application trees before stopping an existing installation.
@@ -354,11 +487,7 @@ ENV_FILE="/data/.env"
 echo ""
 echo "=== Database Configuration ==="
 echo "Select the database engine for ShieldPM:"
-echo "1) SQLite (Default, easiest setup)"
-echo "2) MySQL / MariaDB (Recommended for production)"
-echo "3) PostgreSQL"
-echo ""
-read -r -p "Enter choice [1-3] (Default: 1): " db_choice
+echo "Using the database choice prepared before the service stop."
 
 # Ensure .env exists
 if [ ! -f "$ENV_FILE" ]; then
@@ -631,56 +760,14 @@ PY
 }
 
 # Function to prompt for DB credentials
-prompt_db_creds() {
-    local default_host="127.0.0.1"
-    local default_port="$1"
-    local default_user="npm"
-    local default_pass="npm"
-    local default_name="npm"
 
-    echo "  > SELECT SETUP MODE:"
-    echo "    1) Local (Default): Install DB Server locally & use default credentials ($default_user/$default_pass)"
-    echo "    2) Manual / External: Enter connection details manually"
-    read -r -p "    Enter choice [1-2] (Default: 1): " db_mode
-
-    if [[ "$db_mode" == "2" ]]; then
-        read -r -p "    DB Host (Default: $default_host): " DB_HOST
-        DB_HOST=${DB_HOST:-$default_host}
-        read -r -p "    DB Port (Default: $default_port): " DB_PORT
-        DB_PORT=${DB_PORT:-$default_port}
-        read -r -p "    DB Name (Default: $default_name): " DB_NAME
-        DB_NAME=${DB_NAME:-$default_name}
-        read -r -p "    DB User (Default: $default_user): " DB_USER
-        DB_USER=${DB_USER:-$default_user}
-        read -r -s -p "    DB Password (Default: $default_pass): " DB_PASS
-        echo
-        DB_PASS=${DB_PASS:-$default_pass}
-        
-        # Don't install server if external (unless user wants to, but assume external means existing)
-        if [[ "$DB_HOST" != "127.0.0.1" && "$DB_HOST" != "localhost" ]]; then
-             INSTALL_LOCAL_DB=false
-        else
-             INSTALL_LOCAL_DB=true
-        fi
-    else
-        DB_HOST=$default_host
-        DB_PORT=$default_port
-        DB_USER=$default_user
-        DB_PASS=$default_pass
-        DB_NAME=$default_name
-        INSTALL_LOCAL_DB=true
-    fi
-}
-
+if [ "$LEGACY_DATABASE" = false ]; then
 case "$db_choice" in
     2)
         echo "--> Configuring for MySQL/MariaDB..."
-        prompt_db_creds "3306"
 
         if [ "$INSTALL_LOCAL_DB" = true ]; then
              echo "--> Installing MariaDB Server & Client..."
-             apt-get update
-             apt-get install -y --fix-missing mariadb-server mariadb-client libmariadb3 default-libmysqlclient-dev
              echo "--> Initializing MariaDB..."
              systemctl start mariadb
              # Create DB and User
@@ -698,7 +785,6 @@ GRANT ALL PRIVILEGES ON \`${MYSQL_NAME}\`.* TO '${MYSQL_USER}'@'localhost';
 SQL
         else
              echo "--> Installing MariaDB Client only..."
-             apt-get install -y --fix-missing mariadb-client libmariadb3 default-libmysqlclient-dev
         fi
 
         # Update .env
@@ -710,17 +796,14 @@ SQL
         set_env_value DB_MYSQL_USER "$DB_USER"
         set_env_value DB_MYSQL_PASSWORD "$DB_PASS"
         set_env_value DB_MYSQL_NAME "$DB_NAME"
-        
+
         echo "  > MySQL configured in $ENV_FILE."
         ;;
     3)
         echo "--> Configuring for PostgreSQL..."
-        prompt_db_creds "5432"
 
         if [ "$INSTALL_LOCAL_DB" = true ]; then
             echo "--> Installing PostgreSQL Server & Client..."
-            apt-get update
-            apt-get install -y --fix-missing postgresql postgresql-contrib libpq-dev
             echo "--> Initializing PostgreSQL..."
             systemctl start postgresql
             # Create DB and User
@@ -734,7 +817,6 @@ WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = :'db_name') \gexec
 SQL
         else
             echo "--> Installing PostgreSQL Client only..."
-            apt-get install -y --fix-missing postgresql-client libpq-dev
         fi
 
         # Update .env
@@ -754,6 +836,7 @@ SQL
         configure_database_environment SQLITE
         ;;
 esac
+fi
 
 # 11. CrowdSec IPS (Optional)
 echo ""
@@ -761,12 +844,10 @@ echo "=== CrowdSec IPS (Optional) ==="
 echo "CrowdSec detects and blocks malicious traffic using community threat intelligence."
 echo "The Nginx Bouncer is already built-in. This installs the CrowdSec Agent locally."
 echo ""
-read -r -p "Install CrowdSec? [y/N] (Default: N): " cs_choice
+# Choice was collected before stopping ShieldPM.
 
 if [[ "$cs_choice" =~ ^[Yy]$ ]]; then
     echo "--> Installing CrowdSec Agent..."
-    curl -fsSL https://install.crowdsec.net | bash
-    apt-get install -y crowdsec
 
     # Create acquis with native log paths (/data/nginx/ instead of Docker's /opt/shieldpm/nginx/)
     ACQUIS_DIR="/etc/crowdsec/acquis.d"
@@ -781,24 +862,15 @@ ACQUIS_EOF
 
     # Install ShieldPM parser and collections
     echo "--> Installing CrowdSec parsers and collections..."
-    
+
     # Download custom parser/collection from GitHub directly to target directories
     mkdir -p /etc/crowdsec/parsers/s01-parse/
     mkdir -p /etc/crowdsec/collections/
-    
-    curl -fsSL -o /etc/crowdsec/parsers/s01-parse/shieldpm.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/develop/rootfs/etc/crowdsec/parser.yaml
-    curl -fsSL -o /etc/crowdsec/collections/shieldpm.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/develop/rootfs/etc/crowdsec/collection.yaml
+
+    cp "$INSTALL_SOURCE_DIR/rootfs/etc/crowdsec/parser.yaml" /etc/crowdsec/parsers/s01-parse/shieldpm.yaml
+    cp "$INSTALL_SOURCE_DIR/rootfs/etc/crowdsec/collection.yaml" /etc/crowdsec/collections/shieldpm.yaml
 
     echo "  > Installed ShieldPM parser & collection"
-
-    cscli hub update
-    # Install standard collections/scenarios from hub
-    cscli collections install crowdsecurity/base-http-scenarios 2>/dev/null || true
-    cscli collections install crowdsecurity/http-cve 2>/dev/null || true
-    cscli collections install crowdsecurity/appsec-virtual-patching 2>/dev/null || true
-    cscli collections install crowdsecurity/appsec-generic-rules 2>/dev/null || true
-    cscli collections install crowdsecurity/modsecurity 2>/dev/null || true
-    cscli scenarios install crowdsecurity/nginx-req-limit-exceeded 2>/dev/null || true
 
     # Generate bouncer API key and auto-configure
     echo "--> Configuring CrowdSec Bouncer..."
@@ -848,41 +920,14 @@ echo "=== Anubis AI Firewall (Optional) ==="
 echo "Anubis weighs the soul of incoming HTTP requests to stop AI crawlers."
 echo "It runs as a sidecar proxy to filter traffic before it reaches Nginx."
 echo ""
-read -r -p "Install Anubis? [y/N] (Default: N): " anubis_choice
+# Choice was collected before stopping ShieldPM.
 
 if [[ "$anubis_choice" =~ ^[Yy]$ ]]; then
     echo "--> Installing Anubis..."
 
-    # Detect Architecture
-    ARCH=$(dpkg --print-architecture)
-    # Map Debian arch to Anubis binary naming (linux-amd64, linux-arm64)
-    if [ "$ARCH" = "amd64" ]; then
-        ANUBIS_ARCH="amd64"
-    elif [ "$ARCH" = "arm64" ]; then
-        ANUBIS_ARCH="arm64"
-    else
-        echo "  > Warning: Unsupported architecture $ARCH. Anubis might not work."
-        ANUBIS_ARCH="$ARCH"
-    fi
+    install -m 755 "$INSTALL_TMP_DIR/anubis" /usr/local/bin/anubis
+    set_env_value ANUBIS_ENABLED true
 
-    VERSION="1.27.0"
-    URL="https://github.com/TecharoHQ/anubis/releases/download/v${VERSION}/anubis-${VERSION}-linux-${ANUBIS_ARCH}.tar.gz"
-
-    echo "  > Downloading from $URL..."
-    curl -fL -o "$INSTALL_TMP_DIR/anubis.tar.gz" "$URL"
-
-    if [ -s "$INSTALL_TMP_DIR/anubis.tar.gz" ]; then
-        tar -xzf "$INSTALL_TMP_DIR/anubis.tar.gz" -C /usr/local/bin --strip-components=2 "anubis-${VERSION}-linux-${ANUBIS_ARCH}/bin/anubis"
-        rm "$INSTALL_TMP_DIR/anubis.tar.gz"
-        chmod +x /usr/local/bin/anubis
-        echo "  > Anubis installed to /usr/local/bin/anubis"
-
-        # Enable in .env
-        set_env_value ANUBIS_ENABLED true
-        echo "  > Enabled in $ENV_FILE"
-    else
-        echo "  > Download failed!"
-    fi
 else
     echo "--> Skipping Anubis."
 fi
@@ -893,52 +938,13 @@ echo "=== OAuth2 Proxy (Optional) ==="
 echo "OAuth2 Proxy protects your applications using an external OAuth2 provider."
 echo "It handles authentication flow and passes user identity to the backend."
 echo ""
-read -r -p "Install OAuth2 Proxy? [y/N] (Default: N): " oauth2_choice
+# Choice was collected before stopping ShieldPM.
 
 if [[ "$oauth2_choice" =~ ^[Yy]$ ]]; then
     echo "--> Installing OAuth2 Proxy..."
 
-    # Detect Architecture
-    ARCH=$(dpkg --print-architecture)
-    # Map Debian arch to OAuth2 Proxy binary naming (linux-amd64, linux-arm64)
-    if [ "$ARCH" = "amd64" ]; then
-        OAUTH2_ARCH="amd64"
-    elif [ "$ARCH" = "arm64" ]; then
-        OAUTH2_ARCH="arm64"
-    else
-        echo "  > Warning: Unsupported architecture $ARCH. OAuth2 Proxy might not work."
-        OAUTH2_ARCH="$ARCH"
-    fi
+    install -m 755 "$INSTALL_TMP_DIR/oauth2-proxy" /usr/local/bin/oauth2-proxy
 
-    OAUTH2_VERSION="7.15.3"
-    OAUTH2_TARBALL="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}.tar.gz"
-    OAUTH2_URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${OAUTH2_VERSION}/${OAUTH2_TARBALL}"
-
-    OAUTH2_TMP_DIR=$(mktemp -d)
-    OAUTH2_TAR="$OAUTH2_TMP_DIR/$OAUTH2_TARBALL"
-
-    echo "  > Downloading OAuth2 Proxy $OAUTH2_VERSION ($OAUTH2_ARCH)..."
-    curl -L -f -o "$OAUTH2_TAR" "$OAUTH2_URL" || true
-
-    if [ -s "$OAUTH2_TAR" ]; then
-        cd "$OAUTH2_TMP_DIR"
-        if tar -xzf "$OAUTH2_TARBALL"; then
-            EXTRACTED_BIN="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
-            if [ -f "$EXTRACTED_BIN" ]; then
-                mv "$EXTRACTED_BIN" /usr/local/bin/oauth2-proxy
-                chmod +x /usr/local/bin/oauth2-proxy
-                echo "  > OAuth2 Proxy installed successfully."
-            else
-                echo "  ! Failed to locate extracted OAuth2 Proxy binary."
-            fi
-        else
-            echo "  ! Failed to extract OAuth2 Proxy."
-        fi
-        cd - > /dev/null
-    else
-        echo "  ! Failed to download OAuth2 Proxy. Check internet connection."
-    fi
-    rm -rf "$OAUTH2_TMP_DIR"
 else
     echo "--> Skipping OAuth2 Proxy."
 fi
@@ -950,12 +956,11 @@ echo "OpenAppSec is an AI-based Web Application Firewall (WAF) that protects"
 echo "against OWASP Top 10 threats using machine learning."
 echo "The Nginx attachment module is already built-in."
 echo ""
-read -r -p "Install OpenAppSec Agent? [y/N] (Default: N): " oas_choice
+# Choice was collected before stopping ShieldPM.
 
 if [[ "$oas_choice" =~ ^[Yy]$ ]]; then
     echo "--> Downloading OpenAppSec installer..."
     cd "$INSTALL_TMP_DIR"
-    curl -fsSL -o open-appsec-install https://downloads.openappsec.io/open-appsec-install
     chmod +x open-appsec-install
 
     # Ask about cloud portal
@@ -963,7 +968,6 @@ if [[ "$oas_choice" =~ ^[Yy]$ ]]; then
     echo "  OpenAppSec can be managed via the Cloud Portal (https://my.openappsec.io)"
     echo "  or locally via a policy file. Cloud management requires a Deployment Profile Token."
     echo ""
-    read -r -s -p "  Enter AGENT_TOKEN (leave empty for local-only mode): " OAS_AGENT_TOKEN
     echo
 
     echo "--> Running OpenAppSec installer (agent only)..."
@@ -1022,7 +1026,6 @@ APPSEC_EOF
     echo "  OpenAppSec offers an Advanced ML Model with improved detection accuracy."
     echo "  Download it from: https://my.openappsec.io or https://downloads.openappsec.io"
     echo ""
-    read -r -p "  Path to Advanced Model .tgz (leave empty to skip): " OAS_MODEL_PATH
 
     if [ -n "$OAS_MODEL_PATH" ] && [ -f "$OAS_MODEL_PATH" ]; then
         mkdir -p /etc/cp/conf

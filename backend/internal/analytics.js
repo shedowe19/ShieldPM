@@ -2,6 +2,7 @@ import fs from "node:fs";
 import dayjs from "dayjs";
 import { Tail } from "tail";
 import { resolveAnalyticsRange } from "../lib/analytics-range.js";
+import { upsertAnalyticsRows } from "../lib/analytics-upsert.js";
 import errs from "../lib/error.js";
 import { subscribeProxyHostDomains } from "../lib/proxy-host-domain-events.js";
 import { analytics as logger } from "../logger.js";
@@ -376,41 +377,7 @@ export class AnalyticsService {
 			request_count: entry.count,
 		}));
 
-		await AnalyticCount.transaction(async (trx) => {
-			for (const chunk of this.chunkArray(rows, INSERT_CHUNK_SIZE)) {
-				// Knex/Objection does not support batch insert with onConflict merge for sqlite/mysql well.
-				// Insert individually to prevent "batch insert only works with Postgresql and SQL Server"
-				for (const row of chunk) {
-					await AnalyticCount.query(trx)
-						.insert(row)
-						.onConflict(["aggregation_key", "aggregation_timestamp", "aggregation_generation"])
-						.merge({
-							status_code_2xx: AnalyticCount.knex().raw(
-								"coalesce(analytic_count.status_code_2xx, 0) + ?",
-								[row.status_code_2xx],
-							),
-							status_code_3xx: AnalyticCount.knex().raw(
-								"coalesce(analytic_count.status_code_3xx, 0) + ?",
-								[row.status_code_3xx],
-							),
-							status_code_4xx: AnalyticCount.knex().raw(
-								"coalesce(analytic_count.status_code_4xx, 0) + ?",
-								[row.status_code_4xx],
-							),
-							status_code_5xx: AnalyticCount.knex().raw(
-								"coalesce(analytic_count.status_code_5xx, 0) + ?",
-								[row.status_code_5xx],
-							),
-							bytes_sent: AnalyticCount.knex().raw("coalesce(analytic_count.bytes_sent, 0) + ?", [
-								row.bytes_sent,
-							]),
-							request_count: AnalyticCount.knex().raw("coalesce(analytic_count.request_count, 0) + ?", [
-								row.request_count,
-							]),
-						});
-				}
-			}
-		});
+		await upsertAnalyticsRows(AnalyticCount, rows, INSERT_CHUNK_SIZE);
 	}
 
 	async flush() {

@@ -1,0 +1,23 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"starts_at",
+		"ends_at",
+		"reason"
+	],
+	"properties": {
+		"starts_at": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"ends_at": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"reason": {
+			"type": "string",
+			"maxLength": 255
+		}
+	}
+}

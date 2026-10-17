@@ -3,6 +3,13 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import ipaddr from "ipaddr.js";
 import errs from "../lib/error.js";
+import {
+	invalidateWireguardSnapshot,
+	probeWireguardAvailable,
+	probeWireguardInterface,
+	readWireguardSnapshot,
+	wireguardCommand,
+} from "../lib/wireguard-status.js";
 import { global as logger } from "../logger.js";
 import settingModel from "../models/setting.js";
 import WireguardPeer from "../models/wireguard_peer.js";
@@ -23,7 +30,14 @@ let configurationChanges = Promise.resolve();
  * @returns {Promise<T>}
  */
 const serializeConfigurationChange = (operation) => {
-	const task = configurationChanges.then(operation);
+	const task = configurationChanges.then(async () => {
+		invalidateWireguardSnapshot();
+		try {
+			return await operation();
+		} finally {
+			invalidateWireguardSnapshot();
+		}
+	});
 	configurationChanges = task.catch(() => {});
 	return task;
 };
@@ -291,34 +305,25 @@ const execStdin = (command, stdinData, silent = false) => {
 
 /**
  * Check if `wg` CLI is available
- * @returns {boolean}
+ * @returns {Promise<boolean>}
  */
-const isWgAvailable = () => {
-	try {
-		exec("which wg", true);
-		return true;
-	} catch {
-		return false;
-	}
-};
+const isWgAvailable = probeWireguardAvailable;
 
 /**
  * Generate a WireGuard key pair
  * @returns {Promise<{ privateKey: string, publicKey: string }>}
  */
 const generateKeyPair = async () => {
-	const privateKey = exec("wg genkey");
+	const privateKey = await wireguardCommand("wg", ["genkey"]);
 	const publicKey = await execStdin("wg pubkey", privateKey);
 	return { privateKey, publicKey };
 };
 
 /**
  * Generate a preshared key
- * @returns {string}
+ * @returns {Promise<string>}
  */
-const generatePresharedKey = () => {
-	return exec("wg genpsk");
-};
+const generatePresharedKey = () => wireguardCommand("wg", ["genpsk"]);
 
 /**
  * Get the next available IP in the WG subnet
@@ -478,17 +483,9 @@ AllowedIPs = ${peer.client_address}
 
 /**
  * Check if the WG interface is up
- * @returns {boolean}
+ * @returns {Promise<boolean>}
  */
-const isInterfaceUp = () => {
-	try {
-		// Pass silent=true so we don't log errors when the interface is legitimately down
-		exec(`ip link show ${WG_INTERFACE} > /dev/null 2>&1`, true);
-		return true;
-	} catch {
-		return false;
-	}
-};
+const isInterfaceUp = probeWireguardInterface;
 
 /**
  * Bring the WG interface up or reload it
@@ -498,13 +495,13 @@ const applyConfig = async (forceRestart = false) => {
 	try {
 		const envPrefix = "WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go";
 
-		if (!forceRestart && isInterfaceUp()) {
+		if (!forceRestart && (await isInterfaceUp())) {
 			// Sync config without restarting (graceful)
 			exec(`bash -c "wg syncconf ${WG_INTERFACE} <(wg-quick strip ${wgConfFile})"`);
 			logger.info("WireGuard: Interface config synced");
 		} else {
 			// Full restart if forced or down
-			if (isInterfaceUp()) {
+			if (await isInterfaceUp()) {
 				exec(`wg-quick down ${wgConfFile} 2>/dev/null || true`, true);
 			}
 			exec(`${envPrefix} wg-quick up ${wgConfFile}`);
@@ -522,41 +519,17 @@ const applyConfig = async (forceRestart = false) => {
 			logger.error("WireGuard: Failed to restart interface:", restartErr.message);
 			throw restartErr;
 		}
+	} finally {
+		invalidateWireguardSnapshot();
 	}
 };
 
-/**
- * Parse `wg show` dump output for peer status
- * @returns {Map<string, {lastHandshake: number, transferRx: number, transferTx: number}>}
- */
-const parsePeerStatuses = () => {
-	const statuses = new Map();
-	try {
-		// Use absolute path in case systemd/Node lacks /usr/bin in $PATH somehow
-		const output = exec(`/usr/bin/wg show ${WG_INTERFACE} dump`);
-		const lines = output.split("\n");
-
-		// Skip the first line (interface info)
-		for (let i = 1; i < lines.length; i++) {
-			const parts = lines[i].split("\t");
-			if (parts.length >= 7) {
-				const publicKey = parts[0];
-				const lastHandshake = Number.parseInt(parts[4], 10) || 0;
-				const transferRx = Number.parseInt(parts[5], 10) || 0;
-				const transferTx = Number.parseInt(parts[6], 10) || 0;
-				statuses.set(publicKey, { lastHandshake, transferRx, transferTx });
-			}
-		}
-	} catch (err) {
-		logger.error(`WireGuard: parsePeerStatuses failed: ${err.message}`);
-	}
-	return statuses;
-};
+const statusRefreshes = new Map();
 
 const internalWireguard = {
 	/**
 	 * Check if WireGuard is available
-	 * @returns {boolean}
+	 * @returns {Promise<boolean>}
 	 */
 	isAvailable: () => {
 		return isWgAvailable();
@@ -568,7 +541,7 @@ const internalWireguard = {
 	init: async () => {
 		logger.info("Initializing WireGuard Tunnels...");
 
-		if (!isWgAvailable()) {
+		if (!(await isWgAvailable())) {
 			logger.warn("WireGuard (wg) CLI not found, skipping initialization");
 			return;
 		}
@@ -654,7 +627,7 @@ const internalWireguard = {
 			}
 
 			// Re-sync and apply config if WG is available
-			if (isWgAvailable()) {
+			if (await isWgAvailable()) {
 				await syncConfig();
 				await applyConfig(newMeta.server_address !== current.server_address);
 			}
@@ -668,9 +641,9 @@ const internalWireguard = {
 	 * @returns {Promise<Object>}
 	 */
 	getServerInfo: async () => {
-		const settings = await getWgSettings();
+		const [settings, snapshot] = await Promise.all([getWgSettings(), readWireguardSnapshot()]);
 
-		if (!isWgAvailable()) {
+		if (!snapshot.available) {
 			return {
 				available: false,
 				publicKey: null,
@@ -692,7 +665,7 @@ const internalWireguard = {
 				endpoint: endpointDisplay,
 				listenPort: settings.listen_port,
 				subnet: settings.subnet,
-				interfaceUp: isInterfaceUp(),
+				interfaceUp: snapshot.interfaceUp,
 			};
 		} catch (err) {
 			logger.error("WireGuard: Failed to get server info:", err.message);
@@ -716,7 +689,7 @@ const internalWireguard = {
 	createPeer: (data, ownerUserId) =>
 		serializeConfigurationChange(async () => {
 			validatePeerSettings(data);
-			if (!isWgAvailable()) {
+			if (!(await isWgAvailable())) {
 				throw new errs.ConfigurationError("WireGuard is not available on this system");
 			}
 
@@ -725,7 +698,7 @@ const internalWireguard = {
 
 			// Generate keys
 			const clientKeys = await generateKeyPair();
-			const presharedKey = generatePresharedKey();
+			const presharedKey = await generatePresharedKey();
 			const serverPublicKey = await getServerPublicKey();
 			const clientAddress = await getNextAvailableIP(settings.subnet, settings.server_address);
 			const endpoint = formatEndpoint(settings.endpoint, settings.listen_port);
@@ -919,33 +892,33 @@ PersistentKeepalive = ${peer.persistent_keepalive}
 	 * Refresh peer statuses from live WireGuard data
 	 * @param {number} [ownerUserId] Restrict refreshes to one owner's peers
 	 */
-	refreshStatuses: async (ownerUserId) => {
-		if (!isInterfaceUp()) return;
-
-		const statuses = parsePeerStatuses();
-		const query = WireguardPeer.query().where("is_deleted", 0).andWhere("status", "!=", 0);
-		if (ownerUserId !== undefined) {
-			query.where("owner_user_id", ownerUserId);
-		}
-		const peers = await query;
-
-		for (const peer of peers) {
-			const status = statuses.get(peer.client_public_key);
-			if (status) {
-				const patchData = {
-					transfer_rx: status.transferRx,
-					transfer_tx: status.transferTx,
-				};
-
-				// A handshake within the last 5 minutes means the peer is "online"
-				if (status.lastHandshake > 0) {
-					// Use native Date object. Knex will format it perfectly for the specific DB driver
-					patchData.last_handshake = new Date(status.lastHandshake * 1000);
+	refreshStatuses: (ownerUserId) => {
+		const key = ownerUserId === undefined ? "all" : `owner:${ownerUserId}`;
+		if (statusRefreshes.has(key)) return statusRefreshes.get(key);
+		const refresh = (async () => {
+			const snapshot = await readWireguardSnapshot();
+			if (!snapshot.interfaceUp) return;
+			const query = WireguardPeer.query().where("is_deleted", 0).andWhere("status", "!=", 0);
+			if (ownerUserId !== undefined) query.where("owner_user_id", ownerUserId);
+			const peers = await query.select("id", "client_public_key", "last_handshake", "transfer_rx", "transfer_tx");
+			for (const peer of peers) {
+				const status = snapshot.statuses.get(peer.client_public_key);
+				if (!status) continue;
+				const patch = {};
+				if (Number(peer.transfer_rx || 0) !== status.transferRx) patch.transfer_rx = status.transferRx;
+				if (Number(peer.transfer_tx || 0) !== status.transferTx) patch.transfer_tx = status.transferTx;
+				if (
+					status.lastHandshake > 0 &&
+					new Date(peer.last_handshake || 0).getTime() !== status.lastHandshake * 1000
+				) {
+					patch.last_handshake = new Date(status.lastHandshake * 1000);
 				}
-
-				await peer.$query().patch(patchData);
+				if (Object.keys(patch).length) await peer.$query().patch(patch);
 			}
-		}
+		})();
+		statusRefreshes.set(key, refresh);
+		refresh.finally(() => statusRefreshes.delete(key)).catch(() => {});
+		return refresh;
 	},
 
 	/**
@@ -953,8 +926,8 @@ PersistentKeepalive = ${peer.persistent_keepalive}
 	 * @returns {Promise<Map>}
 	 */
 	getAllPeerStatuses: async () => {
-		if (!isInterfaceUp()) return new Map();
-		return parsePeerStatuses();
+		const snapshot = await readWireguardSnapshot();
+		return new Map([...snapshot.statuses].map(([key, value]) => [key, { ...value }]));
 	},
 };
 

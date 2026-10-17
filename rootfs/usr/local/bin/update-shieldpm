@@ -474,7 +474,9 @@ apt-get install -y --no-install-recommends \
     python3-setuptools \
     libffi-dev \
     gyp \
-    jq
+    jq \
+    mariadb-client \
+    postgresql-client
 
 echo "--> [2/9] Fetching latest source..."
 git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TEMP_DIR"

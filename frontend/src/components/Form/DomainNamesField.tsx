@@ -61,7 +61,7 @@ export function DomainNamesField({
 						className="react-select-container"
 						classNamePrefix="react-select"
 						name={field.name}
-						id={id}
+						inputId={id}
 						closeMenuOnSelect={true}
 						isClearable={false}
 						isValidNewOption={validateDomain(isWildcardPermitted && dnsProviderWildcardSupported)}

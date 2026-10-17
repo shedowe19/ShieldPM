@@ -3,11 +3,18 @@ import http from "node:http";
 import https from "node:https";
 import net from "node:net";
 import errs from "../lib/error.js";
+import { normalizeUpstreamPool } from "../lib/host-traffic-policy.js";
+import {
+	clearPoolObservations,
+	poolObservationKey,
+	recordPoolObservations,
+} from "../lib/upstream-pool-observations.js";
 import { global as logger } from "../logger.js";
 import proxyHostModel from "../models/proxy_host.js";
 import ProxyHostMonitor from "../models/proxy_host_monitor.js";
 import ProxyHostMonitorCheck from "../models/proxy_host_monitor_check.js";
 import internalChat from "./chat.js";
+import internalIncidents from "./incidents.js";
 
 const TICK_MS = 10_000;
 const MAX_CONCURRENT = 5;
@@ -134,7 +141,11 @@ export function probeHttp(host, config, signal) {
 								...(config.upstream_server_name ? { servername: config.upstream_server_name } : {}),
 							}
 						: {}),
-					headers: { "User-Agent": "ShieldPM-Monitor/1", Accept: "*/*" },
+					headers: {
+						"User-Agent": "ShieldPM-Monitor/1",
+						Accept: "*/*",
+						...(config.host_header ? { Host: config.host_header } : {}),
+					},
 				},
 				(response) => {
 					const status = response.statusCode ?? null;
@@ -216,6 +227,64 @@ export function probeTcp(host, config, signal) {
 			finish("down", "Invalid upstream");
 		}
 	});
+}
+
+/** Try serving candidates sequentially within one monitor deadline, reserving time for failover. */
+export async function probePool(host, config, signal) {
+	const pool = normalizeUpstreamPool(host.meta?.upstream_pool, host);
+	const started = performance.now();
+	const candidates = [
+		...pool.targets.filter((target) => !target.backup),
+		...pool.targets.filter((target) => target.backup),
+	];
+	const observations = [];
+	const canonical = (host.domain_names || []).find((domain) =>
+		/^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$/i.test(domain),
+	);
+	let healthy = null;
+	for (let index = 0; index < candidates.length; index++) {
+		if (signal?.aborted) break;
+		const remaining = config.timeout_ms - (performance.now() - started);
+		if (remaining <= 0) break;
+		const target = candidates[index];
+		const budget = Math.max(1, Math.floor(remaining / (candidates.length - index)));
+		const options = {
+			...config,
+			timeout_ms: budget,
+			host_header: pool.host_header || canonical || target.host,
+			upstream_server_name:
+				config.upstream_server_name || pool.tls_server_name || pool.host_header || canonical || target.host,
+		};
+		const upstream = { forward_scheme: host.forward_scheme, forward_host: target.host, forward_port: target.port };
+		let result =
+			config.type === "tcp"
+				? await probeTcp(upstream, options, signal)
+				: await probeHttp(upstream, options, signal);
+		// A short shared-budget slice cannot prove the full configured target timeout failed.
+		if (result.state === "down" && result.message.startsWith("Timed out during"))
+			result = { ...result, state: "unknown", message: "Pool probe budget exhausted before a response" };
+		observations.push({ id: target.id, ...result });
+		if (result.state === "up") {
+			healthy = result;
+			break;
+		}
+	}
+	const state = healthy
+		? "up"
+		: observations.some((item) => item.state === "unknown") || observations.length < candidates.length
+			? "unknown"
+			: "down";
+	return {
+		state,
+		response_ms: Math.round(performance.now() - started),
+		status_code: healthy?.status_code ?? null,
+		message: healthy
+			? `Pool target ${observations[observations.length - 1].id}: ${healthy.message}`
+			: state === "down"
+				? "All upstream pool targets failed"
+				: "Upstream pool availability could not be verified",
+		targets: observations,
+	};
 }
 
 /** Match Nginx's forward_host/path split, but reject unsupported socket and file targets. */
@@ -351,6 +420,7 @@ const alertPath = (path) => {
 
 const alertTarget = (target, config) => {
 	if (!target) return "kein unterstütztes Netzwerkziel";
+	if (target.pool_target_count) return `Upstream-Pool (${target.pool_target_count} Ziele)`;
 	const hostname = target.forward_host;
 	if (typeof hostname !== "string" || (!net.isIP(hostname) && !/^[a-z0-9._-]{1,253}$/i.test(hostname))) {
 		return "ungültiger Zielname";
@@ -427,6 +497,10 @@ const alertDiagnosis = (result, expectedStatus) => {
 		"TLS handshake failed (ERR_SSL_WRONG_VERSION_NUMBER)": [
 			"TLS-Handshake wegen unpassender Protokollversion fehlgeschlagen.",
 			"Zielprotokoll und Port prüfen: Eventuell spricht der Port HTTP statt HTTPS.",
+		],
+		"All upstream pool targets failed": [
+			"Alle geprüften Pool-Ziele sind ausgefallen.",
+			"HTTP-/TCP-Beobachtungen im Pool-Tab und die Dienste auf den einzelnen Zielen prüfen.",
 		],
 		"Invalid upstream": ["Upstream-Ziel ist ungültig.", "Zieladresse und Port des Proxy-Hosts prüfen."],
 		"Unsupported upstream": [
@@ -518,17 +592,30 @@ async function getHost(access, hostId, permission) {
 	return host;
 }
 
-async function pruneHistory(hostId) {
+/**
+ * Keep both history bounds inside the transaction that saves the check.
+ * @param {number} hostId
+ * @param {import("knex").Knex.Transaction} [trx]
+ * @returns {Promise<void>}
+ */
+export async function pruneHistory(hostId, trx) {
 	const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
-	await ProxyHostMonitorCheck.query().where("host_id", hostId).where("checked_at", "<", cutoff).delete();
-	const newest = await ProxyHostMonitorCheck.query()
+	const boundary = await ProxyHostMonitorCheck.query(trx)
 		.select("id")
 		.where("host_id", hostId)
+		.where("checked_at", ">=", cutoff)
 		.orderBy("id", "desc")
-		.limit(MAX_HISTORY);
-	if (newest.length === MAX_HISTORY) {
-		await ProxyHostMonitorCheck.query().where("host_id", hostId).where("id", "<", newest.at(-1).id).delete();
-	}
+		.offset(MAX_HISTORY - 1)
+		.limit(1)
+		.first();
+	// Separate SELECT/DELETE queries also support MySQL's same-table subquery restriction.
+	await ProxyHostMonitorCheck.query(trx)
+		.where("host_id", hostId)
+		.where((query) => {
+			query.where("checked_at", "<", cutoff);
+			if (boundary) query.orWhere("id", "<", boundary.id);
+		})
+		.delete();
 }
 
 const internalProxyHostMonitor = {
@@ -559,6 +646,7 @@ const internalProxyHostMonitor = {
 		}
 		const existing = await ProxyHostMonitor.query().findOne({ host_id: hostId });
 		active.get(hostId)?.abort();
+		clearPoolObservations(hostId);
 		const measurementChanged =
 			!existing ||
 			[
@@ -590,7 +678,11 @@ const internalProxyHostMonitor = {
 		} else await ProxyHostMonitor.query().insert({ host_id: hostId, ...next });
 		// Preserve history for alert, interval and timeout edits. A changed endpoint or
 		// expected code describes a different measurement and starts a fresh history.
-		if (measurementChanged) await ProxyHostMonitorCheck.query().where("host_id", hostId).delete();
+		if (restart)
+			await ProxyHostMonitor.transaction(async (trx) => {
+				await internalIncidents.resetHost(hostId, trx);
+				if (measurementChanged) await ProxyHostMonitorCheck.query(trx).where("host_id", hostId).delete();
+			});
 		if (!options.skipAutoPush) {
 			// Delayed import avoids a module cycle: GitOps itself imports this service to restore monitors.
 			const { default: gitops } = await import("./gitops.js");
@@ -637,28 +729,55 @@ const internalProxyHostMonitor = {
 			const config = await ProxyHostMonitor.query().findOne({ host_id: hostId });
 			const host = await proxyHostModel.query().findById(hostId).where("is_deleted", 0);
 			if (!config?.enabled || !host?.enabled) return null;
-			const target = resolveTarget(host, config);
-			const result = !target
-				? { state: "down", response_ms: 0, status_code: null, message: "Unsupported upstream" }
-				: config.type === "tcp"
-					? await probeTcp(target, config, abort.signal)
-					: await probeHttp(target, { ...config, path: target.path }, abort.signal);
+			const pool = normalizeUpstreamPool(host.meta?.upstream_pool, host);
+			if (pool?.enabled) {
+				const domains = await host.$relatedQuery("host_domains").select("domain_name").orderBy("id").limit(5);
+				host.domain_names = domains.map((row) => row.domain_name);
+			}
+			const poolKey = poolObservationKey(host);
+			const target = pool?.enabled
+				? { forward_scheme: host.forward_scheme, pool_target_count: pool.targets.length }
+				: resolveTarget(host, config);
+			const measured = pool?.enabled
+				? await probePool(host, config, abort.signal)
+				: !target
+					? { state: "down", response_ms: 0, status_code: null, message: "Unsupported upstream" }
+					: config.type === "tcp"
+						? await probeTcp(target, config, abort.signal)
+						: await probeHttp(target, { ...config, path: target.path }, abort.signal);
+			const { targets: poolTargets, ...result } = /** @type {any} */ (measured);
 			if (abort.signal.aborted) return null;
 			const current = await ProxyHostMonitor.query().findById(config.id);
 			const currentHost = await proxyHostModel.query().findById(hostId).where("is_deleted", 0);
-			if (!current?.enabled || !currentHost?.enabled || current.version !== config.version) return null;
+			if (pool?.enabled && currentHost) {
+				const domains = await currentHost
+					.$relatedQuery("host_domains")
+					.select("domain_name")
+					.orderBy("id")
+					.limit(5);
+				currentHost.domain_names = domains.map((row) => row.domain_name);
+			}
+			if (
+				!current?.enabled ||
+				!currentHost?.enabled ||
+				current.version !== config.version ||
+				poolObservationKey(currentHost) !== poolKey
+			)
+				return null;
 			const checkedAt = new Date().toISOString();
 			const transition = current.state !== result.state;
 			const alert = decideAlert(current, result.state, checkedAt);
+			let muted = false;
 			const persisted = await ProxyHostMonitor.transaction(async (trx) => {
+				muted = await internalIncidents.isMuted(hostId, checkedAt, trx);
 				const patched = await ProxyHostMonitor.query(trx)
 					.where("id", config.id)
 					.where("version", config.version)
 					.patch({
 						...result,
 						checked_at: checkedAt,
-						last_alert_at: alert.last_alert_at,
-						last_alert_state: alert.last_alert_state,
+						last_alert_at: muted ? current.last_alert_at : alert.last_alert_at,
+						last_alert_state: muted ? current.last_alert_state : alert.last_alert_state,
 						next_check_at: new Date(Date.now() + config.interval_seconds * 1000).toISOString(),
 					});
 				if (!patched) return false;
@@ -668,11 +787,13 @@ const internalProxyHostMonitor = {
 					...result,
 					transition,
 				});
+				await pruneHistory(hostId, trx);
+				await internalIncidents.recordCheck(trx, currentHost, config, result, checkedAt, muted);
 				return true;
 			});
 			if (!persisted) return null;
-			await pruneHistory(hostId);
-			if (alert.send) {
+			if (poolTargets) recordPoolObservations(host, poolTargets, checkedAt);
+			if (alert.send && !muted) {
 				let domains = [];
 				const priorFindings = { initialFailure: null, lastFailedCheck: null };
 				try {
@@ -793,8 +914,10 @@ const internalProxyHostMonitor = {
 	/** Called after a host was successfully deleted, to purge private health data. */
 	async removeHost(hostId) {
 		active.get(hostId)?.abort();
+		clearPoolObservations(hostId);
 		await ProxyHostMonitor.transaction(async (trx) => {
 			await ProxyHostMonitorCheck.query(trx).where("host_id", hostId).delete();
+			await internalIncidents.removeHost(hostId, trx);
 			await ProxyHostMonitor.query(trx).where("host_id", hostId).delete();
 		});
 	},
@@ -802,6 +925,7 @@ const internalProxyHostMonitor = {
 	/** Invalidate a measurement when the host's actual upstream changes. */
 	async resetHost(hostId, options = {}) {
 		active.get(hostId)?.abort();
+		clearPoolObservations(hostId);
 		await ProxyHostMonitor.transaction(async (trx) => {
 			const monitor = await ProxyHostMonitor.query(trx).findOne({ host_id: hostId });
 			if (!monitor) return;
@@ -824,6 +948,7 @@ const internalProxyHostMonitor = {
 				last_alert_state: null,
 			});
 			await ProxyHostMonitorCheck.query(trx).where("host_id", hostId).delete();
+			await internalIncidents.resetHost(hostId, trx);
 		});
 	},
 };

@@ -11,6 +11,7 @@ vi.mock("../../internal/nginx.js", () => ({
 	default: {
 		withConfigurationLock: (callback) => callback(),
 		configure: vi.fn(),
+		configureHost: vi.fn().mockResolvedValue({ nginx_online: true }),
 		deleteConfig: vi.fn(),
 		getConfigName: () => "/mock/nginx/proxy_host/1.conf",
 		backupConfig: vi.fn(),
@@ -33,6 +34,17 @@ vi.mock("../../models/access_list.js", () => ({
 }));
 vi.mock("../../models/proxy_host.js", () => ({
 	default: { query: mocks.query, transaction: async (callback) => callback({}) },
+}));
+
+vi.mock("../../lib/host-domain-claims.js", () => ({ withHostDomainClaims: async (_options, write) => write({}) }));
+vi.mock("../../internal/host-revisions.js", () => ({
+	default: { record: vi.fn() },
+	captureHostState: vi.fn(async () => {
+		const { default: current } = await import("../../internal/proxy-host.js");
+		const latest = current.get.mock.results.at(-1);
+		return { host: structuredClone(await latest.value), files: [], fingerprint: "captured-host" };
+	}),
+	restoreHostState: vi.fn(),
 }));
 
 import proxyHost from "../../internal/proxy-host.js";

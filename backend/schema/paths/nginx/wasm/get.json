@@ -1,0 +1,26 @@
+{
+	"operationId": "getNginxWasm",
+	"summary": "Inspect installed WebAssembly runtime and trusted policies",
+	"tags": [
+		"proxy-hosts"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.view"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Successful operation",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object"
+					}
+				}
+			}
+		}
+	}
+}

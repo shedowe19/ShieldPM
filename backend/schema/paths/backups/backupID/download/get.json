@@ -1,0 +1,46 @@
+{
+	"operationId": "downloadInstanceBackup",
+	"summary": "Download an encrypted instance archive",
+	"description": "Returns ciphertext only; requires an administrator session. Cache-Control is no-store.",
+	"tags": [
+		"instance-backups"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"responses": {
+		"403": {
+			"description": "Administrator permission required; backups disabled in demo mode"
+		},
+		"400": {
+			"description": "Invalid input or another instance operation is running"
+		},
+		"200": {
+			"description": "Encrypted authenticated .spmb archive",
+			"content": {
+				"application/octet-stream": {
+					"schema": {
+						"type": "string",
+						"format": "binary"
+					}
+				}
+			}
+		}
+	},
+	"parameters": [
+		{
+			"in": "path",
+			"name": "backupID",
+			"required": true,
+			"schema": {
+				"type": "string",
+				"format": "uuid"
+			},
+			"description": "Encrypted archive identifier, never a filesystem path"
+		}
+	]
+}

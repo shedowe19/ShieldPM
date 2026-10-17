@@ -1,0 +1,70 @@
+{
+	"operationId": "getMonitorIncidents",
+	"summary": "List persistent outages within host visibility",
+	"tags": [
+		"incidents"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.view"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "array",
+						"items": {
+							"$ref": "../../components/monitor-incident.json"
+						},
+						"maxItems": 100
+					}
+				}
+			}
+		},
+		"400": {
+			"description": "Invalid input or stale configuration"
+		},
+		"403": {
+			"description": "Permission denied"
+		},
+		"404": {
+			"description": "Object not found within caller scope"
+		}
+	},
+	"parameters": [
+		{
+			"in": "query",
+			"name": "host_id",
+			"schema": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 9007199254740991
+			}
+		},
+		{
+			"in": "query",
+			"name": "status",
+			"schema": {
+				"enum": [
+					"all",
+					"open",
+					"resolved"
+				]
+			}
+		},
+		{
+			"in": "query",
+			"name": "before",
+			"schema": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 9007199254740991
+			}
+		}
+	]
+}

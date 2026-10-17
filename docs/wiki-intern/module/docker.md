@@ -54,6 +54,21 @@ Auto-Discovery sammelt geänderte Host-IDs während eines zweisekündlichen Debo
 
 Gleichzeitige Initialisierungsaufrufe teilen dieselbe Verbindungserstellung. Nach erfolgreichem Verbinden und Einrichten der Ereignisüberwachung bleibt eine erneute Backend-Startsequenz ohne weitere Docker-Listener. Ist kein Docker-Client erreichbar, bleibt eine spätere Initialisierung möglich.
 
+### Wiederverbindung und indizierter Startabgleich
+
+Ein beendeter oder fehlerhafter Docker-Eventstream erhält eine Wiederverbindung mit exponentiellem Abstand
+von einer bis höchstens 30 Sekunden. Erst eine mindestens 30 Sekunden stabile Verbindung setzt den
+Abstand zurück; sofort wieder abbrechende Streams behalten den Backoff. Pro Client existieren ein Stream und ein Reconnect-Timer; Stoppen
+verwirft verspätete Pings/Callbacks und entfernt Stream sowie Timer. Nach Wiederverbindung erfolgt vor
+weiteren Events ein vollständiger Abgleich. Ein defekter Stream ohne Zeilenende darf höchstens 1 MiB puffern.
+
+Der Start-/Reconnect-Abgleich lädt den vollständigen Host-/Domain-Graph einmal und führt indizierte Lookups
+für Container, automatische Domains und manuelle Domains durch. Der Index wird nach Writes aktualisiert.
+Das autoritative Domainregister beansprucht Namen innerhalb desselben Datenbank-Writes; der Index ersetzt
+keine Konfliktprüfung gegenüber anderen Prozessen oder neueren manuellen Änderungen.
+`docker-reconnect.spec.js` prüft End/Close/Error, Backoff, einzelne Listener und Stop während Ping;
+`docker-metadata-preservation.spec.js` misst einen Graph-Scan für zehn Container mit echten Modellen.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

@@ -1,4 +1,5 @@
 import type { ProxyHost } from "src/api/backend";
+import { defaultCachePolicy, defaultUpstreamPool } from "src/api/backend/hostTrafficPolicy";
 import { FORWARD_SCHEME, ICON_TYPE, PHP_VERSION, TERMINAL_AUTH_TYPE, TIME_UNIT } from "src/types/enums";
 import { describe, expect, it } from "vitest";
 import { createProxyHostInitialValues } from "./ProxyHostModalFormValues";
@@ -6,6 +7,7 @@ import { createProxyHostInitialValues } from "./ProxyHostModalFormValues";
 describe("createProxyHostInitialValues", () => {
 	it("initializes every ProxyHost form field with the existing safe defaults", () => {
 		expect(createProxyHostInitialValues({})).toStrictEqual({
+			id: undefined,
 			accessListId: 0,
 			advancedConfig: "",
 			advLimitReqBurst: undefined,
@@ -44,6 +46,10 @@ describe("createProxyHostInitialValues", () => {
 			maintenanceReason: "",
 			maintenanceStart: "",
 			meta: {
+				wasmFilters: [],
+				wafRuleset: "crs",
+				upstreamPool: defaultUpstreamPool(),
+				cachePolicy: defaultCachePolicy(),
 				ipFirewall: {
 					enabled: false,
 					listIds: [],
@@ -243,7 +249,13 @@ describe("createProxyHostInitialValues", () => {
 			},
 		};
 		const values = createProxyHostInitialValues({ meta });
-		expect(values.meta).toStrictEqual(meta);
+		expect(values.meta).toStrictEqual({
+			...meta,
+			wasmFilters: [],
+			wafRuleset: "crs",
+			upstreamPool: defaultUpstreamPool(),
+			cachePolicy: defaultCachePolicy(),
+		});
 		expect(values.meta?.ipFirewall?.listIds).not.toBe(meta.ipFirewall.listIds);
 		expect(values.meta?.ipFirewall?.denylist[0]).not.toBe(meta.ipFirewall.denylist[0]);
 		expect(values.meta?.ipFirewall?.asnDenylist).not.toBe(meta.ipFirewall.asnDenylist);

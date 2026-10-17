@@ -1,0 +1,47 @@
+{
+	"operationId": "postNginxHostWorkspaceBulkApply",
+	"summary": "Apply a reviewed plan with partial results and one Nginx activation",
+	"tags": [
+		"proxy-hosts"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.manage"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Successful operation",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object"
+					}
+				}
+			}
+		}
+	},
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"type": "object",
+					"required": [
+						"plan"
+					],
+					"additionalProperties": false,
+					"properties": {
+						"plan": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100000
+						}
+					}
+				}
+			}
+		}
+	}
+}

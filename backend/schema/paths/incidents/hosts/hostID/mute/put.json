@@ -1,0 +1,107 @@
+{
+	"operationId": "setHostAlarmMute",
+	"summary": "Schedule alarm suppression independently of maintenance pages",
+	"tags": [
+		"incidents"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.manage"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success",
+			"content": {
+				"application/json": {
+					"schema": {
+						"oneOf": [
+							{
+								"type": "null"
+							},
+							{
+								"type": "object",
+								"additionalProperties": false,
+								"required": [
+									"host_id",
+									"starts_at",
+									"ends_at",
+									"reason"
+								],
+								"properties": {
+									"host_id": {
+										"type": "integer",
+										"minimum": 1,
+										"maximum": 9007199254740991
+									},
+									"starts_at": {
+										"type": "string",
+										"format": "date-time"
+									},
+									"ends_at": {
+										"type": "string",
+										"format": "date-time"
+									},
+									"reason": {
+										"type": "string",
+										"maxLength": 255
+									}
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		"400": {
+			"description": "Invalid input or stale configuration"
+		},
+		"403": {
+			"description": "Permission denied"
+		},
+		"404": {
+			"description": "Object not found within caller scope"
+		}
+	},
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"oneOf": [
+						{
+							"$ref": "../../../../../components/alarm-mute-window.json"
+						},
+						{
+							"type": "object",
+							"additionalProperties": false,
+							"required": [
+								"clear"
+							],
+							"properties": {
+								"clear": {
+									"type": "boolean",
+									"const": true
+								}
+							}
+						}
+					]
+				}
+			}
+		}
+	},
+	"parameters": [
+		{
+			"in": "path",
+			"name": "hostID",
+			"required": true,
+			"schema": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 9007199254740991
+			}
+		}
+	]
+}

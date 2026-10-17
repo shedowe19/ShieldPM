@@ -1,0 +1,57 @@
+{
+  "operationId": "getProxyHostCacheStatus",
+  "summary": "Retrieve cache configuration and a bounded recent HIT/MISS sample",
+  "tags": ["proxy-hosts"],
+  "security": [
+    {
+      "bearerAuth": ["proxy_hosts.view"]
+    }
+  ],
+  "parameters": [
+    {
+      "in": "path",
+      "name": "hostID",
+      "required": true,
+      "schema": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 9007199254740991
+      }
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "Current host policy result",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "required": ["enabled", "counts", "sample_requests"],
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "counts": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer"
+                }
+              },
+              "hit_ratio": {
+                "type": ["number", "null"],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "sample_requests": {
+                "type": "integer"
+              },
+              "sample_limit_bytes": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

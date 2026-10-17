@@ -1,0 +1,37 @@
+{
+	"operationId": "getTokensSessions",
+	"summary": "List own browser sessions without refresh credentials",
+	"tags": [
+		"tokens"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"authenticated"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Successful operation",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"properties": {
+							"sessions": {
+								"type": "array",
+								"items": {
+									"type": "object"
+								}
+							},
+							"has_more": {
+								"type": "boolean"
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

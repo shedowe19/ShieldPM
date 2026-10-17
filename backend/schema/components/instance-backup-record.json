@@ -1,0 +1,43 @@
+{
+	"type": "object",
+	"required": [
+		"id",
+		"name",
+		"created_on",
+		"app_version",
+		"database",
+		"size"
+	],
+	"additionalProperties": false,
+	"properties": {
+		"id": {
+			"type": "string",
+			"format": "uuid"
+		},
+		"name": {
+			"type": "string",
+			"maxLength": 80
+		},
+		"created_on": {
+			"type": "string"
+		},
+		"app_version": {
+			"type": [
+				"string",
+				"null"
+			]
+		},
+		"database": {
+			"enum": [
+				"sqlite",
+				"mysql",
+				"postgres",
+				null
+			]
+		},
+		"size": {
+			"type": "integer",
+			"minimum": 0
+		}
+	}
+}

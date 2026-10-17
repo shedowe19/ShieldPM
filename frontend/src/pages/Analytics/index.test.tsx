@@ -6,6 +6,12 @@ import { getAnalyticsStatus } from "src/api/backend/getAnalyticsStatus";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const hostSelection = vi.hoisted(() => ({
+	options: vi.fn(() => ({ data: [{ domainNames: ["example.com"], id: 1 }], isLoading: false })),
+	fullHosts: vi.fn(),
+}));
+vi.mock("src/hooks/useHostOptions", () => ({ useHostOptions: hostSelection.options }));
+
 vi.mock("src/api/backend", () => ({
 	getAnalyticsSeries: vi.fn().mockResolvedValue([]),
 	getAnalyticsSummary: vi.fn().mockResolvedValue({}),
@@ -22,7 +28,7 @@ vi.mock("src/components", () => ({
 
 vi.mock("src/hooks", () => ({
 	useHealth: () => ({ data: undefined }),
-	useProxyHosts: () => ({ data: [{ domainNames: ["example.com"], id: 1 }], isLoading: false }),
+	useProxyHosts: hostSelection.fullHosts,
 }));
 
 vi.mock("src/components/ui/select", () => ({
@@ -100,12 +106,19 @@ afterEach(async () => {
 });
 
 describe("Analytics", () => {
+	it("loads host-selection DTOs rather than the complete proxy configuration", async () => {
+		const { default: Analytics } = await import("./index");
+		render(<Analytics />);
+		await screen.findByText("example.com");
+		expect(hostSelection.options).toHaveBeenCalled();
+		expect(hostSelection.fullHosts).not.toHaveBeenCalled();
+	});
 	it("restores and shares the selected host and range in the URL", async () => {
 		const { default: Analytics } = await import("./index");
 
 		render(<Analytics />, "/analytics?host=1&range=7d");
 
-		await waitFor(() => expect(getAnalyticsSummary).toHaveBeenCalledWith(1, "7d"));
+		await waitFor(() => expect(getAnalyticsSummary).toHaveBeenCalledWith(1, "7d", expect.any(AbortSignal)));
 		fireEvent.click(screen.getByRole("button", { name: "30d" }));
 		await waitFor(() => expect(screen.getByTestId("analytics-location")).toHaveTextContent("?host=1&range=30d"));
 	});
@@ -124,7 +137,7 @@ describe("Analytics", () => {
 
 		render(<Analytics />);
 
-		await waitFor(() => expect(getAnalyticsSeries).toHaveBeenCalledWith(1, "24h"));
+		await waitFor(() => expect(getAnalyticsSeries).toHaveBeenCalledWith(1, "24h", expect.any(AbortSignal)));
 		fireEvent.click(screen.getByRole("button", { name: "Download" }));
 
 		expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
@@ -227,7 +240,7 @@ describe("Analytics", () => {
 
 		await screen.findByText("50");
 		fireEvent.click(screen.getByRole("button", { name: "1h" }));
-		await waitFor(() => expect(getAnalyticsSummary).toHaveBeenCalledWith(1, "1h"));
+		await waitFor(() => expect(getAnalyticsSummary).toHaveBeenCalledWith(1, "1h", expect.any(AbortSignal)));
 		fireEvent.click(screen.getByRole("button", { name: "7d" }));
 		await screen.findByText("200");
 

@@ -1,3 +1,5 @@
+vi.mock("../../lib/host-domain-claims.js", () => ({ withHostDomainClaims: (_options, write) => write({}) }));
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../db.js", () => ({ default: () => ({}) }));

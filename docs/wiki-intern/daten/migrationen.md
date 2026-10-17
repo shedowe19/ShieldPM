@@ -115,3 +115,16 @@ Der SQLite-Import in `backend/lib/db-migrate.js` ist vom Knex-Schema-Upgrade get
 
 - [Datenmodell](./datenmodell.md)
 - [Datenbank](./datenbank.md)
+
+## Proxy-Plattform und Betrieb vom 17. Oktober 2026
+
+| Migration                                 | Zweck                                                                                                     |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `20261017190100_seed_proxy_waf_ruleset`   | Bisher effektive WAF-Auswahl unabhängig vom neuen Cache speichern.                                        |
+| `20261017190200_add_host_domain_claims`   | Gemeinsames transaktionales Domainregister mit SHA-256-Schlüsseln und erhaltener Legacy-Mehrfachbelegung. |
+| `20261017190201_index_session_references` | Referenzindizes für begrenzte sichere Session-Bereinigung.                                                |
+| `20261017190300_incident_center`          | Störungen, Zeitaggregate, Alarmfenster, verschlüsselte Kanäle und dauerhafte Zustellungsaufträge.         |
+| `20261017190500_host_revisions`           | Verschlüsselte angenommene Host-Konfigurationen mit begrenzter Versionierung.                             |
+| `20261017190600_host_workspace`           | Host-Tags und benutzereigene Ansichten/Sicherheitsprofile.                                                |
+
+Instanzbackups verwenden einen privaten dateibasierten Katalog unter `DATA_PATH/instance-backups` und benötigen keine zusätzliche Anwendungsdatenbanktabelle. Einzelheiten stehen im [Umsetzungsnachweis](../entwicklung/feature-implementation-2026-10-17.md).

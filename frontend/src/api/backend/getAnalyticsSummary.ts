@@ -24,7 +24,11 @@ export interface AnalyticsRequestLog {
 	duration: number;
 }
 
-export const getAnalyticsSummary = (hostId?: number, range = "24h"): Promise<AnalyticsSummary> => {
+export const getAnalyticsSummary = (
+	hostId?: number,
+	range = "24h",
+	signal?: AbortSignal,
+): Promise<AnalyticsSummary> => {
 	const url = hostId ? `/nginx/analytics/${hostId}/summary` : "/nginx/analytics/global/summary";
-	return get({ url, params: { range } }) as Promise<AnalyticsSummary>;
+	return get({ url, params: { range } }, signal ? { signal } : undefined) as Promise<AnalyticsSummary>;
 };

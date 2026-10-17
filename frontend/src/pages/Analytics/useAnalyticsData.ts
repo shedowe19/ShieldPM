@@ -29,6 +29,7 @@ export const useAnalyticsData = (selectedHostId: string, range: string) => {
 		let cancelled = false;
 		let latestRequestId = 0;
 		let timeout: ReturnType<typeof setTimeout> | undefined;
+		let activeRequest: AbortController | undefined;
 
 		const clearScheduledFetch = () => {
 			if (timeout !== undefined) {
@@ -40,14 +41,17 @@ export const useAnalyticsData = (selectedHostId: string, range: string) => {
 		const fetchData = async (): Promise<boolean | undefined> => {
 			if (!selectedHostId) return undefined;
 			const requestId = ++latestRequestId;
+			activeRequest?.abort();
+			const controller = new AbortController();
+			activeRequest = controller;
 			setLoading(true);
 			try {
 				const hostId = Number.parseInt(selectedHostId, 10);
 				const [summaryData, seriesData] = await Promise.all([
-					getAnalyticsSummary(hostId, range),
-					getAnalyticsSeries(hostId, range),
+					getAnalyticsSummary(hostId, range, controller.signal),
+					getAnalyticsSeries(hostId, range, controller.signal),
 				]);
-				if (cancelled || requestId !== latestRequestId) return undefined;
+				if (cancelled || controller.signal.aborted || requestId !== latestRequestId) return undefined;
 				setSummary(summaryData);
 				setError(null);
 				setSeries(
@@ -97,6 +101,8 @@ export const useAnalyticsData = (selectedHostId: string, range: string) => {
 		};
 		const cancelPendingRequest = () => {
 			latestRequestId += 1;
+			activeRequest?.abort();
+			activeRequest = undefined;
 			setLoading(false);
 			clearScheduledFetch();
 		};
@@ -118,6 +124,7 @@ export const useAnalyticsData = (selectedHostId: string, range: string) => {
 		window.addEventListener("offline", handleOffline);
 		return () => {
 			cancelled = true;
+			activeRequest?.abort();
 			clearScheduledFetch();
 			document.removeEventListener("visibilitychange", handleVisibilityChange);
 			window.removeEventListener("online", handleOnline);

@@ -16,7 +16,9 @@ vi.mock("../../models/dead_host.js", () => ({ default: { query: mocks.deadQuery 
 vi.mock("../../models/redirection_host.js", () => ({ default: { query: mocks.redirectQuery } }));
 vi.mock("../../models/access_list.js", () => ({ default: {} }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: vi.fn() } }));
-vi.mock("../../internal/nginx.js", () => ({ default: { configure: mocks.configure } }));
+vi.mock("../../internal/nginx.js", () => ({
+	default: { withConfigurationLock: (write) => write(), configure: mocks.configure, configureHost: mocks.configure },
+}));
 vi.mock("../../internal/certificate.js", () => ({
 	default: {
 		createQuickCertificate: vi.fn().mockResolvedValue({ id: 8 }),
@@ -24,11 +26,20 @@ vi.mock("../../internal/certificate.js", () => ({
 	},
 }));
 vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: vi.fn() } }));
-vi.mock("../../internal/git-deploy.js", () => ({ default: { startPollingForHost: vi.fn() } }));
+vi.mock("../../internal/git-deploy.js", () => ({
+	default: { startPollingForHost: vi.fn(), stopPolling: vi.fn() },
+}));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: {} }));
 vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: { resetHost: vi.fn(), removeHost: vi.fn() } }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: mocks.encrypt }));
 vi.mock("../../lib/config.js", () => ({ isPostgres: () => false }));
+
+vi.mock("../../lib/host-domain-claims.js", () => ({ withHostDomainClaims: async (_options, write) => write({}) }));
+vi.mock("../../internal/host-revisions.js", () => ({
+	default: { record: vi.fn() },
+	captureHostState: async (id) => ({ host: await mocks.proxyQuery().findById(id), files: [] }),
+	restoreHostState: vi.fn(),
+}));
 
 import internalDeadHost from "../../internal/dead-host.js";
 import internalProxyHost from "../../internal/proxy-host.js";
@@ -49,6 +60,8 @@ const createStore = (source, queryMock) => {
 			allowGraph: vi.fn().mockReturnThis(),
 			withGraphFetched: vi.fn().mockReturnThis(),
 			first: vi.fn().mockReturnThis(),
+			findById: vi.fn().mockReturnThis(),
+			forUpdate: vi.fn().mockReturnThis(),
 			select: vi.fn().mockImplementation(() => {
 				collision = true;
 				return query;
