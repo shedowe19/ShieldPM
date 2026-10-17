@@ -1,12 +1,17 @@
 import crypto from "node:crypto";
-import { createWriteStream } from "node:fs";
+import { constants, createWriteStream } from "node:fs";
 import fs from "node:fs/promises";
-import path from "node:path";
 import { Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { configGet, isDemoMode } from "../lib/config.js";
 import errs from "../lib/error.js";
-import { InstanceBackup, MAX_BACKUP_BYTES, privateJson } from "../lib/instance-backup.js";
+import {
+	backupArchivePath,
+	backupMetadataPath,
+	InstanceBackup,
+	MAX_BACKUP_BYTES,
+	privateJson,
+} from "../lib/instance-backup.js";
 import internalAuditLog from "./audit-log.js";
 import internalNginx from "./nginx.js";
 
@@ -168,10 +173,22 @@ const internalBackups = {
 	/** Authorize an encrypted archive download. */
 	async download(access, id) {
 		await authorize(access);
-		const filename = backupEngine().archive(id);
-		const info = await fs.lstat(filename).catch(() => null);
-		if (!info?.isFile() || info.isSymbolicLink()) throw new errs.ItemNotFoundError(id);
-		return filename;
+		const instance = backupEngine();
+		const filename = backupArchivePath(instance.store, id);
+		await instance.initialize();
+		// Open once: a path substitution after this point must not change the downloaded inode.
+		const handle = await fs
+			.open(filename, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK)
+			.catch(() => null);
+		if (!handle) throw new errs.ItemNotFoundError(id);
+		try {
+			const info = await handle.stat();
+			if (!info.isFile()) throw new errs.ItemNotFoundError(id);
+			return { stream: handle.createReadStream(), size: info.size };
+		} catch (error) {
+			await handle.close();
+			throw error;
+		}
 	},
 	/** Persist an uploaded encrypted archive without buffering it into server memory. */
 	async upload(access, request) {
@@ -209,7 +226,7 @@ const internalBackups = {
 				database: null,
 				size,
 			};
-			await privateJson(path.join(instance.store, `${id}.json`), row);
+			await privateJson(backupMetadataPath(instance.store, id), row);
 			await audit(access, "created", "backup_imported", id);
 			return row;
 		} finally {

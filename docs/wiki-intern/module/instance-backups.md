@@ -35,6 +35,15 @@ das verschlüsselte Manifest enthält unter anderem SHA-256 je Datei, Datenbankt
 Archivdateien liegen mit Modus `0600`, das Backup-Verzeichnis mit `0700`. Arbeitsdateien und Prüfdaten
 können entschlüsselte Secrets enthalten und bleiben ebenfalls in diesem privaten Verzeichnis.
 
+Archiv- und Metadaten-IDs müssen primitive Zeichenketten im kanonischen UUID-Format mit Kleinbuchstaben sein;
+beide Dateipfade werden unabhängig auf das private Backup-Verzeichnis begrenzt. Entschlüsselung und Download
+öffnen einmal mit `O_NOFOLLOW` und verwenden denselben Dateideskriptor für Typ-/Größenprüfung und Lesen.
+Ein nachträglich ausgetauschter Pfad kann dadurch nicht auf einen anderen Dateiinhalt umleiten. Multipart-Uploads
+werden ausschließlich aus direkten Dateien des privaten Upload-Verzeichnisses gelesen; Symlinks als
+Upload-Verzeichnis oder temporäre Datei werden abgewiesen. Jede Upload-Anfrage besitzt ein eigenes
+Arbeitsverzeichnis; auch ungültige Multipart-Felder, überschrittene Limits, Parserfehler und Abbrüche
+beenden aktive Writer und räumen diesen Bereich auf, bevor der Operationsslot frei wird.
+
 Katalog, öffentliche Auftragsergebnisse und Audit-Einträge enthalten weder Passwort noch Datenbankzugangsdaten,
 Manifestinhalt oder private Dateipfade. Der Katalog zeigt nur ID, Name, Erstellzeit, Version, Provider und Größe.
 
@@ -109,9 +118,8 @@ nach einem bereits bestätigten Start.
 - Höchstens ein Hintergrundauftrag oder Upload gleichzeitig, höchstens 50 katalogisierte Archive und
   50 Auftragseinträge im Arbeitsspeicher. Auftragshistorie überlebt keinen Backend-Neustart; Archive und
   vorgemerkte Aktivierung bleiben auf Datenträger erhalten.
-- Größenlimit 8 GiB für Upload/Eingangsarchiv und entpackten Datenstrom; Manifest höchstens 16 MiB,
-  höchstens 30.000 Archiveinträge einschließlich Verzeichnissen und Links. Die Archivgröße wird zusätzlich
-  durch Kompression und Format-Overhead beeinflusst.
+- Größenlimit 8 GiB sowohl für erzeugte und hochgeladene Archive als auch den entpackten Datenstrom; Manifest höchstens 16 MiB,
+  höchstens 30.000 Archiveinträge einschließlich Verzeichnissen und Links. Beim erzeugten Archiv sind Header und Authentifizierungstag im Größenlimit enthalten.
 - Die Restore-Prüfung verlangt mindestens das Dreifache der deklarierten Dateigrößen zuzüglich 64 MiB
   freien Speicher auf dem Backup-Dateisystem. Das ersetzt keine Kapazitätsplanung für externe Datenbankklone
   oder dauerhaft behaltene Rollback-Checkpoints.

@@ -19,20 +19,20 @@ Wasm führt den gebündelten, begrenzten Policy-Filter aus. Ein beliebiger Uploa
 
 ## Fehlerkorrekturen
 
-| ID  | Änderung und Absicherung                                                                                                                                                                                                                 |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| B01 | Access-List-Dateien erhalten inhaltsadressierte Namen; laufende alte Worker lesen weiterhin die alten Passwort-/CA-Dateien. Ungültige CA wird vor Veröffentlichung verworfen. Gemeinsamer Rollback umfasst Datenbank, Dateien und Nginx. |
-| B02 | Begrenzter kanonischer Validator-Cache entfernt auch AJV-Einträge bei Verdrängung; konstante Schemas werden wiederverwendet.                                                                                                             |
-| B03 | Transaktionales gemeinsames Domainregister verhindert konkurrierende Proxy-/Redirect-/404-Belegungen auch über mehrere Datenbankverbindungen. Alte und neue Namen bleiben während einer Aktivierung für deren Rollback reserviert.       |
-| B04 | Docker-Eventstream verbindet mit begrenztem exponentiellem Backoff neu und gleicht den Bestand erneut ab; Stop beendet Stream und Timer.                                                                                                 |
-| B05 | GitOps aktiviert neue/geänderte Cloudflared-Tunnel und meldet Prozessfehler. Proxy-Importe berücksichtigen die neuen Policy- und Aktivierungsregeln.                                                                                     |
-| B06 | Manueller DDNS-Test und Scheduler verwenden dieselbe Provider-Queue und lesen aktuelle Konfiguration innerhalb der Queue.                                                                                                                |
-| B07 | Die ACME-Registrierung erfolgt erst bei der ersten tatsächlichen Zertifikatsanforderung unter dem vorhandenen Prozess-Lock. Ein nicht erreichbares ACME blockiert die Oberfläche nicht beim Start.                                       |
-| B08 | Installer und Runtime berücksichtigen die effektive Legacy-Datenbankquelle; eine widersprüchliche Providerwahl wird nicht mehr als erfolgreicher Wechsel ausgegeben.                                                                     |
-| B09 | Alle Proxy-Tabs haben zugängliche übersetzte Namen, einschließlich der bisherigen Symbol-Tabs.                                                                                                                                           |
-| B10 | Das gemeinsame React-Select-Domainfeld verwendet `inputId`, damit Label und tatsächliche Eingabe verbunden sind.                                                                                                                         |
-| B11 | Der Cache-Schalter erzeugt echte Cache-Direktiven. Eine Migration bewahrt die bisher effektive WAF-Auswahl unabhängig davon.                                                                                                             |
-| B12 | Upload-Relay kapselt IPv6-Ziele über den vorhandenen Upstream-Host-Filter; echte IPv4-/IPv6-/Pool-Anfragen prüfen den Datenpfad.                                                                                                         |
+| ID  | Änderung und Absicherung                                                                                                                                                                                                                           |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B01 | Access-List-Dateien erhalten unveränderliche versionierte Namen; laufende alte Worker lesen weiterhin die alten Passwort-/CA-Dateien. Ungültige CA wird vor Veröffentlichung verworfen. Gemeinsamer Rollback umfasst Datenbank, Dateien und Nginx. |
+| B02 | Begrenzter kanonischer Validator-Cache entfernt auch AJV-Einträge bei Verdrängung; konstante Schemas werden wiederverwendet.                                                                                                                       |
+| B03 | Transaktionales gemeinsames Domainregister verhindert konkurrierende Proxy-/Redirect-/404-Belegungen auch über mehrere Datenbankverbindungen. Alte und neue Namen bleiben während einer Aktivierung für deren Rollback reserviert.                 |
+| B04 | Docker-Eventstream verbindet mit begrenztem exponentiellem Backoff neu und gleicht den Bestand erneut ab; Stop beendet Stream und Timer.                                                                                                           |
+| B05 | GitOps aktiviert neue/geänderte Cloudflared-Tunnel und meldet Prozessfehler. Proxy-Importe berücksichtigen die neuen Policy- und Aktivierungsregeln.                                                                                               |
+| B06 | Manueller DDNS-Test und Scheduler verwenden dieselbe Provider-Queue und lesen aktuelle Konfiguration innerhalb der Queue.                                                                                                                          |
+| B07 | Die ACME-Registrierung erfolgt erst bei der ersten tatsächlichen Zertifikatsanforderung unter dem vorhandenen Prozess-Lock. Ein nicht erreichbares ACME blockiert die Oberfläche nicht beim Start.                                                 |
+| B08 | Installer und Runtime berücksichtigen die effektive Legacy-Datenbankquelle; eine widersprüchliche Providerwahl wird nicht mehr als erfolgreicher Wechsel ausgegeben.                                                                               |
+| B09 | Alle Proxy-Tabs haben zugängliche übersetzte Namen, einschließlich der bisherigen Symbol-Tabs.                                                                                                                                                     |
+| B10 | Das gemeinsame React-Select-Domainfeld verwendet `inputId`, damit Label und tatsächliche Eingabe verbunden sind.                                                                                                                                   |
+| B11 | Der Cache-Schalter erzeugt echte Cache-Direktiven. Eine Migration bewahrt die bisher effektive WAF-Auswahl unabhängig davon.                                                                                                                       |
+| B12 | Upload-Relay kapselt IPv6-Ziele über den vorhandenen Upstream-Host-Filter; echte IPv4-/IPv6-/Pool-Anfragen prüfen den Datenpfad.                                                                                                                   |
 
 ## Optimierungen
 
@@ -54,12 +54,18 @@ Die [JSON-Rohwerte](./feature-implementation-2026-10-17.json) enthalten alle Sam
 
 ## Abschließende Validierung
 
-- Backend: 2.405 Tests bestanden, 31 konfigurierte Skips; keine Fehler. PostgreSQL-Verhalten wird zusätzlich mit PGlite geprüft.
+- Backend: 2.455 Tests im Gesamtlauf bestanden, 31 konfigurierte Skips; keine Fehler. Die anschließende Upload-Nachprüfung besteht zusätzlich mit 19 HTTP-/Service-Tests. PostgreSQL-Verhalten wird zusätzlich mit PGlite geprüft.
 - Frontend: 986 Tests bestanden; TypeScript, Übersetzungen, Produktionbuild und komprimiertes Größenbudget bestanden.
 - Echter Chromium-Browser: zehn vollständige Abläufe einschließlich der neuen Bedienwege bestanden; keine unbehandelten Browserfehler.
 - Skripte/Betrieb: 170 Python-Tests, davon 149 bestanden und 21 umgebungsabhängig übersprungen; Shellsyntax geprüft.
 - Zusätzlich tatsächliches ShieldPM-Nginx: Wasm/Cache-Kombination, Header-Fehlerstrategie, Pool-Failover, IPv4/DNS/IPv6-Uploads, weiterlaufende Access-List-Worker und Backup-Containment.
 - Statische Konventionen, Diff-/Secretprüfung und Schema-Auflösung bestanden auf dem endgültigen Stand.
+
+### Nachprüfung der ersten CI-Runde
+
+Die echte GitHub-CI hat zusätzliche Annahmen der Testumgebung sichtbar gemacht: Die isolierte MariaDB-Testkopie erhält nun auch die Domain-Schlüsselhilfe; ein immer ausgeführter SQLite-Test prüft denselben vollständigen temporären Migrationsbaum. Drei reine Service-Tests laden keine fremden Datenbank-/Schlüsseldienste mehr. Ihre unveränderten 26 Assertions bestehen sowohl mit schreibgeschütztem `DATA_PATH` als auch ohne vorhandenes Datenverzeichnis. Access-List-Dateien und Revisionssnapshots verwenden denselben validierten Pfad unter `DATA_PATH`.
+
+Die CodeQL-Nachprüfung führte zu zusätzlichen Schutzmaßnahmen und Regressionstests: Dateipfade akzeptieren nur kanonische IDs, Cache-/Logzugriffe prüfen symbolische Links, und Backup-Downloads sowie Entschlüsselung lesen über denselben geprüften Dateideskriptor. Jeder Upload besitzt ein eigenes privates temporäres Verzeichnis, das auch bei falschen Formularfeldern, mehreren Dateien, Größenlimit, Parserfehlern und Verbindungsabbruch bereinigt wird. Sechs zusätzliche echte HTTP-Fälle prüfen diese Fehlerwege, unberührte fremde Dateien und eine anschließend erfolgreiche neue Anfrage. FIFOs können die Prüfung nicht blockieren. Access-List-Dateiversionen verwenden zufällige 256-Bit-IDs unabhängig von Zugangsdaten; die Passwörter bleiben mit bcrypt-Kostenfaktor 13 geschützt. Der WireGuard-Test startet einen festen Hilfsprozess statt erzeugten JavaScript-Quelltextes. CodeQL-Regeln werden dafür nicht unterdrückt.
 
 ## Integrationsregeln und Prüfgrenzen
 

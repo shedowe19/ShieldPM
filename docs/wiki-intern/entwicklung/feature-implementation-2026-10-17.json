@@ -55,11 +55,11 @@
 	"validation": {
 		"node": "26.12.0",
 		"backend": {
-			"passed": 2405,
+			"passed": 2455,
 			"skipped": 31,
-			"passed_files": 257,
-			"skipped_files": 5,
-			"seconds": 95.92
+			"passed_files": 260,
+			"skipped_files": 4,
+			"seconds": 94.64
 		},
 		"frontend": {
 			"passed": 986,
@@ -115,6 +115,19 @@
 			"new_errors": 0,
 			"advisories": 0,
 			"pass": true
+		},
+		"ci_hardening": {
+			"isolated_migration_dependency_fixture": "pass",
+			"readonly_and_absent_data_path_unit_boundaries": 26,
+			"acl_and_revisions_actual_nginx_cases": 121,
+			"traffic_policy_security_and_runtime_cases": 45,
+			"tscanner_uncommitted_files": 7,
+			"tscanner_new_errors": 0,
+			"codespell_tracked_files": 1751,
+			"codeql_suppressions_added": 0,
+			"backup_upload_http_and_service_cases": 19,
+			"backup_upload_cleanup_cases": 6,
+			"tscanner_final_staged_files": 7
 		}
 	}
 }

@@ -42,7 +42,12 @@ const createMigrationDirectory = () => {
 	temporaryDirectories.push(root);
 	fs.mkdirSync(directory);
 	fs.mkdirSync(join(root, "internal"));
+	fs.mkdirSync(join(root, "lib"));
 	fs.symlinkSync(backendSourcePath("node_modules"), join(root, "node_modules"), "dir");
+	fs.copyFileSync(
+		backendSourcePath("lib", "host-domain-claim-key.js"),
+		join(root, "lib", "host-domain-claim-key.js"),
+	);
 	fs.writeFileSync(join(root, "logger.js"), "export const migrate = { info() {}, warn() {} };\n");
 	fs.writeFileSync(
 		join(root, "internal", "nginx.js"),
@@ -55,6 +60,18 @@ const createMigrationDirectory = () => {
 };
 
 const mariaDb = shouldRunMariaDb ? describe : describe.skip;
+
+it("runs the isolated migration package with its real ESM dependencies without a MariaDB service", async () => {
+	const database = knex({ client: "better-sqlite3", connection: { filename: ":memory:" }, useNullAsDefault: true });
+	try {
+		await runMigrations(database, createMigrationDirectory());
+		const applied = (await database("migrations").select("name").orderBy("id")).map(({ name }) => name).sort();
+		expect(applied).toEqual(migrationNames);
+		expect(await database.schema.hasColumn("host_domain_claim", "domain_key")).toBe(true);
+	} finally {
+		await database.destroy();
+	}
+}, 30_000);
 
 mariaDb("complete MariaDB migration chain", () => {
 	it("applies every migration through the production runner to a fresh database", async () => {

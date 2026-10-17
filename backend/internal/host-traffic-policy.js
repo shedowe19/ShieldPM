@@ -1,19 +1,49 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { createWriteStream, constants as fsConstants } from "node:fs";
 import fs from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
+import { pipeline } from "node:stream/promises";
 import punycode from "punycode.js";
 import errs from "../lib/error.js";
 import { normalizeCachePolicy, normalizeUpstreamPool } from "../lib/host-traffic-policy.js";
 import { getPoolObservations } from "../lib/upstream-pool-observations.js";
 import { nginx as logger } from "../logger.js";
 
-const dataPath = () => process.env.DATA_PATH || "/data";
+const dataPath = () => path.resolve(process.env.DATA_PATH || "/data");
 const hostId = (value) => {
 	if (!Number.isSafeInteger(value) || value < 1) throw new errs.ValidationError("Invalid proxy host ID");
-	return value;
+	// Produce a numeric value rather than propagating request data into filesystem paths.
+	return Number(value);
 };
-export const cacheDirectory = (id) => path.join(dataPath(), "nginx", "cache", `host-${hostId(id)}`);
+const containedPath = (root, ...segments) => {
+	const filename = path.resolve(root, ...segments);
+	const relative = path.relative(root, filename);
+	if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative))
+		throw new errs.ConfigurationError("Unsafe storage path");
+	return filename;
+};
+const storageDirectories = async (directories) => {
+	for (const directory of directories) {
+		try {
+			const info = await fs.lstat(directory);
+			if (!info.isDirectory() || info.isSymbolicLink())
+				throw new errs.ConfigurationError("Unsafe storage directory");
+		} catch (error) {
+			if (error.code === "ENOENT") return false;
+			throw error;
+		}
+	}
+	return true;
+};
+const cacheDirectories = (directory) => [
+	dataPath(),
+	path.join(dataPath(), "nginx"),
+	path.dirname(directory),
+	directory,
+];
+const logDirectories = () => [dataPath(), path.join(dataPath(), "logs")];
+export const cacheDirectory = (id) => containedPath(path.join(dataPath(), "nginx", "cache"), `host-${hostId(id)}`);
 export const cacheRequestKeyPath = (requestPath, policy) => {
 	if (policy.cache_key !== "uri_ignore_query") return requestPath;
 	try {
@@ -32,7 +62,7 @@ export const observedRequestsFor = (logs, target) => {
 			.includes(address),
 	).length;
 };
-const trafficLog = (id) => path.join(dataPath(), "logs", `traffic_${hostId(id)}.log`);
+const trafficLog = (id) => containedPath(path.join(dataPath(), "logs"), `traffic_${hostId(id)}.log`);
 const probes = new Map();
 let logMaintenanceTimer;
 let logMaintenancePromise;
@@ -119,7 +149,7 @@ export async function prepareTrafficFiles(host) {
 	const normalized = normalizeCachePolicy(host.meta?.cache_policy, host);
 	if (!normalized?.enabled) return;
 	const directory = cacheDirectory(host.id);
-	const ancestors = [dataPath(), path.join(dataPath(), "nginx"), path.dirname(directory), directory];
+	const ancestors = cacheDirectories(directory);
 	for (const ancestor of ancestors) {
 		await fs.mkdir(ancestor, { recursive: true, mode: 0o700 });
 		const info = await fs.lstat(ancestor);
@@ -131,7 +161,9 @@ export async function prepareTrafficFiles(host) {
 async function readTraffic(id) {
 	let file;
 	try {
-		file = await fs.open(trafficLog(id), "r");
+		const filename = trafficLog(id);
+		if (!(await storageDirectories(logDirectories()))) return [];
+		file = await fs.open(filename, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK);
 		const info = await file.stat();
 		if (!info.isFile()) return [];
 		const start = Math.max(0, info.size - 1024 * 1024);
@@ -149,6 +181,7 @@ async function readTraffic(id) {
 		});
 	} catch (error) {
 		if (error.code === "ENOENT") return [];
+		if (error.code === "ELOOP") throw new errs.ConfigurationError("Unsafe traffic log");
 		throw error;
 	} finally {
 		await file?.close();
@@ -161,6 +194,7 @@ const service = {
 		if (logMaintenancePromise) return logMaintenancePromise;
 		logMaintenancePromise = (async () => {
 			const directory = path.join(dataPath(), "logs");
+			if (!(await storageDirectories(logDirectories()))) return;
 			let entries;
 			try {
 				entries = await fs.readdir(directory, { withFileTypes: true });
@@ -170,12 +204,31 @@ const service = {
 			}
 			for (const entry of entries) {
 				if (!entry.isFile() || !/^traffic_[1-9]\d*\.log$/.test(entry.name)) continue;
-				const filename = path.join(directory, entry.name);
-				const info = await fs.lstat(filename);
-				if (!info.isFile() || info.isSymbolicLink() || info.size <= 10 * 1024 * 1024) continue;
-				// Copy/truncate retains Nginx's open append descriptor. These are sampled observations.
-				await fs.copyFile(filename, `${filename}.1`);
-				await fs.truncate(filename, 0);
+				const filename = containedPath(directory, entry.name);
+				let file;
+				let temporary;
+				try {
+					file = await fs.open(
+						filename,
+						fsConstants.O_RDWR | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK,
+					);
+					const info = await file.stat();
+					if (!info.isFile() || info.size <= 10 * 1024 * 1024) continue;
+					// Preserve Nginx's append descriptor without following a planted rotation symlink.
+					temporary = containedPath(directory, `.traffic-${randomUUID()}.tmp`);
+					await pipeline(
+						file.createReadStream({ autoClose: false, start: 0, end: info.size - 1 }),
+						createWriteStream(temporary, { flags: "wx", mode: 0o600 }),
+					);
+					await fs.rename(temporary, `${filename}.1`);
+					temporary = null;
+					await file.truncate(0);
+				} catch (error) {
+					if (!["ENOENT", "ELOOP"].includes(error.code)) throw error;
+				} finally {
+					await file?.close();
+					if (temporary) await fs.unlink(temporary).catch(() => {});
+				}
 			}
 		})().finally(() => {
 			logMaintenancePromise = null;
@@ -203,21 +256,9 @@ const service = {
 		hostId(id);
 		probes.delete(id);
 		const directory = cacheDirectory(id);
-		let cacheExists = true;
-		for (const ancestor of [path.join(dataPath(), "nginx"), path.dirname(directory), directory]) {
-			try {
-				const info = await fs.lstat(ancestor);
-				if (!info.isDirectory() || info.isSymbolicLink())
-					throw new errs.ConfigurationError("Unsafe cache directory");
-			} catch (error) {
-				if (error.code === "ENOENT") {
-					cacheExists = false;
-					break;
-				}
-				throw error;
-			}
-		}
-		if (cacheExists) await fs.rm(directory, { recursive: true, force: true });
+		if (await storageDirectories(cacheDirectories(directory)))
+			await fs.rm(directory, { recursive: true, force: true });
+		if (!(await storageDirectories(logDirectories()))) return;
 		for (const filename of [trafficLog(id), `${trafficLog(id)}.1`]) {
 			try {
 				await fs.unlink(filename);
@@ -306,7 +347,8 @@ const service = {
 			throw new errs.ValidationError("Purge path must be an absolute request URI");
 		const directory = cacheDirectory(id);
 		let removed = 0;
-		const visit = async (current) => {
+		const visit = async (candidate, depth = 0) => {
+			const current = containedPath(directory, candidate);
 			let items;
 			try {
 				const stat = await fs.lstat(current);
@@ -318,9 +360,15 @@ const service = {
 				throw error;
 			}
 			for (const item of items) {
-				const filename = path.join(current, item.name);
+				if (
+					item.isDirectory() &&
+					(depth >= 2 || !(depth === 0 ? /^[a-f0-9]$/ : /^[a-f0-9]{2}$/).test(item.name))
+				)
+					continue;
+				if (!item.isDirectory() && !/^[a-f0-9]{32}$/.test(item.name)) continue;
+				const filename = containedPath(directory, current, item.name);
 				if (item.isDirectory()) {
-					await visit(filename);
+					await visit(filename, depth + 1);
 					continue;
 				}
 				if (item.isSymbolicLink() || !item.isFile() || !/^[a-f0-9]{32}$/.test(item.name)) continue;
@@ -350,7 +398,7 @@ const service = {
 			: null;
 		if (hashes && (host.domain_names || []).some((domain) => domain.includes("*") || domain.startsWith("~")))
 			throw new errs.ValidationError("Wildcard hosts require a full host cache purge");
-		await visit(directory);
+		if (await storageDirectories(cacheDirectories(directory))) await visit(directory);
 		const { default: internalAuditLog } = await import("./audit-log.js");
 		await internalAuditLog.add(access, {
 			action: "updated",

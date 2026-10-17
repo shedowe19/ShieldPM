@@ -18,7 +18,38 @@ export const MAX_BACKUP_BYTES = 8 * 1024 ** 3;
 const MAX_FILES = 30_000;
 const MAX_MANIFEST = 16 * 1024 ** 2;
 const STORE = "instance-backups";
-const validId = (id) => /^[0-9a-f-]{36}$/.test(id);
+const validId = (id) =>
+	typeof id === "string" &&
+	id.length === 36 &&
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id);
+
+/** Resolve one canonical archive identifier inside its private store. */
+export function backupArchivePath(store, id) {
+	if (
+		typeof id !== "string" ||
+		id.length !== 36 ||
+		!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id)
+	)
+		throw new Error("Invalid backup identifier");
+	const directory = path.resolve(store);
+	const filename = path.resolve(directory, `${id}.spmb`);
+	if (!filename.startsWith(`${directory}${path.sep}`)) throw new Error("Backup path escapes its store");
+	return filename;
+}
+
+/** Metadata uses the same canonical identifier and independently checked containment. */
+export function backupMetadataPath(store, id) {
+	if (
+		typeof id !== "string" ||
+		id.length !== 36 ||
+		!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id)
+	)
+		throw new Error("Invalid backup identifier");
+	const directory = path.resolve(store);
+	const filename = path.resolve(directory, `${id}.json`);
+	if (!filename.startsWith(`${directory}${path.sep}`)) throw new Error("Backup path escapes its store");
+	return filename;
+}
 const safePath = (name) => {
 	if (
 		typeof name !== "string" ||
@@ -338,8 +369,7 @@ export class InstanceBackup {
 		await fs.chmod(this.store, 0o700);
 	}
 	archive(id) {
-		if (!validId(id)) throw new Error("Invalid backup identifier");
-		return path.join(this.store, `${id}.spmb`);
+		return backupArchivePath(this.store, id);
 	}
 	async list() {
 		await this.initialize();
@@ -553,35 +583,36 @@ export class InstanceBackup {
 		}
 	}
 	async decrypt(id, password, work) {
-		const archive = this.archive(id);
-		const info = await fs.lstat(archive);
-		if (!info.isFile() || info.size < 52 || info.size > MAX_BACKUP_BYTES) throw new Error("Invalid backup archive");
-		const handle = await fs.open(archive, constants.O_RDONLY | constants.O_NOFOLLOW);
-		let header;
-		let tag;
+		const archive = backupArchivePath(this.store, id);
+		const compressed = path.join(work, "payload.gz");
+		// Keep one no-follow descriptor for metadata, authentication and ciphertext streaming.
+		// A pathname replacement after open must never switch the inode being decrypted.
+		const handle = await fs.open(archive, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
 		try {
-			header = Buffer.alloc(36);
-			tag = Buffer.alloc(16);
+			const info = await handle.stat();
+			if (!info.isFile() || info.size < 52 || info.size > MAX_BACKUP_BYTES)
+				throw new Error("Invalid backup archive");
+			const header = Buffer.alloc(36);
+			const tag = Buffer.alloc(16);
 			await handle.read(header, 0, 36, 0);
 			await handle.read(tag, 0, 16, info.size - 16);
+			if (!header.subarray(0, 8).equals(MAGIC)) throw new Error("Unsupported backup format");
+			const key = await keyFor(password, header.subarray(8, 24));
+			const decipher = crypto.createDecipheriv("aes-256-gcm", key, header.subarray(24));
+			decipher.setAAD(header);
+			decipher.setAuthTag(tag);
+			key.fill(0);
+			try {
+				await pipeline(
+					handle.createReadStream({ start: 36, end: info.size - 17, autoClose: false }),
+					decipher,
+					createWriteStream(compressed, { flags: "wx", mode: 0o600 }),
+				);
+			} catch {
+				throw new Error("Backup password is incorrect or the archive was modified");
+			}
 		} finally {
 			await handle.close();
-		}
-		if (!header.subarray(0, 8).equals(MAGIC)) throw new Error("Unsupported backup format");
-		const key = await keyFor(password, header.subarray(8, 24));
-		const decipher = crypto.createDecipheriv("aes-256-gcm", key, header.subarray(24));
-		decipher.setAAD(header);
-		decipher.setAuthTag(tag);
-		key.fill(0);
-		const compressed = path.join(work, "payload.gz");
-		try {
-			await pipeline(
-				createReadStream(archive, { start: 36, end: info.size - 17 }),
-				decipher,
-				createWriteStream(compressed, { flags: "wx", mode: 0o600 }),
-			);
-		} catch {
-			throw new Error("Backup password is incorrect or the archive was modified");
 		}
 		const unpacked = new PassThrough();
 		const pumping = pipeline(createReadStream(compressed), createGunzip(), byteLimit(MAX_BACKUP_BYTES), unpacked);
@@ -993,10 +1024,12 @@ export class InstanceBackup {
 		await fs.rm(work, { recursive: true, force: true });
 	}
 	async remove(id) {
+		const archive = backupArchivePath(this.store, id);
+		const metadata = backupMetadataPath(this.store, id);
 		if ((await this.pending())?.id === id)
 			throw new Error("Cancel the pending restore before removing its archive");
-		await fs.rm(this.archive(id));
-		await fs.rm(path.join(this.store, `${id}.json`), { force: true });
+		await fs.rm(archive);
+		await fs.rm(metadata, { force: true });
 	}
 	pendingWork(pending) {
 		if (!/^\.restore-[A-Za-z0-9]+$/.test(pending.work)) throw new Error("Invalid restore staging path");

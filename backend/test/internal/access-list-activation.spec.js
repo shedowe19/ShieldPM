@@ -145,6 +145,44 @@ describe.each(["sqlite", "postgres"])("access-list activation with %s", (engine)
 		if (embedded) await embedded.close();
 		else await state.db.destroy();
 	});
+	it.each([
+		{ id: "../../outside", username: "invalid:username", password: "unused" },
+		{ id: 1, username: "invalid:username", password: "unused" },
+		{ id: 1, username: "candidate", password: 123 },
+	])("never cleans up a supplied ID after an uncommitted create failure: %j", async (input) => {
+		if (engine === "postgres")
+			await state.db.raw("SELECT setval(pg_get_serial_sequence('access_list', 'id'), 1, true)");
+		const original = await state.db("access_list");
+		const credentials = await state.db("access_list_auth");
+		const remove = vi.spyOn(fs, "rm");
+		await expect(
+			service.create(access, {
+				id: input.id,
+				name: "Rejected",
+				items: [{ username: input.username, password: input.password }],
+			}),
+		).rejects.toThrow();
+		expect(await state.db("access_list")).toEqual(original);
+		expect(await state.db("access_list_auth")).toEqual(credentials);
+		expect(await fs.readFile(auth, "utf8")).toBe("previous:hash\n");
+		expect(await fs.readFile(`${auth}.crt`, "utf8")).toBe(pem);
+		expect(remove).not.toHaveBeenCalled();
+	});
+	it("compensates only its committed server-created ID after a later failure", async () => {
+		if (engine === "postgres")
+			await state.db.raw("SELECT setval(pg_get_serial_sequence('access_list', 'id'), 1, true)");
+		service.getFilename.mockImplementation(({ id }) => (id === 1 ? auth : `${auth}.${id}`));
+		service.get.mockRejectedValueOnce(new Error("Post-insert read failed"));
+		const remove = vi.spyOn(fs, "rm");
+		await expect(service.create(access, { id: 1, name: "Candidate", items: [] })).rejects.toThrow(
+			"Post-insert read failed",
+		);
+		expect((await state.db("access_list")).map((list) => list.id)).toEqual([1]);
+		expect(await fs.readFile(auth, "utf8")).toBe("previous:hash\n");
+		expect(remove).toHaveBeenCalledWith(`${auth}.2`, { force: true });
+		expect(remove).toHaveBeenCalledWith(`${auth}.2.crt`, { force: true });
+		expect(remove).not.toHaveBeenCalledWith(auth, expect.anything());
+	});
 	it("rejects malformed CA before publishing passwords or committing DB edits", async () => {
 		const before = await state.db("access_list_auth");
 		await expect(

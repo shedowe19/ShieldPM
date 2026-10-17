@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { Model } from "objection";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { accessListFiles } from "../../lib/access-list-files.js";
 import { createPostgres } from "../helpers/postgres.js";
 
 const state = vi.hoisted(() => ({ db: null, engine: "sqlite" }));
@@ -110,6 +111,7 @@ describe.each(["sqlite", "postgres"])("host revisions with %s", (engine) => {
 	});
 	beforeEach(async () => {
 		directory = await fs.mkdtemp(path.join(os.tmpdir(), "shieldpm-revisions-"));
+		vi.stubEnv("DATA_PATH", directory);
 		config = path.join(directory, "1.conf");
 		vi.spyOn(nginx, "getConfigName").mockReturnValue(config);
 		await fs.writeFile(config, "# previous valid configuration\n", { mode: 0o640 });
@@ -141,6 +143,7 @@ describe.each(["sqlite", "postgres"])("host revisions with %s", (engine) => {
 	});
 	afterEach(async () => {
 		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
 		await fs.rm(directory, { recursive: true, force: true });
 	});
 	afterAll(async () => {
@@ -184,12 +187,15 @@ describe.each(["sqlite", "postgres"])("host revisions with %s", (engine) => {
 		expect(await fs.readFile(config, "utf8")).toBe("# external change\n");
 	});
 	it("rejects changed shared authorization bytes without rolling back other hosts", async () => {
-		const authPath = "/data/access/985019";
-		await fs.mkdir("/data/access", { recursive: true });
+		const authPath = accessListFiles({ id: 985019 }).auth;
+		expect(path.relative(directory, authPath)).toBe(path.join("access", "985019"));
+		await fs.mkdir(path.dirname(authPath), { recursive: true });
 		await fs.writeFile(authPath, "previous:hash\n");
 		try {
 			await state.db("access_list").insert({ id: 985019, is_deleted: false, meta: "{}" });
 			await state.db("proxy_host").where("id", 1).update({ access_list_id: 985019 });
+			const snapshot = await captureHostState(1);
+			expect(snapshot.files.every((file) => file.path.startsWith(`${directory}${path.sep}`))).toBe(true);
 			const revision = await service.record(access(), 1);
 			const plan = await service.plan(access(), 1, revision.id);
 			await fs.writeFile(authPath, "rotated:hash\n");

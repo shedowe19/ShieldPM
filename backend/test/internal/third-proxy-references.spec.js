@@ -23,6 +23,16 @@ vi.mock("../../internal/git-deploy.js", () => ({ default: {} }));
 vi.mock("../../internal/gitops.js", () => ({ default: {} }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: {} }));
 vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: {} }));
+vi.mock("../../lib/host-domain-claims.js", () => ({
+	withHostDomainClaims: () => {
+		throw new Error("Rejected references must not write domain claims");
+	},
+}));
+vi.mock("../../db.js", () => ({
+	default: () => {
+		throw new Error("Reference authorization fixtures must not initialize the runtime database");
+	},
+}));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: vi.fn() }));
 vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.query } }));
 vi.mock("../../models/dead_host.js", () => ({ default: { query: mocks.query } }));

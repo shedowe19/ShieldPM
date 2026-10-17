@@ -1,10 +1,10 @@
-import { createHash, randomUUID, X509Certificate } from "node:crypto";
+import { randomBytes, randomUUID, X509Certificate } from "node:crypto";
 import fs from "node:fs";
 import { isIP } from "node:net";
 import bcrypt from "bcryptjs";
 import ipaddr from "ipaddr.js";
 import _ from "lodash";
-import { accessListFiles } from "../lib/access-list-files.js";
+import { accessListFilename, accessListFiles } from "../lib/access-list-files.js";
 import { captureConfigurationFiles, restoreConfigurationFiles } from "../lib/configuration-files.js";
 import errs from "../lib/error.js";
 import { normalizeAddress } from "../lib/firewall-addresses.js";
@@ -221,23 +221,27 @@ const internalAccessList = {
 		internalNginx.withConfigurationLock(async () => {
 			await access.can("access_lists:create", data);
 			validateCaBundle(data);
+			// Only a committed insert may select rollback targets. Input data.id is
+			// untrusted even when the HTTP schema normally excludes that property.
+			const creation = { id: null };
 			try {
-				return await internalAccessList.createUnlocked(access, data);
+				return await internalAccessList.createUnlocked(access, data, creation);
 			} catch (error) {
-				if (data.id) {
+				if (creation.id !== null) {
+					const filename = internalAccessList.getFilename({ id: creation.id });
 					await accessListModel.transaction(async (trx) => {
-						await accessListAuthModel.query(trx).delete().where("access_list_id", data.id);
-						await accessListClientModel.query(trx).delete().where("access_list_id", data.id);
-						await accessListModel.query(trx).delete().where("id", data.id);
+						await accessListAuthModel.query(trx).delete().where("access_list_id", creation.id);
+						await accessListClientModel.query(trx).delete().where("access_list_id", creation.id);
+						await accessListModel.query(trx).delete().where("id", creation.id);
 					});
-					await fs.promises.rm(internalAccessList.getFilename({ id: data.id }), { force: true });
-					await fs.promises.rm(`${internalAccessList.getFilename({ id: data.id })}.crt`, { force: true });
+					await fs.promises.rm(filename, { force: true });
+					await fs.promises.rm(`${filename}.crt`, { force: true });
 				}
 				throw error;
 			}
 		}),
 
-	createUnlocked: async (access, data) => {
+	createUnlocked: async (access, data, creation = { id: null }) => {
 		await access.can("access_lists:create", data);
 		validateListInput(data);
 		const row = await accessListModel.transaction(async (trx) => {
@@ -283,6 +287,7 @@ const internalAccessList = {
 			}
 			return created;
 		});
+		creation.id = row.id;
 		data.id = row.id;
 
 		// re-fetch with expansions
@@ -744,7 +749,7 @@ const internalAccessList = {
 	 * @returns {String}
 	 */
 	getFilename: (list) => {
-		return `/data/access/${list.id}`;
+		return accessListFilename(list.id);
 	},
 
 	/**
@@ -776,9 +781,9 @@ const internalAccessList = {
 		if (options.immutable) {
 			const authContent = lines.join("");
 			const caContent = list.mtls_enabled && !list.mtls_use_internal ? list.mtls_certificate || "" : "";
-			const revision = createHash("sha256")
-				.update(JSON.stringify({ auth: authContent, ca: caContent }))
-				.digest("hex");
+			// This is an artifact version, not a password verifier. Keep it random and
+			// independent of credentials; authentication retains the bcrypt hash above.
+			const revision = randomBytes(32).toString("hex");
 			const paths = accessListFiles({ id: list.id, meta: { authorization_revision: revision } }, htpasswdFile);
 			const publish = async (filename, content) => {
 				const temporary = `${filename}.${randomUUID()}.tmp`;

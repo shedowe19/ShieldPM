@@ -61,7 +61,10 @@ nur dieser Host geleert; `?path=/assets/app.js` entfernt die exakte ursprünglic
 für HTTP/HTTPS und die gespeicherten Host-Aliase. Wildcard-/Regexhosts verwenden den vollständigen
 Host-Purge, weil nicht alle tatsächlichen Hostnamen aufzählbar sind. Pfade wählen keine
 Dateisystempfade: Die Implementierung berechnet nur feste Cache-Hashes und folgt keinen
-Cache-Verzeichnis-Symlinks. Der vollständige Purge ist auch nach dem Deaktivieren des Caches
+Cache-Verzeichnis-Symlinks. Auch alle Vorfahren unterhalb von `DATA_PATH` werden geprüft;
+die Suche bleibt auf Nginx-Hashverzeichnisse der Ebenen `1:2` begrenzt. Host-IDs werden vor
+Dateizugriffen strikt als positive sichere Ganzzahlen geprüft und neu numerisch kanonisiert.
+Der vollständige Purge ist auch nach dem Deaktivieren des Caches
 verfügbar; ein exakter URI-Purge benötigt eine aktive Policy zur eindeutigen Key-Berechnung.
 Nach erfolgreichem Entfernen eines Hosts werden dessen Cacheverzeichnis und private Traffic-Logs
 entfernt. Die Purge-Aktion erscheint im Audit-Log.
@@ -73,7 +76,9 @@ Zeit, Upstream-Adresse, Cache-Zustand und HTTP-Status, keine Besucher-IP oder UR
 JSON-Analytics-Protokollierung bleibt zusätzlich aktiv.
 
 Die Backend-Wartung prüft die eigenen Logs minütlich und kopiert/trunkiert sie oberhalb von
-10 MiB mit höchstens einer Vorgängerdatei. Ein laufender Request kann daher noch in eine neue
+10 MiB mit höchstens einer Vorgängerdatei. Lesezugriffe öffnen Logs ohne Symlink-Folgen;
+die Rotation verwendet einen exklusiv erzeugten Zwischenspeicher und ersetzt die
+Vorgängerdatei atomar, statt einem eventuell vorhandenen Symlink zu folgen. Ein laufender Request kann daher noch in eine neue
 Stichprobe fallen; Messzähler werden nicht als abrechnungsfeste Statistik dargestellt. Der
 optionale System-Logrotate erfasst ebenfalls `traffic_*.log` mit Größenrotation. Beim Stoppen
 werden Wartungstimer und laufende Wartung sauber beendet.

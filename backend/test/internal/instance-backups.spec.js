@@ -93,6 +93,32 @@ describe("instance backup access and job boundaries", () => {
 			await expect(action()).rejects.toThrow("disabled in demo mode");
 		expect(await fs.readdir(directory)).toEqual([]);
 	});
+	it("rejects noncanonical archive identifiers and symlink downloads", async () => {
+		const id = "11111111-1111-4111-8111-111111111111";
+		await service.list(access);
+		const outside = path.join(directory, "private-source");
+		await fs.writeFile(outside, "must not be downloaded");
+		for (const invalid of ["../private-source", "..\\private-source", "-".repeat(36), `${id}\n`])
+			await expect(service.download(access, invalid)).rejects.toThrow("Invalid backup identifier");
+		await fs.symlink(outside, path.join(directory, "instance-backups", `${id}.spmb`));
+		await expect(service.download(access, id)).rejects.toMatchObject({ status: 404 });
+		expect(await fs.readFile(outside, "utf8")).toBe("must not be downloaded");
+	});
+	it("downloads the already opened archive even if its pathname is replaced", async () => {
+		const id = "11111111-1111-4111-8111-111111111111";
+		await service.list(access);
+		const filename = path.join(directory, "instance-backups", `${id}.spmb`);
+		const outside = path.join(directory, "private-source");
+		await fs.writeFile(filename, "authorized archive");
+		await fs.writeFile(outside, "private data");
+		const opened = await service.download(access, id);
+		await fs.rename(filename, `${filename}.old`);
+		await fs.symlink(outside, filename);
+		let content = "";
+		for await (const chunk of opened.stream) content += chunk.toString();
+		expect(content).toBe("authorized archive");
+		expect(opened.size).toBe(Buffer.byteLength(content));
+	});
 	it("audits create/import/stage/cancel/delete using known setting records without secrets", async () => {
 		const { InstanceBackup } = await import("../../lib/instance-backup.js");
 		const audit = (await import("../../internal/audit-log.js")).default.add;

@@ -12,6 +12,8 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("node:child_process", async (original) => {
 	const actual = await original();
+	const { backendSourcePath } = await import("../helpers/source-path.js");
+	const childScript = backendSourcePath("test", "helpers", "wireguard-status-child.js");
 	return {
 		...actual,
 		execSync: state.sync,
@@ -22,13 +24,9 @@ vi.mock("node:child_process", async (original) => {
 			const dump =
 				"private-interface-key\tpublic-interface-key\t51820\t0\nowned\tpsk\tendpoint\t10.8.0.2/32\t100\t200\t300\t0\nforeign\tpsk\tendpoint\t10.8.0.3/32\t100\t400\t500\t0";
 			const output = args[0] === "show" ? dump : "available";
-			const code =
-				state.failDump && args[0] === "show"
-					? "process.exit(1)"
-					: `process.stdout.write(${JSON.stringify(output)})`;
 			return actual.execFile(
 				process.execPath,
-				["-e", `setTimeout(() => { ${code} }, 20)`],
+				[childScript, output, state.failDump && args[0] === "show" ? "fail" : "ok"],
 				options,
 				(error, stdout, stderr) => {
 					state.active--;

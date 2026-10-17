@@ -29,7 +29,7 @@ stehen im [Modulhandbuch](../module/instance-backups.md).
 | DELETE  | `/api/backups/pending`       | `200`  | Noch nicht aktivierten Restore einschließlich externem Klon abbrechen |
 | DELETE  | `/api/backups/:id`           | `200`  | Gespeichertes Archiv und Katalogeintrag löschen                       |
 
-`:id` ist die vom Server vergebene Archiv-ID. Ein für Restore vorgemerktes Archiv muss vor dem Löschen
+`:id` ist die vom Server vergebene kanonische UUID in Kleinbuchstaben; Pfadbestandteile und abweichende Formate werden abgewiesen. Ein für Restore vorgemerktes Archiv muss vor dem Löschen
 abgebrochen werden. Während eines laufenden Auftrags oder Uploads sind konkurrierende Änderungen gesperrt.
 Ein bereits aktivierter Restore lässt sich über die laufende Instanz nicht abbrechen.
 
@@ -72,7 +72,10 @@ Datenbank während des laufenden Betriebs.
 
 `POST /upload` erwartet `multipart/form-data` mit genau einer Datei unter dem Namen `archive`.
 Maximalgröße ist 8.589.934.592 Bytes, also 8 GiB. Der Upload wird über eine private temporäre Datei
-verarbeitet. Die Datei muss die Formatkennung `SPMBKP01` besitzen und mindestens 52 Bytes groß sein.
+verarbeitet. Jede Anfrage erhält ein eigenes privates Unterverzeichnis. Erfolg, ungültige Felder, mehrere
+Dateien, Größenüberschreitung, Parserfehler und Verbindungsabbruch räumen ausschließlich dieses Verzeichnis
+auf; der Operationsslot wird erst danach freigegeben. Aktive Multipart-Writer werden beim Abbruch beendet.
+Lese- und Löschpfade bleiben auf diese anfrageeigenen Dateien begrenzt; Symlinks werden nicht als Archive gelesen. Die Datei muss die Formatkennung `SPMBKP01` besitzen und mindestens 52 Bytes groß sein.
 Ein erfolgreicher Upload erzeugt einen neuen lokalen Archiveintrag mit Name `Imported backup`;
 `app_version` und `database` sind dort zunächst `null`.
 

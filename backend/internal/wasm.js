@@ -22,7 +22,7 @@ const forbidden = new Set([
 	"content-length",
 	"transfer-encoding",
 	"upgrade",
-	"te",
+	"te", // HTTP TE field; codespell:ignore te
 	"trailer",
 	"keep-alive",
 	"proxy-connection",

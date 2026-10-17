@@ -303,6 +303,85 @@ describe("authorized cache and bounded observations", () => {
 		await expect(service.purgeCache({ can: state.can }, 12)).rejects.toThrow("Unsafe");
 		expect(await fs.readFile(file, "utf8")).toBe("keep");
 	});
+	it.each(["../13", "12/../../logs/traffic_13.log", "12%2f..%2f13", "12", 0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+		"rejects noncanonical host identity %s before storage access",
+		async (id) => {
+			const logs = path.join(directory, "logs");
+			await fs.mkdir(logs);
+			const outside = path.join(logs, "traffic_13.log");
+			await fs.writeFile(outside, '{"cache":"HIT"}\n');
+			expect(() => cacheDirectory(id)).toThrow("Invalid proxy host ID");
+			await expect(service.cacheStatus({ can: state.can }, id)).rejects.toThrow("Invalid proxy host ID");
+			await expect(service.purgeCache({ can: state.can }, id)).rejects.toThrow("Invalid proxy host ID");
+			expect(state.get).not.toHaveBeenCalled();
+			expect(await fs.readFile(outside, "utf8")).toBe('{"cache":"HIT"}\n');
+		},
+	);
+	it.each([["nginx"], ["nginx", "cache"]])(
+		"refuses purge through a symlinked cache ancestor %j",
+		async (...segments) => {
+			state.host = host({ meta: { cache_policy: { enabled: true } } });
+			const outside = path.join(directory, "outside");
+			const actualCache = segments.length === 1 ? path.join(outside, "cache") : outside;
+			const externalHost = path.join(actualCache, "host-12");
+			await fs.mkdir(externalHost, { recursive: true });
+			const marker = path.join(externalHost, "a".repeat(32));
+			await fs.writeFile(marker, "keep");
+			const link = path.join(directory, ...segments);
+			await fs.mkdir(path.dirname(link), { recursive: true });
+			await fs.symlink(outside, link);
+			await expect(service.purgeCache({ can: state.can }, 12)).rejects.toThrow("Unsafe storage directory");
+			await expect(service.removeHostFiles(12)).rejects.toThrow("Unsafe storage directory");
+			expect(await fs.readFile(marker, "utf8")).toBe("keep");
+		},
+	);
+	it("purges valid Nginx hash levels without following nested symlinks or unrelated directories", async () => {
+		state.host = host({ meta: { cache_policy: { enabled: true } } });
+		const own = cacheDirectory(12);
+		await fs.mkdir(path.join(own, "b", "cd"), { recursive: true });
+		await fs.writeFile(path.join(own, "b", "cd", "a".repeat(32)), "remove");
+		await fs.writeFile(path.join(own, "c".repeat(32)), "remove");
+		const external = path.join(directory, "outside");
+		await fs.mkdir(external);
+		const marker = path.join(external, "d".repeat(32));
+		await fs.writeFile(marker, "keep");
+		await fs.symlink(external, path.join(own, "a"));
+		await fs.mkdir(path.join(own, "unrelated"));
+		await fs.writeFile(path.join(own, "unrelated", "e".repeat(32)), "unrelated");
+		expect((await service.purgeCache({ can: state.can }, 12)).removed).toBe(2);
+		expect(await fs.readFile(marker, "utf8")).toBe("keep");
+		expect(await fs.readFile(path.join(own, "unrelated", "e".repeat(32)), "utf8")).toBe("unrelated");
+	});
+	it("rejects symlinked traffic logs and log parents without reading or deleting their targets", async () => {
+		const outside = path.join(directory, "outside");
+		await fs.mkdir(outside);
+		const marker = path.join(outside, "traffic_12.log");
+		await fs.writeFile(marker, '{"cache":"HIT"}\n');
+		const logs = path.join(directory, "logs");
+		await fs.mkdir(logs);
+		await fs.symlink(marker, path.join(logs, "traffic_12.log"));
+		await expect(service.cacheStatus({ can: state.can }, 12)).rejects.toThrow("Unsafe traffic log");
+		await fs.rm(logs, { recursive: true });
+		await fs.symlink(outside, logs);
+		await expect(service.cacheStatus({ can: state.can }, 12)).rejects.toThrow("Unsafe storage directory");
+		await expect(service.removeHostFiles(12)).rejects.toThrow("Unsafe storage directory");
+		await expect(service.maintainLogs()).rejects.toThrow("Unsafe storage directory");
+		expect(await fs.readFile(marker, "utf8")).toBe('{"cache":"HIT"}\n');
+	});
+	it("replaces a planted rotation symlink without overwriting its target", async () => {
+		const logs = path.join(directory, "logs");
+		await fs.mkdir(logs);
+		const file = path.join(logs, "traffic_12.log");
+		await fs.writeFile(file, Buffer.alloc(10 * 1024 * 1024 + 1, 32));
+		const marker = path.join(directory, "outside");
+		await fs.writeFile(marker, "keep");
+		await fs.symlink(marker, `${file}.1`);
+		await service.maintainLogs();
+		expect(await fs.readFile(marker, "utf8")).toBe("keep");
+		expect((await fs.lstat(`${file}.1`)).isSymbolicLink()).toBe(false);
+		expect((await fs.stat(file)).size).toBe(0);
+		expect((await fs.stat(`${file}.1`)).size).toBe(10 * 1024 * 1024 + 1);
+	});
 	it("reports bounded hit/miss samples and rotates oversized observation logs", async () => {
 		state.host = host({ meta: { cache_policy: { enabled: true } } });
 		const logs = path.join(directory, "logs");
