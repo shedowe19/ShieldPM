@@ -1,4 +1,4 @@
--- ShieldPM trusted Proxy-Wasm dispatcher. No user-supplied code or filenames.
+-- ShieldPM administrator-trusted Proxy-Wasm dispatcher. Paths are generated from catalog digests.
 require "resty.core"
 local cjson = require "cjson.safe"
 local wasm = require "resty.proxy-wasm"
@@ -7,6 +7,9 @@ local hex = require "resty.string"
 local M = {}
 local cache = {}
 local last_error = {}
+local function callback(filter, name)
+    return filter.callbacks and filter.callbacks[name] == true
+end
 local function read(path)
     local file, err = io.open(path, "rb")
     if not file then return nil, err end
@@ -21,7 +24,8 @@ local function report(chain, filter, phase)
         local file = io.open(chain.status_path, "w")
         if file then
             file:write(cjson.encode({state="error", filter_id=filter.id, phase=phase,
-                message="Trusted filter execution failed", checked_at=now, version=chain.bundle_version}))
+                message="Trusted filter execution failed", checked_at=now,
+                version=chain.active_version or chain.bundle_version}))
             file:close()
         end
     end
@@ -41,6 +45,9 @@ function M.load(path)
         filter.plugin = plugin -- Keep VM alive for the complete worker lifetime.
         filter.context = assert(wasm.on_configure(plugin, assert(ngx.decode_base64(filter.configuration))),
             "Trusted Wasm configuration failed")
+        local callbacks = {}
+        for _, name in ipairs(filter.callbacks or {}) do callbacks[name] = true end
+        filter.callbacks = callbacks
     end
     cache[path] = chain
     return chain
@@ -52,13 +59,72 @@ function M.access(path)
         return ngx.exit(503)
     end
     ngx.ctx.shieldpm_wasm_chain = chain
+    local needs_body = false
     for _, filter in ipairs(chain.filters) do
-        if filter.phase == "request" then
+        if callback(filter, "proxy_on_request_body") then needs_body = true end
+        if filter.phase == "request" or callback(filter, "proxy_on_request_headers") then
             local success, result = pcall(wasm.on_http_request_headers, filter.context)
             if not success or not result then
                 report(chain, filter, "request")
                 if filter.failure_mode ~= "open" or filter.authentication then return ngx.exit(503) end
             end
+        end
+    end
+    if needs_body then
+        -- HTTP/2 request bodies need not advertise Content-Length or Transfer-Encoding.
+        local body_ok = pcall(ngx.req.read_body)
+        local data = body_ok and ngx.req.get_body_data() or nil
+        local filename = body_ok and ngx.req.get_body_file() or nil
+        local function unavailable()
+            local closed = false
+            for _, filter in ipairs(chain.filters) do
+                if callback(filter, "proxy_on_request_body") then
+                    report(chain, filter, "request_body")
+                    if filter.failure_mode ~= "open" then closed = true end
+                end
+            end
+            return closed
+        end
+        if not body_ok then
+            if unavailable() then return ngx.exit(503) end
+            return
+        end
+        local offset = 0
+        while data or filename do
+            local chunk, eof, read_error
+            if data then
+                chunk = data:sub(offset + 1, offset + 65536)
+                eof = offset + #chunk >= #data
+            else
+                -- Never keep an open body-file descriptor across a Wasm callback:
+                -- a local reply can terminate the Lua handler immediately.
+                local file = io.open(filename, "rb")
+                if file then
+                    local position = file:seek("set", offset)
+                    if position then chunk, read_error = file:read(65537) else read_error = true end
+                    file:close()
+                    if chunk then
+                        eof = #chunk <= 65536
+                        chunk = chunk:sub(1, 65536)
+                    end
+                else read_error = true end
+            end
+            if read_error then
+                if unavailable() then return ngx.exit(503) end
+                return
+            end
+            if not chunk or #chunk == 0 then break end
+            for _, filter in ipairs(chain.filters) do
+                if callback(filter, "proxy_on_request_body") then
+                    local success, result = pcall(wasm.on_http_request_body, filter.context, chunk, eof)
+                    if not success or not result then
+                        report(chain, filter, "request_body")
+                        if filter.failure_mode ~= "open" then return ngx.exit(503) end
+                    end
+                end
+            end
+            if eof then break end
+            offset = offset + #chunk
         end
     end
 end
@@ -67,7 +133,7 @@ function M.header_filter(path)
     -- Responses produced before access (ACME, redirects, WAF) must not acquire another policy chain.
     if not chain then return end
     for _, filter in ipairs(chain.filters) do
-        if filter.phase == "response" then
+        if filter.phase == "response" or callback(filter, "proxy_on_response_headers") then
             local ok, result = pcall(wasm.on_http_response_headers, filter.context)
             if not ok or not result then
                 report(chain, filter, "response")
@@ -86,6 +152,23 @@ function M.header_filter(path)
     end
 end
 function M.body_filter()
-    if ngx.ctx.shieldpm_wasm_discard_body then ngx.arg[1] = nil end
+    if ngx.ctx.shieldpm_wasm_discard_body then ngx.arg[1] = nil; return end
+    local chain = ngx.ctx.shieldpm_wasm_chain
+    if not chain then return end
+    for _, filter in ipairs(chain.filters) do
+        if callback(filter, "proxy_on_response_body") then
+            ngx.arg[1] = ngx.arg[1] or ""
+            local ok, result = pcall(wasm.on_http_response_body, filter.context)
+            if not ok or not result then
+                report(chain, filter, "response_body")
+                if filter.failure_mode ~= "open" then
+                    ngx.ctx.shieldpm_wasm_discard_body = true
+                    ngx.arg[1] = nil
+                    ngx.arg[2] = true
+                    return
+                end
+            end
+        end
+    end
 end
 return M

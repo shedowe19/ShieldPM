@@ -7,6 +7,7 @@ import path from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../internal/anubis.js", () => ({ default: {} }));
+vi.mock("../../internal/audit-log.js", () => ({ default: { add: vi.fn() } }));
 vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: () => "test" }));
 vi.mock("../../lib/encryption.js", () => ({
 	encrypt: (value) => `sealed:${value}`,
@@ -23,6 +24,7 @@ import {
 	finishWasmLifecycle,
 	nginxWorkerSnapshot,
 } from "../../internal/wasm-lifecycle.js";
+import modules from "../../internal/wasm-modules.js";
 import utils from "../../lib/utils.js";
 
 const binary = process.env.SHIELDPM_WASM_NGINX_BINARY;
@@ -57,7 +59,7 @@ const request = (port, key, uri = "/") =>
 				response.on("data", (chunk) => {
 					body += chunk;
 				});
-				response.on("end", () => resolve({ status: response.statusCode, body }));
+				response.on("end", () => resolve({ status: response.statusCode, headers: response.headers, body }));
 			},
 		);
 		req.on("error", reject);
@@ -308,6 +310,47 @@ include ${proxyDirectory}/*.conf; }`,
 		await retire(old.wasm.configuration_path);
 		expect(await exists(next.wasm.configuration_path)).toBe(true);
 		expect(await collectRetiredWasmConfigurations()).toBe(false);
+	}, 15000);
+	it("publishes custom module metadata after a real acknowledged mixed-chain worker reload", async () => {
+		const bytes = await fs.readFile(new URL("../fixtures/custom-proxy-wasm.wasm", import.meta.url));
+		const module = await modules.upload({ can: vi.fn().mockResolvedValue(true) }, bytes, {
+			name: "Accepted custom module",
+			filename: "accepted.wasm",
+		});
+		const configuration = { Accepted: "worker-generation" };
+		const host = row(
+			await prepareWasmFilters([
+				{
+					id: "preset-first",
+					kind: "request_header",
+					enabled: true,
+					failure_mode: "closed",
+					config: { header: "x-preset", operation: "set", value: "first" },
+				},
+				{
+					id: "own-module",
+					kind: "module",
+					enabled: true,
+					failure_mode: "closed",
+					config: { module_id: module.id, configuration },
+				},
+			]),
+		);
+		host.wasm = await prepareHost(host);
+		const context = await createWasmLifecycle();
+		await writeHost(host);
+		await reload(context);
+		await finishWasmLifecycle(context);
+		const expected = {
+			state: "active",
+			version: "Proxy-Wasm 0.2.1",
+			sha256: host.wasm.sha256,
+			modules: [{ filter_id: "own-module", module_id: module.id }],
+		};
+		expect(host.wasm.sha256).not.toBe(module.sha256);
+		expect(await pointer()).toMatchObject(expected);
+		expect(await getHostStatus(77)).toMatchObject(expected);
+		expect((await request(port)).headers["x-custom-response"]).toBe(JSON.stringify(configuration));
 	}, 15000);
 	it("marks removed filters and deleted hosts inactive only after accepted reloads, then erases their keys", async () => {
 		const current = await activate("removed-key");

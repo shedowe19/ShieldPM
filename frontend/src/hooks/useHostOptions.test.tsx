@@ -1,11 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { getHostOptions } from "src/api/backend/hostWorkspace";
+import { getHostOptions } from "src/api/backend/getProxyHostOptions";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useHostOptions } from "./useHostOptions";
 
-vi.mock("src/api/backend/hostWorkspace", () => ({ getHostOptions: vi.fn() }));
+vi.mock("src/api/backend/getProxyHostOptions", () => ({ getHostOptions: vi.fn() }));
 afterEach(() => {
 	cleanup();
 	vi.mocked(getHostOptions).mockReset();

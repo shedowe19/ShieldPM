@@ -1,6 +1,6 @@
 {
-	"operationId": "getNginxHostWorkspaceItems",
-	"summary": "List personal saved views and security profiles",
+	"operationId": "listWasmModules",
+	"summary": "List administrator-trusted Proxy-Wasm modules",
 	"tags": [
 		"proxy-hosts"
 	],
@@ -12,6 +12,12 @@
 		}
 	],
 	"responses": {
+		"400": {
+			"description": "Invalid input, incompatible module or referenced module"
+		},
+		"403": {
+			"description": "Permission denied"
+		},
 		"200": {
 			"description": "Successful operation",
 			"content": {
@@ -19,7 +25,7 @@
 					"schema": {
 						"type": "array",
 						"items": {
-							"type": "object"
+							"$ref": "../../../../components/wasm-module.json"
 						}
 					}
 				}

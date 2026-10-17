@@ -18,6 +18,7 @@ vi.mock("../../internal/git-deploy.js", () => ({ default: {} }));
 vi.mock("../../internal/proxy-host.js", () => ({ default: {} }));
 vi.mock("../../internal/proxy-host-preview.js", () => ({ default: {} }));
 vi.mock("../../internal/proxy-host-diagnostics.js", () => ({ default: {} }));
+vi.mock("../../internal/proxy-host-options.js", () => ({ default: {} }));
 // Nested feature services are outside these monitor endpoint contracts.
 vi.mock("../../internal/host-revisions.js", () => ({ default: {} }));
 vi.mock("../../internal/host-traffic-policy.js", () => ({ default: {} }));

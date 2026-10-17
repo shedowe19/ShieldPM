@@ -11,6 +11,22 @@ export function validateTrustedHostPolicies(candidate, previous) {
 	if (filters === undefined) return;
 	validateWasmFilters(redactWasmFilters(filters));
 	for (const filter of filters) {
+		if (filter.kind === "module") {
+			try {
+				validateWasmFilters([
+					{
+						...filter,
+						config: {
+							module_id: filter.config.module_id,
+							configuration: JSON.parse(decrypt(filter.config.sealed_configuration)),
+						},
+					},
+				]);
+			} catch {
+				throw new errs.ValidationError("The revision contains an unavailable Wasm module configuration");
+			}
+			continue;
+		}
 		if (!filter.enabled || filter.kind !== "api_key") continue;
 		try {
 			if (!decrypt(filter.config.sealed_value)) throw new TypeError("Empty key");

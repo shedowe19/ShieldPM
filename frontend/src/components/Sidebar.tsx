@@ -71,7 +71,6 @@ const menuItems: MenuItem[] = [
 		icon: IconDeviceDesktop,
 		label: "hosts",
 		items: [
-			{ to: "/nginx/workspace", label: "workspace.title", permissionSection: PROXY_HOSTS, permission: VIEW },
 			{
 				to: "/nginx/proxy",
 				label: "proxy-hosts",

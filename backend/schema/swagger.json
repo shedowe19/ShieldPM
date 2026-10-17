@@ -674,47 +674,6 @@
 				"$ref": "./paths/nginx/proxy-hosts/hostID/cache/delete.json"
 			}
 		},
-		"/nginx/host-workspace/options": {
-			"get": {
-				"$ref": "./paths/nginx/host-workspace/options/get.json"
-			}
-		},
-		"/nginx/host-workspace/hosts": {
-			"get": {
-				"$ref": "./paths/nginx/host-workspace/hosts/get.json"
-			}
-		},
-		"/nginx/host-workspace/hosts/{hostID}/tags": {
-			"put": {
-				"$ref": "./paths/nginx/host-workspace/hosts/hostID/tags/put.json"
-			}
-		},
-		"/nginx/host-workspace/items": {
-			"get": {
-				"$ref": "./paths/nginx/host-workspace/items/get.json"
-			},
-			"post": {
-				"$ref": "./paths/nginx/host-workspace/items/post.json"
-			}
-		},
-		"/nginx/host-workspace/items/{itemID}": {
-			"put": {
-				"$ref": "./paths/nginx/host-workspace/items/itemID/put.json"
-			},
-			"delete": {
-				"$ref": "./paths/nginx/host-workspace/items/itemID/delete.json"
-			}
-		},
-		"/nginx/host-workspace/bulk/preview": {
-			"post": {
-				"$ref": "./paths/nginx/host-workspace/bulk/preview/post.json"
-			}
-		},
-		"/nginx/host-workspace/bulk/apply": {
-			"post": {
-				"$ref": "./paths/nginx/host-workspace/bulk/apply/post.json"
-			}
-		},
 		"/backups": {
 			"get": {
 				"$ref": "./paths/backups/get.json"
@@ -797,6 +756,27 @@
 		"/incidents/deliveries/{deliveryID}/retry": {
 			"post": {
 				"$ref": "./paths/incidents/deliveries/deliveryID/retry/post.json"
+			}
+		},
+		"/nginx/proxy-hosts/options": {
+			"get": {
+				"$ref": "./paths/nginx/proxy-hosts/options/get.json"
+			}
+		},
+		"/nginx/wasm/modules": {
+			"get": {
+				"$ref": "./paths/nginx/wasm/modules/get.json"
+			},
+			"post": {
+				"$ref": "./paths/nginx/wasm/modules/post.json"
+			}
+		},
+		"/nginx/wasm/modules/{moduleID}": {
+			"get": {
+				"$ref": "./paths/nginx/wasm/modules/moduleID/get.json"
+			},
+			"delete": {
+				"$ref": "./paths/nginx/wasm/modules/moduleID/delete.json"
 			}
 		}
 	}

@@ -2,6 +2,7 @@ import * as childProcess from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import http from "node:http";
+import http2 from "node:http2";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -10,6 +11,7 @@ import { Ajv } from "ajv";
 import errs from "../lib/error.js";
 import { redactWasmFilters } from "../lib/wasm-response.js";
 import filterSchema from "../schema/components/wasm-filters.json" with { type: "json" };
+import { moduleArtifact } from "./wasm-modules.js";
 
 const bundle = fileURLToPath(new URL("../wasm/", import.meta.url));
 const dispatcher = fileURLToPath(new URL("../../rootfs/usr/local/share/lua/5.1/shieldpm/wasm.lua", import.meta.url));
@@ -40,7 +42,24 @@ export function validateWasmFilters(filters) {
 		if (ids.has(filter.id)) throw new errs.ValidationError("Wasm filter identifiers must be unique");
 		ids.add(filter.id);
 		const config = filter.config;
-		if (filter.kind === "api_key") {
+		if (filter.kind === "module") {
+			if (
+				!config.module_id ||
+				Object.keys(config).some((key) => !["module_id", "configuration", "has_configuration"].includes(key))
+			)
+				throw new errs.ValidationError("Module filters require a catalog module and JSON configuration");
+			if (
+				config.configuration !== undefined &&
+				Buffer.byteLength(JSON.stringify(config.configuration), "utf8") > 65536
+			)
+				throw new errs.ValidationError("Wasm module configuration exceeds 64 KiB");
+		} else if (
+			config.module_id !== undefined ||
+			config.configuration !== undefined ||
+			config.has_configuration !== undefined
+		) {
+			throw new errs.ValidationError("Module configuration is only valid for module filters");
+		} else if (filter.kind === "api_key") {
 			if (
 				filter.failure_mode !== "closed" ||
 				!config.header ||
@@ -87,11 +106,14 @@ export function validateWasmFilters(filters) {
 				.some(
 					(filter) =>
 						filter.enabled &&
-						filter.kind === "request_header" &&
-						filter.config.header.toLowerCase() === authentication.config.header.toLowerCase(),
+						(filter.kind === "module" ||
+							(filter.kind === "request_header" &&
+								filter.config.header.toLowerCase() === authentication.config.header.toLowerCase())),
 				)
 		) {
-			throw new errs.ValidationError("Authentication must run before transformations of its credential header");
+			throw new errs.ValidationError(
+				"Authentication must run before custom modules and transformations of its credential header",
+			);
 		}
 	}
 	return checked;
@@ -102,6 +124,25 @@ export async function prepareWasmFilters(input = [], previous = []) {
 	const filters = structuredClone(validateWasmFilters(input));
 	const { encrypt } = await import("../lib/encryption.js");
 	for (const filter of filters) {
+		if (filter.kind === "module") {
+			await moduleArtifact(filter.config.module_id);
+			const prior = previous.find(
+				(entry) =>
+					entry.id === filter.id &&
+					entry.kind === "module" &&
+					entry.config.module_id === filter.config.module_id,
+			);
+			if (filter.config.configuration !== undefined)
+				filter.config.sealed_configuration = encrypt(JSON.stringify(filter.config.configuration));
+			else if (prior?.config?.sealed_configuration)
+				filter.config.sealed_configuration = prior.config.sealed_configuration;
+			else if (filter.config.has_configuration)
+				throw new errs.ValidationError("The module configuration must be supplied again");
+			else filter.config.sealed_configuration = encrypt("{}");
+			delete filter.config.configuration;
+			delete filter.config.has_configuration;
+			continue;
+		}
 		if (filter.kind !== "api_key") continue;
 		const prior = previous.find((entry) => entry.id === filter.id && entry.kind === "api_key");
 		if (filter.config.value) filter.config.sealed_value = encrypt(filter.config.value);
@@ -188,25 +229,70 @@ export async function materializeWasmHost(host) {
 	const luaPath = path.join(root(), "artifacts", `${digest(luaBytes)}.lua`);
 	await immutableFile(luaPath, luaBytes);
 	const { decrypt } = await import("../lib/encryption.js");
-	const entries = filters.map((filter) => ({
-		id: filter.id,
-		kind: filter.kind,
-		path: artifactPath,
-		sha256: manifest.sha256,
-		phase: filter.kind === "response_header" ? "response" : "request",
-		authentication: filter.kind === "api_key",
-		failure_mode: filter.failure_mode,
-		configuration: encodeWasmConfiguration(
-			filter,
-			filter.kind === "api_key" ? decrypt(filter.config.sealed_value) : "",
-		),
-	}));
-	const policyVersion = digest(JSON.stringify({ version: manifest.version, filters: entries }));
+	const entries = await Promise.all(
+		filters.map(async (filter) => {
+			if (filter.kind === "module") {
+				const module = await moduleArtifact(filter.config.module_id);
+				let configuration;
+				try {
+					configuration = decrypt(filter.config.sealed_configuration);
+					validateWasmFilters([
+						{ ...filter, config: { module_id: module.id, configuration: JSON.parse(configuration) } },
+					]);
+				} catch {
+					throw new errs.ValidationError("The Wasm module configuration is unavailable");
+				}
+				return {
+					id: filter.id,
+					kind: "module",
+					path: module.path,
+					sha256: module.sha256,
+					phase: "both",
+					callbacks: module.callbacks,
+					authentication: false,
+					failure_mode: filter.failure_mode,
+					configuration: Buffer.from(configuration).toString("base64"),
+				};
+			}
+			return {
+				id: filter.id,
+				kind: filter.kind,
+				path: artifactPath,
+				sha256: manifest.sha256,
+				phase: filter.kind === "response_header" ? "response" : "request",
+				authentication: filter.kind === "api_key",
+				failure_mode: filter.failure_mode,
+				configuration: encodeWasmConfiguration(
+					filter,
+					filter.kind === "api_key" ? decrypt(filter.config.sealed_value) : "",
+				),
+			};
+		}),
+	);
+	// Private immutable names must not provide an offline oracle for low-entropy
+	// write-only values: include their existing randomized server ciphertext.
+	const policyVersion = digest(
+		JSON.stringify({
+			version: manifest.version,
+			filters: entries,
+			protected_configuration: filters.map(
+				(filter) => filter.config.sealed_configuration || filter.config.sealed_value || "",
+			),
+		}),
+	);
+	const modules = entries
+		.filter((filter) => filter.kind === "module")
+		.map((filter) => ({ filter_id: filter.id, module_id: filter.sha256 }));
 	const statusPath = path.join(root(), "status", `${host.id}-${policyVersion}.json`);
+	const activeVersion = modules.length ? "Proxy-Wasm 0.2.1" : manifest.version;
+	const activeHash = modules.length ? policyVersion : manifest.sha256;
 	await fs.mkdir(path.dirname(statusPath), { recursive: true, mode: 0o700 });
 	const contents = JSON.stringify({
 		version: 1,
 		bundle_version: manifest.version,
+		active_version: activeVersion,
+		active_sha256: activeHash,
+		modules,
 		filters: entries,
 		status_path: statusPath,
 	});
@@ -216,8 +302,9 @@ export async function materializeWasmHost(host) {
 		configuration_path: configurationPath,
 		configuration_name: path.basename(configurationPath),
 		dispatcher_path: luaPath,
-		version: manifest.version,
-		sha256: manifest.sha256,
+		version: activeVersion,
+		sha256: activeHash,
+		modules,
 		filter_count: entries.length,
 		status_path: statusPath,
 	};
@@ -228,28 +315,79 @@ const luaPath = () =>
 	process.env.SHIELDPM_WASM_LUA_PATH || "/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;;";
 const nginxBinary = () => process.env.SHIELDPM_WASM_NGINX_BINARY || "nginx";
 
-function requestSocket(socketPath, headers = {}) {
+function requestSocket(socketPath, headers = {}, requestBody = "", options = {}) {
 	return new Promise((resolve, reject) => {
-		const target = typeof socketPath === "number" ? { host: "127.0.0.1", port: socketPath } : { socketPath };
-		const request = http.get({ ...target, path: "/", headers, timeout: 1500 }, (response) => {
+		if (options.http2 && typeof socketPath === "number") {
+			const session = http2.connect(`http://127.0.0.1:${socketPath}`);
+			let request;
+			let settled = false;
+			const finish = (error, result) => {
+				if (settled) return;
+				settled = true;
+				request?.destroy();
+				session.destroy();
+				if (error) reject(error.cause?.code === "ECONNREFUSED" ? error.cause : error);
+				else resolve(result);
+			};
+			session.on("error", (error) => finish(error));
+			session.setTimeout(1500, () => finish(new errs.ConfigurationError("Wasm execution timed out")));
+			request = session.request({ ":path": "/", ":method": requestBody ? "POST" : "GET", ...headers });
+			let responseHeaders;
 			let body = "";
-			response.on("data", (chunk) => {
+			request.on("response", (received) => {
+				responseHeaders = received;
+			});
+			request.on("data", (chunk) => {
 				if (body.length < 8192) body += chunk;
 			});
-			response.on("end", () => resolve({ status: response.statusCode, headers: response.headers, body }));
-		});
+			request.on("error", (error) => finish(error));
+			request.on("aborted", () => finish(new errs.ConfigurationError("Wasm execution was interrupted")));
+			request.on("end", () =>
+				finish(null, {
+					status: responseHeaders?.[":status"],
+					headers: responseHeaders,
+					body,
+				}),
+			);
+			request.end(requestBody);
+			return;
+		}
+		const target = typeof socketPath === "number" ? { host: "127.0.0.1", port: socketPath } : { socketPath };
+		const framing = requestBody
+			? options.chunked
+				? { "Transfer-Encoding": "chunked" }
+				: { "Content-Length": Buffer.byteLength(requestBody) }
+			: {};
+		const request = http.request(
+			{
+				...target,
+				path: "/",
+				method: requestBody ? "POST" : "GET",
+				headers: { ...framing, ...headers },
+				timeout: 1500,
+			},
+			(response) => {
+				let body = "";
+				response.on("data", (chunk) => {
+					if (body.length < 8192) body += chunk;
+				});
+				response.on("error", reject);
+				response.on("end", () => resolve({ status: response.statusCode, headers: response.headers, body }));
+			},
+		);
 		request.on("error", reject);
 		request.on("timeout", () => request.destroy(new errs.ConfigurationError("Wasm execution timed out")));
+		request.end(requestBody);
 	});
 }
 
 /** Execute the exact chain in an isolated, bounded Nginx child before production activation. */
-export function executeWasmPreflight(prepared, headers = {}) {
+export function executeWasmPreflight(prepared, headers = {}, options = {}) {
 	const operation = preflightQueue.then(async () => {
 		const work = await fs.mkdtemp(path.join(os.tmpdir(), "shieldpm-wasm-"));
 		/** @type {string | number} */
 		let socketPath = path.join(work, "probe.sock");
-		if (process.env.SHIELDPM_WASM_PREFLIGHT_TCP === "1") {
+		if (process.env.SHIELDPM_WASM_PREFLIGHT_TCP === "1" || options.http2) {
 			socketPath = await new Promise((resolve, reject) => {
 				const server = net.createServer();
 				server.once("error", reject);
@@ -263,13 +401,15 @@ export function executeWasmPreflight(prepared, headers = {}) {
 		const configPath = path.join(work, "nginx.conf");
 		// A candidate preflight must never mutate an accepted worker's runtime status.
 		const probeChain = JSON.parse(await fs.readFile(prepared.configuration_path, "utf8"));
+		if (options.filterId)
+			probeChain.filters = probeChain.filters.filter((filter) => filter.id === options.filterId);
 		probeChain.status_path = path.join(work, "status.json");
 		const probeConfiguration = path.join(work, "chain.json");
 		await fs.writeFile(probeConfiguration, JSON.stringify(probeChain), { mode: 0o600 });
 		const config = `user root; daemon off; master_process off; worker_processes 1; pid ${work}/pid; error_log ${work}/error.log warn;
 	events { worker_connections 32; } http { access_log off; wasm_vm wasmtime; lua_package_path ${quote(luaPath())}; ${process.env.SHIELDPM_WASM_LUA_CPATH ? `lua_package_cpath ${quote(process.env.SHIELDPM_WASM_LUA_CPATH)};` : ""}
 	init_by_lua_block { shieldpm_wasm = dofile(${quote(prepared.dispatcher_path)}); shieldpm_wasm.load(${quote(probeConfiguration)}); }
-	server { listen ${listener}; location / { access_by_lua_block { shieldpm_wasm.access(${quote(probeConfiguration)}); }
+	server { listen ${listener}; ${options.http2 ? "http2 on;" : ""} client_body_temp_path ${work}/body; location / { access_by_lua_block { shieldpm_wasm.access(${quote(probeConfiguration)}); }
 	header_filter_by_lua_block { shieldpm_wasm.header_filter(${quote(probeConfiguration)}); }
 	body_filter_by_lua_block { shieldpm_wasm.body_filter(); } content_by_lua_block { ngx.say("SHIELDPM_WASM_OK:" .. (ngx.var.http_x_shieldpm_probe or "")); } } } }`;
 		await fs.mkdir(path.join(work, "logs"));
@@ -285,7 +425,7 @@ export function executeWasmPreflight(prepared, headers = {}) {
 				if (spawnError || child.exitCode !== null)
 					throw new errs.ConfigurationError("Wasm runtime failed its execution preflight");
 				try {
-					const result = await requestSocket(socketPath, headers);
+					const result = await requestSocket(socketPath, headers, options.requestBody || "", options);
 					const runtimeError = await fs.readFile(probeChain.status_path, "utf8").catch((error) => {
 						if (error.code === "ENOENT") return null;
 						throw error;
@@ -328,6 +468,15 @@ export async function prepareHost(host) {
 			.map((filter) => [filter.config.header, decrypt(filter.config.sealed_value)]),
 	);
 	try {
+		for (const filter of filters.filter((entry) => entry.kind === "module")) {
+			for (const requestBody of ["", "shieldpm-wasm-preflight"]) {
+				const probe = await executeWasmPreflight(prepared, headers, { filterId: filter.id, requestBody });
+				if (probe.runtime_error)
+					throw new errs.ConfigurationError(
+						`Wasm module ${filter.id} failed in ${probe.runtime_error.phase}; verify API7 Proxy-Wasm compatibility; previous configuration retained`,
+					);
+			}
+		}
 		const result = await executeWasmPreflight(prepared, headers);
 		if (result.runtime_error) throw new errs.ConfigurationError("Wasm filter chain failed its execution preflight");
 		const localResponse = filters.find((filter) => filter.kind === "local_response");
@@ -337,6 +486,15 @@ export async function prepareHost(host) {
 			const denied = await executeWasmPreflight(prepared);
 			if (denied.runtime_error || denied.status !== 401)
 				throw new errs.ConfigurationError("Wasm authentication preflight did not reject missing credentials");
+		}
+		// Custom modules can intentionally transform or reject the probe. A completed
+		// HTTP exchange without an ABI/configuration/trap error proves execution;
+		// their business-specific response cannot be compared with bundled presets.
+		if (filters.some((filter) => filter.kind === "module")) {
+			const bodyProbe = await executeWasmPreflight(prepared, headers, { requestBody: "shieldpm-wasm-preflight" });
+			if (bodyProbe.runtime_error)
+				throw new errs.ConfigurationError("Wasm filter chain failed its body execution preflight");
+			return prepared;
 		}
 
 		if (
@@ -348,6 +506,7 @@ export async function prepareHost(host) {
 			throw new errs.ConfigurationError("Wasm filter chain failed its execution preflight");
 		return prepared;
 	} catch (error) {
+		if (error instanceof errs.ConfigurationError && error.message.startsWith("Wasm module ")) throw error;
 		throw new errs.ConfigurationError("Wasm execution preflight failed; previous configuration retained", error);
 	}
 }
@@ -525,6 +684,8 @@ export async function capabilities() {
 		module: "api7/wasm-nginx-module",
 		abi: manifest.abi,
 		trusted_only: true,
+		custom_modules: true,
+		module_upload_max_bytes: 16 * 1024 * 1024,
 	};
 }
 
@@ -562,6 +723,7 @@ export async function markHostActive(hostId, prepared, activationError = null) {
 							version: prepared.version,
 							sha256: prepared.sha256,
 							filter_count: prepared.filter_count,
+							...(prepared.modules?.length ? { modules: prepared.modules } : {}),
 							configuration_file: path.basename(prepared.configuration_path),
 							runtime_status_file: path.basename(prepared.status_path),
 						}

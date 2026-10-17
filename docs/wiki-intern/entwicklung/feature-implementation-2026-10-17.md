@@ -4,18 +4,23 @@ Die [ursprüngliche Gesamtprüfung](./feature-review-2026-10-17.md) ist ein unve
 
 ## Neue Funktionen
 
-| ID  | Umsetzung                                                                                                                                                                                                   | Oberfläche und Dokumentation                                                  |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| F01 | Geordnete vertrauenswürdige Wasm-Filter für API-Schlüssel, Anfrage-/Antwortheader und lokale Antworten; Runtime-Erkennung, echter Selbsttest, unveränderliche Artefakte, geprüfte Aktivierung und Rücknahme | Proxy-Host → Wasm; [Wasm-Filter](../module/wasm-filter.md)                    |
-| F02 | Gewichtete Upstream-Pools, Backup-Ziele, passive Ausfallbehandlung, sichere Wiederholungsregeln, Host-/SNI-/TLS-Konfiguration und getrennte TCP-/Monitorbeobachtung                                         | Proxy-Host → Upstreams; [Upstream-Pools](../module/upstream-pools.md)         |
-| F03 | Verschlüsselte Host-Versionen, redigierter Vergleich, Schutz vor veralteten Zuständen, begrenzte Aufbewahrung und Wiederherstellung mit geprüfter Aktivierung                                               | Host-Menü → Versionen; [Host-Versionen](../features/host-revisionen.md)       |
-| F04 | Störungen, gemessene Verfügbarkeit/Abdeckung, Latenzverlauf, geplante Alarmunterdrückung und dauerhafte Webhook-/ntfy-/Discord-Zustellung mit Wiederholungen                                                | Störungszentrale; [Incident Center](../module/incident-center.md)             |
-| F05 | Tags, persönliche Ansichten, Sicherheits-/Ratenprofile und geprüfte Mehrfachänderungen mit Ergebnissen je Host                                                                                              | Host-Arbeitsbereich; [Arbeitsbereich](../features/host-arbeitsbereich.md)     |
-| F06 | Tatsächlicher Proxy-Cache mit TTL, Routen, Größenlimit, Auth-/Cookie-/Methoden-Bypass, Löschung und begrenzter HIT/MISS-Stichprobe; WAF-Auswahl unabhängig vom Cache                                        | Proxy-Host → Cache und Sicherheit; [Proxy-Cache](../module/proxy-cache.md)    |
-| F07 | Eigene Browser-Sitzungen anzeigen und einzelne oder alle anderen Geräte abmelden                                                                                                                            | Profil → Sitzungen; [Auth-Session-Service](../module/auth-session-service.md) |
-| F08 | Verschlüsselte vollständige Instanzbackups einschließlich Datenbank, Zertifikaten, Schlüsseln und Konfiguration; Upload/Download, Integritätsprüfung und geprüfte Wiederherstellung beim nächsten Start     | Einstellungen → Backups; [Instanzbackups](../module/instance-backups.md)      |
+| ID  | Umsetzung                                                                                                                                                                                                       | Oberfläche und Dokumentation                                                      |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| F01 | Eigene hochgeladene Proxy-Wasm-Module, geordnete Host-Zuordnung und verschlüsselte JSON-Konfiguration; Runtime-Erkennung, echter Ausführungstest, unveränderliche Artefakte, geprüfte Aktivierung und Rücknahme | Proxy-Host → Wasm; [Wasm-Filter](../module/wasm-filter.md)                        |
+| F02 | Gewichtete Upstream-Pools, Backup-Ziele, passive Ausfallbehandlung, sichere Wiederholungsregeln, Host-/SNI-/TLS-Konfiguration und getrennte TCP-/Monitorbeobachtung                                             | Proxy-Host → Upstreams; [Upstream-Pools](../module/upstream-pools.md)             |
+| F03 | Verschlüsselte Host-Versionen, redigierter Vergleich, Schutz vor veralteten Zuständen, begrenzte Aufbewahrung und Wiederherstellung mit geprüfter Aktivierung                                                   | Host-Menü → Versionen; [Host-Versionen](../features/host-revisionen.md)           |
+| F04 | Störungen, gemessene Verfügbarkeit/Abdeckung, Latenzverlauf, geplante Alarmunterdrückung und dauerhafte Webhook-/ntfy-/Discord-Zustellung mit Wiederholungen                                                    | Störungszentrale; [Incident Center](../module/incident-center.md)                 |
+| F05 | Auf ausdrücklichen Benutzerwunsch wieder entfernt: Arbeitsbereich, Navigation, API, Tags, Profile und zugehörige Tests. Die historische Migration bleibt für bereits aktualisierte Datenbanken erhalten.        | Keine aktive Funktion; schlanke Analytics-Hostauswahl bleibt unabhängig erhalten. |
+| F06 | Tatsächlicher Proxy-Cache mit TTL, Routen, Größenlimit, Auth-/Cookie-/Methoden-Bypass, Löschung und begrenzter HIT/MISS-Stichprobe; WAF-Auswahl unabhängig vom Cache                                            | Proxy-Host → Cache und Sicherheit; [Proxy-Cache](../module/proxy-cache.md)        |
+| F07 | Eigene Browser-Sitzungen anzeigen und einzelne oder alle anderen Geräte abmelden                                                                                                                                | Profil → Sitzungen; [Auth-Session-Service](../module/auth-session-service.md)     |
+| F08 | Verschlüsselte vollständige Instanzbackups einschließlich Datenbank, Zertifikaten, Schlüsseln und Konfiguration; Upload/Download, Integritätsprüfung und geprüfte Wiederherstellung beim nächsten Start         | Einstellungen → Backups; [Instanzbackups](../module/instance-backups.md)          |
 
-Wasm führt den gebündelten, begrenzten Policy-Filter aus. Ein beliebiger Upload fremder Wasm-Binaries, ein Plugin-Marktplatz und unbelegte JWT-/Body-Rewrite-Funktionen werden nicht angeboten. Für diese Funktionen wäre eine gesonderte Runtime- und Ressourcenprüfung erforderlich.
+Im Wasm-Tab können Administratoren eigene `.wasm`-Dateien hochladen und gespeicherten Hosts zuordnen.
+Der Katalog verwendet den SHA-256-Inhalt als Identität; Änderungen am Modul ergeben eine neue Version.
+Modulspezifische JSON-Schlüssel bleiben bytegetreu in ihrer Schreibweise erhalten. Die Konfiguration wird
+verschlüsselt gespeichert und nicht aus der API zurückgegeben. Das vorhandene Nginx-Modul erwartet die
+Proxy-Wasm-HTTP-ABI; allgemeine WASI-Programme werden nicht als HTTP-Filter ausgeführt. Die früheren vier
+integrierten Vorlagen sind nur noch ein eingeklappter Zusatzbereich.
 
 ## Fehlerkorrekturen
 
@@ -54,8 +59,8 @@ Die [JSON-Rohwerte](./feature-implementation-2026-10-17.json) enthalten alle Sam
 
 ## Abschließende Validierung
 
-- Backend: 2.508 Tests im Gesamtlauf bestanden, 41 umgebungsabhängige Skips; keine Fehler. PostgreSQL-Verhalten wird zusätzlich mit PGlite geprüft.
-- Frontend: 986 Tests bestanden; TypeScript, Übersetzungen, Produktionsbuild und komprimiertes Größenbudget bestanden.
+- Backend: 2.579 Tests im abschließenden Gesamtlauf bestanden, 74 ausdrückliche Umgebungs-/Runtime-Skips; keine Fehler. PostgreSQL-Verhalten wird zusätzlich mit PGlite geprüft. Die echten MariaDB- und Nginx-Suites werden zusätzlich mit ihrer jeweiligen Runtime aktiviert.
+- Frontend: 995 Tests bestanden; TypeScript, Übersetzungen, Produktionsbuild und komprimiertes Größenbudget bestanden. Alle neun Chromium-Abläufe einschließlich echtem Datei-Upload und Speichern der Modulkonfiguration bestanden.
 - Echter Chromium-Browser: zehn vollständige Abläufe einschließlich der neuen Bedienwege bestanden; keine unbehandelten Browserfehler.
 - Skripte/Betrieb: 170 Python-Tests, davon 149 bestanden und 21 umgebungsabhängig übersprungen; Shellsyntax geprüft.
 - Zusätzlich tatsächliches ShieldPM-Nginx: Wasm/Cache-Kombination, Header-Fehlerstrategie, Pool-Failover, IPv4/DNS/IPv6-Uploads, weiterlaufende Access-List-Worker und Backup-Containment.
@@ -69,7 +74,9 @@ Die CodeQL-Nachprüfung führte zu zusätzlichen Schutzmaßnahmen und Regression
 
 ### Nachprüfung der automatischen PR-Review
 
-Der Monitorfilter des Arbeitsbereichs berücksichtigt die aktuelle Aktivierung von Host und Monitor statt allein des letzten Messwerts. Pausierte Hosts erscheinen dadurch nicht mehr unter `up` oder `down`; aktivierte Hosts ohne Monitor werden unter `unknown` geführt. SQLite- und PostgreSQL/PGlite-Fälle prüfen Filter, Besitzergrenzen, Zähler und Paginierung.
+Der zwischenzeitlich geprüfte Host-Arbeitsbereich wurde anschließend auf Benutzerwunsch vollständig entfernt.
+Seine frühere Filterprüfung bleibt nur historischer Kontext des ursprünglichen Reviews. Die allgemeine schlanke
+Hostauswahl für Analytics ist ein eigenständiger Proxy-Host-Endpunkt und benötigt den Arbeitsbereich nicht.
 
 GitOps verwirft fremde Access-List-Dateirevisionen und erzeugt Passwort-/CA-Dateien unter der lokalen Listen-ID vor der Host-Aktivierung neu. Fehlende oder fehlgeschlagene Listen verhindern das Schreiben abhängiger Host-Kandidaten. Zehn Tests mit tatsächlichem Nginx prüfen Basic Auth, mTLS und Rücknahme, einschließlich eines injizierten Datenbankfehlers nach bereits erfolgreichem Reload. Möglicherweise noch von auslaufenden Workern benötigte unveränderliche ACL-Dateien bleiben erhalten.
 
@@ -114,7 +121,7 @@ Nginx-Konfigurationsfehler können weiterhin die abschließende Aktivierung verh
 
 Neue und vorhandene Hosts verwenden dieselben Policy-Normalisierungen. Öffentliche API und GitOps akzeptieren keine als lokale Geheimnisse ausgegebenen Wasm-Ciphertexte. Ein leeres Schlüsselfeld erhält den aktuellen gespeicherten Schlüssel desselben Hosts und Filters. Exporte, Vorschauen, Revisionsvergleiche und Audit-Metadaten geben Schlüssel nicht preis. Vollständige Instanzbackups enthalten die zur Wiederherstellung benötigten Schlüssel ausschließlich innerhalb des verschlüsselten Archivs.
 
-Die funktionalen Prüfungen verwenden SQLite und PostgreSQL über PGlite, tatsächliche lokale HTTP-/TLS-Server und das veröffentlichte x86_64-Nginx. Wasm-Ausführung, Cache, IPv6, WebSocket, Pool-Failover und weiterlaufende Access-List-Worker werden tatsächlich ausgeführt. In der eingeschränkten Testumgebung ersetzt ein ausschließlich für den Selbsttest aktivierter TCP-Schalter die sonst verwendete Unix-Socket-Verbindung. Die fünf tatsächlichen Master-/Worker-Fälle lesen echte Kernel-Prozessdaten; lediglich die PID-Datei des Testbeobachters übersetzt die verschachtelten lokalen PID-Namensräume. Workerzustände und Prozess-Zugangsdaten werden dabei nicht simuliert. Zusammen mit 18 Datei-/Prozess-Regressionsfällen und 16 echten Wasm-/Cache-/Vorprüfungsfällen bestehen 39 kombinierte Prüfungen.
+Die funktionalen Prüfungen verwenden SQLite und PostgreSQL über PGlite, tatsächliche lokale HTTP-/TLS-Server und das veröffentlichte x86_64-Nginx. Wasm-Ausführung, Cache, IPv6, WebSocket, Pool-Failover und weiterlaufende Access-List-Worker werden tatsächlich ausgeführt. In der eingeschränkten Testumgebung ersetzt ein ausschließlich für den Selbsttest aktivierter TCP-Schalter die sonst verwendete Unix-Socket-Verbindung. Die fünf tatsächlichen Master-/Worker-Fälle lesen echte Kernel-Prozessdaten; lediglich die PID-Datei des Testbeobachters übersetzt die verschachtelten lokalen PID-Namensräume. Workerzustände und Prozess-Zugangsdaten werden dabei nicht simuliert. Die bisherigen 39 kombinierten Prüfungen umfassen außerdem 18 Datei-/Prozess-Regressionsfälle und 16 echte Wasm-/Cache-/Vorprüfungsfälle. Mit Modul-Katalog, Upload-API, vier Callbacks im selben nativen Request-Kontext, HTTP/2-/Chunked-Bodies und bestätigtem gemischtem Preset-/Modul-Reload bestehen abschließend 58 kombinierte Fälle in sieben Dateien ohne Skips. Ein unabhängiger lesbarer WAT-Testfilter und dessen 1.124-Byte-Binary belegen die Ausführung eigener Module statt nur der integrierten Vorlagen. Native API7-Grenzen beim Header-Endstream-Flag und beim allgemeinen Body-Umschreiben sind auf der Wasm-Seite ausdrücklich dokumentiert.
 
 Ein produktiver externer MySQL-/PostgreSQL-Server, ARM64, eine echte WireGuard-Schnittstelle, Docker-Daemon, Cloudflare-/ACME-Konten und öffentliche Benachrichtigungsdienste stehen lokal nicht vollständig zur Verfügung. Deren Grenzen werden durch echte lokale Gegenstellen, kontrollierte Prozessgrenzen und CI-Prüfungen abgesichert; die jeweilige externe Betriebsprüfung wird dadurch nicht ersetzt. Eine produktive Instanz wurde nicht verändert.
 
@@ -122,7 +129,7 @@ Ein produktiver externer MySQL-/PostgreSQL-Server, ARM64, eine echte WireGuard-S
 
 - Geprüfte Wiki-Seiten: ursprüngliche Gesamtprüfung, betroffene Backend-/UI-/Betriebsseiten und API-Übersicht.
 - Aktualisierte Wiki-Seiten: Auth, Access Lists, Host-Lifecycle, Docker, DDNS, GitOps, WireGuard sowie zentrale Index-/Kontextseiten.
-- Neu erstellte Wiki-Seiten: Wasm, Upstream-Pools, Proxy-Cache, Host-Versionen, Host-Arbeitsbereich, Störungszentrale und Instanzbackups einschließlich API-Nachweis.
+- Neu erstellte Wiki-Seiten: Wasm, Upstream-Pools, Proxy-Cache, Host-Versionen, Störungszentrale und Instanzbackups einschließlich API-Nachweis. Die Arbeitsbereich-Seite wurde zusammen mit der zurückgezogenen Funktion entfernt.
 - Keine Wiki-Änderung nötig: entfällt; sämtliche neuen Funktionsbereiche sind dokumentiert.
 - Offene Wiki-TODOs: externe Betriebsprüfungen und die beschriebenen Plattformgrenzen; keine erfundenen Produktivmessungen.
 

@@ -1,0 +1,46 @@
+{
+	"operationId": "getWasmModule",
+	"summary": "Get Proxy-Wasm module catalog metadata",
+	"tags": [
+		"proxy-hosts"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.view"
+			]
+		}
+	],
+	"responses": {
+		"400": {
+			"description": "Invalid input, incompatible module or referenced module"
+		},
+		"403": {
+			"description": "Permission denied"
+		},
+		"200": {
+			"description": "Successful operation",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../../components/wasm-module.json"
+					}
+				}
+			}
+		},
+		"404": {
+			"description": "Module not found"
+		}
+	},
+	"parameters": [
+		{
+			"name": "moduleID",
+			"in": "path",
+			"required": true,
+			"schema": {
+				"type": "string",
+				"pattern": "^[a-f0-9]{64}$"
+			}
+		}
+	]
+}

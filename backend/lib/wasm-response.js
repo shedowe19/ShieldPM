@@ -7,6 +7,11 @@ export function redactWasmFilters(filters = []) {
 			delete clean.config.value;
 			delete clean.config.sealed_value;
 		}
+		if (clean.kind === "module") {
+			clean.config.has_configuration = Boolean(clean.config.sealed_configuration || clean.config.configuration);
+			delete clean.config.configuration;
+			delete clean.config.sealed_configuration;
+		}
 		return clean;
 	});
 }

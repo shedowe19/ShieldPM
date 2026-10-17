@@ -1,6 +1,6 @@
 {
 	"date": "2026-10-17",
-	"scope": "B01-B12, O01-O07, F01-F08 implementation",
+	"scope": "B01-B12, O01-O07 and F01-F08 implementation; F05 withdrawn at user request; F01 expanded to custom Proxy-Wasm modules",
 	"analytics": {
 		"node": "v26.12.0",
 		"engine": "SQLite :memory:",
@@ -55,22 +55,21 @@
 	"validation": {
 		"node": "26.12.0",
 		"backend": {
-			"passed": 2508,
-			"skipped": 41,
-			"passed_files": 262,
-			"skipped_files": 5,
-			"seconds": 92.82
+			"passed": 2579,
+			"skipped": 74,
+			"passed_files": 266,
+			"skipped_files": 11,
+			"seconds": 37.01
 		},
 		"frontend": {
-			"passed": 986,
+			"passed": 995,
 			"passed_files": 223,
-			"seconds": 109.57
+			"seconds": 47.76
 		},
 		"browser": {
-			"cases_passed": 10,
-			"engine": "Chromium 153.0.8010.0",
-			"seconds": 44.3,
-			"unhandled_errors": 0
+			"passed": 9,
+			"uncaught_page_errors": 0,
+			"includes_custom_module_upload_configuration_save": true
 		},
 		"python": {
 			"passed": 149,
@@ -101,8 +100,8 @@
 		],
 		"bundle_gzip_bytes": {
 			"largest_javascript": 106550,
-			"total_javascript": 1192082,
-			"total_stylesheet": 16462,
+			"total_javascript": 1188019,
+			"total_stylesheet": 16461,
 			"limits": {
 				"largest_javascript": 299000,
 				"total_javascript": 1290000,
@@ -112,7 +111,7 @@
 		},
 		"locale_catalogs": 13,
 		"tscanner": {
-			"workspace_files": 747,
+			"workspace_files": 744,
 			"initial_feature_staged_files": 110,
 			"new_errors": 0,
 			"advisories": 0,
@@ -132,7 +131,6 @@
 			"tscanner_final_staged_files": 7
 		},
 		"review_regressions": {
-			"workspace_effective_monitor_state_cases": 16,
 			"gitops_acl_actual_nginx_cases": 10,
 			"gitops_existing_compatibility_cases": 80,
 			"audit_source_contract_cases": 31,
@@ -146,14 +144,65 @@
 			"gitops_test_tls_verification": "Enabled; generated CA trusted explicitly, SAN and servername localhost"
 		},
 		"remote_ci_verified": {
-			"commit": "8df09204b30c495629e37bfb4bbc82979797c8ce",
-			"backend_types": "pass",
-			"backend_tests": "pass",
-			"mariadb_11_8_3_migrations": "pass",
-			"chromium_workflows": "pass",
+			"commit": "8c0e659799fec013c1c55d38b29191bf34c5155c",
+			"scope": "Operational hotfix before custom module and workspace removal follow-up",
+			"all_eight_workflows": "pass",
+			"backend_tests": 2577,
+			"frontend_tests": 986,
+			"mariadb_11_8_3_cases": 26,
 			"codeql": "No new alerts in code changed by this pull request",
-			"frontend_source_format_failure": "fixed locally; complete frontend 986/986 rerun passed",
-			"docker_x86_64_and_aarch64_builds": "pass"
+			"docker_x86_64_and_aarch64_builds": "pass",
+			"root_and_uid_1000_smokes": "pass",
+			"native_and_lxc_artifacts": "pass"
+		},
+		"production_runtime_followup": {
+			"commit": "8c0e659799fec013c1c55d38b29191bf34c5155c",
+			"backend": {
+				"passed": 2577,
+				"skipped": 65,
+				"seconds": 47.95
+			},
+			"real_mariadb_10_11_14": {
+				"passed": 26,
+				"snapshot_isolation": "ON",
+				"seconds": 5.67
+			},
+			"real_mariadb_11_8_3_ci": "26 passed",
+			"real_nginx_startup_and_traffic": {
+				"passed": 10,
+				"seconds": 5.31
+			},
+			"original_failures_reproduced": [
+				"ER_CHECKREAD 1020 at actual history DELETE",
+				"DATETIME 1292 from ISO certificate and captured relation timestamps",
+				"manual update rewrites shared ACL graph",
+				"rollback rejected captured ISO host timestamp",
+				"nginx -t succeeds with missing host includes while healthy sites return HTTP 404"
+			],
+			"codeql_workflow": "pass"
+		},
+		"custom_wasm_modules": {
+			"combined_cases_passed": 58,
+			"files": 7,
+			"skipped": 0,
+			"seconds": 7.63,
+			"independent_binary_fixture_bytes": 1124,
+			"http_callbacks": 4,
+			"native_request_context_shared": true,
+			"http2_and_chunked_cases": 3,
+			"request_body_chunk_maximum_bytes": 65536,
+			"tempfile_read_maximum_bytes": 65537,
+			"module_upload_maximum_bytes": 16777216,
+			"mixed_preset_custom_reload_status": "pass",
+			"configuration_encrypted_write_only": true,
+			"known_native_runtime_limits": [
+				"API7 0.7.0 reports header end_of_stream=1 even with a following body",
+				"proxy_set_buffer_bytes is unimplemented; generic body rewriting is unavailable"
+			]
 		}
+	},
+	"withdrawn_features": {
+		"F05": "Host workspace UI, API, models, tags, translations and tests removed at user request; historic migration remains unchanged for deployed databases",
+		"analytics_host_options": "Independent projection retained at /nginx/proxy-hosts/options"
 	}
 }

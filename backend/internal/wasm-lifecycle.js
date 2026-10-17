@@ -293,8 +293,9 @@ async function markAccepted(references, uncertain = false) {
 			{
 				configuration_path: path.join(hostsDirectory(), name),
 				status_path: chain.status_path,
-				version: chain.bundle_version,
-				sha256: chain.filters[0].sha256,
+				version: chain.active_version || chain.bundle_version,
+				sha256: chain.active_sha256 || chain.filters[0].sha256,
+				modules: chain.modules || [],
 				filter_count: chain.filters.length,
 			},
 			uncertain ? "The latest Nginx reload was not acknowledged; this is the last confirmed policy" : null,

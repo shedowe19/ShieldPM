@@ -92,19 +92,20 @@ die Startwiederherstellung; normale sicherheitsrelevante Sammeländerungen bleib
 
 Nach einem erfolgreichen `configure()` wird `internalAnubis.generatePolicy()` **asynchron** aufgerufen (non-blocking). Dies aktualisiert die Anubis-Sicherheitspolicy basierend auf der neuen Nginx-Konfiguration, ohne den Configure-Flow zu blockieren. Fehler werden separat protokolliert und rollen eine bereits akzeptierte Nginx-Konfiguration nicht zurück.
 
-## Wasm-Lieferumfang und fehlende Produktanbindung
+## Wasm-Lieferumfang und Produktanbindung
 
 Die am 17. Oktober 2026 geprüfte Nginx-Runtime 1.31.6 enthält statisch API7s `wasm-nginx-module` 0.7.0
 mit Wasmtime 49.0.2. Lua-Helfer und Runtime-Bibliothek werden auch im nativen Archiv ausgeliefert.
-Die reguläre Basiskonfiguration setzt bisher kein `wasm_vm`; ShieldPM hat noch keine Filterverwaltung
-oder Hostzuweisung. Die Anbindung erfolgt über `resty.proxy-wasm` und gemeinsame Lua-Phasen.
+ShieldPM verwaltet eigene hochgeladene Proxy-Wasm-Module und deren Zuordnung zu Hosts. Die Anbindung erfolgt
+über `resty.proxy-wasm` und gemeinsame Lua-Phasen; benötigte globale Runtime-Direktiven werden beim Aktivieren
+geprüft. Modulinhalte erhalten unveränderliche SHA-256-Pfade, Konfigurationen bleiben verschlüsselt und werden
+vor der Host-Aktivierung in einer isolierten echten Nginx-Runtime ausgeführt.
 
-Ein isolierter echter Filter prüfte API-Key, Request-/Response-Header, Trap und ungültige Datei erfolgreich.
-`nginx -t` führt Filter jedoch nicht aus und akzeptiert die ungültige Datei. Eine spätere Aktivierung muss
-zusätzlich echte Ausführung prüfen. Allgemeines Body-Umschreiben und Shared-State-/Zeit-APIs fehlen;
-Pluginmetriken sind Stubs. Allgemeine Uploads benötigen zuvor CPU-/Speichergrenzen
-und eine eingeschränkte WASI-Umgebung. Technischer Stand, Nachweise und Feature-Umfang stehen im
-[Gesamtprüfbericht](../entwicklung/feature-review-2026-10-17.md#wasm-vorhandene-technik-und-tatsächlicher-test).
+`nginx -t` allein führt Filter nicht aus und kann sogar eine ungültige Wasm-Datei unbemerkt lassen.
+Die zusätzliche Ausführungsprüfung testet deshalb jedes Modul und anschließend die gesamte Kette, bevor sie
+akzeptiert wird. Ein allgemeines WASI-Kommandozeilenprogramm ist kein Proxy-Wasm-HTTP-Filter. Maßgeblich sind
+die von API7 bereitgestellten Hostfunktionen; nicht unterstützte Imports werden abgewiesen.
+Aktuelle Schnittstellen, Nachweise und Laufzeitgrenzen stehen unter [Wasm-Filter](./wasm-filter.md).
 
 ## Abhängigkeiten der Konfigurationsengine
 

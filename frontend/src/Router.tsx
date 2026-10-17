@@ -39,7 +39,6 @@ const ChatOps = lazy(() => import("src/pages/ChatOps"));
 const Profile = lazy(() => import("src/pages/Profile"));
 const DuoCallback = lazy(() => import("src/pages/DuoCallback"));
 const Incidents = lazy(() => import("src/pages/Incidents"));
-const HostWorkspace = lazy(() => import("src/pages/HostWorkspace"));
 const Backups = lazy(() => import("src/pages/Settings/Backups"));
 
 function Content() {
@@ -53,16 +52,6 @@ function Content() {
 						<AnimatedPage>
 							<HasPermission section={PROXY_HOSTS} permission={VIEW}>
 								<Incidents />
-							</HasPermission>
-						</AnimatedPage>
-					}
-				/>
-				<Route
-					path="/nginx/workspace"
-					element={
-						<AnimatedPage>
-							<HasPermission section={PROXY_HOSTS} permission={VIEW}>
-								<HostWorkspace />
 							</HasPermission>
 						</AnimatedPage>
 					}

@@ -1,5 +1,5 @@
 {
-	"operationId": "getNginxHostWorkspaceOptions",
+	"operationId": "getNginxProxyHostOptions",
 	"summary": "List lightweight authorized host selector options",
 	"tags": [
 		"proxy-hosts"

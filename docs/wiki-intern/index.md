@@ -51,7 +51,6 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Störungszentrale](./module/incident-center.md)
 - [Verschlüsselte Instanzbackups](./module/instance-backups.md)
 - [Host-Versionen](./features/host-revisionen.md)
-- [Host-Arbeitsbereich](./features/host-arbeitsbereich.md)
 - [Nginx-Engine](./module/nginx-engine.md)
 - [Nginx-Templates](./module/nginx-templates.md)
 - [Proxy-Host](./module/proxy-host.md)

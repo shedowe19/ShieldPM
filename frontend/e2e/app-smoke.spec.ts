@@ -107,6 +107,7 @@ async function installMockApi(page: Page) {
 	const requests: ApiRequest[] = [];
 	const topHostSorts: string[] = [];
 	const backupJobs: unknown[] = [];
+	const wasmModules: unknown[] = [];
 
 	const fulfill = async (route: Route, body: unknown, status = 200) => {
 		await route.fulfill({
@@ -128,7 +129,10 @@ async function installMockApi(page: Page) {
 		if (!path.startsWith("/api/")) {
 			return route.continue();
 		}
-		const body = request.postDataJSON();
+		const body =
+			request.headers()["content-type"] === "application/wasm"
+				? Array.from(request.postDataBuffer() || [])
+				: request.postDataJSON();
 		requests.push({ body, method, path });
 
 		if (method === "GET" && path === "/api/") {
@@ -184,39 +188,13 @@ async function installMockApi(page: Page) {
 			return fulfill(route, []);
 		}
 
-		if (method === "GET" && path === "/api/nginx/host-workspace/hosts")
-			return fulfill(route, {
-				items: [
-					{ id: 7, domain_names: ["api.e2e.test"], tags: ["prod"], enabled: true },
-					{ id: 8, domain_names: ["canary.e2e.test"], tags: [], enabled: true },
-				],
-				pagination: { total_pages: 1, total_items: 2 },
-			});
-		if (method === "GET" && path === "/api/nginx/host-workspace/items")
-			return fulfill(route, [
-				{ id: 10, kind: "profile", name: "Shield", definition: { settings: { block_exploits: true } } },
-			]);
-		if (method === "POST" && path === "/api/nginx/host-workspace/bulk/preview")
-			return fulfill(route, {
-				plan: "reviewed-e2e-plan",
-				results: [
-					{ id: 7, ready: true, before: { block_exploits: false }, after: { block_exploits: true } },
-					{ id: 8, ready: false, error: "Permission denied for canary" },
-				],
-			});
-		if (method === "POST" && path === "/api/nginx/host-workspace/bulk/apply")
-			return fulfill(route, {
-				activated: true,
-				results: [
-					{ id: 7, success: true },
-					{ id: 8, success: false, error: "Host changed; preview again" },
-				],
-			});
 		if (method === "GET" && path === "/api/nginx/proxy-hosts")
 			return fulfill(route, {
 				items: [mockHost],
 				pagination: { page: 1, limit: 100, total_items: 1, total_pages: 1 },
 			});
+		if (method === "GET" && path === "/api/nginx/proxy-hosts/options")
+			return fulfill(route, [{ id: 7, domain_names: ["api.e2e.test"] }]);
 		if (method === "GET" && path === "/api/nginx/proxy-hosts/monitors/status")
 			return fulfill(route, [{ host_id: 7, state: "up", checked_at: "2026-10-17T12:00:00Z", response_ms: 25 }]);
 		if (method === "GET" && path === "/api/nginx/proxy-hosts/7") return fulfill(route, mockHost);
@@ -228,6 +206,20 @@ async function installMockApi(page: Page) {
 			(method === "POST" && path === "/api/nginx/wasm/self-test")
 		)
 			return fulfill(route, wasmCapability);
+		if (method === "GET" && path === "/api/nginx/wasm/modules") return fulfill(route, wasmModules);
+		if (method === "POST" && path === "/api/nginx/wasm/modules") {
+			const module = {
+				id: "b".repeat(64),
+				sha256: "b".repeat(64),
+				name: url.searchParams.get("name"),
+				filename: url.searchParams.get("filename"),
+				size: request.postDataBuffer()?.length || 0,
+				abi: "0.2.1",
+				created_on: "2026-10-17T20:00:00Z",
+			};
+			wasmModules.push(module);
+			return fulfill(route, module, 201);
+		}
 		if (method === "GET" && path === "/api/nginx/wasm/hosts/7")
 			return fulfill(route, { state: "inactive", checked_at: null });
 		if (method === "GET" && path === "/api/nginx/proxy-hosts/7/upstream-pool/status")
@@ -512,39 +504,9 @@ test("shows audit row icons at their intended size and preserves filter and deta
 	await expect(page.getByRole("dialog")).toContainText("E2E Firewall List");
 });
 
-test("reviews host profiles before applying partial results", async ({ page }, testInfo) => {
-	const api = await installMockApi(page);
-	await signIn(page);
-	await page.getByRole("button", { name: "Hosts", exact: true }).click();
-	await page.getByRole("link", { name: "Host workspace", exact: true }).click();
-	await expect(page.getByRole("heading", { name: "Host workspace", exact: true })).toBeVisible();
-	await page.getByRole("checkbox", { name: "Select api.e2e.test", exact: true }).check();
-	await page.getByRole("checkbox", { name: "Select canary.e2e.test", exact: true }).check();
-	await page.getByLabel("Saved profile", { exact: true }).selectOption("10");
-	await expect(page.getByRole("button", { name: "Apply reviewed changes", exact: true })).toHaveCount(0);
-	await page.getByRole("button", { name: "Preview changes", exact: true }).click();
-	await expect(page.getByText("#8 Permission denied for canary", { exact: true })).toBeVisible();
-	await expect(page.getByText("Block common exploits: false → true", { exact: true })).toBeVisible();
-	expect(api.requests.filter((r) => r.path.endsWith("/bulk/apply"))).toEqual([]);
-	await page
-		.getByTestId("app-content")
-		.screenshot({ path: testInfo.outputPath("workspace-review.png"), animations: "disabled" });
-	await page.getByRole("button", { name: "Apply reviewed changes", exact: true }).click();
-	await expect(page.getByText("#7: Applied", { exact: true })).toBeVisible();
-	await expect(page.getByText("#8: Host changed; preview again", { exact: true })).toBeVisible();
-	await expect(page.getByRole("button", { name: "Apply reviewed changes", exact: true })).toHaveCount(0);
-	expect(api.requests.filter((r) => r.path.endsWith("/bulk/preview"))).toEqual([
-		{ method: "POST", path: "/api/nginx/host-workspace/bulk/preview", body: { profile_id: 10, host_ids: [7, 8] } },
-	]);
-	expect(api.requests.filter((r) => r.path.endsWith("/bulk/apply"))).toEqual([
-		{ method: "POST", path: "/api/nginx/host-workspace/bulk/apply", body: { plan: "reviewed-e2e-plan" } },
-	]);
-	await page
-		.getByTestId("app-content")
-		.screenshot({ path: testInfo.outputPath("workspace-partial-result.png"), animations: "disabled" });
-});
-
-test("edits Wasm, weighted upstream and cache policies in the real host dialog", async ({ page }, testInfo) => {
+test("uploads and configures a Wasm module with upstream and cache policies in the real host dialog", async ({
+	page,
+}, testInfo) => {
 	await page.setViewportSize({ width: 1440, height: 1100 });
 	const api = await installMockApi(page);
 	await signIn(page);
@@ -560,6 +522,19 @@ test("edits Wasm, weighted upstream and cache policies in the real host dialog",
 	await expect(dialog.getByText(/Runtime: functional/)).toBeVisible();
 	await dialog.getByRole("button", { name: "Verify runtime", exact: true }).click();
 	await expect.poll(() => api.requests.filter((r) => r.path === "/api/nginx/wasm/self-test").length).toBe(1);
+	await dialog.getByLabel("Wasm module file (.wasm)", { exact: true }).setInputFiles({
+		name: "tenant.wasm",
+		mimeType: "application/wasm",
+		buffer: Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]),
+	});
+	await dialog.getByLabel("Module name", { exact: true }).fill("Tenant module");
+	await dialog.getByRole("button", { name: "Upload module", exact: true }).click();
+	await expect(dialog.getByLabel("Available module", { exact: true })).toHaveValue("b".repeat(64));
+	await dialog.getByRole("button", { name: "Add module to host", exact: true }).click();
+	await dialog
+		.getByLabel("Module configuration (JSON)", { exact: true })
+		.fill('{"TenantID":"demo","HeaderRules":{"ExactCase":true}}');
+	await dialog.getByText("Built-in templates", { exact: true }).click();
 	await dialog.getByRole("button", { name: "Add request header", exact: true }).click();
 	await dialog.getByLabel("Header name", { exact: true }).fill("x-e2e-policy");
 	await dialog.getByLabel("Header value", { exact: true }).fill("verified");
@@ -586,10 +561,21 @@ test("edits Wasm, weighted upstream and cache policies in the real host dialog",
 			upstream_pool: { targets: [{ weight: 3 }] },
 			cache_policy: { routes: [{ path: "/", ttl_seconds: 120 }] },
 			wasm_filters: [
+				{
+					kind: "module",
+					enabled: true,
+					config: {
+						module_id: "b".repeat(64),
+						configuration: { TenantID: "demo", HeaderRules: { ExactCase: true } },
+					},
+				},
 				{ kind: "request_header", enabled: true, config: { header: "x-e2e-policy", value: "verified" } },
 			],
 		},
 	});
+	expect(api.requests.find((r) => r.method === "POST" && r.path === "/api/nginx/wasm/modules")?.body).toEqual([
+		0, 97, 115, 109, 1, 0, 0, 0,
+	]);
 	expect(api.requests.filter((r) => r.method === "DELETE" && r.path.endsWith("/cache"))).toHaveLength(1);
 });
 
