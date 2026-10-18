@@ -31,13 +31,17 @@ Die Nachweise trennen echte Ausführung, Verträge und gemockte Oberflächenantw
 
 | Prüfung                     | Nachweis                                                                                                                              |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Vollständige Backend-Suite  | Node 26.12.0: 2.891 bestanden, 96 explizite Umgebungs-/Runtime-Skips; 277 Dateien bestanden, 12 ausgelassen; 36,59 Sekunden.          |
+| Vollständige Backend-Suite  | Node 26.12.0: 2.891 bestanden, 96 explizite Umgebungs-/Runtime-Skips; 277 Dateien bestanden, 12 ausgelassen.          |
 | Vollständige Frontend-Suite | Node 26.12.0: 1.058 Tests in 228 Dateien bestanden.                                                                                   |
 | Echter Chromium-Browser     | 11 Abläufe bestanden, keine ausgelassenen/flaky Fälle; neuer Hostablauf mit gemockter API und Axe ohne Verstöße.                      |
 | Produktions-Bundle          | Unveränderte Grenzwerte bestanden: größtes JS 106.550/299.000, JS gesamt 1.211.756/1.290.000 und CSS 16.461/16.600 Bytes komprimiert. |
 | Echte HTTP-/WASI-Einbindung | 58/58 ausgewählte Nginx-Laufzeitfälle unter Node 26 bestanden, darunter 19/19 neue Host-WASI-Fälle mit echten Kindprozessen.          |
 | Privater Adapter            | Authentifizierung, Pfade, Hashes, Manipulationen, Body-/Header-Grenzen, echter Abbruch und Wiederanlauf geprüft.                      |
 | Image-Smokes                | Dedizierter produktiver Unix-Socket-Nachweis als Root und UID 1000 in beiden Architektur-Builds; GitHub-Ergebnis maßgeblich.          |
+
+Die zwölf Listener-Lebenszyklustests prüfen ausdrücklich, dass der Start auf die Initialisierung der
+Bridge und das Beenden auf deren Abschluss wartet. Die isolierte Service-Testgrenze ersetzt dort
+tatsächliche Socket- und Datenschreibzugriffe; Adaptertests und Image-Smokes prüfen diese separat.
 
 Diese lokale Ausführungsumgebung erlaubt keine Unix-Sockets und keinen zusätzlichen UID-Wechsel.
 Die lokalen echten Nginx-/WASI-Läufe verwenden deshalb ausschließlich den ausdrücklich begrenzten
