@@ -12,6 +12,12 @@ const configurationSources = [
 	"lib/host-traffic-policy.js",
 	"lib/firewall-render.js",
 	"lib/utils.js",
+	"internal/wasm.js",
+	"internal/wasi-host-bridge.js",
+	"lib/wasi-runner.js",
+	"lib/wasi-http-contract.js",
+	"../rootfs/usr/local/share/lua/5.1/shieldpm/wasm.lua",
+	"../rootfs/usr/local/share/lua/5.1/shieldpm/wasi.lua",
 ];
 
 // The startup check and the post-regeneration writer must use the same input
@@ -26,7 +32,12 @@ export const getEnvironmentHash = async () => {
 			file,
 			crypto
 				.createHash("sha512")
-				.update(await fs.promises.readFile(path.join(backendDirectory, file)))
+				.update(
+					await fs.promises.readFile(path.join(backendDirectory, file)).catch((error) => {
+						if (error.code !== "ENOENT" || !file.startsWith("../rootfs/")) throw error;
+						return fs.promises.readFile(file.slice("../rootfs".length));
+					}),
+				)
 				.digest("hex"),
 		]),
 	);

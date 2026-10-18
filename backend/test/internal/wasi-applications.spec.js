@@ -3,6 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("../../lib/encryption.js", () => ({ decrypt: (value) => value }));
+vi.mock("../../internal/nginx.js", () => ({ default: { withConfigurationLock: (action) => action() } }));
+vi.mock("../../models/proxy_host.js", () => ({ default: { query: () => ({ select: async () => [] }) } }));
+vi.mock("../../models/proxy_host_revision.js", () => ({ default: { query: () => ({ select: async () => [] }) } }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: vi.fn() } }));
 
 import audit from "../../internal/audit-log.js";

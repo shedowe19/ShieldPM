@@ -83,7 +83,7 @@ describe("complete encrypted instance backup", () => {
 		expect(await engine.commit()).toBe(true);
 		expect(await engine.pending()).toBeNull();
 	});
-	it("requires Wasm preflight only for enabled, non-deleted hosts with enabled filters", async () => {
+	it("requires Wasm preflight for enabled Proxy-Wasm and WASI policies, excluding disabled or deleted hosts", async () => {
 		const database = new Database(path.join(directory, "shieldpm/database.sqlite"));
 		database.exec(
 			"CREATE TABLE proxy_host (id INTEGER PRIMARY KEY, enabled INTEGER, is_deleted INTEGER, meta TEXT)",
@@ -94,11 +94,13 @@ describe("complete encrypted instance backup", () => {
 		insert.run(2, 0, 0, enabled);
 		insert.run(3, 1, 1, enabled);
 		insert.run(4, 1, 0, JSON.stringify({ wasm_filters: [{ enabled: false }] }));
+		insert.run(5, 1, 0, JSON.stringify({ wasm_filters: [{ kind: "application", enabled: true }] }));
+		insert.run(6, 1, 0, JSON.stringify({ wasm_filters: [{ kind: "application", enabled: false }] }));
 		database.close();
 		vi.spyOn(engine, "wasmCheck").mockResolvedValue(undefined);
 		const row = await engine.create(password);
 		await engine.verify(row.id, password);
-		expect(engine.wasmHosts.map(({ id }) => id)).toEqual([1]);
+		expect(engine.wasmHosts.map(({ id }) => id)).toEqual([1, 5]);
 	});
 
 	it("rejects wrong passwords, truncated and modified archives without changing the instance", async () => {

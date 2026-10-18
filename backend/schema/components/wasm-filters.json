@@ -19,6 +19,7 @@
 			"kind": {
 				"enum": [
 					"module",
+					"application",
 					"api_key",
 					"request_header",
 					"response_header",
@@ -74,6 +75,70 @@
 					"body": {
 						"type": "string",
 						"maxLength": 4096
+					},
+					"application_id": {
+						"type": "string",
+						"pattern": "^[a-f0-9]{64}$"
+					},
+					"mode": {
+						"enum": [
+							"filter",
+							"handler"
+						]
+					},
+					"protocol": {
+						"enum": [
+							"stdio",
+							"http-json-v1"
+						]
+					},
+					"has_settings": {
+						"type": "boolean"
+					},
+					"settings": {
+						"type": "object",
+						"additionalProperties": false,
+						"properties": {
+							"args": {
+								"type": "array",
+								"maxItems": 32,
+								"items": {
+									"type": "string",
+									"maxLength": 4096,
+									"pattern": "^[^\\u0000]*$"
+								}
+							},
+							"env": {
+								"type": "array",
+								"maxItems": 32,
+								"items": {
+									"type": "object",
+									"additionalProperties": false,
+									"required": [
+										"name",
+										"value"
+									],
+									"properties": {
+										"name": {
+											"type": "string",
+											"minLength": 1,
+											"maxLength": 128,
+											"pattern": "^(?!SHIELDPM_HTTP_)[A-Za-z_][A-Za-z0-9_]*$"
+										},
+										"value": {
+											"type": "string",
+											"maxLength": 4096,
+											"pattern": "^[^\\u0000]*$"
+										}
+									}
+								}
+							},
+							"timeout_ms": {
+								"type": "integer",
+								"minimum": 100,
+								"maximum": 60000
+							}
+						}
 					}
 				}
 			}

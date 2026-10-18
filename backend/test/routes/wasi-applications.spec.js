@@ -11,6 +11,10 @@ vi.mock("../../lib/express/jwt-decode.js", () => ({
 		next();
 	},
 }));
+vi.mock("../../lib/encryption.js", () => ({ decrypt: (value) => value }));
+vi.mock("../../internal/nginx.js", () => ({ default: { withConfigurationLock: (action) => action() } }));
+vi.mock("../../models/proxy_host.js", () => ({ default: { query: () => ({ select: async () => [] }) } }));
+vi.mock("../../models/proxy_host_revision.js", () => ({ default: { query: () => ({ select: async () => [] }) } }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: state.audit } }));
 vi.mock("node:child_process", async (original) => {
 	const actual = await original();

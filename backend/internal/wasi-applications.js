@@ -6,12 +6,13 @@ import { Ajv } from "ajv";
 import errs from "../lib/error.js";
 import { runWasiApplication } from "../lib/wasi-runner.js";
 import { inspectWasmModule } from "../lib/wasm-module-inspection.js";
+import { isWasiPreview1Command, proxyWasmMetadata } from "../lib/wasm-runtime-contracts.js";
 import runSchema from "../schema/components/wasi-run-input.json" with { type: "json" };
 import {
+	assertWasmArtifactUnreferenced,
 	MAX_MODULE_BYTES,
 	moduleIdentifier,
 	readWasmFile,
-	wasiPreview1Functions,
 	wasmDirectory,
 	writeWasmArtifact,
 } from "./wasm-modules.js";
@@ -82,19 +83,14 @@ export async function validateWasiApplication(bytes) {
 	if (bytes.length > MAX_MODULE_BYTES) throw new errs.ValidationError("Wasm applications must not exceed 16 MiB");
 	if (bytes.length < 8 || !bytes.subarray(0, 8).equals(Buffer.from([0, 97, 115, 109, 1, 0, 0, 0])))
 		throw new errs.ValidationError("Invalid Wasm application binary header");
-	const { imports, exports } = await inspectWasmModule(bytes);
-	if (
-		imports.some(
-			(entry) =>
-				entry.kind !== "function" ||
-				entry.module !== "wasi_snapshot_preview1" ||
-				!wasiPreview1Functions.has(entry.name),
-		) ||
-		!exports.some((entry) => entry.kind === "function" && entry.name === "_start") ||
-		!exports.some((entry) => entry.kind === "memory" && entry.name === "memory") ||
-		exports.some((entry) => entry.name === "_initialize")
-	)
+	const inspection = await inspectWasmModule(bytes);
+	if (!isWasiPreview1Command(inspection)) {
+		if (proxyWasmMetadata(inspection))
+			throw new errs.ValidationError(
+				"This is a Proxy-Wasm HTTP module. Use the automatic Wasm upload in the host editor to attach it to HTTP traffic",
+			);
 		throw new errs.ValidationError("A standalone WASI Preview 1 command with memory and _start is required");
+	}
 }
 
 async function catalogEntry(id) {
@@ -138,6 +134,15 @@ async function applicationBytes(id) {
 		throw new errs.ConfigurationError("WASI application artifact hash mismatch");
 	return { row, bytes };
 }
+
+/** Resolve a trusted application digest and verify immutable bytes before host activation.
+ * @param {string} id
+ */
+export async function applicationArtifact(id) {
+	const { row } = await applicationBytes(id);
+	return { ...row, path: path.join(root(), "artifacts", `${row.sha256}.wasm`) };
+}
+
 const audit = async (access, action, row, extra = {}) => {
 	const { default: internalAudit } = await import("./audit-log.js");
 	await internalAudit.add(access, {
@@ -148,14 +153,26 @@ const audit = async (access, action, row, extra = {}) => {
 	});
 };
 
+const listCatalog = async () => {
+	const rows = await Promise.all((await catalogNames()).map((name) => catalogEntry(name.slice(0, -5))));
+	return rows.sort((left, right) => left.name.localeCompare(right.name));
+};
+
 const applications = {
+	/** Host editors may select administrator-approved applications without obtaining independent execution rights. @param {any} access */
+	async listForHosts(access) {
+		await access.can("proxy_hosts:list");
+		return withCatalogLock(async () => {
+			await access.can("proxy_hosts:list");
+			return listCatalog();
+		});
+	},
 	/** @param {any} access */
 	async list(access) {
 		await access.can("settings:update");
 		return withCatalogLock(async () => {
 			await access.can("settings:update");
-			const rows = await Promise.all((await catalogNames()).map((name) => catalogEntry(name.slice(0, -5))));
-			return rows.sort((left, right) => left.name.localeCompare(right.name));
+			return listCatalog();
 		});
 	},
 	/** @param {any} access @param {Buffer} bytes @param {any} metadata */
@@ -196,17 +213,23 @@ const applications = {
 	/** @param {any} access @param {string} id */
 	async remove(access, id) {
 		await access.can("settings:update");
-		return withCatalogLock(async () => {
-			await access.can("settings:update");
-			const row = await catalogEntry(id);
-			const filename = path.resolve(root(), "applications", `${row.id}.json`);
-			if (!filename.startsWith(`${root()}${path.sep}`))
-				throw new errs.ConfigurationError("Unsafe WASI application catalog path");
-			await fs.unlink(filename);
-			// Immutable bytecode is retained for already running applications or Proxy-Wasm workers.
-			await audit(access, "deleted", row);
-			return { deleted: true };
-		});
+		const { default: nginx } = await import("./nginx.js");
+		// Host mutation already owns the Nginx lock before resolving catalog entries.
+		// Keep this same order so deleting an application cannot race activation or deadlock.
+		return nginx.withConfigurationLock(() =>
+			withCatalogLock(async () => {
+				await access.can("settings:update");
+				const row = await catalogEntry(id);
+				await assertWasmArtifactUnreferenced(row.id, "application");
+				const filename = path.resolve(root(), "applications", `${row.id}.json`);
+				if (!filename.startsWith(`${root()}${path.sep}`))
+					throw new errs.ConfigurationError("Unsafe WASI application catalog path");
+				await fs.unlink(filename);
+				// Immutable bytecode is retained for already running applications or Proxy-Wasm workers.
+				await audit(access, "deleted", row);
+				return { deleted: true };
+			}),
+		);
 	},
 	/** @param {any} access @param {string} id @param {unknown} input @param {{signal?: AbortSignal}} [options] */
 	async run(access, id, input, options = {}) {

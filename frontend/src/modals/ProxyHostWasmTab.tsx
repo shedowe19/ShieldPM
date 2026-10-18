@@ -1,6 +1,6 @@
 import { useField, useFormikContext } from "formik";
-import { useState } from "react";
-import { WASM_MODULE_MAX_BYTES, type WasmFilter, type WasmFilterKind, type WasmModule } from "src/api/backend/wasm";
+import { useEffect, useState } from "react";
+import { WASM_MODULE_MAX_BYTES, type WasmArtifact, type WasmFilter, type WasmFilterKind } from "src/api/backend/wasm";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
@@ -8,13 +8,14 @@ import { Switch } from "src/components/ui/switch";
 import { TabsContent } from "src/components/ui/tabs";
 import { useUser } from "src/hooks/useUser";
 import {
-	useUploadWasmModule,
+	useUploadWasmArtifact,
+	useWasmArtifacts,
 	useWasmCapability,
 	useWasmHostStatus,
-	useWasmModules,
 	useWasmSelfTest,
 } from "src/hooks/useWasm";
 import { intl } from "src/locale";
+import ProxyHostWasiConfiguration from "./ProxyHostWasiConfiguration";
 
 const text = (id: string, defaultMessage: string) =>
 	intl.formatMessage({ id: `proxy-host.wasm.${id}`, defaultMessage });
@@ -24,14 +25,16 @@ export const createWasmFilter = (kind: WasmFilterKind, moduleId?: string): WasmF
 	enabled: true,
 	failureMode: "closed",
 	config:
-		kind === "module"
-			? { moduleId, configuration: {} }
-			: kind === "local_response"
-				? { status: 503, body: "Temporarily unavailable" }
-				: {
-						header: kind === "api_key" ? "x-api-key" : "x-shieldpm-policy",
-						...(kind === "api_key" ? { value: "" } : { operation: "set", value: "" }),
-					},
+		kind === "application"
+			? { applicationId: moduleId, mode: "handler", protocol: "stdio", settings: {} }
+			: kind === "module"
+				? { moduleId, configuration: {} }
+				: kind === "local_response"
+					? { status: 503, body: "Temporarily unavailable" }
+					: {
+							header: kind === "api_key" ? "x-api-key" : "x-shieldpm-policy",
+							...(kind === "api_key" ? { value: "" } : { operation: "set", value: "" }),
+						},
 });
 
 function configurationError(value: string): string | undefined {
@@ -56,6 +59,12 @@ function ModuleConfiguration({ filter, index }: { filter: WasmFilter; index: num
 		name: `meta.wasmFilters.${index}.config.configuration`,
 		validate: () => configurationError(draft),
 	});
+	const { validateForm } = useFormikContext();
+	// biome-ignore lint/correctness/useExhaustiveDependencies: The draft changes its registered validator even when the saved Formik value stays unchanged.
+	useEffect(() => {
+		// Clearing the field error alone leaves empty parent objects and keeps the host Save button disabled.
+		void validateForm();
+	}, [draft, validateForm]);
 	const error = configurationError(draft) || meta.error;
 	return (
 		<div className="space-y-2">
@@ -95,20 +104,24 @@ function ModuleConfiguration({ filter, index }: { filter: WasmFilter; index: num
 	);
 }
 
-function ModuleCatalog({ filters, add }: { filters: WasmFilter[]; add: (moduleId: string) => void }) {
-	const modules = useWasmModules();
-	const upload = useUploadWasmModule();
+function ModuleCatalog({ filters, add }: { filters: WasmFilter[]; add: (entry: WasmArtifact) => void }) {
+	const modules = useWasmArtifacts();
+	const upload = useUploadWasmArtifact();
 	const { data: user } = useUser("me");
 	const [selected, setSelected] = useState("");
-	const [uploaded, setUploaded] = useState<WasmModule | null>(null);
+	const [uploaded, setUploaded] = useState<WasmArtifact | null>(null);
 	const [file, setFile] = useState<File | null>(null);
 	const [name, setName] = useState("");
 	const [error, setError] = useState("");
 	const catalog =
-		uploaded && !modules.data?.some((module) => module.id === uploaded.id)
+		uploaded &&
+		!modules.data?.some(
+			(module) => module.runtime === uploaded.runtime && module.artifact.id === uploaded.artifact.id,
+		)
 			? [...(modules.data || []), uploaded]
 			: modules.data || [];
-	const selectedModule = catalog.find((module) => module.id === selected);
+	const key = (entry: WasmArtifact) => `${entry.runtime}:${entry.artifact.id}`;
+	const selectedModule = catalog.find((module) => key(module) === selected);
 	return (
 		<section aria-labelledby="wasm-modules-title" className="rounded-lg border p-4 space-y-4">
 			<div className="space-y-2">
@@ -118,10 +131,10 @@ function ModuleCatalog({ filters, add }: { filters: WasmFilter[]; add: (moduleId
 				<p className="text-sm text-muted-foreground">
 					{text(
 						"module-help",
-						"Upload a trusted .wasm HTTP filter for Proxy-Wasm ABI 0.2.1, then add it to this host.",
+						"Upload a trusted .wasm file. ShieldPM detects Proxy-Wasm HTTP filters and WASI Preview 1 applications so either can run on this host.",
 					)}{" "}
 					<a href="/settings/wasi" className="text-primary underline">
-						{text("standalone-wasi", "Run standalone WASI applications in Settings → WASI applications.")}
+						{text("standalone-wasi", "Test applications separately in Settings → WASI applications.")}
 					</a>
 				</p>
 			</div>
@@ -171,7 +184,7 @@ function ModuleCatalog({ filters, add }: { filters: WasmFilter[]; add: (moduleId
 							try {
 								const module = await upload.mutateAsync({ file, name: name.trim() });
 								setUploaded(module);
-								setSelected(module.id);
+								setSelected(key(module));
 							} catch (cause) {
 								setError(
 									cause instanceof Error
@@ -211,15 +224,19 @@ function ModuleCatalog({ filters, add }: { filters: WasmFilter[]; add: (moduleId
 				>
 					<option value="">{text("choose-module", "Select a module")}</option>
 					{catalog.map((module) => (
-						<option key={module.id} value={module.id}>
-							{module.name} · {module.filename}
+						<option key={key(module)} value={key(module)}>
+							{module.artifact.name} · {module.artifact.filename} ·{" "}
+							{module.runtime === "proxy-wasm" ? "Proxy-Wasm" : "WASI Preview 1"}
 						</option>
 					))}
 				</select>
 				{selectedModule && (
 					<p className="break-all text-xs text-muted-foreground">
-						Proxy-Wasm {selectedModule.abi} · {Math.ceil(selectedModule.size / 1024)} KiB · SHA-256{" "}
-						{selectedModule.sha256}
+						{selectedModule.runtime === "proxy-wasm"
+							? `Proxy-Wasm ${selectedModule.artifact.abi}`
+							: "WASI Preview 1"}{" "}
+						· {Math.ceil(selectedModule.artifact.size / 1024)} KiB · SHA-256{" "}
+						{selectedModule.artifact.sha256}
 					</p>
 				)}
 				{modules.isError && (
@@ -231,7 +248,11 @@ function ModuleCatalog({ filters, add }: { filters: WasmFilter[]; add: (moduleId
 					<p className="text-sm text-muted-foreground">{text("catalog-empty", "No uploaded modules yet.")}</p>
 				)}
 			</div>
-			<Button type="button" disabled={!selectedModule || filters.length >= 8} onClick={() => add(selected)}>
+			<Button
+				type="button"
+				disabled={!selectedModule || filters.length >= 8}
+				onClick={() => selectedModule && add(selectedModule)}
+			>
 				{text("add-module", "Add module to host")}
 			</Button>
 		</section>
@@ -255,16 +276,22 @@ export default function ProxyHostWasmTab() {
 	return (
 		<TabsContent value="wasm" className="mt-0 space-y-5">
 			<div className="rounded-lg border p-4 space-y-2">
-				<h3 className="font-medium">{text("title", "WebAssembly filters")}</h3>
+				<h3 className="font-medium">{text("title", "WebAssembly modules and applications")}</h3>
 				<p className="text-sm text-muted-foreground">
 					{text(
 						"description",
-						"Run your own Wasm HTTP modules at the proxy. Modules run in the order shown; saving the host validates and activates them.",
+						"Run Wasm filters and WASI applications on this host. Entries run in the order shown; saving validates and activates the HTTP chain.",
 					)}
 				</p>
 				<p className="text-sm" role="status">
 					{text("runtime", "Runtime")}: {capability.data?.state || "unverified"}{" "}
 					{capability.data?.runtimeVersion ? `· Wasmtime ${capability.data.runtimeVersion}` : ""}
+				</p>
+				<p className="text-sm text-muted-foreground">
+					{text(
+						"application-runtime-help",
+						"WASI applications use the command runtime independently. The Proxy-Wasm runtime check applies to HTTP filter modules.",
+					)}
 				</p>
 				{capability.data?.version && (
 					<p className="text-sm text-muted-foreground">
@@ -301,7 +328,12 @@ export default function ProxyHostWasmTab() {
 			</div>
 			<ModuleCatalog
 				filters={filters}
-				add={(moduleId) => update([...filters, createWasmFilter("module", moduleId)])}
+				add={(entry) =>
+					update([
+						...filters,
+						createWasmFilter(entry.runtime === "proxy-wasm" ? "module" : "application", entry.artifact.id),
+					])
+				}
 			/>
 			{filters.length > 0 && <h3 className="font-medium">{text("chain", "Host execution order")}</h3>}
 			{filters.map((filter, index) => (
@@ -344,7 +376,7 @@ export default function ProxyHostWasmTab() {
 							{text("remove", "Remove")}
 						</Button>
 					</div>
-					{filter.kind !== "local_response" && filter.kind !== "module" && (
+					{filter.kind !== "local_response" && filter.kind !== "module" && filter.kind !== "application" && (
 						<div className="space-y-2">
 							<Label htmlFor={`${filter.id}-header`}>{text("header", "Header name")}</Label>
 							<Input
@@ -357,7 +389,13 @@ export default function ProxyHostWasmTab() {
 							/>
 						</div>
 					)}
-					{filter.kind === "module" ? (
+					{filter.kind === "application" ? (
+						<ProxyHostWasiConfiguration
+							filter={filter}
+							index={index}
+							patch={(config) => patch(index, { config })}
+						/>
+					) : filter.kind === "module" ? (
 						<>
 							<p className="break-all text-xs text-muted-foreground">
 								{text("module-id", "Module SHA-256")}: {filter.config.moduleId}

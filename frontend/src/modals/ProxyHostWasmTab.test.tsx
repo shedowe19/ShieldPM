@@ -43,12 +43,23 @@ vi.mock("src/hooks/useWasm", () => ({
 	useWasmCapability: () => ({ data: { state: "functional", version: "1.0.0" } }),
 	useWasmHostStatus: () => ({ data: { state: "validated" } }),
 	useWasmSelfTest: () => ({ mutate: testRuntime, isPending: false }),
-	useWasmModules: () => moduleCatalog,
-	useUploadWasmModule: () => ({ mutateAsync: uploadModule, isPending: false }),
+	useWasmArtifacts: () => ({
+		...moduleCatalog,
+		data: moduleCatalog.data.map((artifact) => ({ runtime: "proxy-wasm", artifact })),
+	}),
+	useUploadWasmArtifact: () => ({ mutateAsync: uploadModule, isPending: false }),
 }));
 function Values() {
 	const { values } = useFormikContext<{ meta: { wasmFilters: WasmFilter[] } }>();
 	return <output data-testid="values">{JSON.stringify(values)}</output>;
+}
+function SaveHost() {
+	const { isValid } = useFormikContext();
+	return (
+		<button type="submit" disabled={!isValid}>
+			Save host
+		</button>
+	);
 }
 function show(filters: WasmFilter[] = [], onSubmit = vi.fn()) {
 	return render(
@@ -58,7 +69,7 @@ function show(filters: WasmFilter[] = [], onSubmit = vi.fn()) {
 					<Tabs value="wasm">
 						<ProxyHostWasmTab />
 					</Tabs>
-					<button type="submit">Save host</button>
+					<SaveHost />
 					<Values />
 				</Form>
 			</Formik>
@@ -67,9 +78,105 @@ function show(filters: WasmFilter[] = [], onSubmit = vi.fn()) {
 }
 const values = () => JSON.parse(screen.getByTestId("values").textContent || "{}").meta.wasmFilters;
 describe("ProxyHostWasmTab", () => {
-	it("links standalone WASI applications to the separate settings runner", () => {
+	it("detects WASI uploads and adds a host application without requiring Proxy-Wasm callbacks", async () => {
+		const application = {
+			id: "c".repeat(64),
+			name: "HTTP command",
+			filename: "command.wasm",
+			sha256: "c".repeat(64),
+			size: 800,
+			runtime: "wasi-preview1",
+			createdOn: "2026-10-18",
+		};
+		uploadModule.mockResolvedValue({ runtime: "wasi-preview1", artifact: application });
 		show();
-		expect(screen.getByRole("link", { name: /Run standalone WASI applications/ })).toHaveAttribute(
+		const file = new File(["wasm"], "command.wasm");
+		fireEvent.change(screen.getByLabelText("Wasm module file (.wasm)"), { target: { files: [file] } });
+		fireEvent.click(screen.getByRole("button", { name: "Upload module" }));
+		await waitFor(() =>
+			expect(screen.getByLabelText("Available module")).toHaveValue(`wasi-preview1:${application.id}`),
+		);
+		fireEvent.click(screen.getByRole("button", { name: "Add module to host" }));
+		await waitFor(() =>
+			expect(values()[0]).toMatchObject({
+				kind: "application",
+				config: { applicationId: application.id, mode: "handler", protocol: "stdio", settings: {} },
+			}),
+		);
+		expect(screen.getByLabelText("Application role")).toHaveValue("handler");
+		expect(screen.getByText(/a successful exit returns standard output/)).toBeInTheDocument();
+		fireEvent.change(screen.getByLabelText("Application role"), { target: { value: "filter" } });
+		await waitFor(() => expect(values()[0].config).toMatchObject({ mode: "filter", protocol: "http-json-v1" }));
+		expect(screen.getByLabelText("Input and output format")).toBeDisabled();
+		fireEvent.change(screen.getByLabelText("Application role"), { target: { value: "handler" } });
+		fireEvent.change(screen.getByLabelText("Input and output format"), { target: { value: "stdio" } });
+		await waitFor(() => expect(values()[0].config.protocol).toBe("stdio"));
+	});
+	it("keeps private application settings blank and supports an explicit reset", async () => {
+		show([
+			{
+				id: "app",
+				kind: "application",
+				enabled: true,
+				failureMode: "closed",
+				config: { applicationId: "c".repeat(64), mode: "handler", protocol: "stdio", hasSettings: true },
+			},
+		]);
+		const input = screen.getByPlaceholderText("Leave empty to keep the stored execution settings");
+		expect(input).toHaveValue("");
+		expect(values()[0].config).not.toHaveProperty("settings");
+		fireEvent.change(input, { target: { value: "{}" } });
+		await waitFor(() => expect(values()[0].config.settings).toEqual({}));
+		fireEvent.change(input, { target: { value: "" } });
+		await waitFor(() => expect(values()[0].config).not.toHaveProperty("settings"));
+	});
+	it("preserves invalid application drafts across reorder and blocks host submission", async () => {
+		const submit = vi.fn();
+		show(
+			[
+				{
+					id: "app",
+					kind: "application",
+					enabled: true,
+					failureMode: "closed",
+					config: { applicationId: "c".repeat(64), mode: "handler", protocol: "stdio", settings: {} },
+				},
+				{
+					id: "other",
+					kind: "local_response",
+					enabled: true,
+					failureMode: "closed",
+					config: { status: 200, body: "ok" },
+				},
+			],
+			submit,
+		);
+		const input = screen.getByLabelText("Application execution settings (JSON)");
+		fireEvent.change(input, { target: { value: '{"args":' } });
+		fireEvent.click(screen.getAllByRole("button", { name: "Move filter down" })[0]);
+		await waitFor(() => expect(values()[1].id).toBe("app"));
+		expect(screen.getByLabelText("Application execution settings (JSON)")).toHaveValue('{"args":');
+		fireEvent.click(screen.getByRole("button", { name: "Save host" }));
+		await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Enter an object"));
+		expect(submit).not.toHaveBeenCalled();
+		fireEvent.change(screen.getByLabelText("Application execution settings (JSON)"), {
+			target: {
+				value: '{"args":["Exact_CASE"],"env":[{"name":"TenantID","value":"SYNTHETIC_VALUE"}],"timeoutMs":1200}',
+			},
+		});
+		await waitFor(() => expect(screen.getByRole("button", { name: "Save host" })).toBeEnabled());
+		fireEvent.click(screen.getByRole("button", { name: "Save host" }));
+		await waitFor(() => expect(submit).toHaveBeenCalledOnce());
+		expect(values()[1].config.settings).toEqual({
+			args: ["Exact_CASE"],
+			env: [{ name: "TenantID", value: "SYNTHETIC_VALUE" }],
+			timeoutMs: 1200,
+		});
+	});
+
+	it("links the optional standalone application test runner", () => {
+		show();
+		expect(screen.getByRole("link", { name: /Test applications separately/ })).toHaveAttribute(
 			"href",
 			"/settings/wasi",
 		);
@@ -131,7 +238,9 @@ describe("ProxyHostWasmTab", () => {
 				config: { header: "x-tenant", value: "1" },
 			},
 		]);
-		fireEvent.change(screen.getByLabelText("Available module"), { target: { value: "a".repeat(64) } });
+		fireEvent.change(screen.getByLabelText("Available module"), {
+			target: { value: `proxy-wasm:${"a".repeat(64)}` },
+		});
 		fireEvent.click(screen.getByRole("button", { name: "Add module to host" }));
 		await waitFor(() => expect(values()).toHaveLength(2));
 		fireEvent.change(screen.getByLabelText("Module configuration (JSON)"), {
@@ -172,6 +281,7 @@ describe("ProxyHostWasmTab", () => {
 		expect(submit).not.toHaveBeenCalled();
 		expect(input).toHaveValue('{"incomplete":');
 		fireEvent.change(input, { target: { value: '{"CaseSensitive":true}' } });
+		await waitFor(() => expect(screen.getByRole("button", { name: "Save host" })).toBeEnabled());
 		fireEvent.click(screen.getByRole("button", { name: "Save host" }));
 		await waitFor(() => expect(submit).toHaveBeenCalledOnce());
 	});
@@ -201,7 +311,7 @@ describe("ProxyHostWasmTab", () => {
 			filename: "custom.wasm",
 			sha256: "b".repeat(64),
 		};
-		uploadModule.mockResolvedValue(uploaded);
+		uploadModule.mockResolvedValue({ runtime: "proxy-wasm", artifact: uploaded });
 		show();
 		const file = new File([new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0])], "custom.wasm", {
 			type: "application/wasm",
@@ -210,7 +320,7 @@ describe("ProxyHostWasmTab", () => {
 		fireEvent.change(screen.getByLabelText("Module name"), { target: { value: "Custom plugin" } });
 		fireEvent.click(screen.getByRole("button", { name: "Upload module" }));
 		await waitFor(() => expect(uploadModule).toHaveBeenCalledWith({ file, name: "Custom plugin" }));
-		await waitFor(() => expect(screen.getByLabelText("Available module")).toHaveValue(uploaded.id));
+		await waitFor(() => expect(screen.getByLabelText("Available module")).toHaveValue(`proxy-wasm:${uploaded.id}`));
 		expect(values()).toEqual([]);
 		fireEvent.click(screen.getByRole("button", { name: "Add module to host" }));
 		await waitFor(() => expect(values()[0].config.moduleId).toBe(uploaded.id));
@@ -225,12 +335,14 @@ describe("ProxyHostWasmTab", () => {
 			config: { moduleId: "a".repeat(64), configuration: { keepCase: 1 } },
 		};
 		show([existing]);
-		fireEvent.change(screen.getByLabelText("Available module"), { target: { value: "a".repeat(64) } });
+		fireEvent.change(screen.getByLabelText("Available module"), {
+			target: { value: `proxy-wasm:${"a".repeat(64)}` },
+		});
 		const file = new File(["not wasm"], "broken.wasm");
 		fireEvent.change(screen.getByLabelText("Wasm module file (.wasm)"), { target: { files: [file] } });
 		fireEvent.click(screen.getByRole("button", { name: "Upload module" }));
 		await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("unsupported ABI"));
-		expect(screen.getByLabelText("Available module")).toHaveValue("a".repeat(64));
+		expect(screen.getByLabelText("Available module")).toHaveValue(`proxy-wasm:${"a".repeat(64)}`);
 		expect(screen.getByLabelText("Module name")).toHaveValue("broken");
 		expect(values()).toEqual([existing]);
 		expect(screen.getByRole("button", { name: "Upload module" })).toBeEnabled();

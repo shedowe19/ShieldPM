@@ -9,12 +9,18 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Ajv } from "ajv";
 import errs from "../lib/error.js";
+import { validateWasiHostSettings } from "../lib/wasi-http-contract.js";
 import { redactWasmFilters } from "../lib/wasm-response.js";
 import filterSchema from "../schema/components/wasm-filters.json" with { type: "json" };
+import { applicationArtifact } from "./wasi-applications.js";
+import { prepareWasiHostBridge } from "./wasi-host-bridge.js";
 import { moduleArtifact } from "./wasm-modules.js";
 
 const bundle = fileURLToPath(new URL("../wasm/", import.meta.url));
 const dispatcher = fileURLToPath(new URL("../../rootfs/usr/local/share/lua/5.1/shieldpm/wasm.lua", import.meta.url));
+const wasiDispatcher = fileURLToPath(
+	new URL("../../rootfs/usr/local/share/lua/5.1/shieldpm/wasi.lua", import.meta.url),
+);
 const root = () => path.join(process.env.DATA_PATH || "/data", "wasm");
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const validate = new Ajv({ allErrors: true, strict: false }).compile(filterSchema);
@@ -42,6 +48,24 @@ export function validateWasmFilters(filters) {
 		if (ids.has(filter.id)) throw new errs.ValidationError("Wasm filter identifiers must be unique");
 		ids.add(filter.id);
 		const config = filter.config;
+		if (filter.kind === "application") {
+			if (
+				!config.application_id ||
+				!["filter", "handler"].includes(config.mode) ||
+				!["stdio", "http-json-v1"].includes(config.protocol) ||
+				(config.mode === "filter" && config.protocol !== "http-json-v1") ||
+				Object.keys(config).some(
+					(key) => !["application_id", "mode", "protocol", "settings", "has_settings"].includes(key),
+				)
+			)
+				throw new errs.ValidationError(
+					"WASI host applications require a catalog application and HTTP execution mode",
+				);
+			if (config.settings !== undefined) validateWasiHostSettings(config.settings);
+			continue;
+		}
+		if (["application_id", "mode", "protocol", "settings", "has_settings"].some((key) => config[key] !== undefined))
+			throw new errs.ValidationError("WASI application settings are only valid for application filters");
 		if (filter.kind === "module") {
 			if (
 				!config.module_id ||
@@ -97,6 +121,16 @@ export function validateWasmFilters(filters) {
 		if (Buffer.byteLength(config.value || config.body || "", "utf8") > 4096)
 			throw new errs.ValidationError("Wasm value exceeds 4096 bytes");
 	}
+	const handlers = checked.filter(
+		(filter) => filter.enabled && filter.kind === "application" && filter.config.mode === "handler",
+	);
+	if (handlers.length > 1)
+		throw new errs.ValidationError("A host can have only one enabled WASI HTTP application handler");
+	if (handlers.length) {
+		const index = checked.indexOf(handlers[0]);
+		if (checked.slice(index + 1).some((filter) => filter.enabled && filter.kind !== "response_header"))
+			throw new errs.ValidationError("The WASI HTTP application handler must follow all request filters");
+	}
 	for (let index = 0; index < checked.length; index++) {
 		const authentication = checked[index];
 		if (!authentication.enabled || authentication.kind !== "api_key") continue;
@@ -107,6 +141,7 @@ export function validateWasmFilters(filters) {
 					(filter) =>
 						filter.enabled &&
 						(filter.kind === "module" ||
+							filter.kind === "application" ||
 							(filter.kind === "request_header" &&
 								filter.config.header.toLowerCase() === authentication.config.header.toLowerCase())),
 				)
@@ -124,6 +159,26 @@ export async function prepareWasmFilters(input = [], previous = []) {
 	const filters = structuredClone(validateWasmFilters(input));
 	const { encrypt } = await import("../lib/encryption.js");
 	for (const filter of filters) {
+		if (filter.kind === "application") {
+			await applicationArtifact(filter.config.application_id);
+			const prior = previous.find(
+				(entry) =>
+					entry.id === filter.id &&
+					entry.kind === "application" &&
+					entry.config.application_id === filter.config.application_id,
+			);
+			if (filter.config.settings !== undefined)
+				filter.config.sealed_settings = encrypt(
+					JSON.stringify(validateWasiHostSettings(filter.config.settings)),
+				);
+			else if (prior?.config?.sealed_settings) filter.config.sealed_settings = prior.config.sealed_settings;
+			else if (filter.config.has_settings)
+				throw new errs.ValidationError("The WASI application settings must be supplied again");
+			else filter.config.sealed_settings = encrypt(JSON.stringify(validateWasiHostSettings({})));
+			delete filter.config.settings;
+			delete filter.config.has_settings;
+			continue;
+		}
 		if (filter.kind === "module") {
 			await moduleArtifact(filter.config.module_id);
 			const prior = previous.find(
@@ -228,9 +283,42 @@ export async function materializeWasmHost(host) {
 		.catch(async () => fs.readFile("/usr/local/share/lua/5.1/shieldpm/wasm.lua"));
 	const luaPath = path.join(root(), "artifacts", `${digest(luaBytes)}.lua`);
 	await immutableFile(luaPath, luaBytes);
+	const hasApplications = filters.some((filter) => filter.kind === "application");
+	let wasiRuntime;
+	let wasiLuaPath;
+	if (hasApplications) {
+		wasiRuntime = await prepareWasiHostBridge();
+		const wasiLuaBytes = await fs
+			.readFile(wasiDispatcher)
+			.catch(async () => fs.readFile("/usr/local/share/lua/5.1/shieldpm/wasi.lua"));
+		wasiLuaPath = path.join(root(), "artifacts", `${digest(wasiLuaBytes)}.lua`);
+		await immutableFile(wasiLuaPath, wasiLuaBytes);
+	}
 	const { decrypt } = await import("../lib/encryption.js");
 	const entries = await Promise.all(
 		filters.map(async (filter) => {
+			if (filter.kind === "application") {
+				const application = await applicationArtifact(filter.config.application_id);
+				let settings;
+				try {
+					settings = validateWasiHostSettings(JSON.parse(decrypt(filter.config.sealed_settings)));
+				} catch {
+					throw new errs.ValidationError("The WASI application settings are unavailable");
+				}
+				return {
+					id: filter.id,
+					kind: "application",
+					path: application.path,
+					sha256: application.sha256,
+					application_id: application.id,
+					mode: filter.config.mode,
+					protocol: filter.config.protocol,
+					settings,
+					phase: "request",
+					authentication: false,
+					failure_mode: filter.failure_mode,
+				};
+			}
 			if (filter.kind === "module") {
 				const module = await moduleArtifact(filter.config.module_id);
 				let configuration;
@@ -276,16 +364,31 @@ export async function materializeWasmHost(host) {
 			version: manifest.version,
 			filters: entries,
 			protected_configuration: filters.map(
-				(filter) => filter.config.sealed_configuration || filter.config.sealed_value || "",
+				(filter) =>
+					filter.config.sealed_configuration ||
+					filter.config.sealed_value ||
+					filter.config.sealed_settings ||
+					"",
 			),
 		}),
 	);
 	const modules = entries
 		.filter((filter) => filter.kind === "module")
 		.map((filter) => ({ filter_id: filter.id, module_id: filter.sha256 }));
+	const applications = entries
+		.filter((filter) => filter.kind === "application")
+		.map((filter) => ({ filter_id: filter.id, application_id: filter.sha256 }));
+	for (const entry of entries.filter((filter) => filter.kind === "application"))
+		entry.bridge_token = wasiRuntime.tokenFor(`${host.id}:${policyVersion}:${entry.id}`);
 	const statusPath = path.join(root(), "status", `${host.id}-${policyVersion}.json`);
-	const activeVersion = modules.length ? "Proxy-Wasm 0.2.1" : manifest.version;
-	const activeHash = modules.length ? policyVersion : manifest.sha256;
+	const activeVersion = hasApplications
+		? modules.length
+			? "Proxy-Wasm 0.2.1 + WASI Preview 1"
+			: "WASI Preview 1"
+		: modules.length
+			? "Proxy-Wasm 0.2.1"
+			: manifest.version;
+	const activeHash = modules.length || hasApplications ? policyVersion : manifest.sha256;
 	await fs.mkdir(path.dirname(statusPath), { recursive: true, mode: 0o700 });
 	const contents = JSON.stringify({
 		version: 1,
@@ -293,6 +396,15 @@ export async function materializeWasmHost(host) {
 		active_version: activeVersion,
 		active_sha256: activeHash,
 		modules,
+		applications,
+		...(hasApplications
+			? {
+					host_id: host.id,
+					policy_version: policyVersion,
+					wasi_socket_path: wasiRuntime.socket_path,
+					wasi_dispatcher_path: wasiLuaPath,
+				}
+			: {}),
 		filters: entries,
 		status_path: statusPath,
 	});
@@ -305,6 +417,17 @@ export async function materializeWasmHost(host) {
 		version: activeVersion,
 		sha256: activeHash,
 		modules,
+		applications,
+		...(hasApplications
+			? {
+					preflight_timeout_ms:
+						Math.max(
+							...entries
+								.filter((entry) => entry.kind === "application")
+								.map((entry) => entry.settings.timeout_ms),
+						) + 2000,
+				}
+			: {}),
 		filter_count: entries.length,
 		status_path: statusPath,
 	};
@@ -330,7 +453,9 @@ function requestSocket(socketPath, headers = {}, requestBody = "", options = {})
 				else resolve(result);
 			};
 			session.on("error", (error) => finish(error));
-			session.setTimeout(1500, () => finish(new errs.ConfigurationError("Wasm execution timed out")));
+			session.setTimeout(options.timeoutMs || 1500, () =>
+				finish(new errs.ConfigurationError("Wasm execution timed out")),
+			);
 			request = session.request({ ":path": "/", ":method": requestBody ? "POST" : "GET", ...headers });
 			let responseHeaders;
 			let body = "";
@@ -364,7 +489,7 @@ function requestSocket(socketPath, headers = {}, requestBody = "", options = {})
 				path: "/",
 				method: requestBody ? "POST" : "GET",
 				headers: { ...framing, ...headers },
-				timeout: 1500,
+				timeout: options.timeoutMs || 1500,
 			},
 			(response) => {
 				let body = "";
@@ -401,15 +526,19 @@ export function executeWasmPreflight(prepared, headers = {}, options = {}) {
 		const configPath = path.join(work, "nginx.conf");
 		// A candidate preflight must never mutate an accepted worker's runtime status.
 		const probeChain = JSON.parse(await fs.readFile(prepared.configuration_path, "utf8"));
+		if (probeChain.wasi_socket_path)
+			probeChain.wasi_configuration_name = path.basename(prepared.configuration_path);
 		if (options.filterId)
 			probeChain.filters = probeChain.filters.filter((filter) => filter.id === options.filterId);
 		probeChain.status_path = path.join(work, "status.json");
 		const probeConfiguration = path.join(work, "chain.json");
 		await fs.writeFile(probeConfiguration, JSON.stringify(probeChain), { mode: 0o600 });
+		const timeoutMs = options.timeoutMs || prepared.preflight_timeout_ms || 1500;
+		const needsProxyWasm = probeChain.filters.some((filter) => filter.kind !== "application");
 		const config = `user root; daemon off; master_process off; worker_processes 1; pid ${work}/pid; error_log ${work}/error.log warn;
-	events { worker_connections 32; } http { access_log off; wasm_vm wasmtime; lua_package_path ${quote(luaPath())}; ${process.env.SHIELDPM_WASM_LUA_CPATH ? `lua_package_cpath ${quote(process.env.SHIELDPM_WASM_LUA_CPATH)};` : ""}
+	events { worker_connections 32; } http { access_log off; ${needsProxyWasm ? "wasm_vm wasmtime;" : ""} lua_package_path ${quote(luaPath())}; ${process.env.SHIELDPM_WASM_LUA_CPATH ? `lua_package_cpath ${quote(process.env.SHIELDPM_WASM_LUA_CPATH)};` : ""}
 	init_by_lua_block { shieldpm_wasm = dofile(${quote(prepared.dispatcher_path)}); shieldpm_wasm.load(${quote(probeConfiguration)}); }
-	server { listen ${listener}; ${options.http2 ? "http2 on;" : ""} client_body_temp_path ${work}/body; location / { access_by_lua_block { shieldpm_wasm.access(${quote(probeConfiguration)}); }
+	server { listen ${listener}; ${options.http2 ? "http2 on;" : ""} client_body_temp_path ${work}/body; location / { lua_check_client_abort on; access_by_lua_block { shieldpm_wasm.access(${quote(probeConfiguration)}); }
 	header_filter_by_lua_block { shieldpm_wasm.header_filter(${quote(probeConfiguration)}); }
 	body_filter_by_lua_block { shieldpm_wasm.body_filter(); } content_by_lua_block { ngx.say("SHIELDPM_WASM_OK:" .. (ngx.var.http_x_shieldpm_probe or "")); } } } }`;
 		await fs.mkdir(path.join(work, "logs"));
@@ -419,13 +548,16 @@ export function executeWasmPreflight(prepared, headers = {}, options = {}) {
 		child.on("error", (error) => {
 			spawnError = error;
 		});
-		const timer = setTimeout(() => child.kill("SIGKILL"), 5000);
+		const timer = setTimeout(() => child.kill("SIGKILL"), Math.max(5000, timeoutMs + 2000));
 		try {
 			for (let attempt = 0; attempt < 50; attempt++) {
 				if (spawnError || child.exitCode !== null)
 					throw new errs.ConfigurationError("Wasm runtime failed its execution preflight");
 				try {
-					const result = await requestSocket(socketPath, headers, options.requestBody || "", options);
+					const result = await requestSocket(socketPath, headers, options.requestBody || "", {
+						...options,
+						timeoutMs,
+					});
 					const runtimeError = await fs.readFile(probeChain.status_path, "utf8").catch((error) => {
 						if (error.code === "ENOENT") return null;
 						throw error;
@@ -452,7 +584,11 @@ export function executeWasmPreflight(prepared, headers = {}, options = {}) {
 
 /** Prepare a host for rendering. A failed preflight leaves the old referenced chain untouched. */
 export async function prepareHost(host) {
-	if (host.enabled !== false && host.enabled !== 0 && host.meta?.wasm_filters?.some((filter) => filter.enabled)) {
+	if (
+		host.enabled !== false &&
+		host.enabled !== 0 &&
+		host.meta?.wasm_filters?.some((filter) => filter.enabled && filter.kind !== "application")
+	) {
 		if (!(await capabilities()).configured)
 			throw new errs.ConfigurationError(
 				"The installed Nginx Wasm runtime is not configured; restart ShieldPM before activating filters",
@@ -468,12 +604,12 @@ export async function prepareHost(host) {
 			.map((filter) => [filter.config.header, decrypt(filter.config.sealed_value)]),
 	);
 	try {
-		for (const filter of filters.filter((entry) => entry.kind === "module")) {
+		for (const filter of filters.filter((entry) => entry.kind === "module" || entry.kind === "application")) {
 			for (const requestBody of ["", "shieldpm-wasm-preflight"]) {
 				const probe = await executeWasmPreflight(prepared, headers, { filterId: filter.id, requestBody });
 				if (probe.runtime_error)
 					throw new errs.ConfigurationError(
-						`Wasm module ${filter.id} failed in ${probe.runtime_error.phase}; verify API7 Proxy-Wasm compatibility; previous configuration retained`,
+						`${filter.kind === "application" ? "WASI application" : "Wasm module"} ${filter.id} failed in ${probe.runtime_error.phase}; verify its HTTP execution contract; previous configuration retained`,
 					);
 			}
 		}
@@ -490,7 +626,7 @@ export async function prepareHost(host) {
 		// Custom modules can intentionally transform or reject the probe. A completed
 		// HTTP exchange without an ABI/configuration/trap error proves execution;
 		// their business-specific response cannot be compared with bundled presets.
-		if (filters.some((filter) => filter.kind === "module")) {
+		if (filters.some((filter) => filter.kind === "module" || filter.kind === "application")) {
 			const bodyProbe = await executeWasmPreflight(prepared, headers, { requestBody: "shieldpm-wasm-preflight" });
 			if (bodyProbe.runtime_error)
 				throw new errs.ConfigurationError("Wasm filter chain failed its body execution preflight");
@@ -506,7 +642,8 @@ export async function prepareHost(host) {
 			throw new errs.ConfigurationError("Wasm filter chain failed its execution preflight");
 		return prepared;
 	} catch (error) {
-		if (error instanceof errs.ConfigurationError && error.message.startsWith("Wasm module ")) throw error;
+		if (error instanceof errs.ConfigurationError && /^(?:Wasm module|WASI application) /.test(error.message))
+			throw error;
 		throw new errs.ConfigurationError("Wasm execution preflight failed; previous configuration retained", error);
 	}
 }
@@ -685,6 +822,9 @@ export async function capabilities() {
 		abi: manifest.abi,
 		trusted_only: true,
 		custom_modules: true,
+		wasi_host_applications: true,
+		wasi_host_protocols: ["stdio", "http-json-v1"],
+		wasi_host_body_max_bytes: 65536,
 		module_upload_max_bytes: 16 * 1024 * 1024,
 	};
 }
@@ -724,6 +864,7 @@ export async function markHostActive(hostId, prepared, activationError = null) {
 							sha256: prepared.sha256,
 							filter_count: prepared.filter_count,
 							...(prepared.modules?.length ? { modules: prepared.modules } : {}),
+							...(prepared.applications?.length ? { applications: prepared.applications } : {}),
 							configuration_file: path.basename(prepared.configuration_path),
 							runtime_status_file: path.basename(prepared.status_path),
 						}

@@ -11,6 +11,23 @@ export function validateTrustedHostPolicies(candidate, previous) {
 	if (filters === undefined) return;
 	validateWasmFilters(redactWasmFilters(filters));
 	for (const filter of filters) {
+		if (filter.kind === "application") {
+			try {
+				const [publicFilter] = redactWasmFilters([filter]);
+				validateWasmFilters([
+					{
+						...publicFilter,
+						config: {
+							...publicFilter.config,
+							settings: JSON.parse(decrypt(filter.config.sealed_settings)),
+						},
+					},
+				]);
+			} catch {
+				throw new errs.ValidationError("The revision contains unavailable WASI application settings");
+			}
+			continue;
+		}
 		if (filter.kind === "module") {
 			try {
 				validateWasmFilters([

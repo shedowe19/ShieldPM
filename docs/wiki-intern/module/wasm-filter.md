@@ -23,8 +23,9 @@ Proxy-Wasm-Hostfunktionen aus `env` oder Standardfunktionen aus `wasi_snapshot_p
 werden SDK-Module beispielsweise mit `fd_write`, Zeit- oder Zufallsfunktionen unterstützt. Die vorhandene
 Wasmtime-Anbindung stellt diesen WASI-Kontext ausdrücklich bereit. Ein reines WASI-Kommando ohne
 Proxy-Wasm-Lebenszyklus und HTTP-Callback bleibt unzulässig; ein passender Dateiname allein belegt keine
-Kompatibilität. Eigenständige Preview-1-Kommandos werden über die gesonderten
-[WASI-Anwendungen](./wasi-runtime.md) hochgeladen und ausgeführt; sie benötigen keine Proxy-Wasm-Callbacks.
+Kompatibilität. Der gemeinsame Host-Upload erkennt eigenständige Preview-1-Kommandos und ordnet sie dem
+WASI-Anwendungskatalog zu. Sie benötigen keine Proxy-Wasm-Callbacks und lassen sich als HTTP-Anwendung
+oder Anfragefilter an Hosts binden. Der genaue HTTP-Vertrag steht unter [WASI-Anwendungen](./wasi-runtime.md).
 
 Die gemeinsame Kataloghilfe akzeptiert ausschließlich die festen Verzeichnisse `wasm`, `wasm/modules`,
 `wasm/artifacts`, `wasm/hosts` und `wasm/applications` unter `DATA_PATH`. Dateioperationen verwenden den vollständig normalisierten,
@@ -112,7 +113,7 @@ stellt deren bisherige Artefaktreferenzen wieder her.
 ]
 ```
 
-Arten: `module`, `api_key`, `request_header`, `response_header`, `local_response`. Bei einem eigenen Modul
+Arten: `module`, `application`, `api_key`, `request_header`, `response_header`, `local_response`. Bei einem eigenen Modul
 verweist `config.module_id` auf den Katalog-SHA-256; `config.configuration` ist ein JSON-Objekt mit maximal
 64 KiB UTF-8. Schlüssel werden einschließlich ihrer Groß-/Kleinschreibung unverändert weitergegeben.
 Eine gebündelte API-Key-Prüfung muss vor eigenen Modulen und vor Transformationen ihres Credential-Headers
@@ -195,6 +196,8 @@ Upstream-Header und Cookies nicht als Fehlerantwort ausgeliefert. ACME-, Redirec
 
 ## Schnittstellen und Oberfläche
 
+- `GET/POST /api/nginx/wasm/artifacts`: gemeinsamer Katalog und automatische Bytecode-Laufzeiterkennung;
+  `{runtime, artifact}` unterscheidet Proxy-Wasm und WASI. Lesen benötigt Host-Listenrechte, Upload Adminrechte.
 - `GET /api/nginx/wasm/modules`: globaler Katalog, erfordert Host-Listenberechtigung.
 - `POST /api/nginx/wasm/modules?name=...&filename=...`: Admin-Upload als rohe Bytes mit
   `Content-Type: application/wasm` oder `application/octet-stream`, maximal 16 MiB; Rate-Limit und normale

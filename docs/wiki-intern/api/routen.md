@@ -49,6 +49,11 @@ Detaillierte Auflistung aller API-Routen-Dateien.
 
 ### Eigenständige WASI-Anwendungen
 
+`GET/POST /api/nginx/wasm/artifacts` bietet die gemeinsame Hostauswahl und den automatisch erkannten
+Upload als `{runtime, artifact}`. Lesen benötigt `proxy_hosts:list`, Upload `settings:update`.
+WASI-Hostbindungen werden über die bestehende Host-CRUD-API in `meta.wasm_filters` gespeichert;
+der private Unix-Ausführungsadapter ist ausdrücklich kein öffentlicher API-Endpunkt.
+
 `GET`/`POST /api/nginx/wasm/applications`, `DELETE /:applicationID` und
 `POST /:applicationID/run` erfordern `settings:update`. Sie verwalten eigenständige WASI-Preview-1-Kommandos
 mit `_start` unabhängig von den Proxy-Wasm-HTTP-Filtern. Die Startantwort enthält Ausgabe, Status und

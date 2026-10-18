@@ -1,6 +1,7 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import internalWasm from "../../internal/wasm.js";
+import artifacts from "../../internal/wasm-artifacts.js";
 import internalModules, { MAX_MODULE_BYTES } from "../../internal/wasm-modules.js";
 import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
@@ -14,6 +15,24 @@ router.use((_req, res, next) => {
 	next();
 });
 router.use("/applications", applicationRoutes);
+router.get("/artifacts", async (_req, res) => res.send(await artifacts.list(res.locals.access)));
+router.post(
+	"/artifacts",
+	limiter,
+	async (_req, res, next) => {
+		await res.locals.access.can("settings:update");
+		next();
+	},
+	express.raw({ type: ["application/wasm", "application/octet-stream"], limit: MAX_MODULE_BYTES, inflate: false }),
+	async (req, res) => {
+		res.status(201).send(
+			await artifacts.upload(res.locals.access, req.body, {
+				name: req.query.name,
+				filename: req.query.filename,
+			}),
+		);
+	},
+);
 router.get("/modules", async (_req, res) => res.send(await internalModules.list(res.locals.access)));
 router.post(
 	"/modules",

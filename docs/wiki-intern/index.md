@@ -48,6 +48,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Modulübersicht](./module/README.md)
 - [Wasm-Filter](./module/wasm-filter.md)
 - [Eigenständige WASI-Anwendungen](./module/wasi-runtime.md)
+- [WASI-HTTP-Einbindung pro Host vom 18. Oktober](./entwicklung/wasi-host-integration-2026-10-18.md)
 - [Upstream-Pools](./module/upstream-pools.md)
 - [Proxy-Cache](./module/proxy-cache.md)
 - [Störungszentrale](./module/incident-center.md)

@@ -31,6 +31,7 @@ import internalProxyHostMonitor from "./internal/proxy-host-monitor.js";
 import internalTerminal from "./internal/terminal.js";
 import internalTor from "./internal/tor.js";
 import internalUploadRelay from "./internal/upload-relay.js";
+import { prepareWasiHostBridge, stopWasiHostBridges } from "./internal/wasi-host-bridge.js";
 import internalWireguard from "./internal/wireguard.js";
 import migrateFromSqliteToNewDb from "./lib/db-migrate.js";
 import { global as logger } from "./logger.js";
@@ -44,6 +45,7 @@ async function appStart() {
 	try {
 		await migrateFromSqliteToNewDb();
 		await migrateUp();
+		await prepareWasiHostBridge();
 		await analyticsService.init();
 		internalUploadRelay.init();
 		await setup();
@@ -110,6 +112,7 @@ async function appStart() {
 					await internalFirewallList.stopTimer();
 					await analyticsService.stop();
 					await internalUploadRelay.stop();
+					await stopWasiHostBridges();
 					logger.info("Stopping.");
 					process.exit(0);
 				});

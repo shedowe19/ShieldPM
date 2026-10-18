@@ -72,7 +72,7 @@ The Agent must be aware of these specific versions and libraries:
   - `ngx_http_geoip2_module` (GeoIP)
   - `lua-nginx-module` (Scripting)
   - `brotli`, `zstd` (Compression)
-  - `api7/wasm-nginx-module` 0.7.0 with Wasmtime 49.0.2 (verified in Nginx 1.31.6). ShieldPM manages administrator-trusted Proxy-Wasm uploads, per-host configuration, immutable artifacts and real execution preflight. Standalone WASI Preview 1 commands use the independent Node WASI application runner. Current contracts: [Wasm HTTP filters](./docs/wiki-intern/module/wasm-filter.md) and [WASI applications](./docs/wiki-intern/module/wasi-runtime.md).
+  - `api7/wasm-nginx-module` 0.7.0 with Wasmtime 49.0.2 (verified in Nginx 1.31.6). ShieldPM manages administrator-trusted Proxy-Wasm uploads, per-host configuration, immutable artifacts and real execution preflight. Unified artifact upload detects standalone WASI Preview 1 commands, which use the Node WASI runner independently or as per-host HTTP applications/request middleware over a private authenticated Unix bridge. Host application settings are encrypted and write-only. Current contracts: [Wasm HTTP filters](./docs/wiki-intern/module/wasm-filter.md) and [WASI applications](./docs/wiki-intern/module/wasi-runtime.md).
 * **Security Integrations**:
   - **CrowdSec**: IPS via Lua Bouncer.
   - **OpenAppSec**: AI WAF via Attachment Module.

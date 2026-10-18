@@ -1,7 +1,7 @@
 -- ShieldPM administrator-trusted Proxy-Wasm dispatcher. Paths are generated from catalog digests.
 require "resty.core"
 local cjson = require "cjson.safe"
-local wasm = require "resty.proxy-wasm"
+local wasm
 local sha256 = require "resty.sha256"
 local hex = require "resty.string"
 local M = {}
@@ -41,16 +41,60 @@ function M.load(path)
         local digest = sha256:new()
         assert(digest:update(binary))
         assert(hex.to_hex(digest:final()) == filter.sha256, "Trusted Wasm artifact hash mismatch")
-        local plugin = assert(wasm.load(filter.id, filter.path), "Trusted Wasm artifact failed to load")
-        filter.plugin = plugin -- Keep VM alive for the complete worker lifetime.
-        filter.context = assert(wasm.on_configure(plugin, assert(ngx.decode_base64(filter.configuration))),
-            "Trusted Wasm configuration failed")
+        if filter.kind ~= "application" then
+            wasm = wasm or require "resty.proxy-wasm"
+            local plugin = assert(wasm.load(filter.id, filter.path), "Trusted Wasm artifact failed to load")
+            filter.plugin = plugin -- Keep VM alive for the complete worker lifetime.
+            filter.context = assert(wasm.on_configure(plugin, assert(ngx.decode_base64(filter.configuration))),
+                "Trusted Wasm configuration failed")
+        end
         local callbacks = {}
         for _, name in ipairs(filter.callbacks or {}) do callbacks[name] = true end
         filter.callbacks = callbacks
     end
     cache[path] = chain
     return chain
+end
+local function request_body(chain, filter)
+    if not callback(filter, "proxy_on_request_body") then return true end
+    -- Finish this filter before a following application can transform or answer the request.
+    local body_ok = pcall(ngx.req.read_body)
+    local data = body_ok and ngx.req.get_body_data() or nil
+    local filename = body_ok and ngx.req.get_body_file() or nil
+    local function unavailable()
+        report(chain, filter, "request_body")
+        return filter.failure_mode == "open"
+    end
+    if not body_ok then return unavailable() end
+    local offset = 0
+    while data or filename do
+        local chunk, eof, read_error
+        if data then
+            chunk = data:sub(offset + 1, offset + 65536)
+            eof = offset + #chunk >= #data
+        else
+            -- Never retain a body-file descriptor across a callback that may produce a local reply.
+            local file = io.open(filename, "rb")
+            if file then
+                local position = file:seek("set", offset)
+                if position then chunk, read_error = file:read(65537) else read_error = true end
+                file:close()
+                if chunk then
+                    eof = #chunk <= 65536
+                    chunk = chunk:sub(1, 65536)
+                end
+            else read_error = true end
+        end
+        if read_error then return unavailable() end
+        if not chunk or #chunk == 0 then break end
+        local success, result = pcall(wasm.on_http_request_body, filter.context, chunk, eof)
+        if not success or not result then
+            if not unavailable() then return false end
+        end
+        if eof then break end
+        offset = offset + #chunk
+    end
+    return true
 end
 function M.access(path)
     local ok, chain = pcall(M.load, path)
@@ -59,72 +103,25 @@ function M.access(path)
         return ngx.exit(503)
     end
     ngx.ctx.shieldpm_wasm_chain = chain
-    local needs_body = false
     for _, filter in ipairs(chain.filters) do
-        if callback(filter, "proxy_on_request_body") then needs_body = true end
-        if filter.phase == "request" or callback(filter, "proxy_on_request_headers") then
-            local success, result = pcall(wasm.on_http_request_headers, filter.context)
+        if filter.kind == "application" then
+            local success, result = pcall(function()
+                chain.wasi_dispatcher = chain.wasi_dispatcher or dofile(chain.wasi_dispatcher_path)
+                return chain.wasi_dispatcher.run(path, chain, filter)
+            end)
             if not success or not result then
-                report(chain, filter, "request")
-                if filter.failure_mode ~= "open" or filter.authentication then return ngx.exit(503) end
+                report(chain, filter, "wasi_request")
+                if filter.failure_mode ~= "open" then return ngx.exit(503) end
             end
-        end
-    end
-    if needs_body then
-        -- HTTP/2 request bodies need not advertise Content-Length or Transfer-Encoding.
-        local body_ok = pcall(ngx.req.read_body)
-        local data = body_ok and ngx.req.get_body_data() or nil
-        local filename = body_ok and ngx.req.get_body_file() or nil
-        local function unavailable()
-            local closed = false
-            for _, filter in ipairs(chain.filters) do
-                if callback(filter, "proxy_on_request_body") then
-                    report(chain, filter, "request_body")
-                    if filter.failure_mode ~= "open" then closed = true end
+        else
+            if filter.phase == "request" or callback(filter, "proxy_on_request_headers") then
+                local success, result = pcall(wasm.on_http_request_headers, filter.context)
+                if not success or not result then
+                    report(chain, filter, "request")
+                    if filter.failure_mode ~= "open" or filter.authentication then return ngx.exit(503) end
                 end
             end
-            return closed
-        end
-        if not body_ok then
-            if unavailable() then return ngx.exit(503) end
-            return
-        end
-        local offset = 0
-        while data or filename do
-            local chunk, eof, read_error
-            if data then
-                chunk = data:sub(offset + 1, offset + 65536)
-                eof = offset + #chunk >= #data
-            else
-                -- Never keep an open body-file descriptor across a Wasm callback:
-                -- a local reply can terminate the Lua handler immediately.
-                local file = io.open(filename, "rb")
-                if file then
-                    local position = file:seek("set", offset)
-                    if position then chunk, read_error = file:read(65537) else read_error = true end
-                    file:close()
-                    if chunk then
-                        eof = #chunk <= 65536
-                        chunk = chunk:sub(1, 65536)
-                    end
-                else read_error = true end
-            end
-            if read_error then
-                if unavailable() then return ngx.exit(503) end
-                return
-            end
-            if not chunk or #chunk == 0 then break end
-            for _, filter in ipairs(chain.filters) do
-                if callback(filter, "proxy_on_request_body") then
-                    local success, result = pcall(wasm.on_http_request_body, filter.context, chunk, eof)
-                    if not success or not result then
-                        report(chain, filter, "request_body")
-                        if filter.failure_mode ~= "open" then return ngx.exit(503) end
-                    end
-                end
-            end
-            if eof then break end
-            offset = offset + #chunk
+            if not request_body(chain, filter) then return ngx.exit(503) end
         end
     end
 end

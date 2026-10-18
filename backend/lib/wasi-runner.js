@@ -2,6 +2,12 @@ import { fork } from "node:child_process";
 import { performance } from "node:perf_hooks";
 import { StringDecoder } from "node:string_decoder";
 import errs from "./error.js";
+import {
+	MAX_WASI_HTTP_PACKET_BYTES,
+	normalizeWasiHttpRequest,
+	validateWasiHostSettings,
+	wasiHttpEnvironment,
+} from "./wasi-http-contract.js";
 
 export const MAX_WASI_OUTPUT_BYTES = 1024 * 1024;
 export const MAX_WASI_INPUT_BYTES = 64 * 1024;
@@ -16,7 +22,7 @@ const text = (value) => typeof value === "string" && !value.includes("\0");
 const boundedText = (value) => text(value) && Buffer.byteLength(value) <= 4096;
 
 /** Validate independently of the HTTP schema so internal callers cannot bypass execution bounds. */
-function executionInput(bytes, input) {
+function executionInput(bytes, input, httpRequest = false) {
 	if (!Buffer.isBuffer(bytes) || bytes.length < 8 || bytes.length > MAX_MODULE_BYTES)
 		throw new errs.ValidationError("A binary WASI application up to 16 MiB is required");
 	if (!input || typeof input !== "object" || Array.isArray(input))
@@ -28,7 +34,7 @@ function executionInput(bytes, input) {
 		);
 	if (
 		!Array.isArray(env) ||
-		env.length > 32 ||
+		env.length > (httpRequest ? 40 : 32) ||
 		!env.every(
 			(entry) =>
 				entry &&
@@ -46,9 +52,13 @@ function executionInput(bytes, input) {
 		(size, value) => size + Buffer.byteLength(value) + 1,
 		0,
 	);
-	if (metadataBytes > MAX_WASI_INPUT_BYTES)
+	if (metadataBytes > (httpRequest ? 96 * 1024 : MAX_WASI_INPUT_BYTES))
 		throw new errs.ValidationError("WASI arguments and environment must not exceed 64 KiB");
-	if (typeof stdin !== "string" || Buffer.byteLength(stdin) > MAX_WASI_INPUT_BYTES)
+	if (
+		(!httpRequest && typeof stdin !== "string") ||
+		(httpRequest && !Buffer.isBuffer(stdin)) ||
+		Buffer.byteLength(stdin) > (httpRequest ? MAX_WASI_HTTP_PACKET_BYTES : MAX_WASI_INPUT_BYTES)
+	)
 		throw new errs.ValidationError("WASI standard input must not exceed 64 KiB");
 	if (!Number.isInteger(timeout) || timeout < 100 || timeout > 60000)
 		throw new errs.ValidationError("WASI timeout must be between 100 and 60000 milliseconds");
@@ -65,6 +75,33 @@ function executionInput(bytes, input) {
  */
 export async function runWasiApplication(bytes, input = {}, { signal } = {}) {
 	const validated = executionInput(bytes, input);
+	return executeWasiApplication(bytes, validated, signal);
+}
+
+/**
+ * Trusted HTTP-only adapter: raw request bytes or a bounded versioned envelope, never caller-selected limits.
+ * Public standalone execution retains its original 64-KiB string input and environment bounds.
+ * @param {Buffer} bytes
+ * @param {{args?: string[], env?: {name: string, value: string}[], timeout_ms?: number}} settings
+ * @param {any} request
+ * @param {{protocol: "stdio" | "http-json-v1", signal?: AbortSignal}} options
+ * @returns {Promise<WasiResult>}
+ */
+export async function runWasiHttpApplication(bytes, settings, request, { protocol, signal }) {
+	if (!["stdio", "http-json-v1"].includes(protocol)) throw new errs.ValidationError("Invalid WASI HTTP protocol");
+	// Validate administrator-controlled settings under the ordinary public limits first.
+	const checked = executionInput(bytes, { ...validateWasiHostSettings(settings), stdin: "" });
+	const normalized = normalizeWasiHttpRequest(request);
+	const stdin =
+		protocol === "stdio"
+			? normalized.body
+			: Buffer.from(JSON.stringify({ version: 1, request: normalized.request }));
+	const env = wasiHttpEnvironment(normalized.request, checked.env);
+	const validated = executionInput(bytes, { args: checked.args, env, stdin, timeout_ms: checked.timeout }, true);
+	return executeWasiApplication(bytes, validated, signal);
+}
+
+function executeWasiApplication(bytes, validated, signal) {
 	const started = performance.now();
 	const empty = () => ({
 		status: /** @type {WasiResult["status"]} */ ("cancelled"),
@@ -163,12 +200,11 @@ export async function runWasiApplication(bytes, input = {}, { signal } = {}) {
 			signal?.addEventListener("abort", abort, { once: true });
 			if (signal?.aborted) abort();
 			timer = setTimeout(() => terminate("timed_out"), validated.timeout);
-			child.stdin.end(validated.stdin, () => {
-				if (reason || finished) return;
-				child.send({ bytes: Buffer.from(bytes), args: validated.args, env: validated.env }, (error) => {
-					if (error) terminate("failed");
-				});
+			// Start the reader before filling stdin: an HTTP JSON envelope can exceed the pipe capacity.
+			child.send({ bytes: Buffer.from(bytes), args: validated.args, env: validated.env }, (error) => {
+				if (error) terminate("failed");
 			});
+			child.stdin.end(validated.stdin);
 		} catch {
 			if (child) {
 				terminate("failed");

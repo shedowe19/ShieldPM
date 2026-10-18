@@ -1,12 +1,41 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+	getWasmArtifacts,
 	getWasmCapability,
 	getWasmHostStatus,
 	getWasmModules,
 	testWasmCapability,
+	uploadWasmArtifact,
 	uploadWasmModule,
+	type WasmArtifact,
 	type WasmModule,
 } from "src/api/backend/wasm";
+
+export function useWasmArtifacts() {
+	return useQuery({
+		queryKey: ["wasm", "artifacts"],
+		queryFn: ({ signal }) => getWasmArtifacts(signal),
+		staleTime: 30_000,
+	});
+}
+export function useUploadWasmArtifact() {
+	const client = useQueryClient();
+	return useMutation({
+		mutationFn: uploadWasmArtifact,
+		onSuccess: (entry) => {
+			client.setQueryData<WasmArtifact[]>(["wasm", "artifacts"], (entries = []) => [
+				...entries.filter(
+					(existing) => existing.runtime !== entry.runtime || existing.artifact.id !== entry.artifact.id,
+				),
+				entry,
+			]);
+			void client.invalidateQueries({ queryKey: ["wasm", "artifacts"] });
+			void client.invalidateQueries({
+				queryKey: ["wasm", entry.runtime === "proxy-wasm" ? "modules" : "applications"],
+			});
+		},
+	});
+}
 
 export function useWasmCapability() {
 	return useQuery({
@@ -48,6 +77,7 @@ export function useUploadWasmModule() {
 				module,
 			]);
 			void client.invalidateQueries({ queryKey: ["wasm", "modules"] });
+			void client.invalidateQueries({ queryKey: ["wasm", "artifacts"] });
 		},
 	});
 }

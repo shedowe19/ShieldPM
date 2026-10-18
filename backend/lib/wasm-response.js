@@ -12,6 +12,11 @@ export function redactWasmFilters(filters = []) {
 			delete clean.config.configuration;
 			delete clean.config.sealed_configuration;
 		}
+		if (clean.kind === "application") {
+			clean.config.has_settings = Boolean(clean.config.sealed_settings || clean.config.settings);
+			delete clean.config.settings;
+			delete clean.config.sealed_settings;
+		}
 		return clean;
 	});
 }

@@ -800,6 +800,14 @@
 			"post": {
 				"$ref": "./paths/nginx/wasm/applications/applicationID/run/post.json"
 			}
+		},
+		"/nginx/wasm/artifacts": {
+			"get": {
+				"$ref": "./paths/nginx/wasm/artifacts/get.json"
+			},
+			"post": {
+				"$ref": "./paths/nginx/wasm/artifacts/post.json"
+			}
 		}
 	}
 }

@@ -6,59 +6,13 @@ import path from "node:path";
 import { Ajv } from "ajv";
 import errs from "../lib/error.js";
 import { inspectWasmModule } from "../lib/wasm-module-inspection.js";
+import { hasProxyWasmImports, isWasiPreview1Command, proxyWasmMetadata } from "../lib/wasm-runtime-contracts.js";
 
 export const MAX_MODULE_BYTES = 16 * 1024 * 1024;
 const MAX_CATALOG_ITEMS = 512;
-// API7's Wasmtime linker defines WASI Preview 1 for SDK support in otherwise
-// valid Proxy-Wasm HTTP modules. This does not admit standalone WASI programs.
-export const wasiPreview1Functions = new Set([
-	"args_get",
-	"args_sizes_get",
-	"environ_get",
-	"environ_sizes_get",
-	"clock_res_get",
-	"clock_time_get",
-	"fd_advise",
-	"fd_allocate",
-	"fd_close",
-	"fd_datasync",
-	"fd_fdstat_get",
-	"fd_fdstat_set_flags",
-	"fd_fdstat_set_rights",
-	"fd_filestat_get",
-	"fd_filestat_set_size",
-	"fd_filestat_set_times",
-	"fd_pread",
-	"fd_prestat_get",
-	"fd_prestat_dir_name",
-	"fd_pwrite",
-	"fd_read",
-	"fd_readdir",
-	"fd_renumber",
-	"fd_seek",
-	"fd_sync",
-	"fd_tell",
-	"fd_write",
-	"path_create_directory",
-	"path_filestat_get",
-	"path_filestat_set_times",
-	"path_link",
-	"path_open",
-	"path_readlink",
-	"path_remove_directory",
-	"path_rename",
-	"path_symlink",
-	"path_unlink_file",
-	"poll_oneoff",
-	"proc_exit",
-	"proc_raise",
-	"sched_yield",
-	"random_get",
-	"sock_accept",
-	"sock_recv",
-	"sock_send",
-	"sock_shutdown",
-]);
+
+export { wasiPreview1Functions } from "../lib/wasm-runtime-contracts.js";
+
 const root = () => path.resolve(process.env.DATA_PATH || "/data", "wasm");
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const validMetadata = new Ajv({ strict: false }).compile({
@@ -67,7 +21,12 @@ const validMetadata = new Ajv({ strict: false }).compile({
 	required: ["name", "filename"],
 	properties: {
 		name: { type: "string", minLength: 1, maxLength: 128, pattern: "^[^\\u0000-\\u001f\\u007f]+$" },
-		filename: { type: "string", minLength: 6, maxLength: 128, pattern: "^[^/\\\\\\u0000-\\u001f\\u007f]+\\.wasm$" },
+		filename: {
+			type: "string",
+			minLength: 6,
+			maxLength: 128,
+			pattern: "^[^/\\\\\\u0000-\\u001f\\u007f]+\\.[wW][aA][sS][mM]$",
+		},
 	},
 });
 
@@ -162,49 +121,18 @@ export async function validateModuleBytes(bytes) {
 	if (bytes.length > MAX_MODULE_BYTES) throw new errs.ValidationError("Wasm modules must not exceed 16 MiB");
 	if (!bytes.subarray(0, 8).equals(Buffer.from([0, 97, 115, 109, 1, 0, 0, 0])))
 		throw new errs.ValidationError("Invalid Wasm binary header");
-	const { imports, exports } = await inspectWasmModule(bytes);
-	if (
-		imports.some(
-			(entry) =>
-				entry.kind !== "function" ||
-				!(
-					(entry.module === "env" && /^proxy_[a-z0-9_]+$/.test(entry.name)) ||
-					(entry.module === "wasi_snapshot_preview1" && wasiPreview1Functions.has(entry.name))
-				),
-		)
-	)
+	const inspection = await inspectWasmModule(bytes);
+	const metadata = proxyWasmMetadata(inspection);
+	if (metadata) return metadata;
+	if (isWasiPreview1Command(inspection))
+		throw new errs.ValidationError(
+			"This is a standalone WASI Preview 1 application. Use the automatic Wasm upload to attach it to a host, or WASI Applications to run it independently",
+		);
+	if (!hasProxyWasmImports(inspection))
 		throw new errs.ValidationError(
 			"Only Proxy-Wasm host imports and standard WASI Preview 1 SDK functions are supported",
 		);
-	const functions = new Set(exports.filter((entry) => entry.kind === "function").map((entry) => entry.name));
-	const required = [
-		"proxy_abi_version_0_2_1",
-		"proxy_on_memory_allocate",
-		"proxy_on_context_create",
-		"proxy_on_configure",
-		"proxy_on_done",
-		"proxy_on_delete",
-	];
-	if (
-		required.some((name) => !functions.has(name)) ||
-		!exports.some((entry) => entry.kind === "memory" && entry.name === "memory") ||
-		![
-			"proxy_on_request_headers",
-			"proxy_on_response_headers",
-			"proxy_on_request_body",
-			"proxy_on_response_body",
-		].some((name) => functions.has(name))
-	)
-		throw new errs.ValidationError("A Proxy-Wasm ABI 0.2.1 module with an HTTP callback is required");
-	return {
-		abi: "0.2.1",
-		callbacks: [
-			"proxy_on_request_headers",
-			"proxy_on_response_headers",
-			"proxy_on_request_body",
-			"proxy_on_response_body",
-		].filter((name) => functions.has(name)),
-	};
+	throw new errs.ValidationError("A Proxy-Wasm ABI 0.2.1 module with an HTTP callback is required");
 }
 
 async function catalogEntry(id) {
@@ -240,32 +168,44 @@ export async function moduleArtifact(id) {
 	return { ...row, path: filename };
 }
 
-const referencesModule = (host, id) =>
-	(host.meta?.wasm_filters || []).some((filter) => filter.kind === "module" && filter.config?.module_id === id);
-async function assertUnreferenced(id) {
+const referencesArtifact = (host, id, kind) =>
+	(host.meta?.wasm_filters || []).some(
+		(filter) => filter.kind === kind && filter.config?.[kind === "module" ? "module_id" : "application_id"] === id,
+	);
+/** Check host, revision and retained-worker references while the caller holds the Nginx configuration lock.
+ * @param {string} id @param {"module" | "application"} kind
+ */
+export async function assertWasmArtifactUnreferenced(id, kind) {
+	const label = kind === "module" ? "Wasm module" : "WASI application";
 	const [{ default: Host }, { default: Revision }, { decrypt }] = await Promise.all([
 		import("../models/proxy_host.js"),
 		import("../models/proxy_host_revision.js"),
 		import("../lib/encryption.js"),
 	]);
-	if ((await Host.query().select("id", "meta")).some((host) => referencesModule(host, id)))
-		throw new errs.ValidationError("The Wasm module is referenced by a host");
+	if ((await Host.query().select("id", "meta")).some((host) => referencesArtifact(host, id, kind)))
+		throw new errs.ValidationError(`The ${label} is referenced by a host`);
 	for (const revision of await Revision.query().select("encrypted_snapshot")) {
 		let snapshot;
 		try {
 			snapshot = JSON.parse(decrypt(revision.encrypted_snapshot));
 		} catch {
-			throw new errs.ConfigurationError("Cannot verify Wasm module revision references");
+			throw new errs.ConfigurationError(`Cannot verify ${label} revision references`);
 		}
-		if (referencesModule(snapshot.host || {}, id))
-			throw new errs.ValidationError("The Wasm module is referenced by a host revision");
+		if (referencesArtifact(snapshot.host || {}, id, kind))
+			throw new errs.ValidationError(`The ${label} is referenced by a host revision`);
 	}
 	await wasmDirectory(path.join(root(), "hosts"));
 	for (const name of await fs.readdir(path.join(root(), "hosts"))) {
 		if (!/^[1-9]\d*-[a-f0-9]{64}\.json$/.test(name)) continue;
 		const chain = JSON.parse((await readWasmFile(path.join(root(), "hosts", name), 2 * 1024 * 1024)).toString());
-		if (chain.filters?.some((filter) => filter.sha256 === id))
-			throw new errs.ValidationError("The Wasm module is referenced by a retained Nginx worker configuration");
+		if (
+			chain.filters?.some(
+				(filter) =>
+					filter.sha256 === id &&
+					(kind === "module" ? filter.kind !== "application" : filter.kind === "application"),
+			)
+		)
+			throw new errs.ValidationError(`The ${label} is referenced by a retained Nginx worker configuration`);
 	}
 }
 
@@ -340,7 +280,7 @@ const internalWasmModules = {
 		return nginx.withConfigurationLock(async () => {
 			await access.can("settings:update");
 			await catalogEntry(row.id);
-			await assertUnreferenced(row.id);
+			await assertWasmArtifactUnreferenced(row.id, "module");
 			await fs.unlink(path.join(root(), "modules", `${row.id}.json`));
 			const { default: audit } = await import("./audit-log.js");
 			await audit.add(access, {

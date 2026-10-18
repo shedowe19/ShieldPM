@@ -259,6 +259,17 @@ echte HTTP-Starts einschließlich Prozessabbruch sowie Bedienprüfungen im Chrom
 verwendet gemockte API-Antworten und wird nicht als Beleg für die eigentliche WASI-Ausführung gewertet.
 Ausführungsargumente und Ausgaben erscheinen nicht im Audit-Log.
 
+Der Docker-Smoke führt zusätzlich `scripts/ci/wasi-host-smoke.mjs` mit dem tatsächlich gebauten
+Image auf beiden nativen Architekturen jeweils als root und UID 1000 aus. Sieben aus den produktiven
+Vorlagen gerenderte Hosts prüfen den privaten Unix-Socket einschließlich Besitzer und Modus `0600`,
+WASI-Standardausgabe, Argumente und HTTP-Metadaten, binäre JSON-Antworten, leere HTTP-204-/304-Antworten,
+Header-/Body-Änderungen vor einem echten lokalen Upstream und einen geschlossen fehlschlagenden Trap.
+Der Smoke verwendet einen getrennten temporären Datenpfad und validierte Fixture-Bytes im privaten
+Katalog; er erhebt keinen Nachweis für den öffentlichen Upload-/Authentifizierungsablauf. Ein echter
+Unix-Transport ist verpflichtend; der für diesen eingeschränkten lokalen Executor mögliche Test-TCP-
+Transport wird ausdrücklich deaktiviert. Die Python-Orchestrierung prüft Fehlerweitergabe und vollständige
+Container-/Volume-Bereinigung auch bei einem fehlgeschlagenen WASI-HTTP-Aufruf.
+
 ## Verwandte Seiten
 
 - [Setup](./setup.md)

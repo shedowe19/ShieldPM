@@ -208,6 +208,28 @@ async function installMockApi(page: Page) {
 		)
 			return fulfill(route, wasmCapability);
 		if (method === "GET" && path === "/api/nginx/wasm/modules") return fulfill(route, wasmModules);
+		if (method === "GET" && path === "/api/nginx/wasm/artifacts")
+			return fulfill(route, [
+				...wasmModules.map((artifact) => ({ runtime: "proxy-wasm", artifact })),
+				...wasiApplications.map((artifact) => ({ runtime: "wasi-preview1", artifact })),
+			]);
+		if (
+			method === "POST" &&
+			path === "/api/nginx/wasm/artifacts" &&
+			url.searchParams.get("filename") === "host-command.wasm"
+		) {
+			const application = {
+				id: "c".repeat(64),
+				sha256: "c".repeat(64),
+				name: url.searchParams.get("name"),
+				filename: url.searchParams.get("filename"),
+				size: request.postDataBuffer()?.length || 0,
+				runtime: "wasi-preview1",
+				created_on: "2026-10-18T00:00:00Z",
+			};
+			wasiApplications.push(application);
+			return fulfill(route, { runtime: "wasi-preview1", artifact: application }, 201);
+		}
 		if (method === "GET" && path === "/api/nginx/wasm/applications") return fulfill(route, wasiApplications);
 		if (method === "POST" && path === "/api/nginx/wasm/applications") {
 			const application = {
@@ -232,7 +254,7 @@ async function installMockApi(page: Page) {
 				truncated: false,
 			});
 		}
-		if (method === "POST" && path === "/api/nginx/wasm/modules") {
+		if (method === "POST" && ["/api/nginx/wasm/modules", "/api/nginx/wasm/artifacts"].includes(path)) {
 			const module = {
 				id: "b".repeat(64),
 				sha256: "b".repeat(64),
@@ -243,7 +265,11 @@ async function installMockApi(page: Page) {
 				created_on: "2026-10-17T20:00:00Z",
 			};
 			wasmModules.push(module);
-			return fulfill(route, module, 201);
+			return fulfill(
+				route,
+				path.endsWith("/artifacts") ? { runtime: "proxy-wasm", artifact: module } : module,
+				201,
+			);
 		}
 		if (method === "GET" && path === "/api/nginx/wasm/hosts/7")
 			return fulfill(route, { state: "inactive", checked_at: null });
@@ -554,7 +580,7 @@ test("uploads and configures a Wasm module with upstream and cache policies in t
 	});
 	await dialog.getByLabel("Module name", { exact: true }).fill("Tenant module");
 	await dialog.getByRole("button", { name: "Upload module", exact: true }).click();
-	await expect(dialog.getByLabel("Available module", { exact: true })).toHaveValue("b".repeat(64));
+	await expect(dialog.getByLabel("Available module", { exact: true })).toHaveValue(`proxy-wasm:${"b".repeat(64)}`);
 	await dialog.getByRole("button", { name: "Add module to host", exact: true }).click();
 	await dialog
 		.getByLabel("Module configuration (JSON)", { exact: true })
@@ -598,7 +624,7 @@ test("uploads and configures a Wasm module with upstream and cache policies in t
 			],
 		},
 	});
-	expect(api.requests.find((r) => r.method === "POST" && r.path === "/api/nginx/wasm/modules")?.body).toEqual([
+	expect(api.requests.find((r) => r.method === "POST" && r.path === "/api/nginx/wasm/artifacts")?.body).toEqual([
 		0, 97, 115, 109, 1, 0, 0, 0,
 	]);
 	expect(api.requests.filter((r) => r.method === "DELETE" && r.path.endsWith("/cache"))).toHaveLength(1);
@@ -688,4 +714,78 @@ test("uploads and runs a standalone WASI application through the real UI with mo
 			animations: "disabled",
 		});
 	}
+});
+
+test("injects a standalone WASI application into a host and configures its request protocol", async ({
+	page,
+}, testInfo) => {
+	const api = await installMockApi(page);
+	await page.setViewportSize({ width: 1440, height: 1100 });
+	await signIn(page);
+	await page.goto("/nginx/proxy");
+	const row = page.getByRole("row").filter({ hasText: "api.e2e.test" });
+	await row.getByRole("button", { name: "Open action menu", exact: true }).click();
+	await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
+	const dialog = page.getByRole("dialog");
+	await dialog.getByRole("tab", { name: "Wasm", exact: true }).click();
+	await dialog.getByLabel("Wasm module file (.wasm)", { exact: true }).setInputFiles({
+		name: "host-command.wasm",
+		mimeType: "application/wasm",
+		buffer: Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]),
+	});
+	await dialog.getByRole("button", { name: "Upload module", exact: true }).click();
+	await expect(dialog.getByLabel("Available module", { exact: true })).toHaveValue(`wasi-preview1:${"c".repeat(64)}`);
+	await dialog.getByRole("button", { name: "Add module to host", exact: true }).click();
+	await expect(dialog.getByLabel("Application role", { exact: true })).toHaveValue("handler");
+	await expect(dialog.getByLabel("Input and output format", { exact: true })).toHaveValue("stdio");
+	await dialog.getByLabel("Application role", { exact: true }).selectOption("filter");
+	await expect(dialog.getByLabel("Input and output format", { exact: true })).toHaveValue("http-json-v1");
+	await expect(dialog.getByLabel("Input and output format", { exact: true })).toBeDisabled();
+	await dialog
+		.getByLabel("Application execution settings (JSON)", { exact: true })
+		.fill('{"env":[{"name":"SHIELDPM_HTTP_METHOD","value":"BAD"}]}');
+	await expect(dialog.getByRole("alert")).toContainText("SHIELDPM_HTTP_ names are reserved");
+	await expect(dialog.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
+	await dialog
+		.getByLabel("Application execution settings (JSON)", { exact: true })
+		.fill('{"args":["Exact_CASE"],"env":[{"name":"TenantID","value":"Synthetic_VALUE"}],"timeoutMs":1500}');
+	await expect(dialog.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
+	await page.addScriptTag({ content: axe.source });
+	const violations = await page.evaluate(async () => {
+		const result = await (globalThis as typeof globalThis & { axe: typeof axe }).axe.run('[role="dialog"]', {
+			rules: { "color-contrast": { enabled: false } },
+		});
+		return result.violations.map((violation) => violation.id);
+	});
+	expect(violations).toEqual([]);
+	await dialog.screenshot({ path: testInfo.outputPath("host-wasi-application.png"), animations: "disabled" });
+	await dialog.getByRole("button", { name: "Save", exact: true }).click();
+	await expect(dialog).toBeHidden();
+	expect(
+		api.requests.find((request) => request.method === "PUT" && request.path === "/api/nginx/proxy-hosts/7")?.body,
+	).toMatchObject({
+		meta: {
+			retained: { custom_value: "preserved" },
+			wasm_filters: [
+				{
+					kind: "application",
+					enabled: true,
+					failure_mode: "closed",
+					config: {
+						application_id: "c".repeat(64),
+						mode: "filter",
+						protocol: "http-json-v1",
+						settings: {
+							args: ["Exact_CASE"],
+							env: [{ name: "TenantID", value: "Synthetic_VALUE" }],
+							timeout_ms: 1500,
+						},
+					},
+				},
+			],
+		},
+	});
+	expect(
+		api.requests.find((request) => request.method === "POST" && request.path === "/api/nginx/wasm/artifacts")?.body,
+	).toEqual([0, 97, 115, 109, 1, 0, 0, 0]);
 });

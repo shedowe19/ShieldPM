@@ -23,6 +23,7 @@ export function useWasiApplications() {
 				application,
 			]);
 			void client.invalidateQueries({ queryKey });
+			void client.invalidateQueries({ queryKey: ["wasm", "artifacts"] });
 		},
 		gcTime: 0,
 	});
@@ -33,6 +34,7 @@ export function useWasiApplications() {
 				applications.filter((application) => application.id !== id),
 			);
 			void client.invalidateQueries({ queryKey });
+			void client.invalidateQueries({ queryKey: ["wasm", "artifacts"] });
 		},
 	});
 	const run = useMutation({ mutationFn: runWasiApplication, gcTime: 0 });

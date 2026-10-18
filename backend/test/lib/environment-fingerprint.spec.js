@@ -52,6 +52,12 @@ describe("regenerated configuration fingerprint", () => {
 		"lib/host-traffic-policy.js",
 		"lib/firewall-render.js",
 		"lib/utils.js",
+		"internal/wasm.js",
+		"internal/wasi-host-bridge.js",
+		"lib/wasi-runner.js",
+		"lib/wasi-http-contract.js",
+		"../rootfs/usr/local/share/lua/5.1/shieldpm/wasm.lua",
+		"../rootfs/usr/local/share/lua/5.1/shieldpm/wasi.lua",
 	])("regenerates after %s changes with unchanged templates, version and environment", async (source) => {
 		await utils.writeHash();
 		generators.set(fileURLToPath(new URL(`../../${source}`, import.meta.url)), "updated generator");
