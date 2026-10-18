@@ -47,11 +47,14 @@ const hostFields = (host) =>
 		"tor_onion",
 	]);
 
+const hostTimestampFields = ["created_on", "modified_on", "git_last_sync", "maintenance_start", "maintenance_end"];
+const usesMysqlDates = (trx) => ["mysql", "mysql2"].includes(trx.client.config.client);
+
 /** Restore JSON-serialized DATETIME instants through mysql2's configured connection timezone. */
 const restoreDatabaseTimestamps = (row, trx) => {
 	const result = { ...row };
-	if (["mysql", "mysql2"].includes(trx.client.config.client)) {
-		for (const field of ["created_on", "modified_on"]) {
+	if (usesMysqlDates(trx)) {
+		for (const field of hostTimestampFields) {
 			const value = result[field];
 			if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value)) {
 				const instant = new Date(value);
@@ -62,6 +65,14 @@ const restoreDatabaseTimestamps = (row, trx) => {
 		}
 	}
 	return result;
+};
+
+/** Patch a trusted snapshot without restamping captured MySQL temporal columns in model hooks. */
+const patchCapturedHost = async (trx, hostId, fields) => {
+	const timestampFields = usesMysqlDates(trx) ? hostTimestampFields : ["created_on", "modified_on"];
+	await ProxyHost.query(trx).findById(hostId).patch(_.omit(fields, timestampFields));
+	const timestamps = restoreDatabaseTimestamps(_.pick(fields, timestampFields), trx);
+	if (Object.keys(timestamps).length) await trx(ProxyHost.tableName).where("id", hostId).update(timestamps);
 };
 const secretKey =
 	/(?:password|secret|credential|private.?key|token|advanced.?config|forward.?query|php.?override|internal.?note|note|support.?url|(?:^|_)headers?$|config(?:uration)?)/i;
@@ -108,7 +119,7 @@ const authorize = async (access, hostId, permission = "get") => {
  * @param {{includeDeleted?: boolean}} [options]
  */
 export async function captureHostState(hostId, options = {}) {
-	const query = ProxyHost.query().findById(hostId);
+	const query = ProxyHost.query().findById(hostId).context({ preserveDatabaseTimestamps: true });
 	if (!options.includeDeleted) query.where("is_deleted", 0);
 	const model = await query.withGraphFetched("[host_domains,certificate,access_list.[items,clients]]");
 	if (!model) throw new errs.ItemNotFoundError(hostId);
@@ -141,18 +152,12 @@ export async function restoreHostState(snapshot) {
 			domainNames: snapshot.host.is_deleted ? [] : snapshot.host.domain_names,
 		},
 		async (trx) => {
-			await ProxyHost.query(trx)
-				.findById(snapshot.host.id)
-				.patch({
-					...hostFields(snapshot.host),
-					domain_names: snapshot.host.domain_names,
-					is_deleted: snapshot.host.is_deleted ?? 0,
-				});
-			// Compensation restores the accepted state, including timestamps. Model hooks
-			// deliberately stamp normal writes, so restore these trusted captured fields last.
-			const timestamps = restoreDatabaseTimestamps(_.pick(snapshot.host, ["created_on", "modified_on"]), trx);
-			if (Object.keys(timestamps).length)
-				await trx(ProxyHost.tableName).where("id", snapshot.host.id).update(timestamps);
+			await patchCapturedHost(trx, snapshot.host.id, {
+				...hostFields(snapshot.host),
+				..._.pick(snapshot.host, ["created_on", "modified_on"]),
+				domain_names: snapshot.host.domain_names,
+				is_deleted: snapshot.host.is_deleted ?? 0,
+			});
 			await HostDomain.query(trx).delete().where("proxy_host_id", snapshot.host.id);
 			for (const domain of snapshot.host.host_domains || [])
 				await trx(HostDomain.tableName).insert(
@@ -293,9 +298,7 @@ const service = {
 								retainedDomainNames: current.host.domain_names,
 							},
 							async (trx) => {
-								await ProxyHost.query(trx)
-									.findById(hostId)
-									.patch(_.omit(candidate, ["id", "domain_names"]));
+								await patchCapturedHost(trx, hostId, _.omit(candidate, ["id", "domain_names"]));
 								await HostDomain.query(trx).delete().where("proxy_host_id", hostId);
 								for (const domain of candidate.domain_names)
 									await HostDomain.query(trx).insert({ proxy_host_id: hostId, domain_name: domain });

@@ -204,6 +204,13 @@ Neue Zertifikats- und Access-List-Zuordnungen unterliegen den eigenständigen Be
 
 Erstellung, Änderung und Aktivierung von Proxy-Hosts laufen mit dem Schreiben des Host-Zustands, der Nginx-Prüfung und der Revisionsaufzeichnung unter derselben Konfigurationssperre. Zertifikatsausstellung und andere externe Vorprüfungen erfolgen davor. Ein fehlgeschlagener Wasm-Ausführungstest oder ein von `configureHost` zurückgemeldeter Offline-Zustand führt zum Wiederherstellen der vorherigen Host-Felder, Domains, Referenzen und aktiven Dateien. Ein fehlgeschlagen angelegter Host wird nicht als aktiver Host behalten.
 
+Die vertrauenswürdige Kompensation erhält auf MySQL/MariaDB auch `git_last_sync` und die ursprünglichen
+Wartungstermine. Alle fünf DATETIME-Spalten werden mit der vorhandenen Treiberzeitzone wiederhergestellt;
+die normale Formatierung für Formulare verändert diese gespeicherten Zustände nicht. Echte MariaDB-Tests
+prüfen einen bereits gespeicherten Kandidaten, dessen Nginx-Aktivierung abgelehnt wird, samt unveränderten
+Host-Feldern, Domains, Konfigurationsbytes und Dateirechten. Details stehen bei den
+[Host-Revisionen](../features/host-revisionen.md).
+
 Bei einer Domainänderung reserviert die Claim-Registry sowohl die bisherigen als auch die gewünschten Namen, bis die vollständige Aktivierung angenommen ist. Andere Prozesse können daher während einer abgelehnten Änderung die für das Rollback benötigten alten Domains nicht übernehmen. Erst nach Aktivierung und Revisionsspeicherung werden überholte Claims freigegeben.
 
 Die erste Änderung eines bestehenden gültigen Hosts zeichnet dessen Ausgangszustand auf. Weitere erfolgreiche Änderungen sowie Aktivierung, Deaktivierung und Wiederherstellung erzeugen die [Host-Revisionen](../features/host-revisionen.md). Identische Zustände werden nicht doppelt gespeichert. Wiederherstellungen prüfen gespeicherte Pool-, Cache- und Wasm-Regeln erneut. Serverintern versiegelte Wasm-Zugangsdaten werden nur aus verschlüsselten Revisions-Snapshots übernommen; die öffentliche Eingabevalidierung nimmt solche internen Ciphertexte weiterhin nicht entgegen.

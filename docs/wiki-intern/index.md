@@ -29,6 +29,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 
 ### Entwicklung
 
+- [Betriebsfehler vom 18. Oktober 2026](./entwicklung/runtime-fixes-2026-10-18.md) — beschädigte Nginx-Literale und vollständige temporale Host-Wiederherstellung.
 - [Umsetzung der Gesamtprüfung vom 17. Oktober 2026](./entwicklung/feature-implementation-2026-10-17.md) — Fehlerkorrekturen, Optimierungen und acht neue Funktionsbereiche mit Nachweisen.
 
 - [Gesamtprüfung und neue Features vom 17. Oktober 2026](./entwicklung/feature-review-2026-10-17.md) — neue reproduzierte Befunde, weitere Optimierungen und ausführbarer Wasm-Nachweis mit priorisierten Feature-Vorschlägen.

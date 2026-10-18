@@ -54,6 +54,7 @@ vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: { resetHost: v
 vi.mock("../../internal/certificate.js", () => ({ default: { get: vi.fn(), createQuickCertificate: vi.fn() } }));
 
 import certificates from "../../internal/certificate.js";
+import revisions from "../../internal/host-revisions.js";
 import nginx from "../../internal/nginx.js";
 import proxyHosts from "../../internal/proxy-host.js";
 import * as policies from "../../internal/proxy-host-policies.js";
@@ -82,6 +83,7 @@ suite("MariaDB manual proxy-host service updates", () => {
 		await state.db.schema.createTable("proxy_host", (table) => {
 			table.increments("id");
 			for (const field of ["created_on", "modified_on"]) table.dateTime(field).notNullable();
+			for (const field of ["git_last_sync", "maintenance_start", "maintenance_end"]) table.dateTime(field);
 			for (const field of ["meta", "locations", "domain_names", "anubis_rules"]) table.text(field);
 			for (const field of [
 				"forward_host",
@@ -155,6 +157,7 @@ suite("MariaDB manual proxy-host service updates", () => {
 			owner_user_id: 1,
 			created_on: oldDate,
 			modified_on: oldDate,
+			git_last_sync: oldDate,
 			forward_scheme: "http",
 			forward_host: "127.0.0.1",
 			forward_port: 8080,
@@ -393,22 +396,42 @@ suite("MariaDB manual proxy-host service updates", () => {
 			state.db = database;
 			Model.knex(database);
 			try {
+				await state.db("proxy_host").where("id", 7).update({
+					forward_host: "[2001:db8::7]",
+					forward_port: 5055,
+					maintenance_start: "2026-10-25 02:30:00",
+					maintenance_end: "2026-10-25 04:30:00",
+				});
+				const configPath = path.join(state.directory, "7.conf");
+				await fs.writeFile(configPath, "# accepted configuration\n", { mode: 0o640 });
 				const beforeHost = await state.db("proxy_host").where("id", 7).first();
 				const beforeDomains = await state.db("host_domain").where("proxy_host_id", 7);
 				const beforeCertificate = await state.db("certificate").where("id", 3).first();
 				const beforeAcl = await state.db("access_list").where("id", 4).first();
-				state.configure.mockRejectedValueOnce(new Error("Activation rejected"));
+				state.configure.mockImplementationOnce(async (model, _kind, row) => {
+					const meta = {
+						...row.meta,
+						nginx_online: false,
+						nginx_err: 'Startup configuration failed: nginx: [emerg] unknown "statu" variable',
+					};
+					await model.query().findById(row.id).patch({ meta });
+					await fs.writeFile(configPath, "# rejected configuration\n");
+					return meta;
+				});
 				await expect(
 					proxyHosts.update(access, {
 						id: 7,
 						note: "Rejected edit",
 						domain_names: ["rejected.example.test"],
 					}),
-				).rejects.toThrow("Activation rejected");
+				).rejects.toThrow("Host activation failed");
 				expect(await state.db("proxy_host").where("id", 7).first()).toEqual(beforeHost);
 				expect(await state.db("host_domain").where("proxy_host_id", 7)).toEqual(beforeDomains);
 				expect(await state.db("certificate").where("id", 3).first()).toEqual(beforeCertificate);
 				expect(await state.db("access_list").where("id", 4).first()).toEqual(beforeAcl);
+				expect(await fs.readFile(configPath, "utf8")).toBe("# accepted configuration\n");
+				expect((await fs.stat(configPath)).mode & 0o777).toBe(0o640);
+				expect(nginx.reload).toHaveBeenCalledOnce();
 			} finally {
 				state.db = initialDatabase;
 				Model.knex(initialDatabase);
@@ -416,4 +439,17 @@ suite("MariaDB manual proxy-host service updates", () => {
 			}
 		},
 	);
+
+	it("activates a saved revision containing the captured Git synchronization timestamp", async () => {
+		const revision = await revisions.record(access, 7, "baseline");
+		const beforeHost = await state.db("proxy_host").where("id", 7).first();
+		await proxyHosts.update(access, { id: 7, note: "Later edit" });
+		const plan = await revisions.plan(access, 7, revision.id);
+		const restored = await revisions.restore(access, 7, revision.id, plan.expected_fingerprint);
+		expect(restored.action).toBe("restored");
+		expect(await state.db("proxy_host").where("id", 7).first()).toMatchObject({
+			note: null,
+			git_last_sync: beforeHost.git_last_sync,
+		});
+	});
 });

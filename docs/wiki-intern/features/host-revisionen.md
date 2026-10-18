@@ -29,11 +29,22 @@ Zertifikate und Access Lists sind gemeinsam genutzte Ressourcen. Eine Host-Revis
 
 Ein Kandidat wird in kurzen Datenbanktransaktionen geschrieben und anschließend mit der bestehenden Nginx-Aktivierung geprüft. Bei Fehlern werden unmittelbar vorherige Host-Felder, Domains und aktive Dateien samt Berechtigungen wiederhergestellt und erneut geladen. Die langsame Nginx-Prüfung hält keine Datenbanktransaktion offen. Erfolgreiche Wiederherstellung erzeugt eine neue Revision und einen Audit-Eintrag mit Referenz auf die ausgewählte Version.
 
-Auf MySQL/MariaDB werden JSON-serialisierte Zeitpunkte für Host- und Domain-Zeitstempel beim tatsächlichen
-Rollback wieder als `Date`-Werte gebunden. Dadurch verwendet mysql2 die bestehende Verbindungszeitzone;
-strikte DATETIME-Spalten erhalten keine ISO-Zeichenketten mit `T`/`Z`. Die Wiederherstellung erhält die
-Erstellungs-/Änderungszeitpunkte und schreibt keine gemeinsam genutzten Zertifikats- oder Access-List-Graphen.
-Ein echter MariaDB-Service-Test prüft auch den Fehler nach einer bereits gespeicherten Kandidatenänderung.
+Auf MySQL/MariaDB werden JSON-serialisierte Zeitpunkte beim Rollback und bei der Aktivierung einer gespeicherten
+Revision wieder als `Date`-Werte gebunden. Das umfasst alle temporalen Host-Spalten: `created_on`, `modified_on`,
+`git_last_sync`, `maintenance_start` und `maintenance_end`; Domain-Zeitstempel werden ebenfalls wiederhergestellt.
+Dadurch verwendet mysql2 die bestehende Verbindungszeitzone; strikte DATETIME-Spalten erhalten keine
+ISO-Zeichenketten mit `T`/`Z`. Vertrauenswürdige Zustandskopien behalten die ursprünglichen Treiberwerte der
+Wartungstermine. Die Wiederherstellung schreibt diese Werte innerhalb derselben Transaktion nach den regulären
+Modell-Hooks, damit deren Formatierung mit der Serverzeitzone weder Zeitpunkte verschiebt noch den
+Sommerzeitwechsel verändert. SQL-Datumszeichenketten aus `dateStrings` und `null` bleiben unverändert.
+Gemeinsam genutzte Zertifikats- oder Access-List-Graphen werden nicht zurückgeschrieben.
+
+`mariadb-proxy-host-update.spec.js` hat den zuvor fehlenden Fall mit gefülltem `git_last_sync` auf einer echten
+MariaDB reproduziert: Nach abgelehnter Nginx-Aktivierung schlug die Kompensation mit DATETIME-Fehler 1292 fehl und
+verdeckte den Aktivierungsfehler. Die Regression prüft jetzt die vollständige Host-Zeile, Domain-IDs und
+Zeitstempel, Konfigurationsbytes und Dateirechte für lokale, positive und negative Verbindungszeitzonen sowie
+`dateStrings`, einschließlich eines Wartungsfensters am Berliner Sommerzeitwechsel. Ein weiterer Fall aktiviert
+erfolgreich eine gespeicherte Revision mit Git-Zeitstempel.
 
 ## Schnittstellen
 

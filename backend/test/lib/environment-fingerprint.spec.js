@@ -8,14 +8,18 @@ import utils from "../../lib/utils.js";
 
 let template;
 let written;
+let generators;
 
 beforeEach(() => {
 	template = "listen {{ env.HTTP_PORT }}; listen {{ env.HTTPS_PORT }} ssl;";
 	written = [];
+	generators = new Map();
 	vi.stubEnv("DATA_PATH", "/tmp/shieldpm-fingerprint-fixture");
 	vi.stubEnv("TV", "5c");
 	vi.spyOn(fs.promises, "readdir").mockResolvedValue(["proxy_host.conf"]);
-	vi.spyOn(fs.promises, "readFile").mockImplementation(async () => template);
+	vi.spyOn(fs.promises, "readFile").mockImplementation(async (file) =>
+		file.includes(`${path.sep}templates${path.sep}`) ? template : generators.get(file) || "unchanged generator",
+	);
 	vi.spyOn(fs.promises, "mkdir").mockResolvedValue(undefined);
 	vi.spyOn(fs.promises, "writeFile").mockImplementation(async (file, content) => {
 		written.push({ file, content });
@@ -39,6 +43,18 @@ describe("regenerated configuration fingerprint", () => {
 	it("regenerates after template changes even if the version and environment are unchanged", async () => {
 		await utils.writeHash();
 		template += '\nproxy_set_header Authorization "";';
+		await utils.writeHash();
+		expect(written[1].content).not.toBe(written[0].content);
+	});
+	it.each([
+		"internal/nginx.js",
+		"internal/host-traffic-policy.js",
+		"lib/host-traffic-policy.js",
+		"lib/firewall-render.js",
+		"lib/utils.js",
+	])("regenerates after %s changes with unchanged templates, version and environment", async (source) => {
+		await utils.writeHash();
+		generators.set(fileURLToPath(new URL(`../../${source}`, import.meta.url)), "updated generator");
 		await utils.writeHash();
 		expect(written[1].content).not.toBe(written[0].content);
 	});

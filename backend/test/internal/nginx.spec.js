@@ -103,33 +103,33 @@ describe("Fix #59: internalNginx.getLogs", () => {
 	});
 });
 
-describe("Nginx config beautifier runtime setting", () => {
+describe("Nginx config literal preservation", () => {
 	let writeFile;
 	let beautify;
+	const rendered = `log_format fixture escape=json '{"status":$status}';
+server {
+    add_header X-Literal '{"trailing":"$status}#literal"}';
+    content_by_lua_block { ngx.say([[  preserve { braces } and whitespace  ]]) }
+}
+`;
 	beforeEach(() => {
-		vi.spyOn(internalNginx, "renderConfig").mockResolvedValue("generated host configuration");
+		vi.spyOn(internalNginx, "renderConfig").mockResolvedValue(rendered);
 		writeFile = vi.spyOn(fs.promises, "writeFile").mockResolvedValue();
 		beautify = vi.spyOn(utils, "execFile").mockResolvedValue("");
 	});
 
-	it.each([undefined, "false", "true"])("installs a config with DISABLE_NGINX_BEAUTIFIER=%s", async (value) => {
-		vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", value);
-		const host = { id: 12 };
-		const filename = internalNginx.getConfigName("proxy_host", host.id);
-		expect(await internalNginx.generateConfig("proxy_host", host)).toBe(true);
-		expect(internalNginx.renderConfig).toHaveBeenCalledExactlyOnceWith("proxy_host", host);
-		expect(writeFile).toHaveBeenCalledExactlyOnceWith(filename, "generated host configuration", {
-			encoding: "utf8",
-		});
-		if (value === "true") expect(beautify).not.toHaveBeenCalled();
-		else expect(beautify).toHaveBeenCalledExactlyOnceWith("nginxbeautifier", ["-s", "4", filename]);
-	});
-
-	it("keeps successfully generated config usable when the optional beautifier fails", async () => {
-		vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", undefined);
-		beautify.mockRejectedValueOnce(new Error("optional beautifier unavailable"));
-		expect(await internalNginx.generateConfig("proxy_host", { id: 12 })).toBe(true);
-		expect(writeFile).toHaveBeenCalledOnce();
-		expect(beautify).toHaveBeenCalledOnce();
-	});
+	it.each([undefined, "false", "true"])(
+		"preserves literals with legacy DISABLE_NGINX_BEAUTIFIER=%s",
+		async (value) => {
+			vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", value);
+			const host = { id: 12 };
+			const filename = internalNginx.getConfigName("proxy_host", host.id);
+			expect(await internalNginx.generateConfig("proxy_host", host)).toBe(true);
+			expect(internalNginx.renderConfig).toHaveBeenCalledExactlyOnceWith("proxy_host", host);
+			expect(writeFile).toHaveBeenCalledExactlyOnceWith(filename, rendered, {
+				encoding: "utf8",
+			});
+			expect(beautify).not.toHaveBeenCalled();
+		},
+	);
 });

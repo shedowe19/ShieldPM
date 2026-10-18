@@ -66,6 +66,7 @@ suite("startup recovers healthy hosts with actual Nginx validation and traffic",
 		for (const location of [
 			configDirectory,
 			path.join(directory, "logs"),
+			path.join(directory, "nginx"),
 			path.join(directory, "conf.d/include"),
 			path.join(directory, "custom_nginx"),
 		])
@@ -77,7 +78,7 @@ suite("startup recovers healthy hosts with actual Nginx validation and traffic",
 		await new Promise((resolve) => origin.listen(0, "127.0.0.1", resolve));
 		vi.stubEnv("REGENERATE_ALL", "true");
 		vi.stubEnv("DATA_PATH", directory);
-		vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", "true");
+		vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", "false");
 		vi.stubEnv("DISABLE_HTTP", "false");
 		vi.stubEnv("DISABLE_IPV6", "true");
 		vi.stubEnv("IPV4_BINDING", "127.0.0.1");
@@ -92,9 +93,13 @@ suite("startup recovers healthy hosts with actual Nginx validation and traffic",
 		master = path.join(directory, "nginx.conf");
 		await fs.writeFile(
 			master,
-			`user root;pid ${directory}/pid;error_log ${directory}/error.log;events{}http{lua_package_path "${process.env.TRAFFIC_SMOKE_LUA_DIRECTORY || "/usr/local/share/lua/5.1"}/?.lua;;";access_log off;map $http_upgrade $connection_upgrade{default upgrade;"" close;}server{listen 127.0.0.1:${port} default_server;return 404;}include ${configDirectory}/*.conf;}`,
+			`user root;pid ${directory}/pid;error_log ${directory}/error.log;events{}http{lua_package_path "${process.env.TRAFFIC_SMOKE_LUA_DIRECTORY || "/usr/local/share/lua/5.1"}/?.lua;;";access_log off;log_format json_analytics '$status';map $http_upgrade $connection_upgrade{default upgrade;"" close;}server{listen 127.0.0.1:${port} default_server;return 404;}include ${configDirectory}/*.conf;}`,
 		);
 		vi.spyOn(utils, "execFile").mockImplementation(async (command, args) => {
+			if (command === "nginxbeautifier" && process.env.TRAFFIC_SMOKE_BEAUTIFIER_BIN) {
+				const output = await execute(process.env.TRAFFIC_SMOKE_BEAUTIFIER_BIN, args);
+				return `${output.stdout}${output.stderr}`;
+			}
 			if (command !== "nginx") throw new Error(`Unexpected fixture command: ${command}`);
 			const output = await execute(binary, ["-p", directory, "-c", master, ...args]);
 			return `${output.stdout}${output.stderr}`;
@@ -162,8 +167,24 @@ suite("startup recovers healthy hosts with actual Nginx validation and traffic",
 				forward_scheme: "http",
 				forward_host: "127.0.0.1",
 				forward_port: origin.address().port,
-				meta: JSON.stringify(id === 9 ? { docker_container_id: "fixture" } : {}),
-				advanced_config: id === 8 ? "unknown_startup_fixture_directive on;" : "",
+				meta: JSON.stringify(
+					id === 7
+						? {
+								upstream_pool: {
+									enabled: true,
+									targets: [{ id: "primary", host: "127.0.0.1", port: origin.address().port }],
+								},
+							}
+						: id === 9
+							? { docker_container_id: "fixture" }
+							: {},
+				),
+				advanced_config:
+					id === 8
+						? "unknown_startup_fixture_directive on;"
+						: id === 9
+							? `add_header X-Literal '{"trailing":"$status}#literal"}';`
+							: "",
 			});
 			await state.db("host_domain").insert({ proxy_host_id: id, domain_name: `${name}.example.test` });
 		}
@@ -193,6 +214,18 @@ suite("startup recovers healthy hosts with actual Nginx validation and traffic",
 			}),
 		);
 		expect((await request(port, "docker.example.test")).status).toBe(200);
+		const manualConfig = await fs.readFile(path.join(configDirectory, "7.conf"), "utf8");
+		expect(manualConfig).toContain(`"status":$status}';`);
+		expect(await fs.readFile(path.join(configDirectory, "9.conf"), "utf8")).toContain(
+			`add_header X-Literal '{"trailing":"$status}#literal"}';`,
+		);
+		await vi.waitFor(async () => {
+			const records = (await fs.readFile(path.join(directory, "logs/traffic_7.log"), "utf8"))
+				.trim()
+				.split("\n")
+				.map((line) => JSON.parse(line));
+			expect(records).toContainEqual(expect.objectContaining({ status: 200 }));
+		});
 		expect((await request(port, "invalid.example.test")).status).toBe(404);
 		for (const id of [7, 9]) expect((await ProxyHost.query().findById(id)).meta.nginx_online).toBe(true);
 		expect((await ProxyHost.query().findById(8)).meta).toMatchObject({

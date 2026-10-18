@@ -546,14 +546,8 @@ const internalNginx = {
 			throw new errs.ConfigurationError(err.message);
 		}
 
-		if (process.env.DISABLE_NGINX_BEAUTIFIER !== "true") {
-			try {
-				await utils.execFile("nginxbeautifier", ["-s", "4", filename]);
-			} catch {
-				// ignore beautifier errors
-			}
-		}
-
+		// Install the rendered bytes unchanged. nginxbeautifier treats braces in
+		// quoted JSON/Lua as block syntax and can truncate "$status}" to "$statu".
 		return true;
 	},
 
