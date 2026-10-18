@@ -46,6 +46,26 @@ Zeitstempel, Konfigurationsbytes und Dateirechte für lokale, positive und negat
 `dateStrings`, einschließlich eines Wartungsfensters am Berliner Sommerzeitwechsel. Ein weiterer Fall aktiviert
 erfolgreich eine gespeicherte Revision mit Git-Zeitstempel.
 
+Parallele Statusschreiber können nach den Domain-Claim-Abfragen einen MariaDB-Snapshot-Konflikt beim
+Zurückschreiben des Hosts auslösen. Die Kompensation wiederholt ausschließlich ihre Datenbanktransaktion
+höchstens dreimal, mit 25 beziehungsweise 50 Millisekunden Abstand. Erneut versucht werden nur die passenden
+MySQL-/MariaDB-Kombinationen `ER_CHECKREAD`/1020, `ER_LOCK_WAIT_TIMEOUT`/1205 und `ER_LOCK_DEADLOCK`/1213.
+Jeder Versuch liest die Claims neu und setzt bei Fehlern seine gesamte Transaktion zurück. Die erfasste
+Host-Version bleibt dieselbe; Dateien werden erst nach dem erfolgreichen Datenbankabschluss wiederhergestellt.
+Andere Claim-Schreiber werden nicht pauschal wiederholt, da deren Rückrufe weitere Zustände verändern können.
+
+Scheitert auch die Kompensation oder ihr anschließender Reload, bewahrt `lib/host-rollback.js` den ursprünglichen
+Fehler und den Wiederherstellungsfehler privat. Der Fehler behauptet dann keine erfolgreiche Wiederherstellung.
+Eine begrenzte Logzeile mit `[Host rollback]` nennt Host-ID, Operation, Phase und sichere Fehlerkennungen wie
+`code`, `errno` und `sqlState`, ohne SQL, Host-Konfiguration oder Zugangsdaten zu kopieren. Nach erfolgreicher
+Kompensation wird unverändert der ursprüngliche Fehler weitergegeben.
+
+`mariadb-host-revision-full-schema.spec.js` verwendet alle produktiven Migrationen und reproduziert den
+Konflikt mit zwei echten MariaDB-Verbindungen unter `REPEATABLE READ` und aktiver Snapshot-Isolation. Es prüft
+alle 68 Host-Spalten, normale und Onion-Domains, Zeitstempel, Konfigurationsbytes und Dateirechte. Wiederholte
+Konflikte enden nach drei Versuchen ohne teilweise geschriebene Claims; ein tatsächlicher fehlender SQL-Spaltenname
+wird genau einmal versucht. Die ergänzenden Service-Tests prüfen beide privaten Fehlerursachen und sichere Logs.
+
 ## Schnittstellen
 
 | Methode | Pfad                                       | Ergebnis                                                     |

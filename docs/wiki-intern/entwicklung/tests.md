@@ -77,6 +77,15 @@ Dokumentation des Test-Setups und der Test-Strategien.
 - `internal/mariadb-proxy-host-update.spec.js` führt den echten manuellen Host-Service aus. Geladene
   Zertifikats-/Access-List-Relationen und serververwaltete Zeitstempel dürfen nicht in dessen Schreibgraph gelangen;
   der vollständige verschlüsselte Snapshot bleibt für Versionen und Rollback erhalten.
+- `internal/mariadb-host-revision-full-schema.spec.js` führt sämtliche produktiven Migrationen aus und prüft
+  den Snapshot-Roundtrip aller 68 Host-Spalten mit normalen und Onion-Domains. Zwei echte Verbindungen erzeugen
+  einen `ER_CHECKREAD` unmittelbar vor dem Host-Patch. Ein einmaliger Konflikt muss vollständig wiederhergestellt
+  werden, wiederkehrende Konflikte müssen nach drei Versuchen abbrechen, und ein echter permanenter Fehler 1054
+  darf nicht wiederholt werden. Claims, Domains, Konfigurationsbytes und Dateirechte werden mitgeprüft.
+- `lib/host-rollback.spec.js`, `internal/host-update-regressions.spec.js` und `internal/host-revisions.spec.js`
+  prüfen die unveränderte ursprüngliche Fehlerinstanz nach erfolgreichem Rollback sowie beide privaten Ursachen
+  bei gescheiterter Kompensation oder Reload. Begrenzte Diagnosen dürfen weder lange SQL-Abfragen noch Geheimnisse
+  enthalten; selbst ein Fehler der Logausgabe darf die Ursachen nicht verdrängen.
 - `integration/startup-nginx-recovery-runtime.spec.js` startet echtes Nginx mit leerem Hostbestand und einer
   ungültigen Konfiguration. Gültige manuelle und Docker-Hosts müssen anschließend HTTP 200 liefern; der fehlerhafte
   Host bleibt ausgeschlossen, und ein später reparierter Host wird erneut erzeugt.

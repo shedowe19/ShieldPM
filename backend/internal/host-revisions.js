@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
 import _ from "lodash";
 import { accessListFiles } from "../lib/access-list-files.js";
 import { captureConfigurationFiles, restoreConfigurationFiles } from "../lib/configuration-files.js";
@@ -6,6 +7,7 @@ import { decrypt, encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import { withHostDomainClaims } from "../lib/host-domain-claims.js";
 import { sanitizeHostMeta } from "../lib/host-response.js";
+import { rethrowAfterHostRollback } from "../lib/host-rollback.js";
 import { notifyProxyHostDomainsChanged } from "../lib/proxy-host-domain-events.js";
 import { validateTrustedHostPolicies } from "../lib/trusted-host-policies.js";
 import AccessList from "../models/access_list.js";
@@ -49,6 +51,16 @@ const hostFields = (host) =>
 
 const hostTimestampFields = ["created_on", "modified_on", "git_last_sync", "maintenance_start", "maintenance_end"];
 const usesMysqlDates = (trx) => ["mysql", "mysql2"].includes(trx.client.config.client);
+const rollbackConflicts = new Map([
+	[1020, "ER_CHECKREAD"],
+	[1205, "ER_LOCK_WAIT_TIMEOUT"],
+	[1213, "ER_LOCK_DEADLOCK"],
+]);
+const retryableRollbackError = (error) => {
+	if (!usesMysqlDates(ProxyHost.knex())) return false;
+	const native = error?.nativeError ?? error;
+	return native?.code !== undefined && rollbackConflicts.get(native?.errno) === native.code;
+};
 
 /** Restore JSON-serialized DATETIME instants through mysql2's configured connection timezone. */
 const restoreDatabaseTimestamps = (row, trx) => {
@@ -145,29 +157,39 @@ export async function captureHostState(hostId, options = {}) {
 
 /** Restore captured DB fields/domains and exact config bytes after a failed activation; caller holds config lock. */
 export async function restoreHostState(snapshot) {
-	await withHostDomainClaims(
-		{
-			hostType: "proxy",
-			hostId: snapshot.host.id,
-			domainNames: snapshot.host.is_deleted ? [] : snapshot.host.domain_names,
-		},
-		async (trx) => {
-			await patchCapturedHost(trx, snapshot.host.id, {
-				...hostFields(snapshot.host),
-				..._.pick(snapshot.host, ["created_on", "modified_on"]),
-				domain_names: snapshot.host.domain_names,
-				is_deleted: snapshot.host.is_deleted ?? 0,
-			});
-			await HostDomain.query(trx).delete().where("proxy_host_id", snapshot.host.id);
-			for (const domain of snapshot.host.host_domains || [])
-				await trx(HostDomain.tableName).insert(
-					restoreDatabaseTimestamps(
-						_.pick(domain, ["id", "proxy_host_id", "domain_name", "created_on", "modified_on"]),
-						trx,
-					),
-				);
-		},
-	);
+	// A concurrent status writer can invalidate MariaDB's snapshot after the claim reads.
+	// Replay only this database compensation in a fresh transaction; files/reloads run once.
+	for (let attempt = 0; ; attempt++) {
+		try {
+			await withHostDomainClaims(
+				{
+					hostType: "proxy",
+					hostId: snapshot.host.id,
+					domainNames: snapshot.host.is_deleted ? [] : snapshot.host.domain_names,
+				},
+				async (trx) => {
+					await patchCapturedHost(trx, snapshot.host.id, {
+						...hostFields(snapshot.host),
+						..._.pick(snapshot.host, ["created_on", "modified_on"]),
+						domain_names: snapshot.host.domain_names,
+						is_deleted: snapshot.host.is_deleted ?? 0,
+					});
+					await HostDomain.query(trx).delete().where("proxy_host_id", snapshot.host.id);
+					for (const domain of snapshot.host.host_domains || [])
+						await trx(HostDomain.tableName).insert(
+							restoreDatabaseTimestamps(
+								_.pick(domain, ["id", "proxy_host_id", "domain_name", "created_on", "modified_on"]),
+								trx,
+							),
+						);
+				},
+			);
+			break;
+		} catch (error) {
+			if (attempt >= 2 || !retryableRollbackError(error)) throw error;
+			await delay(25 * (attempt + 1));
+		}
+	}
 	await restoreConfigurationFiles(snapshot.files);
 }
 
@@ -317,9 +339,12 @@ const service = {
 					async () => {},
 				);
 			} catch (error) {
-				await restoreHostState(current);
-				await internalNginx.reload();
-				throw error;
+				await rethrowAfterHostRollback(error, {
+					hostId,
+					operation: "restore",
+					restore: () => restoreHostState(current),
+					reload: () => internalNginx.reload(),
+				});
 			}
 			await notifyProxyHostDomainsChanged();
 			const { reconcileRestoredHost } = await import("./proxy-host.js");

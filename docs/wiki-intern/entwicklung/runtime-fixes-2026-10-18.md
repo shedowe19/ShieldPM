@@ -35,6 +35,35 @@ API-Abfragen verwenden weiterhin die bisherige Zeitzonenkonvertierung. Der Konte
 öffentlichen Nutzdaten. Gemeinsam verwendete Zertifikate und Access Lists werden weiterhin nicht
 aus dem Host-Snapshot überschrieben.
 
+## Erneuter Rollback-Fehler um 14:37 Uhr
+
+Der neue Produktionsauszug scheitert in `patchCapturedHost()` beim regulären Modell-Patch, vor dem getrennten
+Zurückschreiben der Zeitspalten. Die native SQL-Ursache bleibt im übermittelten Ausschnitt abgeschnitten.
+Ein weiterer Datumsfehler ist damit nicht nachgewiesen.
+
+Ein Test gegen alle produktiven Migrationen reproduziert nun einen anderen Fehler an genau diesem Stack:
+Nach den Domain-Claim-Abfragen schreibt eine zweite Verbindung den Host-Status. Unter `REPEATABLE READ` mit
+`innodb_snapshot_isolation=ON` weist MariaDB den anschließenden Host-Patch mit `ER_CHECKREAD`/1020 zurück.
+Die [MariaDB-Dokumentation](https://mariadb.com/docs/server/server-usage/storage-engines/innodb/innodb-system-variables#innodb_snapshot_isolation)
+beschreibt diesen Schreibkonflikt als Abbruch der Transaktion. Die Übereinstimmung ist ein Reproduktionsnachweis,
+kein Beweis für den im neuen Produktionslog fehlenden Fehlercode.
+
+`restoreHostState()` wiederholt ausschließlich seine Datenbankkompensation höchstens dreimal in frischen
+Transaktionen, mit 25/50 Millisekunden Abstand. Ausschließlich passende Fehlercode-/Nummer-Paare für Snapshot-,
+Deadlock- und Lock-Timeout-Konflikte werden wiederholt. Permanente SQL-Fehler werden sofort weitergegeben;
+Konfigurationsdateien und Nginx-Reload liegen außerhalb der Wiederholung. Allgemeine Domain-Claim-Rückrufe
+werden wegen möglicher weiterer Zustandsänderungen nicht pauschal erneut ausgeführt.
+
+Eine zweite Korrektur verhindert, dass ein fehlgeschlagener Rollback den ursprünglichen Aktivierungsfehler
+vollständig verdrängt. Beide Ursachen bleiben privat erhalten. Eine kurze `[Host rollback]`-Logzeile enthält
+Host-ID, Operation, Phase und sichere Fehlerkennungen, ohne SQL, Snapshots oder Zugangsdaten. Bei gescheiterter
+Kompensation wird keine erfolgreiche Wiederherstellung behauptet.
+
+Lokaler Nachweis mit echtem MariaDB: 31/31 Fälle über sieben Dateien, davon vier mit vollständig migriertem
+Schema und allen 68 Host-Spalten. Einmaliger Konflikt, drei wiederkehrende Konflikte und permanenter SQL-Fehler
+1054 sind abgedeckt. SQLite-/PostgreSQL-Revisionsfälle bestehen mit 18/18, die ergänzenden Fehler- und
+Host-Service-Regressionen mit 67/67. Der neue native Produktionsfehlercode bleibt offen.
+
 ## Prüfnachweise
 
 - Echter Nginx: vor der Korrektur HTTP 404 für den gültigen manuellen Host und reproduzierter
@@ -78,12 +107,12 @@ besteht nach dieser gezielten Test-Isolierung ohne erhöhtes Zeitlimit.
 
 ## Wiki-Prüfung
 
-- Geprüfte Wiki-Seiten: Nginx-Engine, Rootfs, Konfiguration, Umgebungsvariablen, Proxy-Host und Host-Versionen.
-- Aktualisierte Wiki-Seiten: Nginx-Engine, Umgebungsvariablen, öffentliche Configuration und
-  Docker-Compose-Referenz sowie Proxy-Host und Host-Versionen.
-- Neu erstellte Wiki-Seiten: dieser Betriebsfehlerbericht und die WASI-Runtime.
+- Geprüfte Wiki-Seiten: Proxy-Host, Host-Versionen, Datenbank, Tests und dieser Betriebsfehlerbericht.
+- Aktualisierte Wiki-Seiten: Proxy-Host, Host-Versionen, Tests und dieser Betriebsfehlerbericht; außerdem GEMINI.md.
+- Neu erstellte Wiki-Seiten: keine für die erneute Rollback-Prüfung.
 - Keine Wiki-Änderung nötig, weil: entfällt; Ursachen, Verhalten und Nachweise sind dokumentiert.
-- Offene Wiki-TODOs: die vollständige ursprüngliche SQL-Treiberfehlermeldung liegt nicht vor.
+- Offene Wiki-TODOs: auch im neuen Produktionsauszug fehlt der native SQL-Fehlercode; der exakt reproduzierte
+  Snapshot-Konflikt wird deshalb nicht als bestätigte einzige Produktionsursache dargestellt.
 
 ## Verwandte Seiten
 

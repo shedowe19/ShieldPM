@@ -4,6 +4,7 @@ import path from "node:path";
 import { Model } from "objection";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { accessListFiles } from "../../lib/access-list-files.js";
+import { global as logger } from "../../logger.js";
 import { createPostgres } from "../helpers/postgres.js";
 
 const state = vi.hoisted(() => ({ db: null, engine: "sqlite" }));
@@ -266,6 +267,32 @@ describe.each(["sqlite", "postgres"])("host revisions with %s", (engine) => {
 			files: previous.files,
 		});
 		expect(reload).toHaveBeenCalledOnce();
+		expect(await service.list(access(), 1)).toHaveLength(1);
+	});
+	it("retains both errors privately when a rejected revision cannot restore its database state", async () => {
+		const revision = await service.record(access(), 1);
+		await state.db("proxy_host").where("id", 1).update({ forward_host: "keep.internal" });
+		const plan = await service.plan(access(), 1, revision.id);
+		const activation = new Error("Nginx rejected SECRET revision");
+		const rollback = Object.assign(new Error("UPDATE proxy_host SET meta='SECRET' failed"), {
+			name: "DBError",
+			nativeError: { code: "ER_BAD_FIELD_ERROR", errno: 1054, sqlState: "42S22", sql: "SECRET" },
+		});
+		vi.spyOn(nginx, "configureHost").mockImplementation(async () => {
+			vi.spyOn(state.db, "transaction").mockRejectedValueOnce(rollback);
+			throw activation;
+		});
+		const reload = vi.spyOn(nginx, "reload").mockResolvedValue("");
+		const log = vi.spyOn(logger, "error").mockImplementation(() => {});
+		const error = await service
+			.restore(access(), 1, revision.id, plan.expected_fingerprint)
+			.catch((error) => error);
+		expect(error).toMatchObject({ name: "InternalError", public: false, previous: activation, cause: rollback });
+		expect(error.message).toContain("rollback failed");
+		expect(JSON.stringify(error)).not.toContain("SECRET");
+		expect(JSON.stringify(log.mock.calls)).toContain("ER_BAD_FIELD_ERROR");
+		expect(JSON.stringify(log.mock.calls)).not.toContain("SECRET");
+		expect(reload).not.toHaveBeenCalled();
 		expect(await service.list(access(), 1)).toHaveLength(1);
 	});
 });

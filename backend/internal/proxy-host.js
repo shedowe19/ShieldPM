@@ -4,6 +4,7 @@ import { encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import { withHostDomainClaims } from "../lib/host-domain-claims.js";
 import { sanitizeHostMeta, sanitizeProxyHost } from "../lib/host-response.js";
+import { rethrowAfterHostRollback } from "../lib/host-rollback.js";
 import { notifyProxyHostDomainsChanged } from "../lib/proxy-host-domain-events.js";
 import utils from "../lib/utils.js";
 import AccessList from "../models/access_list.js";
@@ -443,8 +444,12 @@ const internalProxyHost = {
 				}
 			} catch (error) {
 				if (written) {
-					await restoreHostState(previous);
-					await internalNginx.reload();
+					await rethrowAfterHostRollback(error, {
+						hostId: thisData.id,
+						operation: "update",
+						restore: () => restoreHostState(previous),
+						reload: () => internalNginx.reload(),
+					});
 				}
 				throw error;
 			}
@@ -541,8 +546,12 @@ const internalProxyHost = {
 				await withHostDomainClaims({ hostType: "proxy", hostId: row.id, domainNames: [] }, async () => {});
 			} catch (error) {
 				if (written) {
-					await restoreHostState(previous);
-					await internalNginx.reload();
+					await rethrowAfterHostRollback(error, {
+						hostId: row.id,
+						operation: "delete",
+						restore: () => restoreHostState(previous),
+						reload: () => internalNginx.reload(),
+					});
 				}
 				throw error;
 			}
@@ -626,9 +635,12 @@ const internalProxyHost = {
 					throw new errs.ConfigurationError("Host activation failed");
 				await internalHostRevisions.record(access, row.id, "enabled");
 			} catch (error) {
-				await restoreHostState(previous);
-				await internalNginx.reload();
-				throw error;
+				await rethrowAfterHostRollback(error, {
+					hostId: row.id,
+					operation: "enable",
+					restore: () => restoreHostState(previous),
+					reload: () => internalNginx.reload(),
+				});
 			}
 			await reconcileRestoredHost(previous.host, { ...row, enabled: true });
 		});
@@ -672,9 +684,12 @@ const internalProxyHost = {
 				await internalNginx.reload();
 				await internalHostRevisions.record(access, row.id, "disabled");
 			} catch (error) {
-				await restoreHostState(previous);
-				await internalNginx.reload();
-				throw error;
+				await rethrowAfterHostRollback(error, {
+					hostId: row.id,
+					operation: "disable",
+					restore: () => restoreHostState(previous),
+					reload: () => internalNginx.reload(),
+				});
 			}
 			await reconcileRestoredHost(previous.host, { ...row, enabled: false });
 		});

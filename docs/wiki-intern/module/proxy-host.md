@@ -211,6 +211,13 @@ prüfen einen bereits gespeicherten Kandidaten, dessen Nginx-Aktivierung abgeleh
 Host-Feldern, Domains, Konfigurationsbytes und Dateirechten. Details stehen bei den
 [Host-Revisionen](../features/host-revisionen.md).
 
+Die Datenbankkompensation wiederholt vorübergehende MySQL-/MariaDB-Snapshot- und Sperrkonflikte höchstens
+dreimal in frischen Transaktionen. Sie wiederholt weder Nginx-Aktivierung noch Dateiwiederherstellung oder
+Audit-Ereignisse. Schlägt auch das Zurücksetzen fehl, bleiben ursprünglicher Fehler und Rollback-Fehler privat
+erhalten. Eine kurze `[Host rollback]`-Logzeile nennt sichere Fehlerkennungen vor jeder langen SQL-Ausgabe;
+der Fehler meldet in diesem Fall keine erfolgreiche Wiederherstellung. Das gilt für Änderung, Löschen,
+Aktivieren, Deaktivieren und das Aktivieren einer früheren Revision.
+
 Bei einer Domainänderung reserviert die Claim-Registry sowohl die bisherigen als auch die gewünschten Namen, bis die vollständige Aktivierung angenommen ist. Andere Prozesse können daher während einer abgelehnten Änderung die für das Rollback benötigten alten Domains nicht übernehmen. Erst nach Aktivierung und Revisionsspeicherung werden überholte Claims freigegeben.
 
 Die erste Änderung eines bestehenden gültigen Hosts zeichnet dessen Ausgangszustand auf. Weitere erfolgreiche Änderungen sowie Aktivierung, Deaktivierung und Wiederherstellung erzeugen die [Host-Revisionen](../features/host-revisionen.md). Identische Zustände werden nicht doppelt gespeichert. Wiederherstellungen prüfen gespeicherte Pool-, Cache- und Wasm-Regeln erneut. Serverintern versiegelte Wasm-Zugangsdaten werden nur aus verschlüsselten Revisions-Snapshots übernommen; die öffentliche Eingabevalidierung nimmt solche internen Ciphertexte weiterhin nicht entgegen.
