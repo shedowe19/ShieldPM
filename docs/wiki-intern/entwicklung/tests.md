@@ -247,6 +247,18 @@ Echte HTTP-, RSA-, Cookie- und CSRF-Verträge sichern alle Sitzungsübergänge u
 
 Weitere Tests verwenden Telegrafs tatsächlich installierte Legacy-Abbruchsignale, erzeugen echte Express-Portkonflikte und prüfen die automatische GeoIP-Auswahl durch den Validator im Kindprozess. Der Workflow prüft Backend-JSDoc-Typen vor den Tests. Alle Abdeckungszahlen, Nachweise und verbleibenden Betriebsgrenzen stehen im [Prüfbericht](./code-audit-2026-09.md).
 
+## Betriebsfehler und WASI vom 18. Oktober 2026
+
+Die [Betriebsnachprüfung](./runtime-fixes-2026-10-18.md) reproduziert beschädigte JSON-Logvariablen durch
+den entfernten Nginx-Formatierer sowie MariaDB-Fehler bei vollständiger temporaler Host-Wiederherstellung.
+Reale Nginx- und MariaDB-Regressionen ergänzen die normalen SQLite-/PGlite-Suiten.
+
+Die [eigenständigen WASI-Anwendungen](../module/wasi-runtime.md) haben getrennte Belege: echte
+Node-/WASI-Kommandos für Ein-/Ausgabe und Ressourcenlimits, Katalogprüfungen mit unveränderlichen Dateien,
+echte HTTP-Starts einschließlich Prozessabbruch sowie Bedienprüfungen im Chromium-Browser. Der Browser
+verwendet gemockte API-Antworten und wird nicht als Beleg für die eigentliche WASI-Ausführung gewertet.
+Ausführungsargumente und Ausgaben erscheinen nicht im Audit-Log.
+
 ## Verwandte Seiten
 
 - [Setup](./setup.md)

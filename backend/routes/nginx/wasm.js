@@ -4,6 +4,7 @@ import internalWasm from "../../internal/wasm.js";
 import internalModules, { MAX_MODULE_BYTES } from "../../internal/wasm-modules.js";
 import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
+import applicationRoutes from "./wasi-applications.js";
 
 const router = express.Router({ caseSensitive: true, strict: true, mergeParams: true });
 const limiter = rateLimit({ windowMs: 60_000, limit: 3, validate: { trustProxy: false } });
@@ -12,6 +13,7 @@ router.use((_req, res, next) => {
 	res.setHeader("Cache-Control", "no-store");
 	next();
 });
+router.use("/applications", applicationRoutes);
 router.get("/modules", async (_req, res) => res.send(await internalModules.list(res.locals.access)));
 router.post(
 	"/modules",

@@ -1,0 +1,44 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"id",
+		"sha256",
+		"name",
+		"filename",
+		"size",
+		"runtime",
+		"created_on"
+	],
+	"properties": {
+		"id": {
+			"type": "string",
+			"pattern": "^[a-f0-9]{64}$"
+		},
+		"sha256": {
+			"type": "string",
+			"pattern": "^[a-f0-9]{64}$"
+		},
+		"name": {
+			"type": "string"
+		},
+		"filename": {
+			"type": "string"
+		},
+		"size": {
+			"type": "integer",
+			"minimum": 8,
+			"maximum": 16777216
+		},
+		"runtime": {
+			"type": "string",
+			"enum": [
+				"wasi-preview1"
+			]
+		},
+		"created_on": {
+			"type": "string",
+			"format": "date-time"
+		}
+	}
+}

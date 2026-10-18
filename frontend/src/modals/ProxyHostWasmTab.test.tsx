@@ -67,6 +67,14 @@ function show(filters: WasmFilter[] = [], onSubmit = vi.fn()) {
 }
 const values = () => JSON.parse(screen.getByTestId("values").textContent || "{}").meta.wasmFilters;
 describe("ProxyHostWasmTab", () => {
+	it("links standalone WASI applications to the separate settings runner", () => {
+		show();
+		expect(screen.getByRole("link", { name: /Run standalone WASI applications/ })).toHaveAttribute(
+			"href",
+			"/settings/wasi",
+		);
+		expect(screen.queryByText(/Standalone WASI applications are not supported/)).not.toBeInTheDocument();
+	});
 	it("adds fail-closed API policies and preserves existing write-only keys", async () => {
 		show([
 			{

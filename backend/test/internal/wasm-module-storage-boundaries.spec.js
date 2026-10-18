@@ -25,11 +25,14 @@ afterEach(async () => {
 });
 
 describe("Wasm artifact storage boundaries on the actual filesystem", () => {
-	it.each(["", "modules", "artifacts", "hosts"])("allows the fixed trusted directory %s", async (child) => {
-		const target = path.join(directory, "wasm", child);
-		expect(await wasmDirectory(target)).toBe(target);
-		expect((await fs.lstat(target)).isDirectory()).toBe(true);
-	});
+	it.each(["", "modules", "artifacts", "hosts", "applications"])(
+		"allows the fixed trusted directory %s",
+		async (child) => {
+			const target = path.join(directory, "wasm", child);
+			expect(await wasmDirectory(target)).toBe(target);
+			expect((await fs.lstat(target)).isDirectory()).toBe(true);
+		},
+	);
 
 	it.each(["wasm/unknown", "wasm/modules/nested", "wasm-sibling/modules", "outside"])(
 		"rejects untrusted directory %s before creating any filesystem entries",

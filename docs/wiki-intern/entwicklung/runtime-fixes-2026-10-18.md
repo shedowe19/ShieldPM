@@ -48,12 +48,40 @@ aus dem Host-Snapshot überschrieben.
 - Verwandte Service-Regressionen: 104/104 auf SQLite und PostgreSQL/PGlite; unabhängige Nachprüfung
   von Nginx-Literalen und Host-Versionen zusätzlich 28/28. Backend-Typprüfung und Formatierung bestanden.
 
+## Eigenständige WASI-Anwendungen
+
+Unter **Einstellungen → WASI-Anwendungen** können Administratoren jetzt auch eigenständige
+Preview-1-Kommandos hochladen und ausführen. Sie benötigen keine Proxy-Wasm-Callbacks. Jeder Start
+erhält explizite Argumente, Umgebungswerte und Standardeingabe; Ausgabe, Fehlerausgabe und WASI-Exitcode
+werden direkt angezeigt. Stoppen beziehungsweise ein Verbindungsende beendet den tatsächlichen Prozess.
+Der private Katalog und die unveränderlichen Artefakte verwenden dieselben geprüften Dateigrenzen.
+
+Die Ausführung verwendet den vorhandenen Node-WASI-Adapter mit festen Kindprozessen, Zeit-/Ausgabelimits
+und ohne vorgeöffnete Verzeichnisse oder geerbte Umgebung. Es werden keine Anwendungs-, Paket- oder
+Binary-Versionen geändert. Der genaue Preview-1-Vertrag und die Vertrauensgrenze stehen unter
+[WASI-Runtime](../module/wasi-runtime.md).
+
+## Abschließender Prüfstand
+
+- Backend: 2.697 bestanden, 76 ausdrückliche Umgebungs-/Runtime-Skips, 271 bestandene Testdateien.
+- Frontend: 1.028/1.028 bestanden in 226 Dateien; TypeScript, alle 13 Sprachkataloge und Produktionsbuild bestanden.
+- Chromium: 10/10 Abläufe ohne Skips oder unerwartete Fehler. Der WASI-Bedienablauf verwendet gemockte API-Antworten.
+- Tatsächliche gemeinsame Nginx-/Wasm-/WASI-Prüfung: 174/174 Fälle in 13 Dateien, keine Skips, 32,06 Sekunden.
+  Darin enthalten sind 24 eigenständige Runner-, 38 Katalog- und sechs vollständige HTTP-Ausführungsfälle.
+- Komprimiertes Bundle: 1.202.465 Byte JavaScript und 16.461 Byte CSS innerhalb der unveränderten Budgets.
+- TScanner: 753 Dateien, keine Fehler oder Hinweise; Biome sowie die CI-Spellingregeln bestanden.
+
+Die Router-Barrel-Fixture isoliert ihren direkten Berechtigungs-Child, statt darüber unbeabsichtigt
+den vollständigen API-Barrel zu laden. Die verbotene Komponenten-Barrel-Prüfung bleibt unverändert;
+reale Admin-/Nicht-Admin-Rechte haben eigene Router- und Navigationsfälle. Der vollständige Frontend-Lauf
+besteht nach dieser gezielten Test-Isolierung ohne erhöhtes Zeitlimit.
+
 ## Wiki-Prüfung
 
 - Geprüfte Wiki-Seiten: Nginx-Engine, Rootfs, Konfiguration, Umgebungsvariablen, Proxy-Host und Host-Versionen.
 - Aktualisierte Wiki-Seiten: Nginx-Engine, Umgebungsvariablen, öffentliche Configuration und
   Docker-Compose-Referenz sowie Proxy-Host und Host-Versionen.
-- Neu erstellte Wiki-Seiten: dieser Betriebsfehlerbericht.
+- Neu erstellte Wiki-Seiten: dieser Betriebsfehlerbericht und die WASI-Runtime.
 - Keine Wiki-Änderung nötig, weil: entfällt; Ursachen, Verhalten und Nachweise sind dokumentiert.
 - Offene Wiki-TODOs: die vollständige ursprüngliche SQL-Treiberfehlermeldung liegt nicht vor.
 
@@ -62,3 +90,4 @@ aus dem Host-Snapshot überschrieben.
 - [Nginx-Engine](../module/nginx-engine.md)
 - [Host-Versionen](../features/host-revisionen.md)
 - [Umsetzung der Gesamtprüfung](./feature-implementation-2026-10-17.md)
+- [WASI-Anwendungen](../module/wasi-runtime.md)

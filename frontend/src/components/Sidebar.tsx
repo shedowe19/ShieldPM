@@ -167,6 +167,7 @@ const menuItems: MenuItem[] = [
 		permissionSection: ADMIN,
 	},
 	{ to: "/settings/backups", icon: IconShield, label: "backups.title", permissionSection: ADMIN },
+	{ to: "/settings/wasi", icon: IconDeviceDesktop, label: "wasi.title", permissionSection: ADMIN },
 ];
 
 const SidebarItem = ({ item, onClick }: { item: MenuItem; onClick?: () => void }) => {

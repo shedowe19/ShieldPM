@@ -11,7 +11,7 @@ export const MAX_MODULE_BYTES = 16 * 1024 * 1024;
 const MAX_CATALOG_ITEMS = 512;
 // API7's Wasmtime linker defines WASI Preview 1 for SDK support in otherwise
 // valid Proxy-Wasm HTTP modules. This does not admit standalone WASI programs.
-const wasiPreview1Functions = new Set([
+export const wasiPreview1Functions = new Set([
 	"args_get",
 	"args_sizes_get",
 	"environ_get",
@@ -83,7 +83,7 @@ export async function wasmDirectory(directory) {
 	const storageRoot = root();
 	const resolved = [
 		storageRoot,
-		...["modules", "artifacts", "hosts"].map((name) => path.join(storageRoot, name)),
+		...["modules", "artifacts", "hosts", "applications"].map((name) => path.join(storageRoot, name)),
 	].find((candidate) => candidate === requested);
 	if (!resolved) throw new errs.ConfigurationError("Unsafe Wasm storage directory");
 	let current = path.parse(resolved).root;

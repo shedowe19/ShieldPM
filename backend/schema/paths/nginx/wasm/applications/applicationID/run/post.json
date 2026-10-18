@@ -1,0 +1,60 @@
+{
+	"operationId": "runWasiApplication",
+	"summary": "Execute an administrator-trusted standalone WASI Preview 1 command",
+	"tags": [
+		"wasi-applications"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"responses": {
+		"400": {
+			"description": "Invalid input or unavailable runtime capacity"
+		},
+		"403": {
+			"description": "Settings administration is required"
+		},
+		"404": {
+			"description": "Application not found"
+		},
+		"200": {
+			"description": "Successful operation",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../../../components/wasi-run-result.json"
+					}
+				}
+			}
+		},
+		"429": {
+			"description": "Upload or execution rate limit reached"
+		}
+	},
+	"parameters": [
+		{
+			"name": "applicationID",
+			"in": "path",
+			"required": true,
+			"schema": {
+				"type": "string",
+				"pattern": "^[a-f0-9]{64}$"
+			}
+		}
+	],
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"$ref": "../../../../../../components/wasi-run-input.json"
+				}
+			}
+		}
+	},
+	"description": "Executes exact catalog bytes in a fixed disposable Node process, independently of Nginx HTTP filters. Explicit arguments/environment/stdin only; no inherited environment or preopened filesystem. At most two runs, 64 KiB inputs and 1 MiB combined normalized output. Timeout 100–60000 ms, default 10000 ms; client disconnect kills execution. No execution input/output is retained in audit records. node:wasi is not a security sandbox for hostile code."
+}

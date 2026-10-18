@@ -118,8 +118,11 @@ function ModuleCatalog({ filters, add }: { filters: WasmFilter[]; add: (moduleId
 				<p className="text-sm text-muted-foreground">
 					{text(
 						"module-help",
-						"Upload a trusted .wasm HTTP filter for Proxy-Wasm ABI 0.2.1, then add it to this host. Standalone WASI applications are not supported.",
-					)}
+						"Upload a trusted .wasm HTTP filter for Proxy-Wasm ABI 0.2.1, then add it to this host.",
+					)}{" "}
+					<a href="/settings/wasi" className="text-primary underline">
+						{text("standalone-wasi", "Run standalone WASI applications in Settings → WASI applications.")}
+					</a>
 				</p>
 			</div>
 			{user?.roles.includes("admin") ? (

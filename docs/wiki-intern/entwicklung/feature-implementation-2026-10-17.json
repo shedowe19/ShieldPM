@@ -55,21 +55,23 @@
 	"validation": {
 		"node": "26.12.0",
 		"backend": {
-			"passed": 2624,
-			"skipped": 75,
-			"passed_files": 268,
+			"passed": 2697,
+			"skipped": 76,
+			"passed_files": 271,
 			"skipped_files": 11,
-			"seconds": 39.64
+			"seconds": 37.74
 		},
 		"frontend": {
-			"passed": 995,
-			"passed_files": 223,
-			"seconds": 47.76
+			"passed": 1028,
+			"passed_files": 226,
+			"seconds": 49.23
 		},
 		"browser": {
-			"passed": 9,
+			"passed": 10,
 			"uncaught_page_errors": 0,
-			"includes_custom_module_upload_configuration_save": true
+			"includes_custom_module_upload_configuration_save": true,
+			"seconds": 34.787528,
+			"includes_standalone_wasi_ui": true
 		},
 		"python": {
 			"passed": 149,
@@ -99,8 +101,8 @@
 			"Backups are trusted administrator archives, not a hostile SQL sandbox"
 		],
 		"bundle_gzip_bytes": {
-			"largest_javascript": 106550,
-			"total_javascript": 1188019,
+			"largest_javascript": 106549,
+			"total_javascript": 1202465,
 			"total_stylesheet": 16461,
 			"limits": {
 				"largest_javascript": 299000,
@@ -111,7 +113,7 @@
 		},
 		"locale_catalogs": 13,
 		"tscanner": {
-			"workspace_files": 746,
+			"workspace_files": 753,
 			"initial_feature_staged_files": 110,
 			"new_errors": 0,
 			"advisories": 0,
@@ -124,7 +126,7 @@
 			"traffic_policy_security_and_runtime_cases": 45,
 			"tscanner_uncommitted_files": 7,
 			"tscanner_new_errors": 0,
-			"codespell_tracked_files": 1767,
+			"codespell_tracked_files": 1803,
 			"codeql_suppressions_added": 0,
 			"backup_upload_http_and_service_cases": 19,
 			"backup_upload_cleanup_cases": 6,
@@ -207,6 +209,33 @@
 			"compiler_maximum_active_workers": 2,
 			"compiler_old_generation_heap_mib": 96,
 			"compiler_young_generation_heap_mib": 16
+		},
+		"oct18_followup": {
+			"date": "2026-10-18",
+			"operational_hotfix_commit": "3275848184530d28e300689354ad121c1ee63df6",
+			"nginx_literal_and_startup_cases": 13,
+			"startup_fingerprint_cases": 9,
+			"real_mariadb_cases": 27,
+			"standalone_wasi_runner_cases": 24,
+			"standalone_wasi_catalog_cases": 38,
+			"standalone_wasi_http_cases": 6,
+			"combined_real_nginx_wasm_wasi_cases": 174,
+			"combined_files": 13,
+			"combined_skipped": 0,
+			"combined_seconds": 32.06,
+			"wasi_fixture_bytes": 795,
+			"wasi_runtime": "Node.js built-in WASI Preview 1 command",
+			"wasi_admin_only": true,
+			"wasi_no_inherited_env_or_preopens": true,
+			"wasi_run_concurrency": 2,
+			"wasi_timeout_ms_default": 10000,
+			"wasi_timeout_ms_maximum": 60000,
+			"wasi_combined_output_bytes": 1048576,
+			"wasi_per_memory_max_bytes": 268435456,
+			"wasi_not_hostile_code_sandbox": true,
+			"browser_backend_execution_mocked": true,
+			"real_backend_http_cancellation_observes_sigkill": true,
+			"codeql_rules_disabled": 0
 		}
 	},
 	"withdrawn_features": {

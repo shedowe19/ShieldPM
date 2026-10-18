@@ -44,6 +44,16 @@ Detaillierte Auflistung aller API-Routen-Dateien.
 | `ddns_providers.js`    | `/api/nginx/ddns-providers`                   |
 | `analytics.js`         | `/api/nginx/analytics`                        |
 | `upload-relay.js`      | `/api/nginx/proxy-hosts/:hostId/upload-relay` |
+| `wasm.js`              | `/api/nginx/wasm`                             |
+| `wasi-applications.js` | `/api/nginx/wasm/applications`                |
+
+### Eigenständige WASI-Anwendungen
+
+`GET`/`POST /api/nginx/wasm/applications`, `DELETE /:applicationID` und
+`POST /:applicationID/run` erfordern `settings:update`. Sie verwalten eigenständige WASI-Preview-1-Kommandos
+mit `_start` unabhängig von den Proxy-Wasm-HTTP-Filtern. Die Startantwort enthält Ausgabe, Status und
+WASI-Exitcode; ein Verbindungsabbruch beendet die tatsächliche Ausführung. Verträge, Ressourcenlimits
+und Vertrauensgrenzen stehen unter [WASI-Anwendungen](../module/wasi-runtime.md).
 
 ### Proxy-Host-Konfigurationsvorschau
 
@@ -52,9 +62,9 @@ Detaillierte Auflistung aller API-Routen-Dateien.
 Referenzprüfung einen Entwurf ohne Speicherung. Die Antwort enthält `config`, `diff`, `hasCurrent`,
 `nginxValidated: false` und `limitations` (`render-only`, bei neuen Hosts `id-pending`, bei noch
 auszustellenden Zertifikaten `certificate-pending`, bei zusammengefassten Firewall-Tabellen
-`firewall-rule-summaries`). Die gerenderte Konfiguration ist vor der optionalen
-Formatierung und maskiert bekannte Geheimnisse; der Diff vergleicht mit der aktiven Konfiguration nur
-des berechtigten Hosts. Ein `nginx -tq` der vorgeschlagenen Konfiguration erfolgt erst beim Speichern.
+`firewall-rule-summaries`). Die gerenderte Konfiguration maskiert bekannte Geheimnisse; ein
+nachträglicher externer Formatierer wird nicht aufgerufen. Der Diff vergleicht nur mit der aktiven
+Konfiguration des berechtigten Hosts. Ein `nginx -tq` des Entwurfs erfolgt erst beim Speichern.
 
 Automatisch generierte Firewall-CIDR-Tabellen werden in Entwurf und aktivem Vergleich als Anzahl und
 SHA-256-Prüfsumme dargestellt; die produktive Konfiguration behält alle Regeln. Die Vorschau prüft zusätzlich

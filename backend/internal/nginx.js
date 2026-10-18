@@ -547,7 +547,7 @@ const internalNginx = {
 		}
 
 		// Install the rendered bytes unchanged. nginxbeautifier treats braces in
-		// quoted JSON/Lua as block syntax and can truncate "$status}" to "$statu".
+		// quoted JSON/Lua as block syntax and can truncate Nginx variable names.
 		return true;
 	},
 

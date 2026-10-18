@@ -6,6 +6,7 @@ vi.mock("src/components", () => {
 
 vi.mock("src/components/AnimatedPage", () => ({ AnimatedPage: () => null }));
 vi.mock("src/components/ErrorNotFound", () => ({ ErrorNotFound: () => null }));
+vi.mock("src/components/HasPermission", () => ({ HasPermission: () => null }));
 vi.mock("src/components/LoadingPage", () => ({ LoadingPage: () => null }));
 vi.mock("src/components/Page", () => ({ Page: () => null }));
 vi.mock("src/components/Sidebar", () => ({ Sidebar: () => null }));

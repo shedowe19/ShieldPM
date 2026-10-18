@@ -108,6 +108,7 @@ async function installMockApi(page: Page) {
 	const topHostSorts: string[] = [];
 	const backupJobs: unknown[] = [];
 	const wasmModules: unknown[] = [];
+	const wasiApplications: unknown[] = [];
 
 	const fulfill = async (route: Route, body: unknown, status = 200) => {
 		await route.fulfill({
@@ -207,6 +208,30 @@ async function installMockApi(page: Page) {
 		)
 			return fulfill(route, wasmCapability);
 		if (method === "GET" && path === "/api/nginx/wasm/modules") return fulfill(route, wasmModules);
+		if (method === "GET" && path === "/api/nginx/wasm/applications") return fulfill(route, wasiApplications);
+		if (method === "POST" && path === "/api/nginx/wasm/applications") {
+			const application = {
+				id: "c".repeat(64),
+				sha256: "c".repeat(64),
+				name: url.searchParams.get("name"),
+				filename: url.searchParams.get("filename"),
+				size: request.postDataBuffer()?.length || 0,
+				runtime: "wasi-preview1",
+				created_on: "2026-10-18T00:00:00Z",
+			};
+			wasiApplications.push(application);
+			return fulfill(route, application, 201);
+		}
+		if (method === "POST" && path === `/api/nginx/wasm/applications/${"c".repeat(64)}/run`) {
+			return fulfill(route, {
+				status: "failed",
+				exit_code: 7,
+				stdout: "WASI stdout: browser input\n",
+				stderr: "A nonzero program exit remains visible.\n",
+				duration_ms: 8,
+				truncated: false,
+			});
+		}
 		if (method === "POST" && path === "/api/nginx/wasm/modules") {
 			const module = {
 				id: "b".repeat(64),
@@ -603,4 +628,64 @@ test("navigates incident details and verifies a backup without requesting activa
 	await page
 		.getByTestId("app-content")
 		.screenshot({ path: testInfo.outputPath("backup-verification.png"), animations: "disabled" });
+});
+
+test("uploads and runs a standalone WASI application through the real UI with mocked execution results", async ({
+	page,
+}, testInfo) => {
+	const api = await installMockApi(page);
+	await page.setViewportSize({ width: 1440, height: 1100 });
+	await signIn(page);
+	await page.getByRole("link", { name: "WASI applications", exact: true }).click();
+	await expect(page.getByRole("heading", { name: "WASI applications", exact: true })).toBeVisible();
+	await expect(page.getByText("No applications uploaded yet.", { exact: true })).toBeVisible();
+	await page.getByLabel("Application file (.wasm)", { exact: true }).setInputFiles({
+		name: "command.wasm",
+		mimeType: "application/wasm",
+		buffer: Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]),
+	});
+	await page.getByLabel("Application name", { exact: true }).fill("WASI command");
+	await page.getByRole("button", { name: "Upload application", exact: true }).click();
+	await expect(page.getByLabel("Application", { exact: true })).toHaveValue("c".repeat(64));
+	await page.getByLabel("Arguments (JSON array)", { exact: true }).fill('["--fail", "ExactCase"]');
+	await page.getByLabel("Environment variables (JSON object)", { exact: true }).fill('{"TenantID":42}');
+	await page.getByRole("button", { name: "Run", exact: true }).click();
+	await expect(page.getByRole("alert")).toContainText("Enter a JSON object with up to 32 string values.");
+	expect(api.requests.filter((request) => request.path.endsWith("/run"))).toEqual([]);
+	await page.getByLabel("Environment variables (JSON object)", { exact: true }).fill('{"TenantID":"Exact_VALUE"}');
+	await page.getByLabel("Standard input (stdin)", { exact: true }).fill("browser input\n");
+	await page.getByLabel("Time limit (seconds)", { exact: true }).fill("2.5");
+	await page.getByRole("button", { name: "Run", exact: true }).click();
+	await expect(page.getByRole("status")).toContainText("Failed · Exit code: 7");
+	await expect(page.getByRole("region", { name: "Standard output (stdout)", exact: true })).toHaveText(
+		"WASI stdout: browser input\n",
+	);
+	await expect(page.getByRole("region", { name: "Standard error (stderr)", exact: true })).toHaveText(
+		"A nonzero program exit remains visible.\n",
+	);
+	expect(api.requests.find((request) => request.method === "POST" && request.path.endsWith("/run"))?.body).toEqual({
+		args: ["--fail", "ExactCase"],
+		env: [{ name: "TenantID", value: "Exact_VALUE" }],
+		stdin: "browser input\n",
+		timeout_ms: 2500,
+	});
+	expect(
+		api.requests.find((request) => request.method === "POST" && request.path === "/api/nginx/wasm/applications")
+			?.body,
+	).toEqual([0, 97, 115, 109, 1, 0, 0, 0]);
+	await page.addScriptTag({ content: axe.source });
+	const violations = await page.evaluate(async () => {
+		const result = await (globalThis as typeof globalThis & { axe: typeof axe }).axe.run("#app-content", {
+			rules: { "color-contrast": { enabled: false } },
+		});
+		return result.violations.map((violation) => violation.id);
+	});
+	expect(violations).toEqual([]);
+	for (const width of [1440, 390]) {
+		await page.setViewportSize({ width, height: 1100 });
+		await page.getByTestId("app-content").screenshot({
+			path: testInfo.outputPath(`standalone-wasi-${width}.png`),
+			animations: "disabled",
+		});
+	}
 });

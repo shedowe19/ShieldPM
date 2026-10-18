@@ -412,6 +412,8 @@ suite("MariaDB manual proxy-host service updates", () => {
 					const meta = {
 						...row.meta,
 						nginx_online: false,
+						// Preserve the exact corrupted variable from the production error.
+						// codespell:ignore-next-line statu
 						nginx_err: 'Startup configuration failed: nginx: [emerg] unknown "statu" variable',
 					};
 					await model.query().findById(row.id).patch({ meta });

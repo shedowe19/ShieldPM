@@ -79,6 +79,10 @@
 		{
 			"name": "incidents",
 			"description": "Host incidents, measured availability, alarm mutes and notification delivery"
+		},
+		{
+			"name": "wasi-applications",
+			"description": "Administrator-trusted standalone WASI Preview 1 command applications"
 		}
 	],
 	"paths": {
@@ -777,6 +781,24 @@
 			},
 			"delete": {
 				"$ref": "./paths/nginx/wasm/modules/moduleID/delete.json"
+			}
+		},
+		"/nginx/wasm/applications": {
+			"get": {
+				"$ref": "./paths/nginx/wasm/applications/get.json"
+			},
+			"post": {
+				"$ref": "./paths/nginx/wasm/applications/post.json"
+			}
+		},
+		"/nginx/wasm/applications/{applicationID}": {
+			"delete": {
+				"$ref": "./paths/nginx/wasm/applications/applicationID/delete.json"
+			}
+		},
+		"/nginx/wasm/applications/{applicationID}/run": {
+			"post": {
+				"$ref": "./paths/nginx/wasm/applications/applicationID/run/post.json"
 			}
 		}
 	}

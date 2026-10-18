@@ -23,10 +23,11 @@ Proxy-Wasm-Hostfunktionen aus `env` oder Standardfunktionen aus `wasi_snapshot_p
 werden SDK-Module beispielsweise mit `fd_write`, Zeit- oder Zufallsfunktionen unterstützt. Die vorhandene
 Wasmtime-Anbindung stellt diesen WASI-Kontext ausdrücklich bereit. Ein reines WASI-Kommando ohne
 Proxy-Wasm-Lebenszyklus und HTTP-Callback bleibt unzulässig; ein passender Dateiname allein belegt keine
-Kompatibilität.
+Kompatibilität. Eigenständige Preview-1-Kommandos werden über die gesonderten
+[WASI-Anwendungen](./wasi-runtime.md) hochgeladen und ausgeführt; sie benötigen keine Proxy-Wasm-Callbacks.
 
-Die Kataloghilfe akzeptiert ausschließlich die festen Verzeichnisse `wasm`, `wasm/modules`,
-`wasm/artifacts` und `wasm/hosts` unter `DATA_PATH`. Dateioperationen verwenden den vollständig normalisierten,
+Die gemeinsame Kataloghilfe akzeptiert ausschließlich die festen Verzeichnisse `wasm`, `wasm/modules`,
+`wasm/artifacts`, `wasm/hosts` und `wasm/applications` unter `DATA_PATH`. Dateioperationen verwenden den vollständig normalisierten,
 auf diesen Speicher begrenzten Pfad. Jeder Verzeichnisbestandteil wird vor weiteren Schreibzugriffen auf
 Symlinks geprüft; reguläre Artefakte werden weiterhin mit `O_NOFOLLOW` geöffnet und auf Inode, Größe und
 unveränderten Inhalt geprüft. Modulkennungen bestehen aus genau 64 kleingeschriebenen Hexadezimalzeichen.
