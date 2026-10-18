@@ -36,6 +36,8 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 - Der normale Reload in `nginx.js` ist **nicht** verzögert. Nur bestimmte Aufrufer, etwa Docker Auto-Discovery in `docker.js`, sammeln Änderungen vor einem gemeinsamen Reload.
 - Templates verwenden ausschließlich Liquid-Syntax (LiquidJS)
 - Eigene Unix-Sockets liegen unter `/run/shieldpm/`: Backend, PHP, GoAccess, Anubis, OAuth2 und HTTP-Ersatzlistener. Die Startskripte vergeben nur diesem Laufzeitverzeichnis Schreibrechte; fremde Host-Sockets unter `/run` bleiben unverändert. Templateänderungen erzwingen die Neuerzeugung gespeicherter Hosts beim Start.
+- Generierte Dateien werden seit der Korrektur vom 18. Oktober 2026 unverändert aus dem Liquid-Renderpfad installiert. Der frühere `nginxbeautifier` unterscheidet JSON-/Lua-Klammern und Kommentare in einfachen Anführungszeichen nicht zuverlässig von Nginx-Syntax. Sein gepinnter Stand `ac5fd769` kann etwa `$status}` in einem gültigen `log_format` zu `$statu` kürzen. Das führte zu `unknown "statu" variable`, fehlgeschlagener Startvalidierung und ausgeschlossenen Hosts. Die Engine ruft den optionalen Formatierer deshalb nicht mehr auf; `DISABLE_NGINX_BEAUTIFIER` ist nur noch eine ignorierte Altvariable. Erweiterte Benutzerkonfiguration wird nicht automatisch korrigiert oder umgeschrieben.
+- Der gemeinsame Startup-Fingerprint umfasst neben Templates, deren Umgebungswerten und `TV` auch die Quelltext-Prüfsummen der Engine, des Render-Helpers sowie der Firewall- und Traffic-Policy-Generatoren. Änderungen am Generierungscode lösen damit ebenfalls eine Neuerzeugung aus, selbst bei unveränderter Anwendungs-/Templateversion. Das Update ersetzt so auch zuvor beschädigte aktive Dateien. `environment-fingerprint.spec.js` prüft jede dieser Quellen sowie die Übereinstimmung mit dem tatsächlichen Shell-Startpfad.
 - Die editierbare Default-Konfiguration einschließlich Sicherungen liegt unter `/data/nginx/default.conf`. Ein festes Include unter `/usr/local/nginx/conf/conf.d/default.conf` bindet sie ein; der Backendprozess benötigt dort keine Schreibrechte mehr.
 - Nginx öffnet konfigurierte Zugriffslogs bereits bei der Syntaxprüfung. `start.sh` erhält deshalb `/data/logs` und bereitet es vor `launch.sh` mit `prepare_nginx_log_directory()` aus `runtime-config.sh` vor: Verzeichnis anlegen, Eigentümer `PUID:PGID`, Modus `0700`, Symlink-Pfad abweisen. Vorhandene Firewall-Trefferlogs bleiben über Neustarts erhalten; der anschließende Eigentümerwechsel unter `/data` berücksichtigt die gewählte Laufzeit-UID.
 
@@ -64,13 +66,27 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 - `bulkGenerateConfigs(model, host_type, hosts)` delegiert an `bulkGenerateConfigGroups(groups)`. Alle Hosts und Hosttypen eines Gruppenlaufs werden zunächst mit Sicherungen geschrieben und dann genau einmal mit `test()` einschließlich `nginx -tq` und Firewall-Quellenprüfung validiert. Bei einem Fehler werden die bereits geschriebenen Dateien als `.err` gesichert und auf den vorherigen Zustand zurückgesetzt; nach erfolgreicher Prüfung werden Status und Sicherungen abgeschlossen. Ein gemeinsamer Reload liegt beim Aufrufer. Die Dateiverarbeitung ist serialisiert, aber die einzelnen Schreibvorgänge sind kein atomarer Dateisystem-Commit.
 - Mit `{throwOnError: true}` gibt `bulkGenerateConfigGroups()` Render- und Syntaxfehler nach demselben Rollback als Fehler weiter. [GitOps](./gitops.md#import--und-exportkonsistenz) nutzt diesen Modus, damit eine fehlgeschlagene Sammelvalidierung weder als erfolgreicher Restore gilt noch die nachgelagerte Firewall-Listenbereinigung erreicht. Ohne diese Option bleibt der bisherige Rückgabestatus erhalten. `nginx-bulk-validation.spec.js` prüft beide Varianten mit temporären Dateien und simulierten Nginx-Prozessaufrufen.
 
+### Wiederanlauf nach fehlgeschlagener Neuerzeugung
+
+Beim Start mit `REGENERATE_ALL=true` entfernt das Startskript die bisherigen aktiven Hostdateien, bevor das
+Backend sie aus dem Datenbankzustand neu erzeugt. Schlägt die gemeinsame Prüfung anschließend fehl, können
+keine alten Dateien wiederhergestellt werden. Ein erfolgreicher `nginx -t` kann dann nur den leeren Include-Bestand
+bestätigen, während die Webseiten fehlen.
+
+Der Startup-Pfad in `backend/setup.js` isoliert deshalb nach dem fehlgeschlagenen gemeinsamen Versuch die Hosts
+und validiert sie einzeln. Gültige Konfigurationen bleiben erhalten; fehlerhafte Hosts erhalten ihren konkreten
+Fehler und blockieren die anderen Hosts nicht. Der bestehende abschließende Reload in `backend/index.js`
+aktiviert den akzeptierten Bestand. Der Regenerierungshash wird erst geschrieben, wenn alle vorgesehenen
+Hosts akzeptiert wurden; andernfalls wird beim nächsten Start erneut versucht. Diese Ausnahme gilt nur für
+die Startwiederherstellung; normale sicherheitsrelevante Sammeländerungen bleiben atomar.
+
 ### Config-Parsing
 
 - `advancedConfigHasDefaultLocation(advanced_config)` — Parst das `advanced_config`-Feld und prüft, ob ein `location /` Block definiert ist. Gibt `true` zurück, wenn vorhanden. Beeinflusst, ob der Default-Location-Block hinzugefügt wird.
 - `renderConfig(host_type, host_row, options)` — Gemeinsamer Liquid-Renderpfad für
   `generateConfig()` und die Proxy-Host-Vorschau. Bei `{ preview: true }` wird der Terminal-Token
   vor dem Rendern durch einen Platzhalter ersetzt; damit muss eine Vorschau keinen Signierschlüssel
-  lesen. `generateConfig()` schreibt das Ergebnis und startet danach optional `nginxbeautifier`.
+  lesen. `generateConfig()` schreibt das Ergebnis unverändert; ein externer Formatierer wird nicht mehr ausgeführt.
   Der Vorschau-Diff normalisiert nur Einrückung und Leerzeilen; erst das Speichern führt `nginx -tq` aus.
 - Für die [IP-Firewall](./ip-firewall.md#konfigurationsvorschau) ersetzt `{preview: true}` automatisch generierte CIDR-Tabellen durch Anzahl und SHA-256-Prüfsumme. Der Vorschauentwurf erzeugt keine vollständige CIDR-Ausgabe; die aktive Vergleichsdatei wird gestreamt und ebenso zusammengefasst. Ohne Preview-Option enthält die produktive Konfiguration sämtliche Regeln.
 
@@ -78,7 +94,22 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 
 Nach einem erfolgreichen `configure()` wird `internalAnubis.generatePolicy()` **asynchron** aufgerufen (non-blocking). Dies aktualisiert die Anubis-Sicherheitspolicy basierend auf der neuen Nginx-Konfiguration, ohne den Configure-Flow zu blockieren. Fehler werden separat protokolliert und rollen eine bereits akzeptierte Nginx-Konfiguration nicht zurück.
 
-## Abhängigkeiten
+## Wasm-Lieferumfang und Produktanbindung
+
+Die am 17. Oktober 2026 geprüfte Nginx-Runtime 1.31.6 enthält statisch API7s `wasm-nginx-module` 0.7.0
+mit Wasmtime 49.0.2. Lua-Helfer und Runtime-Bibliothek werden auch im nativen Archiv ausgeliefert.
+ShieldPM verwaltet eigene hochgeladene Proxy-Wasm-Module und deren Zuordnung zu Hosts. Die Anbindung erfolgt
+über `resty.proxy-wasm` und gemeinsame Lua-Phasen; benötigte globale Runtime-Direktiven werden beim Aktivieren
+geprüft. Modulinhalte erhalten unveränderliche SHA-256-Pfade, Konfigurationen bleiben verschlüsselt und werden
+vor der Host-Aktivierung in einer isolierten echten Nginx-Runtime ausgeführt.
+
+`nginx -t` allein führt Filter nicht aus und kann sogar eine ungültige Wasm-Datei unbemerkt lassen.
+Die zusätzliche Ausführungsprüfung testet deshalb jedes Modul und anschließend die gesamte Kette, bevor sie
+akzeptiert wird. Ein allgemeines WASI-Kommandozeilenprogramm ist kein Proxy-Wasm-HTTP-Filter. Maßgeblich sind
+die von API7 bereitgestellten Hostfunktionen; nicht unterstützte Imports werden abgewiesen.
+Aktuelle Schnittstellen, Nachweise und Laufzeitgrenzen stehen unter [Wasm-Filter](./wasm-filter.md).
+
+## Abhängigkeiten der Konfigurationsengine
 
 - `lib/utils.js` — Render-Engine (`getRenderEngine()`, Liquid-basiert)
 - `internal/proxy-host.js`, `internal/redirection-host.js`, `internal/dead-host.js`, `internal/stream.js` — rufen die Engine bei CRUD auf
@@ -100,6 +131,15 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 Die Sicherung bleibt bis zum erfolgreichen Reload erhalten. Scheitert die Aktivierung, wird die vorige Konfiguration wiederhergestellt und neu geladen; die Antwort enthält `nginx_online: false`. Der Rollback-Reload erfolgt vor dem Schreiben der Fehlermetadaten, damit ein Datenbankausfall ihn nicht überspringen kann. `withConfigurationLock(callback)` stellt auch Zertifikatsaktivierungen, Default-Site-Wechsel sowie Löschen/Deaktivieren von Hosts in dieselbe Warteschlange. Der Callback darf `test()` und `reload()`, aber nicht erneut `configure()` aufrufen.
 
 Vor der Verarbeitung eines gespeicherten Hostzustands lädt `configureHost()` innerhalb der Konfigurationssperre den vollständigen aktuellen Datensatz einschließlich Zertifikat erneut; bei Proxy-Hosts auch Domains und die vollständige Access-List. Vorab geladene Sammelaufträge können dadurch keine inzwischen geänderten Upstreams, Domains oder neu aktivierte Authentifizierung/TLS durch ihre alten Snapshots ersetzen. Inzwischen deaktivierte, gelöschte oder entfernte Hosts erhalten weiterhin keine aktiven Listener. Die zurückgegebenen und gespeicherten Nginx-Metadaten entfernen auch dabei alte DNS-Zugangsdaten.
+
+`getCurrentHost()` lädt Zertifikat und Access-List als einzelne Beziehungen gemeinsam mit dem Host. Domains sowie
+Access-List-Clients und Authentifizierungseinträge werden anschließend getrennt geladen. Sammlungen werden nicht
+in denselben Join aufgenommen; dadurch entsteht kein kartesisches Produkt und große Hostdaten werden nicht je
+Domain oder Client wiederholt übertragen. Bei einem Proxy-Host mit Zertifikat und Access-List sinkt die Zahl der
+Graph-Abfragen nach dem Aufwärmen der ORM-Metadaten von sechs auf vier. Da Objections `$fetchGraph()` den
+`$afterFind()`-Hook des Wurzelobjekts nicht erneut ausführt, bildet der Loader `domain_names` ausdrücklich aus
+den frisch geladenen Domains. Der nächste Host wird weiterhin erst unmittelbar vor seiner eigenen Erzeugung
+innerhalb der Sperre gelesen; es gibt keinen veraltbaren Vorab-Cache für den gesamten Sammelauftrag.
 
 Auch während eines langsamen Tests oder Reloads können andere Aufrufe Host-Metadaten speichern. Die Statusaktualisierung liest deshalb erst danach die aktuellen Metadaten in einer kurzen Datenbanktransaktion mit `forUpdate()` und ergänzt ausschließlich die Nginx-Statusfelder. PostgreSQL/MySQL sperren dabei die Hostzeile; SQLite verwendet seine Transaktionsserialisierung. Kein Datenbanklock wird über den Nginx-Prozessaufruf gehalten. Das gilt auch für den Fehlerstatus nach dem Rollback-Reload. `sixth-nginx-current-state.spec.js` prüft beide Rennen und die Geheimnisbereinigung mit echten SQLite- und PostgreSQL/PGlite-Modellen, Liquid-Rendering und temporären Dateien; die Prozessaufrufe sind simuliert.
 

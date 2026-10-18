@@ -16,6 +16,8 @@ import type {
 	TorOnionStatus,
 	UiColor,
 } from "src/types/enums";
+import type { CachePolicy, UpstreamPoolPolicy } from "./hostTrafficPolicy";
+import type { WasmFilter } from "./wasm";
 
 export interface UserPermissions {
 	id?: number;
@@ -187,7 +189,15 @@ export interface ProxyHost {
 	uploadRelayMaxFileSize?: number;
 	uploadRelayMaxPendingBytes?: number;
 	uploadRelayCleanupHours?: number;
-	meta: Record<string, unknown> & { ipFirewall?: FirewallPolicy; nginxOnline?: boolean; nginxErr?: string };
+	meta: Record<string, unknown> & {
+		ipFirewall?: FirewallPolicy;
+		nginxOnline?: boolean;
+		nginxErr?: string;
+		wasmFilters?: WasmFilter[];
+		upstreamPool?: UpstreamPoolPolicy;
+		cachePolicy?: CachePolicy;
+		wafRuleset?: "base" | "crs";
+	};
 	maintenanceOnFailure: boolean;
 	advLimitReqRate?: number;
 	advLimitReqUnit?: TimeUnit;

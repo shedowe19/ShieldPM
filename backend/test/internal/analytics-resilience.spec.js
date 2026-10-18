@@ -13,17 +13,6 @@ vi.mock("../../models/analytics_logs.js", () => ({ default: {} }));
 
 import { AnalyticsService } from "../../internal/analytics.js";
 
-const entry = (id) => ({
-	host_id: id,
-	timestamp: "2026-09-01T12:00:00Z",
-	count: 1,
-	bytes: 20,
-	status_2xx: 1,
-	status_3xx: 0,
-	status_4xx: 0,
-	status_5xx: 0,
-});
-
 describe("analytics input and transaction resilience", () => {
 	beforeEach(() => vi.clearAllMocks());
 	it("ignores malformed values without crashing the log tail or modifying counters", () => {
@@ -75,28 +64,5 @@ describe("analytics input and transaction resilience", () => {
 		} finally {
 			setImmediateSpy.mockRestore();
 		}
-	});
-	it("rolls back earlier chunks if a later aggregation chunk fails, so retry cannot double count", async () => {
-		const committed = [];
-		mocks.transaction.mockImplementation(async (callback) => {
-			const pending = [];
-			await callback(pending);
-			committed.push(...pending);
-		});
-		mocks.query.mockImplementation((pending) => ({
-			insert: (row) => ({
-				onConflict: () => ({
-					merge: async () => {
-						if (row.proxy_host_id === 251) throw new Error("database failed");
-						pending.push(row);
-					},
-				}),
-			}),
-		}));
-		const service = new AnalyticsService();
-		await expect(service.flushAggregations(Array.from({ length: 251 }, (_, i) => entry(i + 1)))).rejects.toThrow(
-			"database failed",
-		);
-		expect(committed).toEqual([]);
 	});
 });

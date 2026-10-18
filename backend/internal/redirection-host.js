@@ -2,6 +2,7 @@ import fs from "node:fs";
 import _ from "lodash";
 import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
+import { withHostDomainClaims } from "../lib/host-domain-claims.js";
 import { sanitizeHostMeta } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import redirectionHostModel from "../models/redirection_host.js";
@@ -47,22 +48,6 @@ const internalRedirectionHost = {
 		await internalHost.validateReferences(access, thisData);
 		internalHost.validateDomainNames(thisData.domain_names);
 
-		// Get a list of the domain names and check each of them against existing records
-		const domain_name_check_promises = [];
-
-		thisData.domain_names.map((domain_name) => {
-			domain_name_check_promises.push(internalHost.isHostnameTaken(domain_name));
-			return true;
-		});
-
-		const check_results = await Promise.all(domain_name_check_promises);
-		check_results.map((result) => {
-			if (result.is_taken) {
-				throw new errs.ValidationError(`${result.hostname} is already in use`);
-			}
-			return true;
-		});
-
 		// At this point the domains should have been checked
 		thisData.owner_user_id = access.token.getUserId(1);
 		thisData = internalHost.cleanSslHstsData(createCertificate, thisData);
@@ -73,9 +58,13 @@ const internalRedirectionHost = {
 			thisData.advanced_config = "";
 		}
 
-		let row = await redirectionHostModel
-			.query()
-			.insertAndFetch(/** @type {any} */ ({ ...thisData, meta: sanitizeHostMeta(thisData.meta) }));
+		let row = await withHostDomainClaims(
+			{ hostType: "redirection", domainNames: thisData.domain_names },
+			async (trx) =>
+				redirectionHostModel
+					.query(trx)
+					.insertAndFetch(/** @type {any} */ ({ ...thisData, meta: sanitizeHostMeta(thisData.meta) })),
+		);
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
@@ -153,24 +142,7 @@ const internalRedirectionHost = {
 			);
 		}
 
-		// Get a list of the domain names and check each of them against existing records
-		const domain_name_check_promises = [];
-
-		if (typeof thisData.domain_names !== "undefined") {
-			internalHost.validateDomainNames(thisData.domain_names);
-			thisData.domain_names.map((domain_name) => {
-				domain_name_check_promises.push(internalHost.isHostnameTaken(domain_name, "redirection", thisData.id));
-				return true;
-			});
-
-			const check_results = await Promise.all(domain_name_check_promises);
-			check_results.map((result) => {
-				if (result.is_taken) {
-					throw new errs.ValidationError(`${result.hostname} is already in use`);
-				}
-				return true;
-			});
-		}
+		if (thisData.domain_names !== undefined) internalHost.validateDomainNames(thisData.domain_names);
 
 		if (createCertificate) {
 			const cert = await internalCertificate.createQuickCertificate(access, {
@@ -194,10 +166,23 @@ const internalRedirectionHost = {
 
 		thisData.meta = sanitizeHostMeta(thisData.meta);
 
-		const _saved_row = await redirectionHostModel
-			.query()
-			.patchAndFetchById(thisData.id, /** @type {any} */ (thisData))
-			.then(/** @type {any} */ (utils.omitRow(omissions()))); // Ensure we omit rows here if needed, though patchAndFetchById returns object
+		const _saved_row = await withHostDomainClaims(
+			{ hostType: "redirection", hostId: thisData.id, domainNames: thisData.domain_names },
+			async (trx) => {
+				const grant = await access.can("redirection_hosts:get", thisData.id);
+				const current = await redirectionHostModel.query(trx).findById(thisData.id).forUpdate();
+				if (
+					!current ||
+					current.is_deleted ||
+					(grant.permission_visibility !== "all" && current.owner_user_id !== access.token.getUserId(1))
+				)
+					throw new errs.ItemNotFoundError(thisData.id);
+				return redirectionHostModel
+					.query(trx)
+					.patchAndFetchById(thisData.id, /** @type {any} */ (thisData))
+					.then(/** @type {any} */ (utils.omitRow(omissions())));
+			},
+		); // Ensure we omit rows here if needed, though patchAndFetchById returns object
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -285,11 +270,14 @@ const internalRedirectionHost = {
 			const hadConfig = fs.existsSync(internalNginx.getConfigName("redirection_host", row.id));
 			await internalNginx.backupConfig("redirection_host", row);
 			try {
-				await redirectionHostModel.transaction(async (trx) => {
-					await redirectionHostModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
-					await internalNginx.deleteConfig("redirection_host", row);
-					await internalNginx.reload();
-				});
+				await withHostDomainClaims(
+					{ hostType: "redirection", hostId: row.id, domainNames: [] },
+					async (trx) => {
+						await redirectionHostModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
+						await internalNginx.deleteConfig("redirection_host", row);
+						await internalNginx.reload();
+					},
+				);
 			} catch (error) {
 				// The database transaction has rolled back. Restore the listener
 				// before releasing the shared configuration lock.

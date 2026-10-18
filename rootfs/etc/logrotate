@@ -5,3 +5,12 @@
         notifempty
         copytruncate
 }
+
+/data/logs/traffic_*.log {
+        daily
+        maxsize 10M
+        rotate 3
+        missingok
+        notifempty
+        copytruncate
+}

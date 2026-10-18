@@ -1,4 +1,5 @@
 import _ from "lodash";
+import { redactWasmFilters } from "./wasm-response.js";
 
 // DNS credentials belong to the certificate, never to host responses or audit history.
 export const sanitizeHostMeta = (meta) => _.omit(meta, ["dns_provider_credentials", "dnsProviderCredentials"]);
@@ -14,6 +15,8 @@ export const sanitizeProxyHost = (host) => {
 		"terminal_private_key",
 	]);
 	if (row.meta) row.meta = sanitizeHostMeta(row.meta);
+	if (Array.isArray(row.meta?.wasm_filters))
+		row.meta = { ...row.meta, wasm_filters: redactWasmFilters(row.meta.wasm_filters) };
 	if (row.forward_host?.startsWith("/data/websites/")) {
 		row.forward_host = "(managed)";
 	}

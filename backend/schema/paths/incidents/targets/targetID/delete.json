@@ -1,0 +1,56 @@
+{
+	"operationId": "deleteNotificationTarget",
+	"summary": "Delete own channel and its delivery history",
+	"tags": [
+		"incidents"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.manage"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": [
+							"success"
+						],
+						"properties": {
+							"success": {
+								"type": "boolean"
+							}
+						}
+					}
+				}
+			}
+		},
+		"400": {
+			"description": "Invalid input or stale configuration"
+		},
+		"403": {
+			"description": "Permission denied"
+		},
+		"404": {
+			"description": "Object not found within caller scope"
+		}
+	},
+	"parameters": [
+		{
+			"in": "path",
+			"name": "targetID",
+			"required": true,
+			"schema": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 9007199254740991
+			}
+		}
+	]
+}

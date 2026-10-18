@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import errs from "../lib/error.js";
 import { global as logger } from "../logger.js";
 import CloudflaredTunnel from "../models/cloudflared_tunnel.js";
 
@@ -166,6 +167,18 @@ const internalCloudflared = {
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 			const tunnel = await CloudflaredTunnel.query().findById(snapshot.id).where("is_deleted", 0);
 			if (tunnel) await internalCloudflared._start(tunnel);
+		}),
+
+	/** Apply imported credentials through the same lifecycle queue; unchanged stopped tunnels stay stopped. */
+	activateImported: (tunnelId) =>
+		serialize(tunnelId, async () => {
+			const tunnel = await CloudflaredTunnel.query().findById(tunnelId).where("is_deleted", 0);
+			if (!tunnel) throw new errs.ItemNotFoundError(tunnelId);
+			await internalCloudflared._start(tunnel);
+			const current = await CloudflaredTunnel.query().findById(tunnelId).where("is_deleted", 0);
+			if (!processes.has(String(tunnelId)) || current?.status !== 2) {
+				throw new errs.InternalError("Imported Cloudflared tunnel could not be activated");
+			}
 		}),
 
 	/** Stop and remove the record in one lifecycle operation before queued restarts can proceed. */

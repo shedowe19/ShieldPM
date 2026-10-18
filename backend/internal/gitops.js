@@ -1,18 +1,23 @@
 import fs from "node:fs";
 import { isIP } from "node:net";
 import path from "node:path";
+import bcrypt from "bcryptjs";
 import git from "isomorphic-git";
 import http from "isomorphic-git/http/node";
 import * as yaml from "js-yaml";
 import _ from "lodash";
+import { accessListFilename } from "../lib/access-list-files.js";
 import { isDemoMode } from "../lib/config.js";
+import { captureConfigurationFiles, restoreConfigurationFiles } from "../lib/configuration-files.js";
 import { decrypt, encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import { normalizeListInput } from "../lib/firewall-list-validation.js";
 import { normalizeFirewallPolicy } from "../lib/firewall-policy.js";
 import { assertNoSymlinkPath, assertSafeConfigTree, writeConfigFile } from "../lib/gitops-files.js";
 import { withImportedIdSequence } from "../lib/gitops-sequences.js";
+import { withHostDomainClaims } from "../lib/host-domain-claims.js";
 import { notifyProxyHostDomainsChanged } from "../lib/proxy-host-domain-events.js";
+import { redactWasmFilters } from "../lib/wasm-response.js";
 import { global as logger } from "../logger.js";
 import AccessList from "../models/access_list.js";
 import Certificate from "../models/certificate.js";
@@ -27,8 +32,10 @@ import Stream from "../models/stream.js";
 import User from "../models/user.js";
 import internalCloudflared from "./cloudflared.js";
 import { validateHostFirewall, withFirewallReferences } from "./firewall-policy.js";
+import internalHostRevisions, { captureHostState, restoreHostState } from "./host-revisions.js";
 import internalNginx from "./nginx.js";
 import internalProxyHostMonitor, { assertMonitorConfig } from "./proxy-host-monitor.js";
+import { prepareProxyHostPolicies } from "./proxy-host-policies.js";
 import { relayConfigForHost, validateRelayConfigForHost } from "./upload-relay.js";
 
 const GITOPS_DIR = "/data/gitops";
@@ -221,12 +228,18 @@ const ALLOWED_IMPORT_FIELDS = {
 };
 
 const validateImportedAccessList = (accessList) => {
+	const usernames = new Set();
 	for (const item of accessList.items || []) {
+		if (item.password !== undefined && typeof item.password !== "string")
+			throw new errs.ValidationError("Imported Access List passwords must be strings");
 		if (typeof item.username !== "string" || !/^[^:\r\n\0]+$/.test(item.username)) {
 			throw new errs.ValidationError(
 				"Imported Access List usernames cannot be empty or contain colons or line breaks",
 			);
 		}
+		if (usernames.has(item.username))
+			throw new errs.ValidationError("Imported Access List usernames must be unique");
+		usernames.add(item.username);
 	}
 	for (const client of accessList.clients || []) {
 		if (!["allow", "deny"].includes(client.directive) || typeof client.address !== "string") {
@@ -280,6 +293,14 @@ const sanitizeImportData = (modelName, data) => {
 		]);
 	}
 	if (modelName === "AccessList") {
+		if (result.meta !== undefined) {
+			let meta = result.meta;
+			for (let depth = 0; depth < 2 && typeof meta === "string"; depth++) meta = JSON.parse(meta);
+			if (!meta || typeof meta !== "object" || Array.isArray(meta))
+				throw new errs.ValidationError("Imported Access List metadata must be an object");
+			// Authorization artifacts are local runtime state, never portable GitOps references.
+			result.meta = _.omit(meta, ["authorization_revision"]);
+		}
 		for (const [relation, fields] of Object.entries({
 			items: ["username", "password", "meta"],
 			clients: ["address", "directive", "meta"],
@@ -663,11 +684,10 @@ const internalGitOps = {
 			if (graph) query.withGraphFetched(graph);
 			for (const row of await query) {
 				const filePath = path.join(configDir, directory, `${row.id}.yaml`);
-				await writeConfigFile(
-					GITOPS_DIR,
-					filePath,
-					yaml.dump(internalGitOps.sanitizeForExport(row, ["is_deleted"]), { indent: 2 }),
-				);
+				const exportData = internalGitOps.sanitizeForExport(row, ["is_deleted"]);
+				if (model === AccessList && exportData.meta)
+					exportData.meta = _.omit(exportData.meta, ["authorization_revision"]);
+				await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 				exportedFiles.push(filePath);
 			}
 		}
@@ -844,6 +864,8 @@ const internalGitOps = {
 	 */
 	sanitizeForExport: (obj, excludeFields) => {
 		const result = { ...obj };
+		if (Array.isArray(result.meta?.wasm_filters))
+			result.meta = { ...result.meta, wasm_filters: redactWasmFilters(result.meta.wasm_filters) };
 		for (const field of excludeFields) {
 			delete result[field];
 		}
@@ -1102,545 +1124,876 @@ const internalGitOps = {
 
 		const configDir = getConfigDir();
 		await assertSafeConfigTree(GITOPS_DIR, configDir);
-		let imported = 0;
-		let skipped = 0;
-		let deleted = 0;
-		const errors = [];
-		/** @type {Array<() => Promise<void>>} */
-		const deferredFirewallPrunes = [];
+		return internalNginx.withConfigurationLock(async () => {
+			let imported = 0;
+			let skipped = 0;
+			let deleted = 0;
+			const errors = [];
+			/** @type {Array<() => Promise<void>>} */
+			const deferredFirewallPrunes = [];
+			const deferredAccessListPrunes = [];
+			const accessListChanges = new Map();
+			const failedAccessListIds = new Set();
+			const cloudflaredActivations = new Set();
+			const proxyChanges = new Map();
+			let proxyActivated = false;
+			const rememberProxy = async (id, exists) => {
+				if (proxyChanges.has(id)) return;
+				const previous = exists ? await captureHostState(id, { includeDeleted: true }) : null;
+				const files =
+					previous?.files ||
+					(await captureConfigurationFiles([internalNginx.getConfigName("proxy_host", id)]));
+				if (previous && !previous.host.is_deleted && previous.host.meta?.nginx_online !== false)
+					await internalHostRevisions.record(access, id, "baseline");
+				proxyChanges.set(id, { previous, files, changed: false, staged: false });
+			};
+			const compensateProxies = async () => {
+				const failures = [];
+				for (const [id, change] of proxyChanges) {
+					if (!change.changed && !change.staged) continue;
+					try {
+						if (change.previous) await restoreHostState(change.previous);
+						else {
+							await withHostDomainClaims(
+								{ hostType: "proxy", hostId: id, domainNames: [] },
+								async (trx) => {
+									await ProxyHost.query(trx).findById(id).patch({ is_deleted: 1 });
+								},
+							);
+							await restoreConfigurationFiles(change.files);
+						}
+					} catch (error) {
+						failures.push(error);
+					}
+				}
+				if (proxyChanges.size) {
+					try {
+						await internalNginx.reload();
+					} catch (error) {
+						failures.push(error);
+					}
+				}
+				if (failures.length) throw new AggregateError(failures, "Could not restore every proxy host");
+			};
 
-		/**
-		 * Helper to import standard models and DELETE missing ones (Full Sync)
-		 * @param {Object} modelClass - Objection.js Model class
-		 * @param {string} dirName - Directory name in gitops repo
-		 * @param {string} [hostType] - Host type string for Nginx (e.g. 'proxy_host')
-		 * @param {string|null} [relationGraph] - Relation graph for insertGraph/upsertGraph
-		 */
-		const importModel = async (modelClass, dirName, hostType = null, relationGraph = null) => {
-			const dirPath = path.join(configDir, dirName);
-			const importedIds = [];
-			const errorCountBeforeImport = errors.length;
-			// Older backups do not contain every integration. Absence is not a deletion request.
-			if (!fs.existsSync(dirPath)) return;
+			const rememberAccessList = async (id) => {
+				if (accessListChanges.has(id)) return;
+				const previous = await AccessList.query().findById(id).withGraphFetched("[items,clients]");
+				// Capture accepted host/reference files before replacing shared ACL metadata.
+				for (const host of await ProxyHost.query().where("is_deleted", 0).where("access_list_id", id))
+					await rememberProxy(host.id, true);
+				accessListChanges.set(id, {
+					previous: previous ? _.cloneDeep(previous.toJSON ? previous.toJSON() : previous) : null,
+					changed: false,
+					imported: false,
+					pruned: false,
+				});
+			};
+			const restoreAccessList = async (id) => {
+				const change = accessListChanges.get(id);
+				if (!change?.changed) return;
+				await AccessList.transaction(async (trx) => {
+					await trx("access_list_auth").where("access_list_id", id).delete();
+					await trx("access_list_client").where("access_list_id", id).delete();
+					if (change.previous) {
+						const row = change.previous;
+						await AccessList.query(trx)
+							.findById(id)
+							.patch(_.omit(row, ["id", "items", "clients"]));
+						await trx("access_list")
+							.where("id", id)
+							.update(_.pick(row, ["created_on", "modified_on"]));
+						for (const [table, children] of [
+							["access_list_auth", row.items],
+							["access_list_client", row.clients],
+						])
+							for (const child of children || [])
+								await trx(table).insert({ ...child, meta: JSON.stringify(child.meta || {}) });
+					} else await trx("access_list").where("id", id).delete();
+				});
+				change.changed = false;
+			};
+			const compensateAccessLists = async () => {
+				let failed = false;
+				for (const id of accessListChanges.keys()) {
+					try {
+						await restoreAccessList(id);
+					} catch {
+						failed = true;
+					}
+				}
+				if (failed) throw new errs.ConfigurationError("Could not restore every imported Access List");
+			};
+			const materializeAccessList = async (id) => {
+				const { default: accessLists } = await import("./access-list.js");
+				const row = await AccessList.query().findById(id).withGraphFetched("[items,clients]");
+				await fs.promises.mkdir(path.dirname(accessListFilename(id)), { recursive: true, mode: 0o700 });
+				const artifacts = await accessLists.build(row, { immutable: true });
+				if (!artifacts?.revision)
+					throw new errs.ConfigurationError("Access List authorization artifacts could not be built");
+				await AccessList.query()
+					.findById(id)
+					.patch({ meta: { ...row.meta, authorization_revision: artifacts.revision } });
+			};
 
-			if (fs.existsSync(dirPath)) {
-				const files = await fs.promises.readdir(dirPath);
-				const yamlFiles = files.filter((f) => f.endsWith(".yaml"));
+			/**
+			 * Helper to import standard models and DELETE missing ones (Full Sync)
+			 * @param {Object} modelClass - Objection.js Model class
+			 * @param {string} dirName - Directory name in gitops repo
+			 * @param {string} [hostType] - Host type string for Nginx (e.g. 'proxy_host')
+			 * @param {string|null} [relationGraph] - Relation graph for insertGraph/upsertGraph
+			 */
+			const importModel = async (modelClass, dirName, hostType = null, relationGraph = null) => {
+				const dirPath = path.join(configDir, dirName);
+				const importedIds = [];
+				const errorCountBeforeImport = errors.length;
+				// Older backups do not contain every integration. Absence is not a deletion request.
+				if (!fs.existsSync(dirPath)) return;
 
-				await Promise.all(
-					yamlFiles.map(async (file) => {
-						try {
-							const content = await fs.promises.readFile(path.join(dirPath, file), "utf8");
-							const data = yaml.load(content);
+				if (fs.existsSync(dirPath)) {
+					const files = await fs.promises.readdir(dirPath);
+					const yamlFiles = files.filter((f) => f.endsWith(".yaml"));
 
-							if (data && typeof data === "object") {
-								// Apply field whitelist validation to prevent DB field injection
-								const itemData = sanitizeImportData(modelClass.name, data);
-								if (!itemData) {
-									errors.push(
-										`${dirName}/${file}: Model "${modelClass.name}" not allowed or no valid fields`,
-									);
-									return;
-								}
-								const existingId = itemData.id;
-								if (!Number.isSafeInteger(existingId) || existingId <= 0) {
-									throw new errs.ValidationError("Imported objects require a positive integer ID");
-								}
+					await Promise.all(
+						yamlFiles.map(async (file) => {
+							let importedAccessListId;
+							let accessListWritten = false;
+							try {
+								const content = await fs.promises.readFile(path.join(dirPath, file), "utf8");
+								const data = yaml.load(content);
+								if (
+									modelClass === AccessList &&
+									data &&
+									typeof data === "object" &&
+									"id" in data &&
+									typeof data.id === "number" &&
+									Number.isSafeInteger(data.id) &&
+									data.id > 0
+								)
+									importedAccessListId = data.id;
 
-								let existing;
-								if (existingId) {
-									importedIds.push(existingId);
-									existing = await modelClass.query().findById(existingId);
-									if (existing && !options.overwrite) {
-										skipped++;
+								if (data && typeof data === "object") {
+									// Apply field whitelist validation to prevent DB field injection
+									const itemData = sanitizeImportData(modelClass.name, data);
+									if (!itemData) {
+										errors.push(
+											`${dirName}/${file}: Model "${modelClass.name}" not allowed or no valid fields`,
+										);
 										return;
 									}
-								}
-								const upstreamChanged =
-									modelClass === ProxyHost &&
-									existing &&
-									[
-										"forward_scheme",
-										"forward_host",
-										"forward_port",
-										"terminal_host",
-										"terminal_port",
-									].some(
-										(field) =>
-											Object.hasOwn(itemData, field) && existing[field] !== itemData[field],
-									);
+									const existingId = itemData.id;
+									if (!Number.isSafeInteger(existingId) || existingId <= 0) {
+										throw new errs.ValidationError(
+											"Imported objects require a positive integer ID",
+										);
+									}
 
-								// Ensure item is not marked as deleted upon restore
-								if (modelClass !== DdnsProvider) itemData.is_deleted = 0;
-								if (modelClass === ProxyHost && Array.isArray(itemData.domain_names)) {
-									itemData.host_domains = itemData.domain_names.map((domain_name) => ({
-										domain_name,
-									}));
-									delete itemData.domain_names;
-								}
-
-								// Ensure owner_user_id is valid
-								if (itemData.owner_user_id) {
-									// Check if user exists, if not set to current user to avoid constraint error
-								}
-
-								if (modelClass === ProxyHost) {
-									await validateHostFirewall(access, itemData, existing || {});
-									const relayCandidate = _.assign({}, existing || {}, itemData);
-									if (relayCandidate.upload_relay_enabled)
-										await validateRelayConfigForHost(relayCandidate);
-								}
-
-								const writeImported = async () => {
-									await withImportedIdSequence(modelClass, async (transaction) => {
-										if (options.overwrite && existingId) {
-											// Use upsertGraph for complex models
-											if (relationGraph) {
-												await modelClass.query(transaction).upsertGraph(itemData, {
-													insertMissing: true,
-													relate: true,
-													update: true,
-													noDelete: false, // Delete missing children (items/clients)
-												});
-											} else {
-												const existing = await modelClass
-													.query(transaction)
-													.findById(existingId);
-												if (existing) {
-													await modelClass
-														.query(transaction)
-														.patchAndFetchById(existingId, itemData);
-												} else {
-													await modelClass.query(transaction).insert(itemData);
-												}
-											}
-										} else {
-											if (modelClass !== User && !itemData.owner_user_id)
-												itemData.owner_user_id = access.token.getUserId(1);
-
-											let newRow;
-											if (relationGraph) {
-												newRow = await modelClass.query(transaction).insertGraph(itemData);
-											} else {
-												newRow = await modelClass.query(transaction).insert(itemData);
-											}
-
-											if (itemData.id) importedIds.push(itemData.id);
-											else if (newRow?.id) importedIds.push(newRow.id);
+									if (modelClass === AccessList) {
+										if (importedIds.includes(existingId))
+											throw new errs.ValidationError("Duplicate imported Access List ID");
+										importedAccessListId = existingId;
+									}
+									let existing;
+									if (existingId) {
+										importedIds.push(existingId);
+										const existingQuery = modelClass.query().findById(existingId);
+										if (modelClass === ProxyHost) existingQuery.withGraphFetched("host_domains");
+										existing = await existingQuery;
+										if (existing && !options.overwrite) {
+											skipped++;
+											return;
 										}
-									});
-									if (upstreamChanged)
-										await internalProxyHostMonitor.resetHost(existingId, {
-											disableUnsupported: true,
+									}
+									if (modelClass === AccessList) {
+										await rememberAccessList(existingId);
+										for (const item of itemData.items || []) {
+											if (
+												item.password &&
+												!/^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(item.password) &&
+												!/^\$apr1\$[./A-Za-z0-9]{1,8}\$[./A-Za-z0-9]{22}$/.test(item.password)
+											)
+												item.password = await bcrypt.hash(item.password, 13);
+										}
+									}
+									const activateCloudflared =
+										modelClass === CloudflaredTunnel &&
+										(!existing ||
+											(Object.hasOwn(itemData, "token") && existing.token !== itemData.token) ||
+											existing.status === 3);
+									if (modelClass === CloudflaredTunnel) {
+										// Status describes this process, not the exporting instance's child.
+										itemData.status = existing?.status ?? 0;
+									}
+									// Ensure item is not marked as deleted upon restore
+									if (modelClass !== DdnsProvider) itemData.is_deleted = 0;
+									if (modelClass === ProxyHost && Array.isArray(itemData.domain_names)) {
+										itemData.host_domains = itemData.domain_names.map((domain_name) => ({
+											domain_name,
+										}));
+										delete itemData.domain_names;
+									}
+
+									// Ensure owner_user_id is valid
+									if (itemData.owner_user_id) {
+										// Check if user exists, if not set to current user to avoid constraint error
+									}
+
+									let requestedProxyMeta;
+									if (modelClass === ProxyHost) {
+										requestedProxyMeta = itemData.meta;
+										for (
+											let depth = 0;
+											depth < 2 && typeof requestedProxyMeta === "string";
+											depth++
+										)
+											requestedProxyMeta = JSON.parse(requestedProxyMeta);
+										const listId = itemData.access_list_id ?? existing?.access_list_id ?? 0;
+										if (!Number.isSafeInteger(listId) || listId < 0)
+											throw new errs.ValidationError("Invalid imported Access List reference");
+										if (
+											listId &&
+											(failedAccessListIds.has(listId) ||
+												!(await AccessList.query().where("is_deleted", 0).findById(listId)))
+										)
+											throw new errs.ValidationError(
+												"Referenced Access List was not imported successfully; host retained",
+											);
+										await validateHostFirewall(access, itemData, existing || {});
+										const relayCandidate = _.assign({}, existing || {}, itemData);
+										if (relayCandidate.upload_relay_enabled)
+											await validateRelayConfigForHost(relayCandidate);
+										await rememberProxy(existingId, !!existing);
+									}
+
+									const writeImported = async () => {
+										const write = async (claimTransaction) =>
+											withImportedIdSequence(
+												modelClass,
+												async (transaction) => {
+													if (modelClass === ProxyHost) {
+														const currentQuery = modelClass
+															.query(transaction)
+															.findById(existingId);
+														if (transaction) currentQuery.forUpdate();
+														const current = await currentQuery;
+														await prepareProxyHostPolicies(
+															itemData,
+															current || {},
+															requestedProxyMeta,
+														);
+													}
+													if (options.overwrite && existingId) {
+														// Use upsertGraph for complex models
+														if (relationGraph) {
+															await modelClass.query(transaction).upsertGraph(itemData, {
+																insertMissing: true,
+																relate: true,
+																update: true,
+																noDelete: false, // Delete missing children (items/clients)
+															});
+														} else {
+															const existing = await modelClass
+																.query(transaction)
+																.findById(existingId);
+															if (existing) {
+																await modelClass
+																	.query(transaction)
+																	.patchAndFetchById(existingId, itemData);
+															} else {
+																await modelClass.query(transaction).insert(itemData);
+															}
+														}
+													} else {
+														if (modelClass !== User && !itemData.owner_user_id)
+															itemData.owner_user_id = access.token.getUserId(1);
+
+														let newRow;
+														if (relationGraph) {
+															newRow = await modelClass
+																.query(transaction)
+																.insertGraph(itemData);
+														} else {
+															newRow = await modelClass
+																.query(transaction)
+																.insert(itemData);
+														}
+
+														if (itemData.id) importedIds.push(itemData.id);
+														else if (newRow?.id) importedIds.push(newRow.id);
+													}
+												},
+												claimTransaction,
+											);
+										const hostType =
+											modelClass === ProxyHost
+												? "proxy"
+												: modelClass === RedirectionHost
+													? "redirection"
+													: modelClass === DeadHost
+														? "dead"
+														: null;
+										const domainNames =
+											itemData.host_domains?.map((row) => row.domain_name) ||
+											itemData.domain_names;
+										if (
+											hostType &&
+											(modelClass === ProxyHost ||
+												domainNames ||
+												!existing ||
+												existing.is_deleted)
+										)
+											await withHostDomainClaims(
+												{
+													hostType,
+													hostId: existingId,
+													domainNames: domainNames || existing?.domain_names || [],
+													retainedDomainNames:
+														modelClass === ProxyHost && !existing?.is_deleted
+															? existing?.domain_names || []
+															: [],
+												},
+												write,
+											);
+										else if (modelClass === AccessList) await AccessList.transaction(write);
+										else await write();
+									};
+									if (modelClass === ProxyHost)
+										await withFirewallReferences(itemData, existing || {}, writeImported, {
+											lockHeld: true,
 										});
-								};
-								if (modelClass === ProxyHost)
-									await withFirewallReferences(itemData, existing || {}, writeImported);
-								else if (modelClass.name === "FirewallList")
-									await internalNginx.withConfigurationLock(writeImported);
-								else await writeImported();
-								imported++;
-							} else {
-								throw new errs.ValidationError("Expected a YAML object");
-							}
-						} catch (err) {
-							logger.error(`Import failed for ${dirName}/${file}:`, err);
-							errors.push(`${dirName}/${file}: ${err instanceof Error ? err.message : "Unknown error"}`);
-						}
-					}),
-				);
-			}
-
-			// FULL SYNC: Delete items not in importedIds after this model imported without errors.
-			const pruneMissing = async () => {
-				const query = modelClass.query().whereNotIn("id", importedIds);
-
-				try {
-					const staleItems = await query;
-					const deletePromises = staleItems.map(async (item) => {
-						const deleteItem = async () => {
-							if (modelClass === User && item.id === access.token.getUserId(1)) return;
-							if (modelClass.name === "FirewallList") {
-								const hosts = await ProxyHost.query().where("is_deleted", 0);
-								if (
-									hosts.some((host) => {
-										const meta = typeof host.meta === "string" ? JSON.parse(host.meta) : host.meta;
-										return meta?.ip_firewall?.list_ids?.includes(item.id);
-									})
-								) {
-									throw new errs.ValidationError(
-										`Firewall list ${item.id} is still assigned to a proxy host`,
-									);
+									else await writeImported();
+									if (modelClass === AccessList) {
+										accessListChanges.get(existingId).changed = true;
+										accessListWritten = true;
+										await materializeAccessList(existingId);
+										accessListChanges.get(existingId).imported = true;
+									}
+									if (modelClass === ProxyHost) proxyChanges.get(existingId).changed = true;
+									if (activateCloudflared) cloudflaredActivations.add(existingId);
+									imported++;
+								} else {
+									throw new errs.ValidationError("Expected a YAML object");
 								}
+							} catch (err) {
+								if (modelClass === AccessList) {
+									if (importedAccessListId) failedAccessListIds.add(importedAccessListId);
+									try {
+										if (accessListWritten) await restoreAccessList(importedAccessListId);
+									} catch {
+										throw new errs.ConfigurationError("Access List rollback failed");
+									}
+									const message =
+										err instanceof errs.ValidationError
+											? err.message
+											: "Access List import failed; previous authorization retained";
+									logger.error(`Import failed for ${dirName}/${file}: ${message}`);
+									errors.push(`${dirName}/${file}: ${message}`);
+									return;
+								}
+								logger.error(`Import failed for ${dirName}/${file}:`, err);
+								errors.push(
+									`${dirName}/${file}: ${err instanceof Error ? err.message : "Unknown error"}`,
+								);
 							}
-							// Delete Nginx config if hostType is provided
-							if (hostType) {
-								await internalNginx.deleteConfig(hostType, item);
-							}
+						}),
+					);
+				}
 
-							// Soft delete if supported, else hard delete
-							if (item.is_deleted !== undefined) {
-								await modelClass.query().patchAndFetchById(item.id, { is_deleted: 1 });
-							} else {
-								await modelClass.query().deleteById(item.id);
-							}
-							// Persist deletion before stopping: queued starts then see the deleted row.
-							if (modelClass === CloudflaredTunnel) await internalCloudflared.stop(item.id);
-							deleted++;
-							logger.info(`GitOps Full Sync: Deleted ${dirName} #${item.id}`);
-						};
-						if (modelClass.name === "FirewallList") await internalNginx.withConfigurationLock(deleteItem);
-						else await deleteItem();
-					});
+				// FULL SYNC: Delete items not in importedIds after this model imported without errors.
+				const pruneMissing = async () => {
+					const query = modelClass.query().whereNotIn("id", importedIds);
 
-					for (const result of await Promise.allSettled(deletePromises)) {
-						if (result.status === "rejected") errors.push(`${dirName}: ${result.reason.message}`);
+					try {
+						const staleItems = await query;
+						const deletePromises = staleItems.map(async (item) => {
+							const deleteItem = async () => {
+								if (modelClass === User && item.id === access.token.getUserId(1)) return;
+								if (modelClass.name === "FirewallList") {
+									const hosts = await ProxyHost.query().where("is_deleted", 0);
+									if (
+										hosts.some((host) => {
+											const meta =
+												typeof host.meta === "string" ? JSON.parse(host.meta) : host.meta;
+											return meta?.ip_firewall?.list_ids?.includes(item.id);
+										})
+									) {
+										throw new errs.ValidationError(
+											`Firewall list ${item.id} is still assigned to a proxy host`,
+										);
+									}
+								}
+								if (modelClass === AccessList) {
+									if (item.is_deleted) return;
+									const assigned = await ProxyHost.query()
+										.where("is_deleted", 0)
+										.where("access_list_id", item.id)
+										.first();
+									if (assigned)
+										throw new errs.ValidationError(
+											`Access List ${item.id} is still assigned to a proxy host`,
+										);
+									await rememberAccessList(item.id);
+								}
+								if (modelClass === ProxyHost) await rememberProxy(item.id, true);
+								// Delete Nginx config if hostType is provided
+								if (hostType) {
+									await internalNginx.deleteConfig(hostType, item);
+								}
+
+								// Soft delete if supported, else hard delete
+								const deleteRecord = (trx) =>
+									item.is_deleted !== undefined
+										? modelClass.query(trx).patchAndFetchById(item.id, { is_deleted: 1 })
+										: modelClass.query(trx).deleteById(item.id);
+								const claimType =
+									modelClass === ProxyHost
+										? "proxy"
+										: modelClass === RedirectionHost
+											? "redirection"
+											: modelClass === DeadHost
+												? "dead"
+												: null;
+								if (claimType)
+									await withHostDomainClaims(
+										{
+											hostType: claimType,
+											hostId: item.id,
+											domainNames: [],
+											retainedDomainNames:
+												modelClass === ProxyHost ? item.domain_names || [] : [],
+										},
+										deleteRecord,
+									);
+								else await deleteRecord();
+								if (modelClass === AccessList)
+									Object.assign(accessListChanges.get(item.id), { changed: true, pruned: true });
+								if (modelClass === ProxyHost) proxyChanges.get(item.id).changed = true;
+								// Persist deletion before stopping: queued starts then see the deleted row.
+								if (modelClass === CloudflaredTunnel) await internalCloudflared.stop(item.id);
+								deleted++;
+								logger.info(`GitOps Full Sync: Deleted ${dirName} #${item.id}`);
+							};
+							await deleteItem();
+						});
+
+						for (const result of await Promise.allSettled(deletePromises)) {
+							if (result.status === "rejected") errors.push(`${dirName}: ${result.reason.message}`);
+						}
+					} catch (err) {
+						logger.warn(`GitOps Cleanup failed for ${dirName}:`, err);
+						errors.push(`${dirName}: ${err instanceof Error ? err.message : "Cleanup failed"}`);
 					}
-				} catch (err) {
-					logger.warn(`GitOps Cleanup failed for ${dirName}:`, err);
-					errors.push(`${dirName}: ${err instanceof Error ? err.message : "Cleanup failed"}`);
+				};
+				if (options.overwrite && errors.length === errorCountBeforeImport) {
+					// Hosts still reference the previous lists until their restore completes.
+					if (modelClass.name === "FirewallList") deferredFirewallPrunes.push(pruneMissing);
+					else if (modelClass === AccessList) deferredAccessListPrunes.push(pruneMissing);
+					else await pruneMissing();
 				}
 			};
-			if (options.overwrite && errors.length === errorCountBeforeImport) {
-				// Hosts still reference the previous lists until their restore completes.
-				if (modelClass.name === "FirewallList") deferredFirewallPrunes.push(pruneMissing);
-				else await pruneMissing();
-			}
-		};
 
-		try {
-			// 1. Import Users first
-			await importModel(User, "users", null, "permissions");
-
-			// 2. Import Certificates
-			await importModel(Certificate, "certificates");
-
-			// 3. Import Access Lists
-			await importModel(AccessList, "access-lists", null, "[items, clients]");
-			if (fs.existsSync(path.join(configDir, "firewall-lists"))) {
-				const { default: FirewallList } = await import("../models/firewall_list.js");
-				await importModel(FirewallList, "firewall-lists");
-			}
-
-			// 4. Import Hosts & Streams
-			const errorsBeforeHostImport = errors.length;
 			try {
+				// 1. Import Users first
+				await importModel(User, "users", null, "permissions");
+
+				// 2. Import Certificates
+				await importModel(Certificate, "certificates");
+
+				// 3. Import Access Lists
+				await importModel(AccessList, "access-lists", null, "[items, clients]");
+				if (fs.existsSync(path.join(configDir, "firewall-lists"))) {
+					const { default: FirewallList } = await import("../models/firewall_list.js");
+					await importModel(FirewallList, "firewall-lists");
+				}
+
+				// 4. Import Hosts & Streams
+				const errorsBeforeHostImport = errors.length;
 				await importModel(ProxyHost, "proxy-hosts", "proxy_host", "host_domains");
-			} finally {
-				// One refresh covers successful, partially failed and pruned host batches.
-				await notifyProxyHostDomainsChanged();
-			}
-			const monitorDir = path.join(configDir, "proxy-host-monitors");
-			// An older GitOps backup has no monitor directory; preserve local settings in that case.
-			if (fs.existsSync(monitorDir)) {
-				await assertNoSymlinkPath(GITOPS_DIR, monitorDir);
-				const importedHostIds = [];
-				let failed = false;
-				const files = await fs.promises.readdir(monitorDir);
-				for (const file of files.filter((name) => name.endsWith(".yaml"))) {
-					try {
-						if (!/^[1-9]\d*\.yaml$/.test(file)) throw new errs.ValidationError("Invalid monitor filename");
-						const filePath = path.join(monitorDir, file);
-						await assertNoSymlinkPath(GITOPS_DIR, filePath);
-						const data = yaml.load(await fs.promises.readFile(filePath, "utf8"));
-						const hostId = Number(file.slice(0, -5));
-						if (!data || typeof data !== "object" || Array.isArray(data))
-							throw new errs.ValidationError("Invalid monitor object");
-						const parsed = /** @type {Record<string, any>} */ (data);
-						if (!Number.isSafeInteger(hostId) || parsed.host_id !== hostId)
-							throw new errs.ValidationError("Monitor host ID mismatch");
-						const settings = { ...parsed };
-						delete settings.host_id;
-						const validSettings = assertMonitorConfig(settings);
-						const exists = await ProxyHostMonitor.query().findOne({ host_id: hostId });
-						if (exists && !options.overwrite) {
+				const monitorDir = path.join(configDir, "proxy-host-monitors");
+				// An older GitOps backup has no monitor directory; preserve local settings in that case.
+				if (fs.existsSync(monitorDir)) {
+					await assertNoSymlinkPath(GITOPS_DIR, monitorDir);
+					const importedHostIds = [];
+					let failed = false;
+					const files = await fs.promises.readdir(monitorDir);
+					for (const file of files.filter((name) => name.endsWith(".yaml"))) {
+						try {
+							if (!/^[1-9]\d*\.yaml$/.test(file))
+								throw new errs.ValidationError("Invalid monitor filename");
+							const filePath = path.join(monitorDir, file);
+							await assertNoSymlinkPath(GITOPS_DIR, filePath);
+							const data = yaml.load(await fs.promises.readFile(filePath, "utf8"));
+							const hostId = Number(file.slice(0, -5));
+							if (!data || typeof data !== "object" || Array.isArray(data))
+								throw new errs.ValidationError("Invalid monitor object");
+							const parsed = /** @type {Record<string, any>} */ (data);
+							if (!Number.isSafeInteger(hostId) || parsed.host_id !== hostId)
+								throw new errs.ValidationError("Monitor host ID mismatch");
+							const settings = { ...parsed };
+							delete settings.host_id;
+							const validSettings = assertMonitorConfig(settings);
+							const exists = await ProxyHostMonitor.query().findOne({ host_id: hostId });
+							if (exists && !options.overwrite) {
+								importedHostIds.push(hostId);
+								skipped++;
+								continue;
+							}
+							await internalProxyHostMonitor.update(access, hostId, validSettings, {
+								skipAutoPush: true,
+							});
 							importedHostIds.push(hostId);
-							skipped++;
-							continue;
+							imported++;
+						} catch (err) {
+							failed = true;
+							errors.push(
+								`proxy-host-monitors/${file}: ${err instanceof Error ? err.message : "Invalid monitor"}`,
+							);
 						}
-						await internalProxyHostMonitor.update(access, hostId, validSettings, { skipAutoPush: true });
-						importedHostIds.push(hostId);
-						imported++;
+					}
+					if (
+						options.overwrite &&
+						!failed &&
+						errors.length === errorsBeforeHostImport &&
+						fs.existsSync(path.join(configDir, "proxy-hosts")) &&
+						(files.some((file) => file.endsWith(".yaml")) || files.includes(".gitkeep"))
+					) {
+						const removed = await ProxyHostMonitor.query().whereNotIn("host_id", importedHostIds);
+						for (const monitor of removed) {
+							await internalProxyHostMonitor.removeHost(monitor.host_id);
+							deleted++;
+						}
+					}
+				}
+				await importModel(RedirectionHost, "redirection-hosts", "redirection_host");
+				await importModel(DeadHost, "dead-hosts", "dead_host");
+				await importModel(Stream, "streams", "stream");
+				await importModel(CloudflaredTunnel, "cloudflared-tunnels");
+				await importModel(DdnsProvider, "ddns-providers");
+
+				// Access Lists can be changed independently of their attached Proxy Hosts.
+				// Fail closed before rendering: a GitOps import must never leave an enabled
+				// relay behind an Access List that now permits unauthenticated access.
+				for (const host of await ProxyHost.query()
+					.where("is_deleted", 0)
+					.withGraphFetched("access_list.[items, clients]")) {
+					if (!host.upload_relay_enabled) continue;
+					try {
+						relayConfigForHost(host);
 					} catch (err) {
-						failed = true;
+						await ProxyHost.query().findById(host.id).patch({ upload_relay_enabled: 0 });
+						host.upload_relay_enabled = 0;
 						errors.push(
-							`proxy-host-monitors/${file}: ${err instanceof Error ? err.message : "Invalid monitor"}`,
+							`proxy-hosts/${host.id}: Upload relay disabled because its Access List is no longer enforcing (${err.message})`,
 						);
 					}
 				}
-				if (
-					options.overwrite &&
-					!failed &&
-					errors.length === errorsBeforeHostImport &&
-					fs.existsSync(path.join(configDir, "proxy-hosts")) &&
-					(files.some((file) => file.endsWith(".yaml")) || files.includes(".gitkeep"))
-				) {
-					const removed = await ProxyHostMonitor.query().whereNotIn("host_id", importedHostIds);
-					for (const monitor of removed) {
-						await internalProxyHostMonitor.removeHost(monitor.host_id);
-						deleted++;
-					}
-				}
-			}
-			await importModel(RedirectionHost, "redirection-hosts", "redirection_host");
-			await importModel(DeadHost, "dead-hosts", "dead_host");
-			await importModel(Stream, "streams", "stream");
-			await importModel(CloudflaredTunnel, "cloudflared-tunnels");
-			await importModel(DdnsProvider, "ddns-providers");
 
-			// Access Lists can be changed independently of their attached Proxy Hosts.
-			// Fail closed before rendering: a GitOps import must never leave an enabled
-			// relay behind an Access List that now permits unauthenticated access.
-			for (const host of await ProxyHost.query()
-				.where("is_deleted", 0)
-				.withGraphFetched("access_list.[items, clients]")) {
-				if (!host.upload_relay_enabled) continue;
-				try {
-					relayConfigForHost(host);
-				} catch (err) {
-					await ProxyHost.query().findById(host.id).patch({ upload_relay_enabled: 0 });
-					host.upload_relay_enabled = 0;
-					errors.push(
-						`proxy-hosts/${host.id}: Upload relay disabled because its Access List is no longer enforcing (${err.message})`,
+				// 5. Import Settings
+				const settingsDir = path.join(configDir, "settings");
+				if (fs.existsSync(settingsDir)) {
+					const files = await fs.promises.readdir(settingsDir);
+					const yamlFiles = files.filter((f) => f.endsWith(".yaml"));
+
+					await Promise.all(
+						yamlFiles.map(async (file) => {
+							try {
+								const content = await fs.promises.readFile(path.join(settingsDir, file), "utf8");
+								const data = yaml.load(content);
+								if (data && typeof data === "object") {
+									// Apply field whitelist validation for settings
+									const settingData = sanitizeImportData("Setting", data);
+									if (!settingData || typeof settingData.id !== "string" || !settingData.id) {
+										errors.push(`settings/${file}: No valid fields allowed`);
+										return;
+									}
+
+									if (settingData.id === "gitops-config") return;
+
+									const existing = await settingModel.query().findById(settingData.id);
+									if (existing) {
+										await settingModel.query().patchAndFetchById(settingData.id, settingData);
+									} else {
+										await settingModel.query().insert(settingData);
+									}
+									imported++;
+								}
+							} catch (err) {
+								errors.push(
+									`settings/${file}: ${err instanceof Error ? err.message : "Unknown error"}`,
+								);
+							}
+						}),
 					);
 				}
-			}
 
-			// 5. Import Settings
-			const settingsDir = path.join(configDir, "settings");
-			if (fs.existsSync(settingsDir)) {
-				const files = await fs.promises.readdir(settingsDir);
-				const yamlFiles = files.filter((f) => f.endsWith(".yaml"));
+				// 6. Restore Certificate Files
+				const certFilesDir = path.join(configDir, "certificate-files");
+				if (fs.existsSync(certFilesDir)) {
+					const isBlockedPrivateKeyRestore = (filePath) => {
+						const filename = path.basename(filePath).toLowerCase();
+						return filename.endsWith(".key") || filename === "privkey.pem" || filename === "root_ca.key";
+					};
 
-				await Promise.all(
-					yamlFiles.map(async (file) => {
-						try {
-							const content = await fs.promises.readFile(path.join(settingsDir, file), "utf8");
-							const data = yaml.load(content);
-							if (data && typeof data === "object") {
-								// Apply field whitelist validation for settings
-								const settingData = sanitizeImportData("Setting", data);
-								if (!settingData || typeof settingData.id !== "string" || !settingData.id) {
-									errors.push(`settings/${file}: No valid fields allowed`);
-									return;
-								}
+					const getSafeStats = async (srcPath) => {
+						const stats = await fs.promises.lstat(srcPath);
+						if (stats.isSymbolicLink()) {
+							logger.warn(`GitOps restore: skipping symbolic link ${srcPath}`);
+							return null;
+						}
+						return stats;
+					};
 
-								if (settingData.id === "gitops-config") return;
+					const restoreFile = async (src, dest) => {
+						const stats = await getSafeStats(src);
+						if (!stats?.isFile()) {
+							return false;
+						}
 
-								const existing = await settingModel.query().findById(settingData.id);
-								if (existing) {
-									await settingModel.query().patchAndFetchById(settingData.id, settingData);
-								} else {
-									await settingModel.query().insert(settingData);
-								}
-								imported++;
+						if (isBlockedPrivateKeyRestore(src) || isBlockedPrivateKeyRestore(dest)) {
+							logger.warn(`GitOps restore: blocked private key restore for ${src}`);
+							return false;
+						}
+
+						await fs.promises.copyFile(src, dest);
+						// Set permissions
+						if (dest.endsWith(".key") || dest.endsWith(".pem")) {
+							const filename = path.basename(dest);
+							if (filename === "privkey.pem" || filename.endsWith(".key")) {
+								await fs.promises.chmod(dest, 0o600);
+							} else {
+								await fs.promises.chmod(dest, 0o644);
 							}
-						} catch (err) {
-							errors.push(`settings/${file}: ${err instanceof Error ? err.message : "Unknown error"}`);
 						}
-					}),
-				);
-			}
 
-			// 6. Restore Certificate Files
-			const certFilesDir = path.join(configDir, "certificate-files");
-			if (fs.existsSync(certFilesDir)) {
-				const isBlockedPrivateKeyRestore = (filePath) => {
-					const filename = path.basename(filePath).toLowerCase();
-					return filename.endsWith(".key") || filename === "privkey.pem" || filename === "root_ca.key";
-				};
+						return true;
+					};
 
-				const getSafeStats = async (srcPath) => {
-					const stats = await fs.promises.lstat(srcPath);
-					if (stats.isSymbolicLink()) {
-						logger.warn(`GitOps restore: skipping symbolic link ${srcPath}`);
-						return null;
-					}
-					return stats;
-				};
+					// Restore Let's Encrypt
+					const leDir = path.join(certFilesDir, "letsencrypt");
+					if (fs.existsSync(leDir)) {
+						const domains = await fs.promises.readdir(leDir);
+						for (const domain of domains) {
+							const srcDir = path.join(leDir, domain);
+							const srcDirStats = await getSafeStats(srcDir);
+							if (!srcDirStats?.isDirectory()) {
+								continue;
+							}
 
-				const restoreFile = async (src, dest) => {
-					const stats = await getSafeStats(src);
-					if (!stats?.isFile()) {
-						return false;
-					}
-
-					if (isBlockedPrivateKeyRestore(src) || isBlockedPrivateKeyRestore(dest)) {
-						logger.warn(`GitOps restore: blocked private key restore for ${src}`);
-						return false;
-					}
-
-					await fs.promises.copyFile(src, dest);
-					// Set permissions
-					if (dest.endsWith(".key") || dest.endsWith(".pem")) {
-						const filename = path.basename(dest);
-						if (filename === "privkey.pem" || filename.endsWith(".key")) {
-							await fs.promises.chmod(dest, 0o600);
-						} else {
-							await fs.promises.chmod(dest, 0o644);
+							const targetDir = path.join("/data/tls/certbot/live", domain);
+							if (!fs.existsSync(targetDir)) {
+								await fs.promises.mkdir(targetDir, { recursive: true });
+							}
+							const files = await fs.promises.readdir(srcDir);
+							for (const file of files) {
+								try {
+									await restoreFile(path.join(srcDir, file), path.join(targetDir, file));
+								} catch (err) {
+									logger.error(
+										`GitOps restore failed for ${path.join(srcDir, file)}: ${err instanceof Error ? err.message : "Unknown error"}`,
+									);
+									throw err;
+								}
+							}
 						}
 					}
 
-					return true;
-				};
-
-				// Restore Let's Encrypt
-				const leDir = path.join(certFilesDir, "letsencrypt");
-				if (fs.existsSync(leDir)) {
-					const domains = await fs.promises.readdir(leDir);
-					for (const domain of domains) {
-						const srcDir = path.join(leDir, domain);
-						const srcDirStats = await getSafeStats(srcDir);
-						if (!srcDirStats?.isDirectory()) {
-							continue;
-						}
-
-						const targetDir = path.join("/data/tls/certbot/live", domain);
+					// Restore Custom Certs
+					const customDir = path.join(certFilesDir, "custom");
+					if (fs.existsSync(customDir)) {
+						const targetDir = "/data/tls/custom";
 						if (!fs.existsSync(targetDir)) {
 							await fs.promises.mkdir(targetDir, { recursive: true });
 						}
-						const files = await fs.promises.readdir(srcDir);
-						for (const file of files) {
-							try {
-								await restoreFile(path.join(srcDir, file), path.join(targetDir, file));
-							} catch (err) {
-								logger.error(
-									`GitOps restore failed for ${path.join(srcDir, file)}: ${err instanceof Error ? err.message : "Unknown error"}`,
-								);
-								throw err;
-							}
-						}
-					}
-				}
+						const items = await fs.promises.readdir(customDir);
+						for (const item of items) {
+							const srcPath = path.join(customDir, item);
+							const destPath = path.join(targetDir, item);
+							const stats = await getSafeStats(srcPath);
 
-				// Restore Custom Certs
-				const customDir = path.join(certFilesDir, "custom");
-				if (fs.existsSync(customDir)) {
-					const targetDir = "/data/tls/custom";
-					if (!fs.existsSync(targetDir)) {
-						await fs.promises.mkdir(targetDir, { recursive: true });
-					}
-					const items = await fs.promises.readdir(customDir);
-					for (const item of items) {
-						const srcPath = path.join(customDir, item);
-						const destPath = path.join(targetDir, item);
-						const stats = await getSafeStats(srcPath);
-
-						if (!stats) {
-							continue;
-						}
-
-						if (stats.isFile()) {
-							try {
-								await restoreFile(srcPath, destPath);
-							} catch (err) {
-								logger.error(
-									`GitOps restore failed for ${srcPath}: ${err instanceof Error ? err.message : "Unknown error"}`,
-								);
-								throw err;
+							if (!stats) {
+								continue;
 							}
-						} else if (stats.isDirectory() && item.startsWith("npm-")) {
-							if (!fs.existsSync(destPath)) {
-								await fs.promises.mkdir(destPath, { recursive: true });
-							}
-							const files = await fs.promises.readdir(srcPath);
-							for (const file of files) {
+
+							if (stats.isFile()) {
 								try {
-									await restoreFile(path.join(srcPath, file), path.join(destPath, file));
+									await restoreFile(srcPath, destPath);
 								} catch (err) {
 									logger.error(
-										`GitOps restore failed for ${path.join(srcPath, file)} -> ${path.join(destPath, file)}: ${err instanceof Error ? err.message : "Unknown error"}`,
+										`GitOps restore failed for ${srcPath}: ${err instanceof Error ? err.message : "Unknown error"}`,
 									);
 									throw err;
+								}
+							} else if (stats.isDirectory() && item.startsWith("npm-")) {
+								if (!fs.existsSync(destPath)) {
+									await fs.promises.mkdir(destPath, { recursive: true });
+								}
+								const files = await fs.promises.readdir(srcPath);
+								for (const file of files) {
+									try {
+										await restoreFile(path.join(srcPath, file), path.join(destPath, file));
+									} catch (err) {
+										logger.error(
+											`GitOps restore failed for ${path.join(srcPath, file)} -> ${path.join(destPath, file)}: ${err instanceof Error ? err.message : "Unknown error"}`,
+										);
+										throw err;
+									}
+								}
+							}
+						}
+					}
+
+					// Restore Internal Certificates
+					const internalDir = path.join(certFilesDir, "internal");
+					if (fs.existsSync(internalDir)) {
+						const targetBaseDir = "/data/tls/internal";
+						if (!fs.existsSync(targetBaseDir)) {
+							await fs.promises.mkdir(targetBaseDir, { recursive: true });
+						}
+
+						const internalItems = await fs.promises.readdir(internalDir);
+						for (const item of internalItems) {
+							const srcPath = path.join(internalDir, item);
+							const destPath = path.join(targetBaseDir, item);
+							const stat = await getSafeStats(srcPath);
+
+							if (!stat) {
+								continue;
+							}
+
+							if (stat.isFile()) {
+								try {
+									await restoreFile(srcPath, destPath);
+								} catch (err) {
+									logger.error(
+										`GitOps restore failed for ${srcPath}: ${err instanceof Error ? err.message : "Unknown error"}`,
+									);
+									throw err;
+								}
+							} else if (stat.isDirectory() && item.startsWith("npm-")) {
+								const destDir = path.join(targetBaseDir, item);
+								if (!fs.existsSync(destDir)) {
+									await fs.promises.mkdir(destDir, { recursive: true });
+								}
+								const files = await fs.promises.readdir(srcPath);
+								for (const file of files) {
+									try {
+										await restoreFile(path.join(srcPath, file), path.join(destDir, file));
+									} catch (err) {
+										logger.error(
+											`GitOps restore failed for ${path.join(srcPath, file)}: ${err instanceof Error ? err.message : "Unknown error"}`,
+										);
+										throw err;
+									}
 								}
 							}
 						}
 					}
 				}
 
-				// Restore Internal Certificates
-				const internalDir = path.join(certFilesDir, "internal");
-				if (fs.existsSync(internalDir)) {
-					const targetBaseDir = "/data/tls/internal";
-					if (!fs.existsSync(targetBaseDir)) {
-						await fs.promises.mkdir(targetBaseDir, { recursive: true });
-					}
+				// ACL pruning must see the final host references and may never silently remove active authorization.
+				for (const prune of deferredAccessListPrunes) await prune();
+				// Status writes in the final batch also touch hosts absent from this backup.
+				const proxyHosts = await ProxyHost.query().where("is_deleted", 0).withGraphFetched("host_domains");
+				for (const host of proxyHosts) {
+					await rememberProxy(host.id, true);
+					proxyChanges.get(host.id).staged = true;
+				}
+				// 7. Regenerate all affected configurations as one validated batch.
+				await internalNginx.bulkGenerateConfigGroupsUnlocked(
+					[
+						{
+							model: ProxyHost,
+							hostType: "proxy_host",
+							hosts: proxyHosts,
+						},
+						{
+							model: RedirectionHost,
+							hostType: "redirection_host",
+							hosts: await RedirectionHost.query().where("is_deleted", 0),
+						},
+						{
+							model: DeadHost,
+							hostType: "dead_host",
+							hosts: await DeadHost.query().where("is_deleted", 0),
+						},
+						{ model: Stream, hostType: "stream", hosts: await Stream.query().where("is_deleted", 0) },
+					],
+					{ throwOnError: true, reload: true },
+				);
 
-					const internalItems = await fs.promises.readdir(internalDir);
-					for (const item of internalItems) {
-						const srcPath = path.join(internalDir, item);
-						const destPath = path.join(targetBaseDir, item);
-						const stat = await getSafeStats(srcPath);
+				proxyActivated = true;
+				for (const [id, change] of proxyChanges) {
+					if (!change.changed) continue;
+					const current = await ProxyHost.query().findById(id).withGraphFetched("host_domains");
+					if (current && !current.is_deleted) await internalHostRevisions.record(access, id, "imported");
+					await withHostDomainClaims(
+						{
+							hostType: "proxy",
+							hostId: id,
+							domainNames: current && !current.is_deleted ? current.domain_names : [],
+						},
+						async () => {},
+					);
+					const { reconcileRestoredHost } = await import("./proxy-host.js");
+					await reconcileRestoredHost(change.previous?.host || current, current);
+				}
+				if (fs.existsSync(path.join(configDir, "proxy-hosts"))) await notifyProxyHostDomainsChanged();
 
-						if (!stat) {
-							continue;
-						}
-
-						if (stat.isFile()) {
-							try {
-								await restoreFile(srcPath, destPath);
-							} catch (err) {
-								logger.error(
-									`GitOps restore failed for ${srcPath}: ${err instanceof Error ? err.message : "Unknown error"}`,
-								);
-								throw err;
-							}
-						} else if (stat.isDirectory() && item.startsWith("npm-")) {
-							const destDir = path.join(targetBaseDir, item);
-							if (!fs.existsSync(destDir)) {
-								await fs.promises.mkdir(destDir, { recursive: true });
-							}
-							const files = await fs.promises.readdir(srcPath);
-							for (const file of files) {
-								try {
-									await restoreFile(path.join(srcPath, file), path.join(destDir, file));
-								} catch (err) {
-									logger.error(
-										`GitOps restore failed for ${path.join(srcPath, file)}: ${err instanceof Error ? err.message : "Unknown error"}`,
-									);
-									throw err;
-								}
-							}
-						}
+				for (const id of cloudflaredActivations) {
+					try {
+						await internalCloudflared.activateImported(id);
+					} catch (error) {
+						errors.push(`cloudflared-tunnels/${id}: ${error.message}`);
 					}
 				}
+
+				// Keep the last usable lists on any failed restore, including a failed Nginx activation.
+				if (!errors.length) {
+					for (const prune of deferredFirewallPrunes) await prune();
+				}
+
+				logger.info(
+					`GitOps import: ${imported} imported, ${skipped} skipped, ${deleted} deleted, ${errors.length} errors`,
+				);
+				return { success: errors.length === 0, imported, skipped, deleted, errors };
+			} catch (err) {
+				const errorMessage = err instanceof Error ? err.message : "Unknown error";
+				logger.error("GitOps import failed:", err);
+				if (!proxyActivated) {
+					try {
+						await compensateAccessLists();
+					} catch {
+						errors.push("Access List rollback failed");
+					}
+				}
+				try {
+					if (!proxyActivated) await compensateProxies();
+				} catch (rollbackError) {
+					logger.error("GitOps proxy rollback failed:", rollbackError);
+					errors.push(`Proxy rollback failed: ${rollbackError.message}`);
+				}
+				if (fs.existsSync(path.join(configDir, "proxy-hosts"))) await notifyProxyHostDomainsChanged();
+				return {
+					success: false,
+					imported: proxyActivated
+						? imported
+						: Math.max(
+								0,
+								imported -
+									[...proxyChanges.values()].filter((change) => change.changed).length -
+									[...accessListChanges.values()].filter((change) => change.imported).length,
+							),
+					skipped,
+					deleted: proxyActivated
+						? deleted
+						: Math.max(
+								0,
+								deleted - [...accessListChanges.values()].filter((change) => change.pruned).length,
+							),
+					errors: [...errors, errorMessage],
+				};
 			}
-
-			// 7. Regenerate all affected configurations as one validated batch.
-			await internalNginx.bulkGenerateConfigGroups(
-				[
-					{
-						model: ProxyHost,
-						hostType: "proxy_host",
-						hosts: await ProxyHost.query().where("is_deleted", 0).withGraphFetched("host_domains"),
-					},
-					{
-						model: RedirectionHost,
-						hostType: "redirection_host",
-						hosts: await RedirectionHost.query().where("is_deleted", 0),
-					},
-					{ model: DeadHost, hostType: "dead_host", hosts: await DeadHost.query().where("is_deleted", 0) },
-					{ model: Stream, hostType: "stream", hosts: await Stream.query().where("is_deleted", 0) },
-				],
-				{ throwOnError: true },
-			);
-
-			await internalNginx.reload();
-
-			// Keep the last usable lists on any failed restore, including a failed Nginx activation.
-			if (!errors.length) {
-				for (const prune of deferredFirewallPrunes) await prune();
-			}
-
-			logger.info(
-				`GitOps import: ${imported} imported, ${skipped} skipped, ${deleted} deleted, ${errors.length} errors`,
-			);
-			return { success: errors.length === 0, imported, skipped, deleted, errors };
-		} catch (err) {
-			const errorMessage = err instanceof Error ? err.message : "Unknown error";
-			logger.error("GitOps import failed:", err);
-			return { success: false, imported, skipped, deleted, errors: [...errors, errorMessage] };
-		}
+		});
 	},
 
 	/**

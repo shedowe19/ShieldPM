@@ -14,8 +14,10 @@ vi.mock("../../internal/certificate.js", () => ({ default: {} }));
 vi.mock("../../internal/access-list.js", () => ({ default: {} }));
 vi.mock("../../internal/firewall-list.js", () => ({ default: { get: mocks.list } }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: mocks.audit } }));
-vi.mock("../../internal/nginx.js", () => ({ default: { configure: mocks.configure } }));
-vi.mock("../../internal/git-deploy.js", () => ({ default: {} }));
+vi.mock("../../internal/nginx.js", () => ({
+	default: { withConfigurationLock: (write) => write(), configureHost: mocks.configure, reload: vi.fn() },
+}));
+vi.mock("../../internal/git-deploy.js", () => ({ default: { stopPolling: vi.fn(), startPollingForHost: vi.fn() } }));
 vi.mock("../../internal/gitops.js", () => ({ default: {} }));
 vi.mock("../../internal/host.js", () => ({ default: {} }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: {} }));
@@ -23,6 +25,17 @@ vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: {} }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: vi.fn() }));
 vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.query } }));
 vi.mock("../../models/access_list.js", () => ({ default: {} }));
+
+vi.mock("../../lib/host-domain-claims.js", () => ({ withHostDomainClaims: async (_options, write) => write({}) }));
+vi.mock("../../internal/host-revisions.js", () => ({
+	default: { record: vi.fn() },
+	captureHostState: vi.fn(async () => {
+		const { default: current } = await import("../../internal/proxy-host.js");
+		const latest = current.get.mock.results.at(-1);
+		return { host: structuredClone(await latest.value), files: [], fingerprint: "captured-host" };
+	}),
+	restoreHostState: vi.fn(),
+}));
 
 import proxy from "../../internal/proxy-host.js";
 
@@ -68,9 +81,10 @@ describe("proxy host enable country and ASN firewall readiness", () => {
 
 		await expect(proxy.enable(access, { id: 7 })).resolves.toBe(true);
 
-		expect(row.enabled).toBe(1);
+		// The loaded row remains a rollback snapshot; the persisted patch enables the host.
+		expect(row.enabled).toBe(0);
 		expect(mocks.patch).toHaveBeenCalledExactlyOnceWith({ enabled: 1 });
-		expect(mocks.configure).toHaveBeenCalledWith(expect.any(Object), "proxy_host", row);
+		expect(mocks.configure).toHaveBeenCalledWith(expect.any(Object), "proxy_host", { ...row, enabled: true });
 		expect(mocks.readFile).not.toHaveBeenCalled();
 		expect(mocks.list).not.toHaveBeenCalled();
 		expect(row.meta.ip_firewall).toEqual(policy);

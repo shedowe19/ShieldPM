@@ -76,6 +76,29 @@ vi.mock("../../internal/nginx.js", () => {
 	};
 });
 
+vi.mock("../../lib/host-domain-claims.js", () => ({
+	withHostDomainClaims: async (_options, write) => state.db.transaction(write),
+}));
+vi.mock("../../internal/host-revisions.js", async () => {
+	const { captureConfigurationFiles, restoreConfigurationFiles } = await import("../../lib/configuration-files.js");
+	return {
+		default: { record: vi.fn() },
+		// Stateful revision boundary: preserve this fixture's real SQLite flags and exact config bytes.
+		captureHostState: async (hostId) => ({
+			host: await state.db("proxy_host").where("id", hostId).first(),
+			files: await captureConfigurationFiles([path.join(state.directory, `proxy_host-${hostId}.conf`)]),
+			fingerprint: "captured-host",
+		}),
+		restoreHostState: async (snapshot) => {
+			const current = await state.db("proxy_host").where("id", snapshot.host.id).first();
+			if (JSON.stringify(current) !== JSON.stringify(snapshot.host)) {
+				await state.db("proxy_host").where("id", snapshot.host.id).update(snapshot.host);
+			}
+			await restoreConfigurationFiles(snapshot.files);
+		},
+	};
+});
+
 import dead from "../../internal/dead-host.js";
 import proxy from "../../internal/proxy-host.js";
 import redirect from "../../internal/redirection-host.js";

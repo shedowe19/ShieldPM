@@ -20,14 +20,14 @@ describe("Nginx bulk validation outcome", () => {
 	beforeEach(async () => {
 		directory = await fs.promises.mkdtemp(path.join(os.tmpdir(), "shieldpm-bulk-validation-"));
 		rows = [
-			{ id: 1, enabled: true, meta: { note: "preserved" } },
-			{ id: 2, enabled: true, meta: {} },
+			{ id: 1, enabled: true, meta: { note: "preserved" }, host_domains: [], $fetchGraph: async () => {} },
+			{ id: 2, enabled: true, meta: {}, host_domains: [], $fetchGraph: async () => {} },
 		];
 		model = {
 			transaction: (callback) => callback({}),
 			query: () => ({
 				findById: (id) => ({
-					withGraphFetched: async () => rows.find((row) => row.id === id),
+					withGraphJoined: async () => rows.find((row) => row.id === id),
 					forUpdate: async () => rows.find((row) => row.id === id),
 				}),
 				where: (_field, id) => ({
@@ -49,6 +49,21 @@ describe("Nginx bulk validation outcome", () => {
 	afterEach(async () => {
 		vi.restoreAllMocks();
 		await fs.promises.rm(directory, { recursive: true, force: true });
+	});
+
+	it("reactivates previous listeners when status persistence fails after a successful batch reload", async () => {
+		const activations = [];
+		vi.spyOn(nginx, "reload").mockImplementation(async () => {
+			activations.push(await Promise.all(rows.map((host) => fs.promises.readFile(filename(host.id), "utf8"))));
+		});
+		vi.spyOn(nginx, "commitStagedConfig").mockRejectedValueOnce(new Error("Status write failed"));
+		await expect(nginx.bulkGenerateConfigGroups(groups(), { reload: true, throwOnError: true })).rejects.toThrow(
+			"Status write failed",
+		);
+		expect(activations).toEqual([
+			["replacement 1", "replacement 2"],
+			["working 1", "working 2"],
+		]);
 	});
 
 	it("throws a failed strict validation only after restoring every staged config and status", async () => {

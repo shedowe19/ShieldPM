@@ -36,6 +36,10 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 - Beim Start erkennt GoAccess die GeoLite2-Datenbanken für City, Country und ASN einzeln: Eine nicht leere Datei unter `/data/goaccess/geoip` hat Vorrang; andernfalls verwendet es dieselbe Datei unter `/data/nginx`, die der Boot-Updater oder eine ausdrücklich konfigurierte eigene Quelle bereitstellt. Eine explizite `--geoip-database`-Angabe in `GOACLA` bleibt unverändert. Nginx verwendet weiterhin `/data/nginx`.
 - Die [IP-Firewall](./ip-firewall.md#asn-quelle-und-host-regeln) verwendet optional dieselbe Datei `/data/nginx/GeoLite2-ASN.mmdb` für ASN-Regeln und öffentliche Netzwerkinformationen. Die gemeinsamen Startskripte richten dafür die reservierten Nginx-Variablen `$spm_geoip2_asn` und `$spm_geoip2_asn_org` mit `source=$remote_addr` ein. Die bestehende Country-/City-Konfiguration und die GoAccess-Dateiauswahl bleiben erhalten; es gibt weder einen separaten Firewall-Geodatenabruf noch eine neue ASN-Analytics-Tabelle oder -Ansicht.
 - Der Platzhalter der Hostauswahl verwendet die zentrale Locale-Schicht und ist in allen 13 unterstützten Sprachen übersetzt.
+- Die gemeinsame Hostauswahl lädt über `GET /api/nginx/proxy-hosts/options` ausschließlich autorisierte,
+  nicht gelöschte Host-IDs und Domains. Der unabhängige Leseweg verwendet `proxy_hosts:list`, wahrt die
+  Besitzersichtbarkeit und lädt keine Proxy-Metadaten oder Zugangsdaten. `useHostOptions` teilt die Anfrage
+  zwischen Verbrauchern und bricht sie ab, sobald der letzte Verbraucher geschlossen wird.
 - Die Spaltenüberschriften der Tabelle „Letzte Anfragen“ werden ebenfalls über die zentrale Locale-Schicht in allen 13 unterstützten Sprachen ausgegeben.
 - Die aktuelle Host- und Zeitraum-Auswahl steht als `host` und `range` in der Analytics-URL. Aufgerufene Links stellen damit
   denselben Untersuchungszeitraum wieder her; Änderungen der vorhandenen Filter ersetzen den URL-Eintrag, statt bei jeder

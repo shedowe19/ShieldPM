@@ -234,8 +234,8 @@ printf 'elapsed=%s' "$SECONDS"
 		expect(updater).toContain("systemctl restart shieldpm");
 		expect(updater).toContain("jq");
 		expect(updater).toContain("journalctl --no-pager -u shieldpm -n 100");
-		expect(nativeInstaller).toContain('VERSION="1.27.0"');
-		expect(nativeInstaller).toContain('OAUTH2_VERSION="7.15.3"');
+		expect(nativeInstaller).toContain("releases/download/v1.27.0/anubis-1.27.0-linux-$arch.tar.gz");
+		expect(nativeInstaller).toContain("releases/download/v7.15.3/oauth2-proxy-v7.15.3.linux-$arch.tar.gz");
 		expect(nativeInstaller).not.toContain("SHOULD_UPDATE_OAUTH2");
 	});
 

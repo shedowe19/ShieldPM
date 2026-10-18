@@ -47,7 +47,7 @@ export const createProxyHostPayload = ({ id, values }: CreateProxyHostPayloadPar
 	}
 
 	return {
-		id: id === "new" ? undefined : id,
 		...payload,
+		id: id === "new" ? undefined : id,
 	};
 };

@@ -4,18 +4,36 @@ import internalGitDeploy from "../../internal/git-deploy.js";
 import internalProxyHost from "../../internal/proxy-host.js";
 import internalProxyHostDiagnostics from "../../internal/proxy-host-diagnostics.js";
 import internalProxyHostMonitor from "../../internal/proxy-host-monitor.js";
+import proxyHostOptions from "../../internal/proxy-host-options.js";
 import internalProxyHostPreview from "../../internal/proxy-host-preview.js";
 import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
 import { getValidationSchema } from "../../schema/index.js";
+import hostTrafficRouter from "./host_traffic_policy.js";
+import hostRevisionsRouter from "./proxy_host_revisions.js";
 
 const router = express.Router({
 	caseSensitive: true,
 	strict: true,
 	mergeParams: true,
 });
+
+router
+	.route("/options")
+	.options((_, res) => res.sendStatus(204))
+	.all(jwtdecode())
+	.get(async (req, res) => {
+		const data = await validator(
+			{ type: "object", additionalProperties: false, properties: { query: { type: "string", maxLength: 255 } } },
+			{ query: req.query.query ?? "" },
+		);
+		res.send(await proxyHostOptions.get(res.locals.access, data.query));
+	});
+
+router.use("/:host_id/revisions", hostRevisionsRouter);
+router.use("/:host_id", hostTrafficRouter);
 
 const diagnosisLimiter = rateLimit({
 	windowMs: 60 * 1000,

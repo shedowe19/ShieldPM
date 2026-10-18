@@ -1,0 +1,80 @@
+{
+	"operationId": "uploadWasmArtifact",
+	"summary": "Automatically detect and upload a trusted Proxy-Wasm module or WASI Preview 1 command",
+	"tags": [
+		"proxy-hosts"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"responses": {
+		"400": {
+			"description": "Invalid input or unsupported executable Wasm contract"
+		},
+		"403": {
+			"description": "Permission denied"
+		},
+		"201": {
+			"description": "Successful operation",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../components/wasm-artifact.json"
+					}
+				}
+			}
+		},
+		"413": {
+			"description": "Module exceeds 16 MiB"
+		},
+		"429": {
+			"description": "Upload or self-test rate limit reached"
+		}
+	},
+	"description": "Raw binary upload up to 16 MiB. A disposable compiler inspects supported imports and exports without instantiation. A full Proxy-Wasm ABI 0.2.1 HTTP contract takes precedence over WASI SDK imports; standalone commands require memory and _start and reject reactors and components. The destination catalog independently revalidates its strict contract. Existing module and application endpoints remain available for explicit runtime uploads. Only administrators may introduce executable code.",
+	"parameters": [
+		{
+			"name": "name",
+			"in": "query",
+			"required": true,
+			"schema": {
+				"type": "string",
+				"minLength": 1,
+				"maxLength": 128
+			},
+			"description": "Human-readable module name"
+		},
+		{
+			"name": "filename",
+			"in": "query",
+			"required": true,
+			"schema": {
+				"type": "string",
+				"minLength": 1,
+				"maxLength": 128
+			},
+			"description": "Plain basename ending in .wasm; no directory separators"
+		}
+	],
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/wasm": {
+				"schema": {
+					"type": "string",
+					"format": "binary"
+				}
+			},
+			"application/octet-stream": {
+				"schema": {
+					"type": "string",
+					"format": "binary"
+				}
+			}
+		}
+	}
+}

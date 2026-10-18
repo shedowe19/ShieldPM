@@ -1,0 +1,55 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"id",
+		"host_id",
+		"opened_at",
+		"resolved_at",
+		"last_seen_at",
+		"resolution",
+		"failure_count",
+		"message"
+	],
+	"properties": {
+		"id": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 9007199254740991
+		},
+		"host_id": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 9007199254740991
+		},
+		"opened_at": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"resolved_at": {
+			"type": [
+				"string",
+				"null"
+			],
+			"format": "date-time"
+		},
+		"last_seen_at": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"resolution": {
+			"type": [
+				"string",
+				"null"
+			]
+		},
+		"failure_count": {
+			"type": "integer",
+			"minimum": 0
+		},
+		"message": {
+			"type": "string",
+			"maxLength": 255
+		}
+	}
+}

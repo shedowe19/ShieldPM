@@ -12,7 +12,10 @@ const mocks = vi.hoisted(() => ({
 	logError: vi.fn(),
 	settingsPatch: vi.fn(),
 }));
-vi.mock("node:child_process", () => ({ execSync: mocks.exec, spawn: mocks.spawn }));
+vi.mock("node:child_process", async () => {
+	const { legacyWireguardExecFile } = await import("../helpers/legacy-wireguard-exec.js");
+	return { execSync: mocks.exec, spawn: mocks.spawn, execFile: legacyWireguardExecFile(mocks.exec) };
+});
 vi.mock("node:fs", () => ({
 	default: { existsSync: () => true, readFileSync: mocks.read, writeFileSync: mocks.write },
 }));

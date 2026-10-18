@@ -18,6 +18,15 @@ vi.mock("../../internal/git-deploy.js", () => ({ default: {} }));
 vi.mock("../../internal/proxy-host.js", () => ({ default: {} }));
 vi.mock("../../internal/proxy-host-preview.js", () => ({ default: {} }));
 vi.mock("../../internal/proxy-host-diagnostics.js", () => ({ default: {} }));
+vi.mock("../../internal/proxy-host-options.js", () => ({ default: {} }));
+// Nested feature services are outside these monitor endpoint contracts.
+vi.mock("../../internal/host-revisions.js", () => ({ default: {} }));
+vi.mock("../../internal/host-traffic-policy.js", () => ({ default: {} }));
+vi.mock("../../db.js", () => ({
+	default: () => {
+		throw new Error("Monitor route fixtures must not initialize the runtime database");
+	},
+}));
 vi.mock("../../internal/proxy-host-monitor.js", () => ({
 	default: { get: state.get, update: state.update, listStatus: state.listStatus, check: state.check },
 }));

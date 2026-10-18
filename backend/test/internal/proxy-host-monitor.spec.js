@@ -1,3 +1,12 @@
+vi.mock("../../internal/incidents.js", () => ({
+	default: {
+		isMuted: async () => false,
+		recordCheck: async () => {},
+		resetHost: async () => {},
+		removeHost: async () => {},
+	},
+}));
+
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import http from "node:http";
@@ -28,6 +37,7 @@ import monitor, {
 	formatHostMonitorAlert,
 	networkMessage,
 	probeHttp,
+	probePool,
 	probeTcp,
 } from "../../internal/proxy-host-monitor.js";
 import { up } from "../../migrations/20260923000000_add_proxy_host_monitor.js";
@@ -349,6 +359,74 @@ describe("proxy host upstream monitor", () => {
 		expect(await ProxyHostMonitor.query().findOne({ host_id: 11 })).toBeUndefined();
 		expect(await state.db("proxy_host_monitor_check").where("host_id", 11)).toHaveLength(0);
 	});
+	it("rolls back the status and inserted check when retention cleanup fails, without sending an alert", async () => {
+		await monitor.update(access, 11, settings());
+		await state
+			.db("proxy_host_monitor_check")
+			.insert(
+				Array.from({ length: 100 }, () => ({ host_id: 11, checked_at: new Date().toISOString(), state: "up" })),
+			);
+		const before = await ProxyHostMonitor.query().findOne({ host_id: 11 });
+		responseStatus = 503;
+		await state.db.raw(`CREATE TRIGGER reject_history_delete BEFORE DELETE ON proxy_host_monitor_check
+			BEGIN SELECT RAISE(ABORT, 'history cleanup rejected'); END`);
+		try {
+			await expect(monitor.run(11)).rejects.toThrow("history cleanup rejected");
+		} finally {
+			await state.db.raw("DROP TRIGGER reject_history_delete");
+		}
+		expect(await ProxyHostMonitor.query().findOne({ host_id: 11 })).toEqual(before);
+		expect(await state.db("proxy_host_monitor_check").where("host_id", 11)).toHaveLength(100);
+		expect(state.alerts).not.toHaveBeenCalled();
+	});
+
+	it("keeps concurrent hosts bounded while each host has only one in-flight check", async () => {
+		const allAccess = { ...access, can: vi.fn().mockResolvedValue({ permission_visibility: "all" }) };
+		for (const hostId of [11, 12]) {
+			await monitor.update(allAccess, hostId, settings({ alert_enabled: false }));
+			await state.db("proxy_host_monitor_check").insert(
+				Array.from({ length: 100 }, () => ({
+					host_id: hostId,
+					checked_at: new Date().toISOString(),
+					state: "up",
+				})),
+			);
+		}
+		const results = await Promise.all([monitor.run(11), monitor.run(12), monitor.run(11)]);
+		expect(results.filter(Boolean)).toHaveLength(2);
+		for (const hostId of [11, 12])
+			expect(await state.db("proxy_host_monitor_check").where("host_id", hostId)).toHaveLength(100);
+		expect(state.alerts).not.toHaveBeenCalled();
+	});
+
+	it("discards a stale in-flight probe after a settings version change", async () => {
+		const entered = Promise.withResolvers();
+		const resume = Promise.withResolvers();
+		const delayed = http.createServer(async (_req, res) => {
+			entered.resolve();
+			await resume.promise;
+			res.writeHead(503).end();
+		});
+		await new Promise((resolve) => delayed.listen(0, "127.0.0.1", resolve));
+		try {
+			await state.db("proxy_host").where("id", 11).update({ forward_port: delayed.address().port });
+			await monitor.update(access, 11, settings());
+			const pending = monitor.run(11);
+			await entered.promise;
+			// A second invocation shares the same active guard while the probe is blocked.
+			expect(await monitor.run(11)).toBeNull();
+			await monitor.update(access, 11, settings({ path: "/changed" }));
+			resume.resolve();
+			expect(await pending).toBeNull();
+			expect(await state.db("proxy_host_monitor_check").where("host_id", 11)).toHaveLength(0);
+			expect((await ProxyHostMonitor.query().findOne({ host_id: 11 })).state).toBe("unknown");
+			expect(state.alerts).not.toHaveBeenCalled();
+		} finally {
+			resume.resolve();
+			delayed.closeAllConnections();
+			await new Promise((resolve) => delayed.close(resolve));
+		}
+	});
 	it("expires old history even when the monitor is paused", async () => {
 		await monitor.update(access, 11, settings({ enabled: false }));
 		await state.db("proxy_host_monitor_check").insert([
@@ -633,6 +711,27 @@ describe("proxy host upstream monitor", () => {
 				});
 				expect(requests).toHaveBeenCalledTimes(2);
 				expect(state.alerts).not.toHaveBeenCalled();
+				const pooled = await probePool(
+					{
+						id: 11,
+						forward_scheme: "https",
+						forward_host: "127.0.0.1",
+						domain_names: ["public.example.test"],
+						meta: {
+							upstream_pool: {
+								enabled: true,
+								host_header: "application.example.test",
+								tls_server_name: "wrong.example.test",
+								targets: [{ id: "tls", host: "127.0.0.1", port: secureServer.address().port }],
+							},
+						},
+					},
+					settings({ upstream_ca: ca, upstream_server_name: "private.example.test" }),
+				);
+				expect(pooled).toMatchObject({ state: "up", status_code: 200 });
+				expect(requests.mock.calls[requests.mock.calls.length - 1][0].headers.host).toBe(
+					"application.example.test",
+				);
 			} finally {
 				if (secureServer?.listening) await new Promise((resolve) => secureServer.close(resolve));
 				rmSync(directory, { recursive: true, force: true });

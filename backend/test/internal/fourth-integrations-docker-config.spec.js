@@ -1,3 +1,5 @@
+vi.mock("../../lib/host-domain-claims.js", () => ({ withHostDomainClaims: (_options, write) => write({}) }));
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({ hosts: [] }));

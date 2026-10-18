@@ -5,7 +5,7 @@ vi.mock("../../models/ddns_provider.js", () => ({ default: { query: mocks.query 
 vi.mock("../../internal/audit-log.js", () => ({ default: {} }));
 vi.mock("../../internal/gitops.js", () => ({ default: {} }));
 vi.mock("../../internal/ddns.js", () => ({
-	default: { getWanIps: mocks.getWanIps, updateProvider: mocks.updateProvider },
+	default: { getWanIps: mocks.getWanIps, updateProvider: mocks.updateProvider, runProvider: mocks.updateProvider },
 }));
 
 import service from "../../internal/ddns-provider.js";

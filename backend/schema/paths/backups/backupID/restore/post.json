@@ -1,0 +1,65 @@
+{
+	"operationId": "scheduleInstanceRestore",
+	"summary": "Stage an instance restore for next restart",
+	"description": "Authenticates the archive, checks hashes, application version and migration compatibility, restores into an isolated database, validates Nginx and executes restored Wasm chains. External database users need permission to create/drop a separate restore database. The active database is never overwritten. Requires confirmation exactly RESTORE followed by a space and the selected backup ID. Changes apply before services start at the next restart; the previous instance is retained until backend readiness.",
+	"tags": [
+		"instance-backups"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"responses": {
+		"403": {
+			"description": "Administrator permission required; backups disabled in demo mode"
+		},
+		"400": {
+			"description": "Invalid input or another instance operation is running"
+		},
+		"202": {
+			"description": "Operation accepted",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../components/instance-backup-job.json"
+					}
+				}
+			}
+		}
+	},
+	"parameters": [
+		{
+			"in": "path",
+			"name": "backupID",
+			"required": true,
+			"schema": {
+				"type": "string",
+				"format": "uuid"
+			},
+			"description": "Encrypted archive identifier, never a filesystem path"
+		}
+	],
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"allOf": [
+						{
+							"$ref": "../../../../components/instance-backup-input.json"
+						},
+						{
+							"type": "object",
+							"required": [
+								"confirmation"
+							]
+						}
+					]
+				}
+			}
+		}
+	}
+}

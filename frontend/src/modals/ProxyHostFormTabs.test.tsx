@@ -32,13 +32,20 @@ vi.mock("src/components/ui/tabs", () => ({
 	TabsTrigger: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
 }));
 
-vi.mock("src/locale", () => ({ T: ({ id }: { id: string }) => id }));
+vi.mock("src/locale", () => ({
+	T: ({ id }: { id: string }) => id,
+	intl: { formatMessage: ({ id }: { id: string }) => id },
+}));
 vi.mock("./ProxyHostAdvancedTab", () => ({ default: () => <div data-testid="advanced-tab" /> }));
 vi.mock("./ProxyHostDetailsTab", () => ({ default: () => <div data-testid="details-tab" /> }));
 vi.mock("./ProxyHostMaintenanceTab", () => ({ default: () => <div data-testid="maintenance-tab" /> }));
 vi.mock("./ProxyHostNotesTab", () => ({ default: () => <div data-testid="notes-tab" /> }));
 vi.mock("./ProxyHostSecurityTab", () => ({ default: () => <div data-testid="security-tab" /> }));
 vi.mock("./ProxyHostSslTab", () => ({ default: () => <div data-testid="ssl-tab" /> }));
+
+vi.mock("./ProxyHostUpstreamPoolTab", () => ({ default: () => null }));
+vi.mock("./ProxyHostCacheTab", () => ({ default: () => null }));
+vi.mock("./ProxyHostWasmTab", () => ({ default: () => null }));
 
 const locations = [{ path: "/api" }] as ProxyLocation[];
 

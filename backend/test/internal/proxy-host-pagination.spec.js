@@ -13,6 +13,21 @@ vi.mock("../../internal/host.js", () => ({ default: {} }));
 vi.mock("../../internal/nginx.js", () => ({ default: {} }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: {} }));
 vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: {} }));
+vi.mock("../../internal/host-revisions.js", () => ({
+	default: {},
+	captureHostState: vi.fn(),
+	restoreHostState: vi.fn(),
+}));
+vi.mock("../../lib/host-domain-claims.js", () => ({
+	withHostDomainClaims: () => {
+		throw new Error("Pagination must not write domain claims");
+	},
+}));
+vi.mock("../../db.js", () => ({
+	default: () => {
+		throw new Error("Pagination fixtures must not initialize the runtime database");
+	},
+}));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: vi.fn() }));
 vi.mock("../../lib/error.js", () => ({ default: {} }));
 vi.mock("../../lib/utils.js", () => ({ default: {} }));

@@ -1,0 +1,68 @@
+{
+	"operationId": "postNginxProxyHosts{Hostid}Revisions{Revisionid}Restore",
+	"summary": "Restore a reviewed host version with stale-state protection",
+	"tags": [
+		"proxy-hosts"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.manage"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Successful operation",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object"
+					}
+				}
+			}
+		}
+	},
+	"parameters": [
+		{
+			"in": "path",
+			"name": "hostID",
+			"required": true,
+			"schema": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 9007199254740991
+			}
+		},
+		{
+			"in": "path",
+			"name": "revisionID",
+			"required": true,
+			"schema": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 9007199254740991
+			}
+		}
+	],
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"type": "object",
+					"required": [
+						"expected_fingerprint"
+					],
+					"additionalProperties": false,
+					"properties": {
+						"expected_fingerprint": {
+							"type": "string",
+							"pattern": "^[a-f0-9]{64}$"
+						}
+					}
+				}
+			}
+		}
+	}
+}

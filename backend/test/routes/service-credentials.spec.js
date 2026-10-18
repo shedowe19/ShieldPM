@@ -22,6 +22,11 @@ vi.mock("../../internal/ddns.js", () => ({
 		process: vi.fn(),
 		getWanIps: async () => ({ ipv4: "192.0.2.1" }),
 		updateProvider: operations.updateDdns,
+		runProvider: async (id) => {
+			const { default: Provider } = await import("../../models/ddns_provider.js");
+			const ips = { ipv4: "192.0.2.1" };
+			return { ...(await operations.updateDdns(await Provider.query().findById(id), ips)), ips };
+		},
 	},
 }));
 vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: vi.fn() } }));
@@ -301,7 +306,7 @@ describe("public service credential boundaries with RSA authentication and SQLit
 			oauth2_cookie_secret: "replacement",
 			oidc_client_secret: secret,
 		});
-		expect(accessList.build).toHaveBeenCalledWith(expect.objectContaining({ meta: saved }));
+		expect(accessList.build).toHaveBeenCalledWith(expect.objectContaining({ meta: saved }), { immutable: true });
 	});
 
 	it("does not restore Access List secrets rotated after the initial snapshot", async () => {

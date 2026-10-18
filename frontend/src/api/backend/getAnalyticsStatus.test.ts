@@ -15,6 +15,6 @@ describe("getAnalyticsStatus", () => {
 		api.get.mockResolvedValue(status);
 
 		await expect(getAnalyticsStatus()).resolves.toEqual(status);
-		expect(api.get).toHaveBeenCalledWith({ url: "/analytics/status" });
+		expect(api.get).toHaveBeenCalledWith({ url: "/analytics/status" }, undefined);
 	});
 });

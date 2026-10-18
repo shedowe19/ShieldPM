@@ -47,6 +47,15 @@ describe("host firewall authorization and final reference check", () => {
 		expect(mocks.lock).toHaveBeenCalledOnce();
 		expect(write).not.toHaveBeenCalled();
 	});
+	it("checks references directly when the host activation already holds the configuration lock", async () => {
+		const write = vi.fn().mockResolvedValue("accepted");
+		await expect(
+			withFirewallReferences({ meta: { ip_firewall: { list_ids: [2] } } }, {}, write, { lockHeld: true }),
+		).resolves.toBe("accepted");
+		expect(mocks.assertExist).toHaveBeenCalledExactlyOnceWith([2]);
+		expect(mocks.lock).not.toHaveBeenCalled();
+		expect(write).toHaveBeenCalledOnce();
+	});
 	it("retains the enabled firewall when an unrelated partial host edit omits it", async () => {
 		const data = { meta: { nginx_online: true } };
 		await validateHostFirewall({}, data, {

@@ -14,14 +14,27 @@ vi.mock("../../lib/config.js", () => ({
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: state.audit } }));
 vi.mock("../../internal/certificate.js", () => ({ default: {} }));
 vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: vi.fn() } }));
-vi.mock("../../internal/git-deploy.js", () => ({ default: { startPollingForHost: vi.fn() } }));
+vi.mock("../../internal/git-deploy.js", () => ({ default: { startPollingForHost: vi.fn(), stopPolling: vi.fn() } }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: {} }));
-vi.mock("../../internal/nginx.js", () => ({ default: { configure: state.configure } }));
+vi.mock("../../internal/nginx.js", () => ({
+	default: {
+		withConfigurationLock: (write) => write(),
+		configure: state.configure,
+		configureHost: state.configure,
+		getConfigName: (_kind, id) => `/mock/nginx/proxy_host/${id}.conf`,
+	},
+}));
 vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: { resetHost: state.resetMonitor } }));
+
+vi.mock("../../internal/host-revisions.js", async (importOriginal) => ({
+	...(await importOriginal()),
+	default: { record: vi.fn() },
+}));
 
 import host from "../../internal/host.js";
 import proxy from "../../internal/proxy-host.js";
 import { subscribeProxyHostDomains } from "../../lib/proxy-host-domain-events.js";
+import { up as claimSchema } from "../../migrations/20261017190200_add_host_domain_claims.js";
 import ProxyHost from "../../models/proxy_host.js";
 
 const access = {
@@ -70,6 +83,14 @@ describe("atomic proxy host and normalized domain writes", () => {
 				table.increments("id");
 				table.integer("is_deleted").defaultTo(0);
 			});
+		for (const name of ["redirection_host", "dead_host"]) {
+			await state.db.schema.createTable(name, (table) => {
+				table.increments("id");
+				table.integer("is_deleted").defaultTo(0);
+				table.json("domain_names");
+			});
+		}
+		await claimSchema(state.db);
 		unsubscribe = subscribeProxyHostDomains(async () => {
 			domainSnapshots.push(await snapshot());
 		});
@@ -78,6 +99,8 @@ describe("atomic proxy host and normalized domain writes", () => {
 		vi.clearAllMocks();
 		domainSnapshots.length = 0;
 		await state.db.raw("DROP TRIGGER IF EXISTS reject_domain");
+		await state.db("host_domain_claim_owner").delete();
+		await state.db("host_domain_claim").delete();
 		await state.db("host_domain").delete();
 		await state.db("proxy_host").delete();
 		vi.spyOn(host, "isHostnameTaken").mockResolvedValue({ is_taken: false });
@@ -139,6 +162,7 @@ describe("atomic proxy host and normalized domain writes", () => {
 
 	it("marks a changed upstream for monitor reconciliation after saving the host", async () => {
 		const created = await proxy.create(access, input());
+		state.resetMonitor.mockClear();
 		await proxy.update(access, { id: created.id, note: "same upstream" });
 		expect(state.resetMonitor).not.toHaveBeenCalled();
 
@@ -150,7 +174,8 @@ describe("atomic proxy host and normalized domain writes", () => {
 		});
 		expect(state.resetMonitor).toHaveBeenCalledOnce();
 		expect(state.resetMonitor).toHaveBeenCalledWith(created.id, { disableUnsupported: true });
-		expect(state.resetMonitor.mock.invocationCallOrder[0]).toBeLessThan(
+		// Monitor reconciliation follows accepted activation so failed candidates cannot reset live monitoring.
+		expect(state.resetMonitor.mock.invocationCallOrder[0]).toBeGreaterThan(
 			state.configure.mock.invocationCallOrder.at(-1),
 		);
 		expect((await ProxyHost.query().findById(created.id)).forward_scheme).toBe("path");

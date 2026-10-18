@@ -20,7 +20,10 @@ const ProxyHostOptions = () => (
 							<Switch
 								id="cachingEnabled"
 								checked={field.checked}
-								onCheckedChange={(checked: boolean) => form.setFieldValue("cachingEnabled", checked)}
+								onCheckedChange={(checked: boolean) => {
+									form.setFieldValue("cachingEnabled", checked);
+									form.setFieldValue("meta.cachePolicy.enabled", checked);
+								}}
 							/>
 						)}
 					</Field>

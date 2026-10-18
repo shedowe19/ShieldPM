@@ -1,0 +1,49 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"id",
+		"sha256",
+		"name",
+		"filename",
+		"size",
+		"abi",
+		"callbacks",
+		"created_on"
+	],
+	"properties": {
+		"id": {
+			"type": "string",
+			"pattern": "^[a-f0-9]{64}$"
+		},
+		"sha256": {
+			"type": "string",
+			"pattern": "^[a-f0-9]{64}$"
+		},
+		"name": {
+			"type": "string",
+			"maxLength": 128
+		},
+		"filename": {
+			"type": "string",
+			"maxLength": 128
+		},
+		"size": {
+			"type": "integer",
+			"minimum": 8,
+			"maximum": 16777216
+		},
+		"abi": {
+			"const": "0.2.1"
+		},
+		"callbacks": {
+			"type": "array",
+			"items": {
+				"type": "string"
+			}
+		},
+		"created_on": {
+			"type": "string"
+		}
+	}
+}

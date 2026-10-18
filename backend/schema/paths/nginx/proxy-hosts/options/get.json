@@ -1,0 +1,46 @@
+{
+	"operationId": "getNginxProxyHostOptions",
+	"summary": "List lightweight authorized host selector options",
+	"tags": [
+		"proxy-hosts"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.view"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Successful operation",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"required": [
+								"id",
+								"domain_names"
+							],
+							"properties": {
+								"id": {
+									"type": "integer",
+									"minimum": 1,
+									"maximum": 9007199254740991
+								},
+								"domain_names": {
+									"type": "array",
+									"items": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

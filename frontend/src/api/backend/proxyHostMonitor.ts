@@ -42,8 +42,11 @@ export function getProxyHostMonitor(id: number): Promise<ProxyHostMonitorDetail>
 	return api.get({ url: `/nginx/proxy-hosts/${id}/monitor` });
 }
 
-export function getProxyHostMonitorStatuses(ids: number[]): Promise<ProxyHostMonitorSummary[]> {
-	return api.get({ url: "/nginx/proxy-hosts/monitors/status", params: { ids: ids.join(",") } });
+export function getProxyHostMonitorStatuses(ids: number[], signal?: AbortSignal): Promise<ProxyHostMonitorSummary[]> {
+	return api.get(
+		{ url: "/nginx/proxy-hosts/monitors/status", params: { ids: ids.join(",") } },
+		signal ? { signal } : undefined,
+	);
 }
 
 export function updateProxyHostMonitor(id: number, config: ProxyHostMonitorConfig): Promise<ProxyHostMonitorDetail> {

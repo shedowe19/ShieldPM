@@ -21,6 +21,8 @@ export const useAnalyticsLiveMetrics = () => {
 		let dbStatsRequestInFlight: number | undefined;
 		let liveTimeout: ReturnType<typeof setTimeout> | undefined;
 		let dbStatsTimeout: ReturnType<typeof setTimeout> | undefined;
+		let liveController: AbortController | undefined;
+		let dbStatsController: AbortController | undefined;
 
 		const clearScheduledLiveFetch = () => {
 			if (liveTimeout !== undefined) {
@@ -39,8 +41,10 @@ export const useAnalyticsLiveMetrics = () => {
 			if (liveRequestInFlight !== undefined) return;
 			const requestId = ++latestLiveRequestId;
 			liveRequestInFlight = requestId;
+			const controller = new AbortController();
+			liveController = controller;
 			try {
-				const data = await getAnalyticsStatus();
+				const data = await getAnalyticsStatus(controller.signal);
 				if (cancelled || requestId !== latestLiveRequestId) return;
 				setNetworkSpeed(data.totalSec || 0);
 				return true;
@@ -59,8 +63,10 @@ export const useAnalyticsLiveMetrics = () => {
 			if (dbStatsRequestInFlight !== undefined) return;
 			const requestId = ++latestDbStatsRequestId;
 			dbStatsRequestInFlight = requestId;
+			const controller = new AbortController();
+			dbStatsController = controller;
 			try {
-				const data = await getDbStats();
+				const data = await getDbStats(controller.signal);
 				if (cancelled || requestId !== latestDbStatsRequestId) return;
 				setDbStats(data);
 				return true;
@@ -133,6 +139,10 @@ export const useAnalyticsLiveMetrics = () => {
 		const cancelPendingRequest = () => {
 			latestLiveRequestId += 1;
 			latestDbStatsRequestId += 1;
+			liveController?.abort();
+			dbStatsController?.abort();
+			liveController = undefined;
+			dbStatsController = undefined;
 			liveRequestInFlight = undefined;
 			dbStatsRequestInFlight = undefined;
 			clearScheduledLiveFetch();
@@ -155,6 +165,8 @@ export const useAnalyticsLiveMetrics = () => {
 		window.addEventListener("offline", handleOffline);
 		return () => {
 			cancelled = true;
+			liveController?.abort();
+			dbStatsController?.abort();
 			liveRequestInFlight = undefined;
 			dbStatsRequestInFlight = undefined;
 			clearScheduledLiveFetch();

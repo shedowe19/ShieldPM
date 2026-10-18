@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
@@ -84,7 +85,13 @@ vi.mock("../../models/proxy_host.js", () => ({
 vi.mock("../../models/now_helper.js", () => ({ default: () => "now" }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: state.audit } }));
 vi.mock("../../internal/nginx.js", () => ({
-	default: { reload: vi.fn(), bulkGenerateConfigs: vi.fn(), withConfigurationLock: (callback) => callback() },
+	default: {
+		reload: vi.fn(),
+		bulkGenerateConfigs: vi.fn(),
+		bulkGenerateConfigGroupsUnlocked: vi.fn(),
+		getConfigName: (_type, id) => `/tmp/shieldpm-unit-nonexistent-${id}.conf`,
+		withConfigurationLock: (callback) => callback(),
+	},
 }));
 vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: vi.fn() } }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: { stop: vi.fn(), restart: vi.fn() } }));
@@ -93,6 +100,7 @@ vi.mock("../../logger.js", () => ({ access: { info: vi.fn() } }));
 
 import service from "../../internal/access-list.js";
 
+const testCertificate = fs.readFileSync(new URL("../fixtures/access-list-ca.pem", import.meta.url), "utf8");
 const access = { can: vi.fn().mockResolvedValue(true), token: { getUserId: () => 1 } };
 
 describe("access list credential updates", () => {
@@ -237,16 +245,18 @@ describe("access list credential updates", () => {
 		await service.update(access, {
 			id: 1,
 			mtls_enabled: true,
-			mtls_certificate: "TEST CERTIFICATE",
+			mtls_certificate: testCertificate,
 			satisfy_any: true,
 		});
 		expect(state.config).toMatchObject({
 			name: "Original",
 			mtls_enabled: true,
-			mtls_certificate: "TEST CERTIFICATE",
+			mtls_certificate: testCertificate,
 			satisfy_any: true,
 		});
-		expect(service.build).toHaveBeenCalledWith(expect.objectContaining({ mtls_certificate: "TEST CERTIFICATE" }));
+		expect(service.build).toHaveBeenCalledWith(expect.objectContaining({ mtls_certificate: testCertificate }), {
+			immutable: true,
+		});
 	});
 
 	it("replaces IP rules using only editable client fields", async () => {

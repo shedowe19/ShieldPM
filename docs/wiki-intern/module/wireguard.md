@@ -105,6 +105,16 @@ Subnetz und Serveradresse verlangen kanonische IPv4-Adressen mit vier Dezimalokt
 
 Ändern, Löschen, Aktivieren und Deaktivieren beachten die `permission_visibility` ihrer Capability. Downloads privater Peer-Konfigurationen bleiben auf den jeweiligen Eigentümer begrenzt.
 
+### Asynchrone Statusbeobachtung
+
+`backend/lib/wireguard-status.js` führt Verfügbarkeitsprüfung (`wg --version`), Interface-Abfrage und `wg show wg0 dump` über asynchrones `execFile` aus. Jeder Aufruf besitzt ein Zeitlimit von fünf Sekunden und ein Ausgabelimit von 1 MiB; die Statusbefehle starten keine Shell. Auch die Schlüsselerzeugung beim erstmaligen Serverstatus verwendet die asynchrone Befehlsgrenze. Eine langsame CLI blockiert damit nicht die Verarbeitung unabhängiger API-Anfragen.
+
+Gleichzeitige Statusleser teilen genau eine laufende Beobachtung und anschließend höchstens zwei Sekunden lang denselben Snapshot. Der private Interface-Schlüssel aus der ersten Dump-Zeile wird verworfen; gespeichert werden nur öffentliche Peer-Schlüssel und Statuszähler. Konfigurationsänderungen invalidieren den Snapshot vor und nach ihrer seriellen Ausführung. Eine verspätete Beobachtung aus einer älteren Generation darf den aktuellen Cache nicht wieder befüllen; ein neuer Leser wartet auf eine frische Beobachtung. Die öffentliche interne Map-Ausgabe ist eine Kopie des Snapshots.
+
+Statuspersistierung bleibt besitzerbezogen: Eine eingeschränkte Anfrage liest und aktualisiert ausschließlich die eigenen aktiven Peers. Gleichzeitig laufende Aktualisierungen für denselben Besitzer werden zusammengeführt. Die Abfrage lädt nur ID, öffentlichen Schlüssel, Handshake und Transferzähler, ohne private Peer-Schlüssel zu entschlüsseln. Nur tatsächlich geänderte Werte werden gespeichert; ein fehlgeschlagener Dump setzt vorhandene Zähler nicht auf null. Die vorhandene Warteschlange für Konfigurationsänderungen bleibt erhalten. Die seltenen `wg-quick`-/`syncconf`-Aktivierungsbefehle außerhalb des Statuspfads verwenden weiterhin den bisherigen synchronen Ausführungshelfer.
+
+`wireguard-async-status.spec.js` startet reale verzögerte Node-Unterprozesse als kontrollierte CLI-Ersatzumgebung. Das feste Hilfsskript `test/helpers/wireguard-status-child.js` erhält Ausgabe und Erfolgs-/Fehlermodus ausschließlich als Datenargumente; der Test erzeugt keinen ausführbaren JavaScript-Quelltext. Es prüft einen weiterlaufenden Event-Loop, zwanzig zusammengeführte Statusanforderungen, kurze Cache-Laufzeit, Generationswechsel, Besitzergrenzen und ausbleibende redundante Statuswrites. Das ist ein Ausführungs- und Nebenläufigkeitsnachweis, kein VPN-Durchsatztest. Bestehende Lifecycle-, Schlüssel-, Firewall- und Mutationsreihenfolgetests verwenden dieselbe neue asynchrone Befehlsgrenze.
+
 ### Reihenfolge aller Konfigurationsänderungen
 
 Auch Peer-Änderung, Löschung, Aktivierung und Deaktivierung nutzen dieselbe Warteschlange wie Peer-Erstellung und Servereinstellungen. Sie umfasst jeweils Datenbankänderung, Schreiben von `wg0.conf` und Anwendung auf dem Interface. Eine langsame ältere Änderung kann damit einen später deaktivierten oder gelöschten Peer nicht wieder in die Laufzeitkonfiguration aufnehmen.

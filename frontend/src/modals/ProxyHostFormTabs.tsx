@@ -7,14 +7,17 @@ import { GitSyncTab } from "src/components";
 import { LocationsFields } from "src/components/Form/LocationsFields";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
-import { T } from "src/locale";
+import { intl, T } from "src/locale";
 import { FORWARD_SCHEME, PROXY_HOST_TAB } from "src/types/enums";
 import ProxyHostAdvancedTab from "./ProxyHostAdvancedTab";
+import ProxyHostCacheTab from "./ProxyHostCacheTab";
 import ProxyHostDetailsTab from "./ProxyHostDetailsTab";
 import ProxyHostMaintenanceTab from "./ProxyHostMaintenanceTab";
 import ProxyHostNotesTab from "./ProxyHostNotesTab";
 import ProxyHostSecurityTab from "./ProxyHostSecurityTab";
 import ProxyHostSslTab from "./ProxyHostSslTab";
+import ProxyHostUpstreamPoolTab from "./ProxyHostUpstreamPoolTab";
+import ProxyHostWasmTab from "./ProxyHostWasmTab";
 
 type Props = {
 	errorMessage?: ReactNode;
@@ -25,7 +28,7 @@ type Props = {
 const ProxyHostFormTabs = ({ errorMessage, hostId, locations }: Props) => (
 	<Tabs defaultValue={PROXY_HOST_TAB.DETAILS} className="flex-1 flex flex-col min-h-0">
 		<div className="px-6 pt-4">
-			<TabsList className="w-full justify-start">
+			<TabsList className="w-full justify-start flex-wrap h-auto gap-y-1">
 				<TabsTrigger value={PROXY_HOST_TAB.DETAILS}>
 					<T id="column.details" />
 				</TabsTrigger>
@@ -35,22 +38,42 @@ const ProxyHostFormTabs = ({ errorMessage, hostId, locations }: Props) => (
 				<TabsTrigger value={PROXY_HOST_TAB.SSL}>
 					<T id="column.ssl" />
 				</TabsTrigger>
-				<TabsTrigger value={PROXY_HOST_TAB.SECURITY}>
+				<TabsTrigger value="upstream-pool">
+					<T id="traffic.pool.tab" />
+				</TabsTrigger>
+				<TabsTrigger value="cache">
+					<T id="traffic.cache.tab" />
+				</TabsTrigger>
+				<TabsTrigger value="wasm">
+					<T id="proxy-host.wasm.tab" />
+				</TabsTrigger>
+				<TabsTrigger value={PROXY_HOST_TAB.SECURITY} aria-label={intl.formatMessage({ id: "user.security" })}>
 					<IconShieldLock size={20} />
 				</TabsTrigger>
-				<TabsTrigger value={PROXY_HOST_TAB.ADVANCED} className="ml-auto">
+				<TabsTrigger
+					value={PROXY_HOST_TAB.ADVANCED}
+					className="ml-auto"
+					aria-label={intl.formatMessage({ id: "advanced" })}
+				>
 					<IconSettings size={20} />
 				</TabsTrigger>
-				<TabsTrigger value={PROXY_HOST_TAB.MAINTENANCE}>
+				<TabsTrigger
+					value={PROXY_HOST_TAB.MAINTENANCE}
+					aria-label={intl.formatMessage({ id: "proxy-host.maintenance-mode" })}
+				>
 					<IconTool size={20} />
 				</TabsTrigger>
-				<TabsTrigger value={PROXY_HOST_TAB.NOTES}>
+				<TabsTrigger value={PROXY_HOST_TAB.NOTES} aria-label={intl.formatMessage({ id: "host.note" })}>
 					<IconNote size={20} />
 				</TabsTrigger>
 				<Field name="forwardScheme">
 					{({ field: schemeField }: FieldProps) =>
 						schemeField.value === FORWARD_SCHEME.PATH && (
-							<TabsTrigger value={PROXY_HOST_TAB.GIT_SYNC} className="text-emerald-500">
+							<TabsTrigger
+								value={PROXY_HOST_TAB.GIT_SYNC}
+								className="text-emerald-500"
+								aria-label={intl.formatMessage({ id: "proxy-host.git-sync" })}
+							>
 								<IconGitBranch size={20} />
 							</TabsTrigger>
 						)
@@ -73,6 +96,9 @@ const ProxyHostFormTabs = ({ errorMessage, hostId, locations }: Props) => (
 					<LocationsFields initialValues={locations} />
 				</TabsContent>
 				<ProxyHostSslTab />
+				<ProxyHostUpstreamPoolTab hostId={hostId} />
+				<ProxyHostCacheTab hostId={hostId} />
+				<ProxyHostWasmTab />
 				<ProxyHostSecurityTab />
 				<ProxyHostAdvancedTab />
 				<ProxyHostMaintenanceTab />

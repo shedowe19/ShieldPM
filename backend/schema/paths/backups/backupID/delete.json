@@ -1,0 +1,38 @@
+{
+	"operationId": "deleteInstanceBackup",
+	"summary": "Delete an encrypted stored archive",
+	"description": "A pending restore must be canceled before its source archive can be deleted.",
+	"tags": [
+		"instance-backups"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"responses": {
+		"403": {
+			"description": "Administrator permission required; backups disabled in demo mode"
+		},
+		"400": {
+			"description": "Invalid input or another instance operation is running"
+		},
+		"200": {
+			"description": "Encrypted archive removed"
+		}
+	},
+	"parameters": [
+		{
+			"in": "path",
+			"name": "backupID",
+			"required": true,
+			"schema": {
+				"type": "string",
+				"format": "uuid"
+			},
+			"description": "Encrypted archive identifier, never a filesystem path"
+		}
+	]
+}

@@ -1,0 +1,35 @@
+{
+	"operationId": "listWasmModules",
+	"summary": "List administrator-trusted Proxy-Wasm modules",
+	"tags": [
+		"proxy-hosts"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.view"
+			]
+		}
+	],
+	"responses": {
+		"400": {
+			"description": "Invalid input, incompatible module or referenced module"
+		},
+		"403": {
+			"description": "Permission denied"
+		},
+		"200": {
+			"description": "Successful operation",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "array",
+						"items": {
+							"$ref": "../../../../components/wasm-module.json"
+						}
+					}
+				}
+			}
+		}
+	}
+}

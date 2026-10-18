@@ -216,11 +216,14 @@ class ProxyHost extends Model {
 		}
 	}
 
-	$afterFind() {
+	$afterFind(queryContext) {
 		// Stored dates use the server timezone; expose explicit instants to browser-local forms.
-		for (const field of ["maintenance_start", "maintenance_end"]) {
-			if (this[field] && dayjs(this[field]).isValid()) {
-				this[field] = dayjs(this[field]).toISOString();
+		// Trusted compensation snapshots retain the driver's original temporal values instead.
+		if (!queryContext?.preserveDatabaseTimestamps) {
+			for (const field of ["maintenance_start", "maintenance_end"]) {
+				if (this[field] && dayjs(this[field]).isValid()) {
+					this[field] = dayjs(this[field]).toISOString();
+				}
 			}
 		}
 

@@ -1,0 +1,48 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"status",
+		"exit_code",
+		"stdout",
+		"stderr",
+		"duration_ms",
+		"signal",
+		"truncated"
+	],
+	"properties": {
+		"status": {
+			"type": "string",
+			"enum": [
+				"completed",
+				"failed",
+				"timed_out",
+				"output_limit",
+				"cancelled"
+			]
+		},
+		"exit_code": {
+			"type": "integer",
+			"nullable": true,
+			"minimum": 0,
+			"maximum": 4294967295
+		},
+		"stdout": {
+			"type": "string"
+		},
+		"stderr": {
+			"type": "string"
+		},
+		"duration_ms": {
+			"type": "integer",
+			"minimum": 0
+		},
+		"signal": {
+			"type": "string",
+			"nullable": true
+		},
+		"truncated": {
+			"type": "boolean"
+		}
+	}
+}

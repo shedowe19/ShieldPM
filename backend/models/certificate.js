@@ -3,6 +3,7 @@
 
 import { Model } from "objection";
 import db from "../db.js";
+import errs from "../lib/error.js";
 import { convertBoolFieldsToInt, convertIntFieldsToBool } from "../lib/helpers.js";
 import deadHostModel from "./dead_host.js";
 import now from "./now_helper.js";
@@ -14,6 +15,57 @@ import userModel from "./user.js";
 Model.knex(db());
 
 const boolFields = ["is_deleted"];
+const dateFields = ["created_on", "modified_on", "expires_on"];
+const sqlDatePattern = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?$/;
+const isoDatePattern = /^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?([Zz]|[+-](\d{2}):(\d{2}))$/;
+
+/** Keep certificate DATETIME writes valid in strict MySQL without changing SQL clock expressions. */
+const mysqlDateTime = (value, field) => {
+	if (
+		value &&
+		(typeof value.toKnexRaw === "function" || (value.isRawInstance && typeof value.toSQL === "function"))
+	) {
+		return value;
+	}
+	const invalid = () => {
+		throw new errs.ValidationError(`Invalid certificate ${field} timestamp`);
+	};
+	if (value instanceof Date) {
+		if (!Number.isFinite(value.getTime()) || value.getUTCFullYear() < 1000 || value.getUTCFullYear() > 9999) {
+			return invalid();
+		}
+		return new Date(value.getTime() - value.getUTCMilliseconds());
+	}
+	if (typeof value !== "string") return invalid();
+	const sqlMatch = sqlDatePattern.exec(value);
+	const match = sqlMatch || isoDatePattern.exec(value);
+	if (!match) return invalid();
+	const [, year, month, day, hour, minute, second, , offsetHour, offsetMinute] = match;
+	const daysInMonth = new Date(Date.UTC(Number(year), Number(month), 0)).getUTCDate();
+	if (
+		Number(year) < 1000 ||
+		Number(month) < 1 ||
+		Number(month) > 12 ||
+		Number(day) < 1 ||
+		Number(day) > daysInMonth ||
+		Number(hour) > 23 ||
+		Number(minute) > 59 ||
+		Number(second) > 59 ||
+		Number(offsetHour || 0) > 23 ||
+		Number(offsetMinute || 0) > 59
+	) {
+		return invalid();
+	}
+	if (sqlMatch) return value;
+	const instant = new Date(value);
+	if (!Number.isFinite(instant.getTime()) || instant.getUTCFullYear() < 1000 || instant.getUTCFullYear() > 9999) {
+		return invalid();
+	}
+	// Bind a real instant so mysql2 applies the same connection timezone used when reading DATETIME.
+	// Truncate to the existing DATETIME(0) precision before the driver can round fractional seconds.
+	instant.setUTCMilliseconds(0);
+	return instant;
+};
 
 class Certificate extends Model {
 	/** @type {number} */
@@ -68,6 +120,11 @@ class Certificate extends Model {
 
 	$formatDatabaseJson(json) {
 		const thisJson = convertBoolFieldsToInt(json, boolFields);
+		if (["mysql", "mysql2"].includes(this.$knex()?.client?.config?.client)) {
+			for (const field of dateFields) {
+				if (typeof thisJson[field] !== "undefined") thisJson[field] = mysqlDateTime(thisJson[field], field);
+			}
+		}
 		return super.$formatDatabaseJson(thisJson);
 	}
 

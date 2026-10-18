@@ -134,7 +134,7 @@ ShieldPM runs schema migrations for the **selected** database on startup. When y
 | `NGINX_404_REDIRECT`            | Redirect 404 hosts to the default site                                                   | `false`              |
 | `NGINX_HSTS_SUBDOMAINS`         | Include subdomains in HSTS header when enabled                                           | `true`               |
 | `X_FRAME_OPTIONS`               | X-Frame-Options header value                                                             | `sameorigin`         |
-| `DISABLE_NGINX_BEAUTIFIER`      | Disable automatic formatting of Nginx configs                                            | `false`              |
+| `DISABLE_NGINX_BEAUTIFIER`      | Legacy ignored setting; generated Nginx configuration is always preserved unchanged      | ignored              |
 | `FULLCLEAN`                     | Remove selected unused runtime/log data during startup; it does not rebuild host configs | `false`              |
 | `REGENERATE_ALL`                | Remove generated host `.conf` files during startup so the backend can regenerate them    | `false`              |
 | `SKIP_IP_RANGES`                | Skip fetching real IP ranges (Cloudflare, etc.)                                          | `true`               |

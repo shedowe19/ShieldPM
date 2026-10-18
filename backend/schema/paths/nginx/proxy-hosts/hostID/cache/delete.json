@@ -1,0 +1,54 @@
+{
+  "operationId": "purgeProxyHostCache",
+  "summary": "Purge only an authorized host or its exact request URI",
+  "tags": ["proxy-hosts"],
+  "security": [
+    {
+      "bearerAuth": ["proxy_hosts.manage"]
+    }
+  ],
+  "parameters": [
+    {
+      "in": "path",
+      "name": "hostID",
+      "required": true,
+      "schema": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 9007199254740991
+      }
+    },
+    {
+      "in": "query",
+      "name": "path",
+      "required": false,
+      "schema": {
+        "type": "string",
+        "maxLength": 2048
+      },
+      "description": "Exact original request URI; omit to purge the entire host. Wildcard hosts require a full purge."
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "Current host policy result",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "required": ["removed", "path"],
+            "properties": {
+              "removed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "path": {
+                "type": ["string", "null"]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -14,6 +14,7 @@ const host = (overrides = {}) => ({
 	id: 12,
 	enabled: true,
 	domain_names: ["proxy.example.test"],
+	host_domains: [{ domain_name: "proxy.example.test" }],
 	forward_scheme: "http",
 	forward_host: "127.0.0.1",
 	forward_port: 8080,
@@ -23,6 +24,7 @@ const host = (overrides = {}) => ({
 	meta: {},
 	...overrides,
 });
+const persistedHost = (overrides = {}) => ({ ...host(overrides), $fetchGraph: async () => {} });
 
 describe("Nginx configuration regressions", () => {
 	beforeAll(async () => {
@@ -283,7 +285,10 @@ describe("Nginx configuration regressions", () => {
 			internalNginx.configure(
 				{
 					query: () => ({
-						findById: () => ({ withGraphFetched: async () => host(), forUpdate: async () => host() }),
+						findById: () => ({
+							withGraphJoined: async () => persistedHost(),
+							forUpdate: async () => host(),
+						}),
 					}),
 				},
 				"proxy_host",
@@ -294,23 +299,33 @@ describe("Nginx configuration regressions", () => {
 	});
 
 	it("serializes concurrent configuration changes", async () => {
-		let release;
+		const entered = Promise.withResolvers();
+		const release = Promise.withResolvers();
+		const order = [];
 		const configure = vi
 			.spyOn(internalNginx, "configureHost")
-			.mockImplementationOnce(
-				() =>
-					new Promise((resolve) => {
-						release = resolve;
-					}),
-			)
-			.mockResolvedValueOnce({ nginx_online: true });
+			.mockImplementationOnce(async () => {
+				order.push("first entered");
+				entered.resolve();
+				await release.promise;
+				order.push("first completed");
+				return { nginx_online: true };
+			})
+			.mockImplementationOnce(async () => {
+				order.push("second entered");
+				return { nginx_online: true };
+			});
 		const first = internalNginx.configure({}, "proxy_host", host());
 		const second = internalNginx.configure({}, "proxy_host", host({ id: 13 }));
-		await Promise.resolve();
-		expect(configure).toHaveBeenCalledTimes(1);
-		release({ nginx_online: true });
-		await Promise.all([first, second]);
+		await entered.promise;
+		try {
+			expect(configure).toHaveBeenCalledTimes(1);
+		} finally {
+			release.resolve();
+			await Promise.all([first, second]);
+		}
 		expect(configure).toHaveBeenCalledTimes(2);
+		expect(order).toEqual(["first entered", "first completed", "second entered"]);
 	});
 
 	it("does not reactivate a stale snapshot after its host was disabled", async () => {
@@ -321,7 +336,7 @@ describe("Nginx configuration regressions", () => {
 			transaction: (callback) => callback({}),
 			query: () => ({
 				findById: () => ({
-					withGraphFetched: async () => host({ enabled: false, is_deleted: false }),
+					withGraphJoined: async () => persistedHost({ enabled: false, is_deleted: false }),
 					forUpdate: async () => host({ enabled: false }),
 				}),
 				where: () => ({ patch: async () => 1 }),
@@ -350,7 +365,7 @@ describe("Nginx configuration regressions", () => {
 		const model = {
 			transaction: (callback) => callback({}),
 			query: () => ({
-				findById: () => ({ withGraphFetched: async () => host(), forUpdate: async () => host() }),
+				findById: () => ({ withGraphJoined: async () => persistedHost(), forUpdate: async () => host() }),
 				where: () => ({ patch }),
 			}),
 		};
@@ -378,7 +393,7 @@ describe("Nginx configuration regressions", () => {
 		const model = {
 			transaction: (callback) => callback({}),
 			query: () => ({
-				findById: () => ({ withGraphFetched: async () => host(), forUpdate: async () => host() }),
+				findById: () => ({ withGraphJoined: async () => persistedHost(), forUpdate: async () => host() }),
 				where: () => ({ patch }),
 			}),
 		};
@@ -404,7 +419,7 @@ describe("Nginx configuration regressions", () => {
 		const model = {
 			transaction: (callback) => callback({}),
 			query: () => ({
-				findById: () => ({ withGraphFetched: async () => host(), forUpdate: async () => host() }),
+				findById: () => ({ withGraphJoined: async () => persistedHost(), forUpdate: async () => host() }),
 				where: () => ({ patch }),
 			}),
 		};

@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
 	setup: true,
 	renderDashboard: vi.fn(),
 	renderLogin: vi.fn(),
+	roles: ["admin"],
+	renderWasiApplications: vi.fn(),
 }));
 
 vi.mock("src/components/AnimatedPage", () => ({
@@ -51,6 +53,10 @@ vi.mock("src/hooks/useHealth", () => ({
 		isLoading: false,
 	}),
 }));
+vi.mock("src/hooks/useUser", () => ({
+	useUser: () => ({ data: { roles: mocks.roles, permissions: {} }, isLoading: false }),
+}));
+vi.mock("src/pages/Settings/WasiApplications", () => ({ default: () => mocks.renderWasiApplications() }));
 vi.mock("src/pages/DuoCallback", () => ({
 	default: () => <div>Duo callback</div>,
 }));
@@ -80,6 +86,8 @@ describe("Router", () => {
 		mocks.authenticated = false;
 		mocks.loading = false;
 		mocks.setup = true;
+		mocks.roles = ["admin"];
+		mocks.renderWasiApplications.mockReset().mockReturnValue(<div>WASI applications</div>);
 		mocks.renderLogin.mockReset().mockReturnValue(<div>Login</div>);
 		mocks.failAnalyticsImport = false;
 		mocks.failDashboard = false;
@@ -91,6 +99,23 @@ describe("Router", () => {
 		});
 		window.history.replaceState({}, "", "/duo-callback?duo_code=duo-code");
 	});
+
+	it.each([true, false])(
+		"guards the standalone WASI route with administrator permission (admin=%s)",
+		async (admin) => {
+			mocks.authenticated = true;
+			mocks.roles = admin ? ["admin"] : [];
+			window.history.replaceState({}, "", "/settings/wasi");
+			const { default: Router } = await import("./Router");
+			render(<Router />);
+			if (admin) {
+				expect(await screen.findByText("WASI applications")).toBeInTheDocument();
+			} else {
+				expect(await screen.findByText("You do not have access to view this.")).toBeInTheDocument();
+				expect(mocks.renderWasiApplications).not.toHaveBeenCalled();
+			}
+		},
+	);
 
 	it.each([true, false])("waits for session restoration before mounting login (restored=%s)", async (restored) => {
 		mocks.loading = true;

@@ -1,0 +1,81 @@
+{
+	"operationId": "uploadWasiApplication",
+	"summary": "Upload a standalone WASI Preview 1 command without executing it",
+	"tags": [
+		"wasi-applications"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"responses": {
+		"400": {
+			"description": "Invalid input or unavailable runtime capacity"
+		},
+		"403": {
+			"description": "Settings administration is required"
+		},
+		"404": {
+			"description": "Application not found"
+		},
+		"201": {
+			"description": "Successful operation",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../components/wasi-application.json"
+					}
+				}
+			}
+		},
+		"413": {
+			"description": "Application exceeds 16 MiB"
+		},
+		"429": {
+			"description": "Upload or execution rate limit reached"
+		}
+	},
+	"parameters": [
+		{
+			"name": "name",
+			"in": "query",
+			"required": true,
+			"schema": {
+				"type": "string",
+				"minLength": 1,
+				"maxLength": 128
+			}
+		},
+		{
+			"name": "filename",
+			"in": "query",
+			"required": true,
+			"schema": {
+				"type": "string",
+				"minLength": 1,
+				"maxLength": 128
+			}
+		}
+	],
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/wasm": {
+				"schema": {
+					"type": "string",
+					"format": "binary"
+				}
+			},
+			"application/octet-stream": {
+				"schema": {
+					"type": "string",
+					"format": "binary"
+				}
+			}
+		}
+	},
+	"description": "Administrator-trusted Preview 1 core module with exported memory and _start; no _initialize or foreign host imports. At most 16 MiB. Compilation-only upload never instantiates the module. The private content-addressed artifact is immutable."
+}

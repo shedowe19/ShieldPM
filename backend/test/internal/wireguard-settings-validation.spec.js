@@ -16,7 +16,10 @@ const mocks = vi.hoisted(() => ({
 	unlinkSync: vi.fn(),
 }));
 
-vi.mock("node:child_process", () => ({ execSync: mocks.execSync, spawn: mocks.spawn }));
+vi.mock("node:child_process", async () => {
+	const { legacyWireguardExecFile } = await import("../helpers/legacy-wireguard-exec.js");
+	return { execSync: mocks.execSync, spawn: mocks.spawn, execFile: legacyWireguardExecFile(mocks.execSync) };
+});
 vi.mock("node:fs", () => ({
 	default: {
 		existsSync: mocks.existsSync,

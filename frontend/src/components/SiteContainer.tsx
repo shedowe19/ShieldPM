@@ -15,6 +15,7 @@ export function SiteContainer({ children }: Props) {
 		location.pathname === "/users" ||
 		location.pathname === "/audit-log" ||
 		location.pathname === "/settings" ||
+		location.pathname === "/settings/wasi" ||
 		location.pathname.startsWith("/nginx/");
 
 	const className = isFullWidth

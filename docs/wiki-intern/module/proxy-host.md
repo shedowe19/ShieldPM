@@ -26,6 +26,14 @@ Proxy-Hosts leiten eingehende HTTP/HTTPS-Anfragen an Upstream-Server weiter. Sie
 4. `nginx.js` rendert Template und schreibt `.conf`
 5. Nginx wird neu geladen
 
+Manuelle Updates schreiben ausschließlich die angefragten Hostfelder und die ausdrücklich normalisierten
+Domainrelationen. Geladene Besitzer-, Zertifikats- und Access-List-Graphen sowie Erstellungs-/Änderungszeitstempel
+gehören nicht in diesen Schreibgraph. Der vollständige vorherige Zustand bleibt getrennt als verschlüsselter
+Versions-/Rollback-Snapshot erhalten. Nach dem Warten auf die Konfigurationssperre werden nur die benötigten
+aktuellen SSL-/HSTS-Felder ergänzt; ausgelassene Felder und Geheimnisse werden nicht aus einem älteren
+Lesesnapshot zurückgeschrieben. `mariadb-proxy-host-update.spec.js` prüft den tatsächlichen Service auf einem
+strikten Server einschließlich unveränderter gemeinsam genutzter Zertifikate und Access Lists.
+
 Die Bearbeitungsdialoge für Proxy-, Redirect-, 404-Hosts und Streams fragen beim Öffnen die aktuelle Host-ID
 erneut ab, auch wenn React Query noch einen Cacheeintrag besitzt. Erst die erfolgreiche Antwort initialisiert
 das Formular. Scheitert dieser Abruf, zeigt der Dialog den Fehler und erlaubt kein Speichern alter Cachewerte.
@@ -97,6 +105,12 @@ bereit; `Table.tsx` zeigt je nach Auswahl die neun Datenspalten Symbol, Eigentü
 Status, Dienstprüfung und Latenz. Jede ist einzeln ausblendbar, standardmäßig sind alle sichtbar. Die Auswahl wird
 im Browser über `localStorage` für erneutes Laden gespeichert. Das Zeilen-Aktionsmenü bleibt unabhängig von der
 Auswahl erreichbar. Die Spaltenauswahl verändert keine API-Daten, Host-Konfiguration oder Monitor-Ausführung.
+
+Sind Dienstprüfung und Latenz gleichzeitig ausgeblendet, übergibt die Tabelle keine Host-IDs an die Statusabfrage.
+Dadurch pausieren deren 30-Sekunden-Abfragen. Sobald wieder eine der beiden Spalten sichtbar ist, lädt React Query
+aktuelle Werte auch innerhalb des sonst üblichen Cache-Zeitfensters. Der Abbruch einer nicht mehr beobachteten
+Abfrage reicht bis zum HTTP-Request; ein anderer sichtbarer Verbraucher derselben Statusabfrage bleibt aktiv.
+Der Überwachungsdialog und die Hintergrundprüfungen des Backends laufen unabhängig davon weiter.
 
 `frontend/src/lib/serviceIcons.ts` ordnet bekannte Hostnamen und Forward-Ports lokal einem Icon aus dem
 Homarr-Dashboard-Icons-CDN zu; zuerst wird ein passender Hostname **mit** Port versucht, dann ein reiner
@@ -178,10 +192,34 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Ergänzungen der zweiten Codeprüfung
 
-Beim Löschen und Deaktivieren von Proxy-, Redirect-, 404-Hosts und Streams laufen Datenbankflag, Config-Entfernung und Reload in der Nginx-Warteschlange. Die Datenbankänderung bleibt bis zum erfolgreichen Reload in einer Transaktion. Ein Fehler beim Schreiben, Entfernen oder Reload setzt das Flag zurück und stellt eine zuvor vorhandene Konfiguration wieder her; anschließend wird diese erneut geladen. Audit-Einträge, GitOps und das Beenden des Proxy-Pollings folgen erst nach erfolgreichem Abschluss. Eine alte Sicherung wird nicht als aktive Konfiguration wiederbelebt, wenn vor der Änderung keine Config-Datei existierte. Bereits wartende Konfigurationsgenerierungen können dadurch nicht nachträglich die gerade entfernte Datei wiederherstellen.
+Beim Löschen und Deaktivieren von Proxy-, Redirect-, 404-Hosts und Streams laufen Datenbankflag, Config-Entfernung und Reload in der Nginx-Warteschlange. Die Aktivierung stellt Datenbankzustand und Dateien bei einem fehlgeschlagenen Reload gemeinsam wieder her. Für Proxy-Host-Änderung, Aktivierung und Deaktivierung bleiben keine Datenbanktransaktionen während der langsamen Nginx-Prüfung offen. Ein Fehler beim Schreiben, Entfernen oder Reload setzt das Flag zurück und stellt eine zuvor vorhandene Konfiguration wieder her; anschließend wird diese erneut geladen. Audit-Einträge, GitOps und das Beenden des Proxy-Pollings folgen erst nach erfolgreichem Abschluss. Eine alte Sicherung wird nicht als aktive Konfiguration wiederbelebt, wenn vor der Änderung keine Config-Datei existierte. Bereits wartende Konfigurationsgenerierungen können dadurch nicht nachträglich die gerade entfernte Datei wiederherstellen.
 
 `backend/test/internal/host-removal-rollback.spec.js` prüft alle acht Lösch-/Deaktivierungspfade mit SQLite und temporären Konfigurationsdateien, einschließlich Schreib-, Datei- und Reloadfehlern. Nginx-Prozessaufrufe werden dabei simuliert.
 
 DNS-Zugangsdaten verbleiben ausschließlich im Zertifikatskontext. Für verwaltete Git-Websites sperrt die generierte Nginx-Konfiguration Symlinks und für statische Hosts den Zugriff auf Git-Metadaten. Details zu mTLS, OIDC und Limits stehen unter [Nginx-Templates](./nginx-templates.md).
 
 Neue Zertifikats- und Access-List-Zuordnungen unterliegen den eigenständigen Berechtigungs- und Eigentümerprüfungen der [Host-Hilfslogik](./host.md).
+
+## Revisionen und vollständige Aktivierung
+
+Erstellung, Änderung und Aktivierung von Proxy-Hosts laufen mit dem Schreiben des Host-Zustands, der Nginx-Prüfung und der Revisionsaufzeichnung unter derselben Konfigurationssperre. Zertifikatsausstellung und andere externe Vorprüfungen erfolgen davor. Ein fehlgeschlagener Wasm-Ausführungstest oder ein von `configureHost` zurückgemeldeter Offline-Zustand führt zum Wiederherstellen der vorherigen Host-Felder, Domains, Referenzen und aktiven Dateien. Ein fehlgeschlagen angelegter Host wird nicht als aktiver Host behalten.
+
+Die vertrauenswürdige Kompensation erhält auf MySQL/MariaDB auch `git_last_sync` und die ursprünglichen
+Wartungstermine. Alle fünf DATETIME-Spalten werden mit der vorhandenen Treiberzeitzone wiederhergestellt;
+die normale Formatierung für Formulare verändert diese gespeicherten Zustände nicht. Echte MariaDB-Tests
+prüfen einen bereits gespeicherten Kandidaten, dessen Nginx-Aktivierung abgelehnt wird, samt unveränderten
+Host-Feldern, Domains, Konfigurationsbytes und Dateirechten. Details stehen bei den
+[Host-Revisionen](../features/host-revisionen.md).
+
+Die Datenbankkompensation wiederholt vorübergehende MySQL-/MariaDB-Snapshot- und Sperrkonflikte höchstens
+dreimal in frischen Transaktionen. Sie wiederholt weder Nginx-Aktivierung noch Dateiwiederherstellung oder
+Audit-Ereignisse. Schlägt auch das Zurücksetzen fehl, bleiben ursprünglicher Fehler und Rollback-Fehler privat
+erhalten. Eine kurze `[Host rollback]`-Logzeile nennt sichere Fehlerkennungen vor jeder langen SQL-Ausgabe;
+der Fehler meldet in diesem Fall keine erfolgreiche Wiederherstellung. Das gilt für Änderung, Löschen,
+Aktivieren, Deaktivieren und das Aktivieren einer früheren Revision.
+
+Bei einer Domainänderung reserviert die Claim-Registry sowohl die bisherigen als auch die gewünschten Namen, bis die vollständige Aktivierung angenommen ist. Andere Prozesse können daher während einer abgelehnten Änderung die für das Rollback benötigten alten Domains nicht übernehmen. Erst nach Aktivierung und Revisionsspeicherung werden überholte Claims freigegeben.
+
+Die erste Änderung eines bestehenden gültigen Hosts zeichnet dessen Ausgangszustand auf. Weitere erfolgreiche Änderungen sowie Aktivierung, Deaktivierung und Wiederherstellung erzeugen die [Host-Revisionen](../features/host-revisionen.md). Identische Zustände werden nicht doppelt gespeichert. Wiederherstellungen prüfen gespeicherte Pool-, Cache- und Wasm-Regeln erneut. Serverintern versiegelte Wasm-Zugangsdaten werden nur aus verschlüsselten Revisions-Snapshots übernommen; die öffentliche Eingabevalidierung nimmt solche internen Ciphertexte weiterhin nicht entgegen.
+
+`reconcileRestoredHost` gleicht erst nach angenommener Aktivierung die Hintergrunddienste ab: Änderungen des direkten Upstreams oder Upstream-Pools setzen den Monitor zurück, Git-Deploy-Polling wird aktualisiert und OAuth2-Zuordnungen werden neu bewertet. API-Regressionsfälle in `proxy-host-activation.spec.js` prüfen SQLite und PostgreSQL/PGlite über tatsächliche HTTP-Aufrufe: fehlgeschlagene Änderungen bewahren die vorherigen Filter, Domains, DB-Einstellungen und Listener; fehlgeschlagenes Aktivieren oder Deaktivieren bewahrt den vorherigen Aktivierungszustand.

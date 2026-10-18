@@ -28,7 +28,11 @@ vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: vi.fn()
 vi.mock("../../internal/nginx.js", () => ({
 	default: {
 		bulkGenerateConfigs: state.bulk,
+		bulkGenerateConfigGroupsUnlocked: async (groups) => {
+			for (const group of groups) await state.bulk(group.model, group.hostType, group.hosts);
+		},
 		generateConfig: state.generate,
+		getConfigName: (_hostType, id) => `/tmp/shieldpm-host-expansion-${id}.conf`,
 		withConfigurationLock: (callback) => callback(),
 		backupConfig: vi.fn(),
 		deleteBackupConfig: vi.fn(),

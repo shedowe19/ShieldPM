@@ -140,11 +140,10 @@ const internalDdnsProvider = {
 	 */
 	test: async (access, data) => {
 		await access.can("ddns_providers:update", data.id);
-		const row = await internalDdnsProvider.get(access, { id: data.id }, { includeCredentials: true });
-		const ips = await internalDdns.getWanIps();
-		const result = await internalDdns.updateProvider(row, ips);
+		await internalDdnsProvider.get(access, { id: data.id });
+		const result = await internalDdns.runProvider(data.id);
 		if (!result.success) throw new errs.ValidationError(result.error);
-		return { status: "success", ips };
+		return { status: "success", ips: result.ips };
 	},
 };
 

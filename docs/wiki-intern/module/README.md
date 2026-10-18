@@ -54,6 +54,10 @@ Die Module unter `backend/internal/` bündeln Geschäftslogik. Viele CRUD-Module
 
 ### Tools & Integrationen
 
+Die [WASI-Anwendungen](./wasi-runtime.md) ergänzen die eigenständige Ausführung von Preview-1-Kommandos
+über `wasi-applications.js` und die HTTP-Einbindung pro Host über einen privaten Adapter. Die gemeinsame
+Oberfläche erkennt WASI und [Proxy-Wasm-HTTP-Filter](./wasm-filter.md), verwendet aber die jeweils passende Runtime.
+
 | Modul                           | Datei           | Beschreibung                       |
 | ------------------------------- | --------------- | ---------------------------------- |
 | [AI / AI-Core](./ai-agent.md)   | `ai.js`         | AI-Agent Verwaltung                |

@@ -60,6 +60,16 @@ Ein gespeicherter `last_error` löst beim nächsten regulären Intervall einen e
 
 Die Statusfelder `last_ipv4`, `last_ipv6`, `last_updated_on` und `last_error` sind in der Datenbank nullable und dürfen auch in API-Antworten `null` enthalten. Das veröffentlichte Antwortschema bildet diese Werte ausdrücklich ab. `sixth-integrations-ddns-response-contract.spec.js` validiert vollständige Erstellungs- und Listenantworten des echten HTTP-Routers mit echten SQLite-Migrationen und Modellen gegen das zusammengesetzte OpenAPI-Schema.
 
+### Gemeinsame Queue für manuelle Tests und Scheduler
+
+Auch der manuelle Test führt einen echten DNS-Write aus. Er und der Scheduler teilen eine Queue je Provider.
+Die aktuelle Konfiguration wird erst beim Beginn dieses Auftrags erneut aus der Datenbank gelesen; ein älterer,
+langsamer Test darf daher keinen später gestarteten Scheduler-Write mit einer veralteten Adresse abschließen.
+Gleichzeitige WAN-Abfragen sind nach Startreihenfolge versioniert: Eine ältere, spät eintreffende Antwort
+ersetzt keine inzwischen fertiggestellte neuere Messung. Unterschiedliche Provider können unabhängig arbeiten. Der bestehende globale Scheduler koalesziert weiterhin
+Intervallticks und erzwungene Folgeläufe. `ddns-shared-queue.spec.js` reproduziert die Reihenfolge mit verzögerten
+HTTP-Antworten und prüft den letzten gespeicherten und extern geschriebenen IP-Wert.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

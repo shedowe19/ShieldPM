@@ -11,6 +11,7 @@ process.on("uncaughtException", (err) => {
 
 import app from "./app.js";
 import analyticsService from "./internal/analytics.js";
+import internalSessionCleanup from "./internal/auth-session-cleanup.js";
 import internalCertificate from "./internal/certificate.js";
 import internalChat from "./internal/chat.js";
 import internalCloudflared from "./internal/cloudflared.js";
@@ -19,6 +20,9 @@ import internalDocker from "./internal/docker.js";
 import internalFirewallList from "./internal/firewall-list.js";
 import internalGitDeploy from "./internal/git-deploy.js";
 import internalGitOps from "./internal/gitops.js";
+import internalHostTraffic from "./internal/host-traffic-policy.js";
+import internalIncidents from "./internal/incidents.js";
+import internalBackups from "./internal/instance-backups.js";
 import internalIpRanges from "./internal/ip_ranges.js";
 import internalMaintenance from "./internal/maintenance.js";
 import internalNginx from "./internal/nginx.js";
@@ -27,6 +31,7 @@ import internalProxyHostMonitor from "./internal/proxy-host-monitor.js";
 import internalTerminal from "./internal/terminal.js";
 import internalTor from "./internal/tor.js";
 import internalUploadRelay from "./internal/upload-relay.js";
+import { prepareWasiHostBridge, stopWasiHostBridges } from "./internal/wasi-host-bridge.js";
 import internalWireguard from "./internal/wireguard.js";
 import migrateFromSqliteToNewDb from "./lib/db-migrate.js";
 import { global as logger } from "./logger.js";
@@ -40,10 +45,12 @@ async function appStart() {
 	try {
 		await migrateFromSqliteToNewDb();
 		await migrateUp();
+		await prepareWasiHostBridge();
 		await analyticsService.init();
 		internalUploadRelay.init();
 		await setup();
 		await getCompiledSchema();
+		await internalSessionCleanup.initTimer();
 
 		if (!IP_RANGES_FETCH_ENABLED) {
 			logger.info("IP Ranges fetch is disabled by environment variable");
@@ -71,13 +78,22 @@ async function appStart() {
 		await internalChat.init();
 		internalGitDeploy.init();
 
-		const server = app.listen("/run/shieldpm/shieldpm.sock", (err) => {
+		const server = app.listen("/run/shieldpm/shieldpm.sock", async (err) => {
 			if (err) {
 				logger.error("Backend socket failed to listen:", err);
 				process.exit(1);
 				return;
 			}
 			logger.info(`Backend PID ${process.pid} listening on unix socket...`);
+			try {
+				await internalBackups.commitStartupRestore();
+			} catch (error) {
+				logger.error("Restore activation could not be committed", error);
+				server.close(() => process.exit(1));
+				return;
+			}
+			internalIncidents.init();
+			internalHostTraffic.init();
 			internalProxyHostMonitor.init();
 
 			// Initialize Terminal WebSocket (needs server instance)
@@ -85,12 +101,18 @@ async function appStart() {
 
 			process.on("SIGTERM", () => {
 				logger.info(`PID ${process.pid} received SIGTERM`);
-				internalProxyHostMonitor.stop();
+				const monitoringStopped = Promise.resolve(internalProxyHostMonitor.stop());
 				internalFirewallList.stopTimer();
 				server.close(async () => {
+					await monitoringStopped;
+					await internalDocker.stop();
+					await internalIncidents.stop();
+					await internalHostTraffic.stop();
+					await internalSessionCleanup.stop();
 					await internalFirewallList.stopTimer();
 					await analyticsService.stop();
 					await internalUploadRelay.stop();
+					await stopWasiHostBridges();
 					logger.info("Stopping.");
 					process.exit(0);
 				});

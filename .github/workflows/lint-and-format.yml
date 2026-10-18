@@ -103,7 +103,7 @@ jobs:
         run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/frontend" audit --level high
 
   mariadb-migration:
-    name: MariaDB migrations
+    name: MariaDB migrations and runtime regressions
     runs-on: ubuntu-latest
     services:
       mariadb:
@@ -141,8 +141,10 @@ jobs:
         run: |
           cd "$GITHUB_WORKSPACE/backend"
           mapfile -d '' migration_tests < <(find test/migrations -maxdepth 1 -type f -name 'mariadb-*.spec.js' -print0 | sort -z)
+          mapfile -d '' runtime_tests < <(find test/internal -maxdepth 1 -type f -name 'mariadb-*.spec.js' -print0 | sort -z)
           ((${#migration_tests[@]}))
-          npx --yes --package yarn@1.22.22 yarn test --run "${migration_tests[@]}"
+          ((${#runtime_tests[@]}))
+          npx --yes --package yarn@1.22.22 yarn test --run "${migration_tests[@]}" "${runtime_tests[@]}"
 
   frontend-e2e:
     name: Frontend browser smoke

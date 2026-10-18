@@ -1,3 +1,6 @@
+vi.mock("../../internal/cloudflared.js", () => ({ default: { stop: vi.fn(), activateImported: vi.fn() } }));
+vi.mock("../../lib/host-domain-claims.js", () => ({ withHostDomainClaims: (_options, write) => write({}) }));
+
 import * as yaml from "js-yaml";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -58,6 +61,7 @@ const mocks = vi.hoisted(() => {
 					const row = (rows[name] || []).find((entry) => entry.id === id);
 					const result = Promise.resolve(row);
 					result.withGraphFetched = () => result;
+					result.forUpdate = () => result;
 					result.patch = async (data) => {
 						writes.push({ name, data });
 						Object.assign(row, data);
@@ -118,6 +122,26 @@ vi.mock("../../models/access_list.js", () => ({ default: mocks.makeModel("Access
 vi.mock("../../models/firewall_list.js", () => ({ default: mocks.makeModel("FirewallList") }));
 vi.mock("../../models/proxy_host.js", () => ({ default: mocks.makeModel("ProxyHost") }));
 vi.mock("../../models/proxy_host_monitor.js", () => ({ default: mocks.makeModel("ProxyHostMonitor") }));
+vi.mock("../../models/host_domain.js", () => ({ default: mocks.makeModel("HostDomain") }));
+vi.mock("../../models/proxy_host_revision.js", () => ({ default: mocks.makeModel("ProxyHostRevision") }));
+vi.mock("../../internal/host-revisions.js", () => ({
+	default: { record: vi.fn() },
+	captureHostState: vi.fn(async (id) => {
+		const row = mocks.rows.ProxyHost.find((entry) => entry.id === id);
+		return { host: structuredClone(row), files: [], fingerprint: `host-${id}` };
+	}),
+	restoreHostState: vi.fn(async ({ host }) => {
+		const row = mocks.rows.ProxyHost.find((entry) => entry.id === host.id);
+		for (const key of Object.keys(row)) delete row[key];
+		Object.assign(row, structuredClone(host));
+	}),
+}));
+vi.mock("../../lib/configuration-files.js", () => ({
+	captureConfigurationFiles: vi.fn(async () => []),
+	restoreConfigurationFiles: vi.fn(),
+}));
+vi.mock("../../internal/git-deploy.js", () => ({ default: { startPollingForHost: vi.fn(), stopPolling: vi.fn() } }));
+vi.mock("../../internal/oauth2-proxy.js", () => ({ default: { start: vi.fn(), stop: vi.fn() } }));
 vi.mock("../../models/redirection_host.js", () => ({ default: mocks.makeModel("RedirectionHost") }));
 vi.mock("../../models/dead_host.js", () => ({ default: mocks.makeModel("DeadHost") }));
 vi.mock("../../models/stream.js", () => ({ default: mocks.makeModel("Stream") }));
@@ -159,6 +183,10 @@ vi.mock("../../internal/firewall-list.js", () => ({
 vi.mock("../../internal/nginx.js", () => ({
 	default: {
 		withConfigurationLock: vi.fn((callback) => callback()),
+		getConfigName: (_type, id) => `/data/nginx/proxy_host/${id}.conf`,
+		bulkGenerateConfigGroupsUnlocked: vi.fn(async () => {
+			await nginx.reload();
+		}),
 		bulkGenerateConfigGroups: vi.fn(),
 		bulkGenerateConfigs: vi.fn(),
 		reload: vi.fn(),
@@ -427,25 +455,34 @@ describe("GitOps import sanitization and safe restore", () => {
 			staged.push(stage);
 			return stage;
 		});
-		const test = vi.spyOn(realNginx, "test").mockRejectedValueOnce(failure);
+		const test = vi.spyOn(realNginx, "test").mockResolvedValue(undefined).mockRejectedValueOnce(failure);
+		const reload = vi.spyOn(realNginx, "reload").mockImplementation(() => realNginx.test());
 		const rollback = vi.spyOn(realNginx, "rollbackStagedConfig").mockResolvedValue({ nginx_online: false });
 		const commit = vi.spyOn(realNginx, "commitStagedConfig");
-		vi.mocked(nginx.bulkGenerateConfigGroups).mockImplementationOnce(realNginx.bulkGenerateConfigGroups);
+		vi.mocked(nginx.bulkGenerateConfigGroupsUnlocked).mockImplementationOnce(
+			realNginx.bulkGenerateConfigGroupsUnlocked,
+		);
 		try {
 			const result = await gitops.importConfig(access, { overwrite: true });
 
 			expect(result.success).toBe(false);
 			expect(result.errors).toContain(failure.message);
-			expect(nginx.bulkGenerateConfigGroups).toHaveBeenCalledWith(expect.any(Array), { throwOnError: true });
-			expect(test).toHaveBeenCalledOnce();
+			expect(nginx.bulkGenerateConfigGroupsUnlocked).toHaveBeenCalledWith(expect.any(Array), {
+				throwOnError: true,
+				reload: true,
+			});
+			expect(test).toHaveBeenCalledTimes(2);
+			expect(reload).toHaveBeenCalledTimes(2);
 			expect(rollback).toHaveBeenCalledExactlyOnceWith(staged[0], failure);
 			expect(commit).not.toHaveBeenCalled();
-			expect(nginx.reload).not.toHaveBeenCalled();
+			// Failed candidates are never reloaded; compensation reloads the restored accepted files once.
+			expect(nginx.reload).toHaveBeenCalledOnce();
 			expect(mocks.rows.FirewallList.find((row) => row.id === 1).is_deleted).toBe(0);
 			expect(mocks.prunes.some(({ name }) => name === "FirewallList")).toBe(false);
 		} finally {
 			configure.mockRestore();
 			test.mockRestore();
+			reload.mockRestore();
 			rollback.mockRestore();
 			commit.mockRestore();
 		}
@@ -799,6 +836,33 @@ describe("GitOps import sanitization and safe restore", () => {
 			{ skipAutoPush: true },
 		);
 	});
+	it("omits local ACL artifact revisions from portable exports and older imports", async () => {
+		const local = "a".repeat(64);
+		mocks.rows.AccessList = [
+			{ id: 7, meta: { authorization_revision: local, note: "portable" }, items: [], clients: [] },
+		];
+		const initialize = vi.spyOn(gitops, "initRepo").mockResolvedValue();
+		const certificates = vi.spyOn(gitops, "exportCertificateFiles").mockResolvedValue();
+		try {
+			expect(await gitops.exportConfig()).toContain("/data/gitops/shieldpm-config/access-lists/7.yaml");
+			const output = vi
+				.mocked(writeConfigFile)
+				.mock.calls.find(([, filename]) => filename.endsWith("/access-lists/7.yaml"));
+			expect(yaml.load(output[2])).toMatchObject({ meta: { note: "portable" } });
+			expect(output[2]).not.toContain("authorization_revision");
+			expect(mocks.rows.AccessList[0].meta.authorization_revision).toBe(local);
+			expect(
+				gitops.sanitizeImportData("AccessList", {
+					id: 7,
+					meta: { authorization_revision: local, note: "portable" },
+					items: [],
+				}),
+			).toMatchObject({ meta: { note: "portable" } });
+		} finally {
+			initialize.mockRestore();
+			certificates.mockRestore();
+		}
+	});
 	it("exports optional HTTPS trust settings alongside a proxy host monitor", async () => {
 		mocks.rows.ProxyHost = [{ id: 1, domain_names: ["example.test"] }];
 		mocks.rows.ProxyHostMonitor = [
@@ -839,5 +903,119 @@ describe("GitOps import sanitization and safe restore", () => {
 		const result = await gitops.importConfig(access, { overwrite: true });
 		expect(result.success).toBe(false);
 		expect(mocks.prunes.some(({ name }) => name === "ProxyHostMonitor")).toBe(false);
+	});
+	it.each([false, true])("rejects imported Wasm ciphertext before writing, JSON-string meta=%s", async (encoded) => {
+		const meta = {
+			wasm_filters: [
+				{
+					id: "auth",
+					kind: "api_key",
+					enabled: true,
+					failure_mode: "closed",
+					config: { header: "x-api-key", sealed_value: "foreign-ciphertext" },
+				},
+			],
+		};
+		file("proxy-hosts", {
+			id: 1,
+			forward_scheme: "http",
+			forward_host: "127.0.0.1",
+			domain_names: ["wasm.example"],
+			meta: encoded ? JSON.stringify(meta) : meta,
+		});
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(result.errors.join(" ")).toContain("Wasm");
+		expect(mocks.writes.some((entry) => entry.name === "ProxyHost")).toBe(false);
+	});
+	it("restores a redacted Wasm API-key policy by stable ID without replacing its stored key", async () => {
+		const filter = {
+			id: "auth",
+			kind: "api_key",
+			enabled: true,
+			failure_mode: "closed",
+			config: { header: "x-api-key", sealed_value: "existing-instance-ciphertext" },
+		};
+		const prior = { id: 1, forward_scheme: "http", forward_host: "127.0.0.1", meta: { wasm_filters: [filter] } };
+		mocks.rows.ProxyHost = [prior];
+		const exported = gitops.sanitizeForExport(prior, []);
+		file("proxy-hosts", { ...exported, domain_names: ["wasm.example"] });
+		expect(await gitops.importConfig(access, { overwrite: true })).toMatchObject({ success: true });
+		expect(mocks.writes.find((entry) => entry.name === "ProxyHost").data.meta.wasm_filters[0].config).toEqual({
+			header: "x-api-key",
+			sealed_value: "existing-instance-ciphertext",
+		});
+	});
+	it("rejects a redacted API-key filter on a new host until a new key is supplied", async () => {
+		file("proxy-hosts", {
+			id: 1,
+			forward_scheme: "http",
+			forward_host: "127.0.0.1",
+			domain_names: ["wasm.example"],
+			meta: {
+				wasm_filters: [
+					{
+						id: "auth",
+						kind: "api_key",
+						enabled: true,
+						failure_mode: "closed",
+						config: { header: "x-api-key", has_secret: true },
+					},
+				],
+			},
+		});
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(result.errors.join(" ")).toContain("requires a key");
+		expect(mocks.writes.some((entry) => entry.name === "ProxyHost")).toBe(false);
+	});
+	it("exports neither plaintext Wasm credentials nor instance ciphertext", () => {
+		const exported = gitops.sanitizeForExport(
+			{
+				id: 1,
+				meta: {
+					wasm_filters: [
+						{
+							id: "auth",
+							kind: "api_key",
+							enabled: true,
+							failure_mode: "closed",
+							config: {
+								header: "x-api-key",
+								value: "plaintext-do-not-export",
+								sealed_value: "ciphertext-do-not-export",
+							},
+						},
+					],
+				},
+			},
+			[],
+		);
+		expect(JSON.stringify(exported)).not.toMatch(/plaintext-do-not-export|ciphertext-do-not-export|sealed_value/);
+		expect(exported.meta.wasm_filters[0].config).toEqual({ header: "x-api-key", has_secret: true });
+	});
+	it("preserves current pool and sealed Wasm settings when an import changes unrelated metadata", async () => {
+		const filters = [
+			{
+				id: "auth",
+				kind: "api_key",
+				enabled: true,
+				failure_mode: "closed",
+				config: { header: "x-api-key", sealed_value: "existing-ciphertext" },
+			},
+		];
+		mocks.rows.ProxyHost = [
+			{
+				id: 1,
+				forward_scheme: "http",
+				forward_host: "127.0.0.1",
+				meta: { wasm_filters: filters, upstream_pool: { enabled: false, targets: [] } },
+			},
+		];
+		file("proxy-hosts", { id: 1, meta: { note: "Unrelated restored metadata" } });
+		expect(await gitops.importConfig(access, { overwrite: true })).toMatchObject({ success: true });
+		const written = mocks.writes.find((entry) => entry.name === "ProxyHost").data;
+		expect(written.meta.wasm_filters).toEqual(filters);
+		expect(written.meta.upstream_pool).toMatchObject({ enabled: false, targets: [] });
 	});
 });

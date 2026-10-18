@@ -31,6 +31,28 @@ const DEFAULT_ANUBIS_RULES = [
 const ProxyHostSecurityTab = () => (
 	<TabsContent value={PROXY_HOST_TAB.SECURITY} className="mt-0 space-y-4">
 		<ProxyHostFirewallSettings />
+		<div className="space-y-2">
+			<Label htmlFor="waf-ruleset">
+				<T id="traffic.waf.ruleset" />
+			</Label>
+			<Field name="meta.wafRuleset">
+				{({ field, form }: FieldProps) => (
+					<select
+						id="waf-ruleset"
+						className="h-10 w-full rounded-md border bg-background px-3"
+						value={field.value || "crs"}
+						onChange={(event) => form.setFieldValue(field.name, event.target.value)}
+					>
+						<option value="base">
+							<T id="traffic.waf.base" />
+						</option>
+						<option value="crs">
+							<T id="traffic.waf.crs" />
+						</option>
+					</select>
+				)}
+			</Field>
+		</div>
 
 		<Alert variant="default" className="bg-muted/50">
 			<IconShieldLock className="h-4 w-4" />

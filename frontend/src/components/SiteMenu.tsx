@@ -109,6 +109,7 @@ const menuItems: MenuItem[] = [
 		label: "settings",
 		permissionSection: ADMIN,
 	},
+	{ to: "/settings/wasi", icon: IconDeviceDesktop, label: "wasi.title", permissionSection: ADMIN },
 ];
 
 const getMenuItem = (item: MenuItem, onClick?: () => void) => {

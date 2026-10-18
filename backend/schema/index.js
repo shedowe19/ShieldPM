@@ -23,7 +23,7 @@ const getCompiledSchema = async () => {
 				mutateInputSchema: false,
 			})
 			.then((schema) => {
-				schema.info.version = PACKAGE.version;
+				/** @type {any} */ (schema).info.version = PACKAGE.version;
 				compiledSchema = schema;
 				return schema;
 			})
