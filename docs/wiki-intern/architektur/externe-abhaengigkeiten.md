@@ -133,6 +133,46 @@ Die direkte FTP-Bibliothek ist jetzt 6.2.3, während der gezielte `get-uri`-Pin 
 Sicherheitsauflösungen und der FTP-Kompatibilitätsadapter werden unverändert übernommen. Audit-Ergebnisse
 in den folgenden datierten Abschnitten beschreiben den jeweiligen damaligen Paketstand.
 
+## Sicherheitsnachprüfung vom 27. Oktober 2026
+
+Die erneute Paketprüfung nach dem Merge von PR #157 erfasst sieben unterschiedliche Advisories in drei
+transitiven Backend-Paketen. `yarn audit --json` zählt dieselbe Warnung je Abhängigkeitspfad und meldet daher
+vor der Korrektur **17 Pfadmeldungen**: zwei hohe, neun mittlere und sechs niedrige bei 522 erfassten
+Backend-Abhängigkeiten. Das Frontend meldet bei 628 Abhängigkeiten keine Befunde; das eigenständige
+Scanner-Paket meldet bei 24 Abhängigkeiten ebenfalls keine Befunde. Die Läufe verwenden Node.js 26.12.0
+und Yarn 1.22.22. Diese Zahlen sind ein datierter Snapshot der Paket-Audits.
+
+| Paket              | Vorher | Korrigierte Version | Betroffener Pfad und Änderung                                                                        |
+| ------------------ | ------ | ------------------- | ---------------------------------------------------------------------------------------------------- |
+| `follow-redirects` | 1.16.0 | 1.16.2              | Duo Universal → Axios; gezielte Lockfile-Aktualisierung innerhalb des bestehenden Bereichs `^1.16.0` |
+| `fast-uri`         | 3.1.8  | 3.1.9               | Ajv und dessen Schema-/ORM-Aufrufer; bestehende Resolution `ajv/fast-uri` anheben                    |
+| `ip-address`       | 10.7.3 | 10.7.4              | Express Rate Limit und Proxy Agent; die beiden vorhandenen Consumer-Resolutions anheben              |
+
+`follow-redirects` korrigiert ab 1.16.1 das Entfernen vertraulicher Header bei Redirects sowohl für
+[Header-Arrays](https://github.com/follow-redirects/follow-redirects/security/advisories/GHSA-q3jh-wrc6-jgq8)
+als auch für
+[Sonderzeichen in selbst deklarierten sensiblen Headernamen](https://github.com/follow-redirects/follow-redirects/security/advisories/GHSA-8r9p-f939-6h3c).
+Das [Hersteller-Release Fast URI 3.1.9](https://github.com/fastify/fast-uri/releases/tag/v3.1.9) nennt vier
+Korrekturen: URI-Scheme-Spoofing durch Prozentkodierung (`GHSA-w74x-v6f9-j3xg`), mehrdeutige oder
+kontrollzeichenhaltige Hosts (`GHSA-wjr9-j795-jxcr`), relative Pfadnormalisierung (`GHSA-xhq7-xmqj-769h`)
+und Scheme-Injection in Suffix-Referenzen (`GHSA-333x-w4r6-6crp`).
+[IP Address 10.7.4](https://github.com/beaugunderson/ip-address/releases/tag/v10.7.4) korrigiert
+[quadratische Arbeit beim Parsen langer IPv6-Zonenkennungen](https://github.com/beaugunderson/ip-address/security/advisories/GHSA-rxp7-6hxx-x8q5).
+
+Diese Nachprüfung ersetzt weder die direkten Paketaktualisierungen aus PR #157 noch die historischen
+Nachweise weiter unten. Sie aktualisiert dessen weiterhin gesetzte Sicherheits-Pins und den betroffenen
+Redirect-Lockeintrag. Direkte Anwendungsabhängigkeiten, FTP-Adapter und Scanner-Versionen bleiben dabei
+unverändert. Lockfile-Untergrenzen und die
+[Laufzeitprüfungen der aufgelösten Consumer](../entwicklung/tests.md#sicherheitsnachprüfung-vom-27-oktober-2026)
+sichern die Korrektur und die verwendeten Schnittstellen ab.
+
+Der anschließende Backend-Audit des korrigierten Lockfiles meldet bei 522 erfassten Abhängigkeiten in allen
+Schweregraden keine bekannten Befunde. Frontend und Scanner bleiben bei ihren unveränderten Lockfiles.
+
+Die private Dependabot-Übersicht war bei dieser Prüfung nicht lesbar. Die Paket-Audits und öffentlichen
+Herstellerwarnungen sind deshalb der belegte Prüfgegenstand; eine vollständige Abnahme oder Schließung
+aller GitHub-Alerts ist damit nicht bestätigt.
+
 ## YAML-Kompatibilität beim Dependency-Update
 
 `@apidevtools/swagger-parser` 13.1.0 verwendet `@apidevtools/json-schema-ref-parser` mit `^16.0.3`.
