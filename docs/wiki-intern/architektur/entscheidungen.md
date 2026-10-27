@@ -8,7 +8,7 @@ Dokumentation wichtiger technischer Entscheidungen, die aus dem Code und der Pro
 
 ### E1: Express.js v5 statt v4
 
-Express 5 wird verwendet (`5.2.1`). Dies bringt native `async/await`-Unterstützung in Route-Handlern und einen moderneren Router.
+Express 5 wird verwendet (`5.3.0`). Dies bringt native `async/await`-Unterstützung in Route-Handlern und einen moderneren Router.
 
 ### E2: ESM statt CommonJS
 

@@ -2,7 +2,8 @@
 
 ## Zweck
 
-Dokumentation aller wesentlichen externen Abhängigkeiten und deren Zweck.
+Dokumentation aller wesentlichen externen Abhängigkeiten und deren Zweck. Die Tabellen enthalten die
+Versionsangaben aus `backend/package.json` und `frontend/package.json` im Stand von PR #157 vom 27. Oktober 2026; die exakten aufgelösten Versionen stehen in den jeweiligen `yarn.lock`-Dateien.
 
 ## Backend-Abhängigkeiten
 
@@ -10,11 +11,11 @@ Dokumentation aller wesentlichen externen Abhängigkeiten und deren Zweck.
 
 | Paket            | Version | Zweck                             |
 | ---------------- | ------- | --------------------------------- |
-| `express`        | 5.2.1   | Web-Framework                     |
-| `objection`      | 3.1.5   | ORM                               |
+| `express`        | 5.3.0   | Web-Framework                     |
+| `objection`      | 4.4.1   | ORM                               |
 | `knex`           | 3.3.0   | SQL-Query-Builder und Migrationen |
 | `better-sqlite3` | ^13.0.3 | SQLite-Treiber                    |
-| `mysql2`         | ^3.24.5 | MySQL/MariaDB-Treiber             |
+| `mysql2`         | ^3.24.6 | MySQL/MariaDB-Treiber             |
 | `pg`             | ^8.23.1 | PostgreSQL-Treiber                |
 
 ### Sicherheit
@@ -38,47 +39,50 @@ Dokumentation aller wesentlichen externen Abhängigkeiten und deren Zweck.
 | `@google/generative-ai` | ^0.24.1  | Google Gemini AI             |
 | `telegraf`              | ^4.16.3  | Telegram Bot                 |
 | `dockerode`             | ^5.0.1   | Docker API                   |
-| `isomorphic-git`        | ^1.43.1  | Git-Operationen              |
+| `isomorphic-git`        | ^1.44.5  | Git-Operationen              |
 | `ssh2`                  | ^1.17.0  | SSH-Verbindungen (Terminal)  |
 | `ws`                    | ^8.22.0  | WebSocket-Server             |
-| `systeminformation`     | ^5.33.15 | System-Info (CPU, RAM, etc.) |
+| `systeminformation`     | ^5.33.16 | System-Info (CPU, RAM, etc.) |
 
 ### Hilfsbibliotheken
 
-| Paket           | Version | Zweck                                       |
-| --------------- | ------- | ------------------------------------------- |
-| `ajv`           | ^8.20.0 | JSON-Schema-Validierung                     |
-| `lodash`        | ^4.18.1 | Utility-Funktionen                          |
-| `dayjs`         | 1.11.23 | Datums-Verarbeitung                         |
-| `liquidjs`      | 10.30.0 | Template-Engine (Nginx-Configs)             |
-| `archiver`      | ^8.0.0  | ZIP-Archivierung (GitOps Export)            |
-| `js-yaml`       | ^5.4.3  | YAML-Verarbeitung                           |
-| `cookie-parser` | ^1.4.7  | Cookie-Parsing                              |
-| `proxy-agent`   | 8.0.2   | Umgebungsbasierte ausgehende Proxys und PAC |
-| `get-uri`       | 8.0.1   | PAC-Quellen und Protokoll-Registry          |
-| `basic-ftp`     | 6.2.2   | FTP-PAC mit eigenem Stream-Handler          |
-| `punycode.js`   | 2.3.1   | Internationalisierte Domainnamen            |
-| `signale`       | 1.4.0   | Logger                                      |
+| Paket                                 | Version | Zweck                                       |
+| ------------------------------------- | ------- | ------------------------------------------- |
+| `ajv`                                 | ^8.20.0 | JSON-Schema-Validierung                     |
+| `lodash`                              | ^4.18.1 | Utility-Funktionen                          |
+| `dayjs`                               | 1.11.23 | Datums-Verarbeitung                         |
+| `liquidjs`                            | 10.30.0 | Template-Engine (Nginx-Configs)             |
+| `archiver`                            | ^8.0.0  | ZIP-Archivierung (GitOps Export)            |
+| `js-yaml`                             | ^5.5.0  | YAML-Verarbeitung                           |
+| `cookie-parser`                       | ^1.4.7  | Cookie-Parsing                              |
+| `proxy-agent`                         | 8.0.2   | Umgebungsbasierte ausgehende Proxys und PAC |
+| `get-uri`                             | 8.0.1   | PAC-Quellen und Protokoll-Registry          |
+| `basic-ftp`                           | 6.2.3   | FTP-PAC mit eigenem Stream-Handler          |
+| `@apidevtools/json-schema-ref-parser` | ^16.0.5 | JSON-Schema-Referenzen                      |
+| `punycode.js`                         | 2.3.1   | Internationalisierte Domainnamen            |
+| `signale`                             | 1.4.0   | Logger                                      |
 
 ## Frontend-Abhängigkeiten (Auswahl)
 
 | Paket                       | Version            | Zweck                                            |
 | --------------------------- | ------------------ | ------------------------------------------------ |
-| `react` / `react-dom`       | ^19.3.0            | UI-Framework                                     |
+| `react` / `react-dom`       | ^19.3.1            | UI-Framework                                     |
 | `react-router-dom`          | ^7.18.4            | Routing                                          |
-| `@tanstack/react-query`     | ^5.104.1           | Server-State                                     |
-| `@tanstack/react-table`     | 9.2.6              | Tabellen                                         |
+| `@tanstack/react-query`     | ^5.105.0           | Server-State                                     |
+| `@tanstack/react-table`     | 9.3.1              | Tabellen                                         |
 | `tailwindcss`               | ^4.3.3             | CSS-Framework                                    |
 | `@radix-ui/*`               | diverse            | Accessible UI-Primitives                         |
-| `i18next` / `react-i18next` | ^26.4.2 / ^17.0.16 | i18n                                             |
-| `react-intl`                | ^12.1.4            | ICU-Formatierung für Oberflächentexte            |
+| `i18next` / `react-i18next` | ^26.5.11 / ^17.1.9 | i18n                                             |
+| `react-intl`                | ^12.1.6            | ICU-Formatierung für Oberflächentexte            |
 | `@simplewebauthn/browser`   | ^14.0.0            | WebAuthn/Passkey im Browser                      |
-| `framer-motion`             | ^14.0.0            | Animationen                                      |
+| `framer-motion`             | ^14.7.1            | Animationen                                      |
 | `recharts`                  | ^3.10.1            | Charts (Analytics)                               |
 | `@xterm/xterm`              | ^6.0.0             | Terminal-Emulator                                |
-| `lucide-react`              | ^1.52.0            | Icons                                            |
-| `zod`                       | ^4.6.5             | Schema-Validierung                               |
-| `react-hook-form`           | ^7.89.0            | Formulare                                        |
+| `lucide-react`              | ^1.62.0            | Icons                                            |
+| `zod`                       | ^4.6.7             | Schema-Validierung                               |
+| `react-hook-form`           | ^7.91.0            | Formulare                                        |
+| `@hookform/resolvers`       | ^6.0.1             | Schema-Adapter für React Hook Form               |
+| `query-string`              | 10.0.0             | URL-Abfrageparameter                             |
 | `react-markdown`            | ^10.1.0            | Markdown-Rendering (AI Chat)                     |
 | `d3-geo`                    | ^3.1.1             | Projektion und SVG-Pfade der Analytics-Weltkarte |
 | `topojson-client`           | ^3.1.0             | TopoJSON-Umwandlung für die Analytics-Weltkarte  |
@@ -88,12 +92,15 @@ Dokumentation aller wesentlichen externen Abhängigkeiten und deren Zweck.
 
 | Paket                    | Version / Einsatz                                            |
 | ------------------------ | ------------------------------------------------------------ |
-| `@biomejs/biome`         | ^2.5.15, JS/TS-Lint und Formatierung                         |
-| `vitest`                 | Backend ^5.0.3, Frontend 5.0.3; Tests                        |
+| `@biomejs/biome`         | ^2.6.3, JS/TS-Lint und Formatierung                          |
+| `vitest`                 | Backend ^5.0.5, Frontend 5.0.5; Tests                        |
 | `@testing-library/react` | ^16.3.3 im Frontend; Komponententests                        |
 | `typescript`             | ^7.0.2 im Backend, 7.0.2 im Frontend; Typsicherheit          |
-| `@electric-sql/pglite`   | 0.5.8; Backend-Tests mit eingebetteter PostgreSQL-Engine     |
-| `vite`                   | ^8.3.3 im Backend, 8.3.3 im Frontend; Build und Testumgebung |
+| `@electric-sql/pglite`   | 0.5.12; Backend-Tests mit eingebetteter PostgreSQL-Engine    |
+| `vite`                   | ^8.3.5 im Backend, 8.3.5 im Frontend; Build und Testumgebung |
+| `happy-dom`              | ^21.0.4 im Frontend; DOM-Testumgebung                        |
+| `@playwright/test`       | ^1.64.1 im Frontend; Browser-Smokes                          |
+| `@types/node`            | ^26.6.5 in Backend und Frontend; Node-Typen                  |
 
 ### Eigenständiges Scanner-Paket
 
@@ -108,10 +115,29 @@ verwendet ausschließlich eingebaute deterministische Prüfungen und lokale AST-
 Provider-CLI oder Kontoanmeldung ist nicht erforderlich. Installation, Regelumfang und CI-Verhalten stehen in der
 [TScanner-Anleitung](../../wiki/TScanner.md).
 
+## Dependency-Update in PR #157
+
+[PR #157](https://github.com/shedowe19/ShieldPM/pull/157) aktualisiert die Anwendungsabhängigkeiten samt
+Lockfiles und Lizenznachweisen. Die Major-Wechsel betreffen Objection 3.1.5 → 4.4.1 im Backend sowie
+`@hookform/resolvers` 5.9.1 → 6.0.1, `query-string` 9.5.1 → 10.0.0 und `happy-dom` 20.14.5 → 21.0.4
+im Frontend. `happy-dom` dient ausschließlich der Testumgebung. Der separate Scanner bleibt bei seinen
+unveränderten eigenen Paketversionen.
+
+Für Objection 4 beziehen Tests `DBError` über den öffentlichen ORM-Export; reduzierte Datenbankschemas
+müssen auch die für geladene Relationen benötigten Join-Spalten enthalten. Diese Kompatibilitätskorrekturen
+liegen bereits auf `develop`. Die [Testdokumentation](../entwicklung/tests.md#dependency-kompatibilität-vom-27-oktober)
+beschreibt die reproduzierten Fehler und den erfolgreichen Update-Verifikationslauf. Die Anwendung bleibt
+bei Version 4.4.1 und Node.js 26+.
+
+Die direkte FTP-Bibliothek ist jetzt 6.2.3, während der gezielte `get-uri`-Pin 6.2.2 bleibt. Die vorhandenen
+Sicherheitsauflösungen und der FTP-Kompatibilitätsadapter werden unverändert übernommen. Audit-Ergebnisse
+in den folgenden datierten Abschnitten beschreiben den jeweiligen damaligen Paketstand.
+
 ## YAML-Kompatibilität beim Dependency-Update
 
 `@apidevtools/swagger-parser` 13.1.0 verwendet `@apidevtools/json-schema-ref-parser` mit `^16.0.3`.
-Dieser Parser verlangt bereits `js-yaml` mit `^5.4.2`; die direkte Backend-Abhängigkeit ist `^5.4.3`.
+Bereits Parser 16.0.3 verlangte `js-yaml` mit `^5.4.2`; PR #157 aktualisiert den direkten Parser auf
+`^16.0.5` und die direkte YAML-Abhängigkeit auf `^5.5.0`.
 Der frühere scoped Sicherheits-Pin `@apidevtools/swagger-parser/**/js-yaml` auf 4.3.2 ist damit inkompatibel
 und wurde mitsamt seinem ungenutzten Lockfile-Eintrag entfernt. Yarn Classic wendet einen solchen Pin trotz
 seiner Versionswarnung an; die gemeinsame YAML-Abhängigkeit konnte dadurch beim Dependency-Update mit
@@ -228,8 +254,9 @@ Der strengere Transferhost-Schutz darf dafür nicht pauschal abgeschaltet werden
 
 ## FTP-Korrektur in PR #150
 
-Das Backend bindet `basic-ftp` 6.2.2 direkt und exakt ein. Die begrenzte Resolution
-`**/get-uri/basic-ftp` setzt auch den FTP-Consumer in der PAC-Kette auf diese Version;
+Die Korrektur in PR #150 band `basic-ftp` 6.2.2 direkt und exakt ein. Seit PR #157 verwendet der direkte
+FTP-Handler 6.2.3; die begrenzte Resolution `**/get-uri/basic-ftp` bleibt bei 6.2.2 für den FTP-Consumer
+in der PAC-Kette;
 `get-uri` 8.0.1 ist für die verwendete öffentliche Protokoll-Registry ebenfalls direkt deklariert.
 Damit werden sowohl die Unix-Listing-Korrektur als auch die MLSD-/PASV-Korrekturen verwendet.
 

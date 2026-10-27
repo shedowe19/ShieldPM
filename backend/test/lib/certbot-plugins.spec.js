@@ -54,12 +54,9 @@ describe("Certbot Python target discovery", () => {
 	it("lists and loads base and target plugin entry points while preferring target dependencies", () => {
 		directory = fs.mkdtempSync(path.join(os.tmpdir(), "shieldpm-certbot-python-"));
 		const venv = path.join(directory, "venv");
-		execFileSync("python3", ["-m", "venv", "--without-pip", venv]);
-		const python = path.join(venv, "bin", "python");
-		const site = execFileSync(python, ["-c", 'import sysconfig; print(sysconfig.get_path("purelib"))'], {
-			encoding: "utf8",
-		}).trim();
+		const site = path.join(directory, "base-plugins");
 		const target = path.join(directory, "certbot-plugins");
+		fs.mkdirSync(site);
 		fs.mkdirSync(target);
 		const writeDistribution = (root, name, entryPoint, module) => {
 			fs.writeFileSync(path.join(root, `${name}.py`), module);
@@ -86,11 +83,31 @@ describe("Certbot Python target discovery", () => {
 		);
 		fs.writeFileSync(path.join(site, "fixture_dependency.py"), 'source = "base-dependency"\n');
 		fs.writeFileSync(path.join(target, "fixture_dependency.py"), 'source = "target-dependency"\n');
+		// Build only the PEP 405 layout: activation scripts and extra Python setup processes are unnecessary.
 		const output = execFileSync(
-			python,
+			"python3",
 			[
 				"-c",
-				'import importlib.metadata, json; print(json.dumps({entry.name: entry.load().source for entry in importlib.metadata.entry_points(group="certbot.plugins")}))',
+				`import os, sys, sysconfig
+from pathlib import Path
+venv = Path(sys.argv[1])
+python = venv / "bin" / "python"
+python.parent.mkdir(parents=True)
+base = Path(sys.executable).resolve()
+python.symlink_to(base)
+(venv / "pyvenv.cfg").write_text("home = " + str(base.parent) + "\\ninclude-system-site-packages = false\\n")
+site = Path(sysconfig.get_path("purelib", scheme="posix_prefix", vars={"base": str(venv)}))
+site.parent.mkdir(parents=True)
+Path(sys.argv[2]).rename(site)
+os.execv(str(python), [str(python), "-c", sys.argv[3], str(venv)])`,
+				venv,
+				site,
+				`import importlib.metadata, json, site, sys
+from pathlib import Path
+assert Path(sys.prefix) == Path(sys.argv[1])
+assert sys.prefix != sys.base_prefix
+assert site.ENABLE_USER_SITE is False
+print(json.dumps({entry.name: entry.load().source for entry in importlib.metadata.entry_points(group="certbot.plugins")}))`,
 			],
 			{ encoding: "utf8", env: { ...process.env, PYTHONPATH: target } },
 		);
