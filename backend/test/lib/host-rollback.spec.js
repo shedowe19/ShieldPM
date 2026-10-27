@@ -1,4 +1,4 @@
-import dbErrors from "db-errors";
+import { DBError } from "objection";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import errs from "../../lib/error.js";
 import { rethrowAfterHostRollback } from "../../lib/host-rollback.js";
@@ -16,7 +16,7 @@ const wrappedDatabaseFailure = () => {
 		sql: query,
 		sqlMessage: `Record has changed: ${secret}`,
 	});
-	return new dbErrors.DBError({ nativeError, client: "mysql" });
+	return new DBError({ nativeError, client: "mysql" });
 };
 
 describe("host rollback error handling", () => {

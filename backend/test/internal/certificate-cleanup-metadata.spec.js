@@ -30,7 +30,7 @@ const hostTypes = [
 	["dead_host", DeadHost],
 	["stream", Stream],
 ];
-const tables = ["certificate", ...hostTypes.map(([type]) => type)];
+const tables = ["certificate", "access_list", ...hostTypes.map(([type]) => type)];
 const tlsFields = {
 	certificate_id: 99,
 	ssl_forced: 1,
@@ -51,6 +51,7 @@ describe.each(["sqlite", "postgres"])("certificate cleanup preserves concurrent 
 		for (const name of tables) {
 			await state.db.schema.createTable(name, (table) => {
 				table.increments("id");
+				if (name === "proxy_host") table.integer("access_list_id").notNullable().defaultTo(0);
 				for (const field of ["is_deleted", "enabled", ...Object.keys(tlsFields)]) table.integer(field);
 				for (const field of ["meta", "domain_names", "modified_on"]) table.text(field);
 			});

@@ -154,6 +154,27 @@ Die Testbestandsprüfung unterscheidet Strukturprüfung und vertiefte Funktionsp
 
 Der [isolierte Kompatibilitätslauf](https://github.com/shedowe19/ShieldPM/actions/runs/38466520461) prüft die korrigierten Quellen getrennt mit der festgehaltenen und der neuesten Dependency-Linie: beide Jobs erfolgreich, jeweils 2.161 bestandene Backendtests mit vier beabsichtigten Skips, 931 Frontendtests und sieben Browser-Smokes. Typen, Locales, Produktionsbuild und Bundlebudget sowie 73 Scanner-Integrationstests bestehen ebenfalls. Die Infrastruktur schließt lokal 164 Fälle mit 21 Umgebungsskips ab; in CI bleiben zwei erwartete Skips, die echten Containersmokes decken die entsprechenden Laufzeitpfade ab. Die nur für diesen Nachweis angelegte read-only Pipeline wird nach dem Abruf der generierten Lockfiles und Paketnachweise entfernt; die regulären PR-Checks bleiben aktiv.
 
+## Dependency-Kompatibilität vom 27. Oktober
+
+Der Dependency-Updatejob `40533907145` aktualisierte Objection von 3.1.5 auf 4.4.1. Zwei Testannahmen
+verhinderten die anschließende Verifikation:
+
+- `lib/host-rollback.spec.js` importierte `db-errors`, obwohl das Paket nur eine transitive Abhängigkeit von
+  Objection 3 war. Objection 4 enthält die Fehlerklassen selbst. Der Test verwendet deshalb den öffentlichen
+  `DBError`-Export der direkt deklarierten Abhängigkeit `objection`; die echten nativen Fehlerursachen und alle
+  Prüfungen gegen die Ausgabe vertraulicher SQL-/Konfigurationswerte bleiben erhalten.
+- Das reduzierte Schema in `internal/certificate-cleanup-metadata.spec.js` enthielt weder
+  `proxy_host.access_list_id` noch die Tabelle `access_list`. Objection 4 weist einen fehlenden Join-Schlüssel
+  beim Laden der Relation ausdrücklich zurück. Die Fixture bildet nun den produktiven Fremdschlüssel mit
+  Standardwert `0` und die leere Relationstabelle ab. Die tatsächlichen Datenbankabfragen sowie die konkurrierenden
+  Metadatenänderungen und der Reload-/Rollbackpfad bleiben für SQLite und PostgreSQL/PGlite aktiv.
+
+Die Kompatibilitätsprüfung verwendet zusätzlich zu den versionierten Abhängigkeiten die unveränderten
+Manifest-/Lockfile-Artefakte des fehlgeschlagenen Jobs in einem isolierten Worktree. Dort müssen dieselben Tests,
+Backendtypen, Frontendlocales, Frontendtests, Produktionsbuild und Bundlebudget über
+`bash scripts/ci/verify-dependencies.sh` bestehen. Der Fix aktualisiert keine Anwendungsabhängigkeiten und entfernt
+keine Prüfschritte; aktuelle Dependency-Updates bleiben Aufgabe des bestehenden Updateworkflows.
+
 ## Regressionen der messbaren Optimierungen vom 17. Oktober
 
 - `frontend/src/pages/Nginx/ProxyHosts/Table.monitor-polling.test.tsx` verwendet die tatsächliche Tabelle, den
