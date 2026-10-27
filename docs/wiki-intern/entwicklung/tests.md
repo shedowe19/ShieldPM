@@ -201,6 +201,41 @@ begrenzen deshalb ihre Vorbereitung auf den tatsächlichen Prüfgegenstand:
 Die regulären Testzeitlimits und die Produktionsimplementierungen bleiben unverändert. Die übrigen Relay-Tests
 prüfen weiterhin das Anlegen und dauerhafte Schreiben von Upload-Sitzungen.
 
+## Sicherheitsnachprüfung vom 27. Oktober 2026
+
+Die [Paketnachprüfung](../architektur/externe-abhaengigkeiten.md#sicherheitsnachprüfung-vom-27-oktober-2026)
+betrifft `follow-redirects` 1.16.2 (Sicherheitsuntergrenze 1.16.1), `fast-uri` 3.1.9 und `ip-address` 10.7.4. Die Manifestprüfung in
+`backend/test/ci/npm-package-constraints.spec.js` hält die vorhandenen Consumer-Resolutions begrenzt;
+`dependabot-security-resolutions.spec.js` kontrolliert unabhängig davon alle tatsächlich im Backend-Lockfile
+aufgelösten Versionen der drei Pakete. Für `follow-redirects` genügt eine Aktualisierung des Lockeintrags
+innerhalb des von Axios bereits erlaubten Versionsbereichs; ein zusätzlicher Manifest-Override ist nicht nötig.
+
+`backend/test/lib/dependency-security-october.spec.js` ergänzt die bisherigen Kompatibilitätsproben in
+`dependency-runtime-security.spec.js` um die neuen Sicherheitsfälle. Prüfgegenstand sind die über ihre
+Consumer tatsächlich aufgelösten Pakete: vertrauliche Header bei lokalen HTTP-Redirects, die korrigierten
+URI-Scheme-/Host-/Pfadfälle sowie die Ablehnung langer ungültiger IPv6-Zonenkennungen. Die Proben
+verwenden lokale Fixtures beziehungsweise isolierte Unterprozesse und benötigen keine externen Zielserver.
+Sie ersetzen weder die Anwendungssuiten noch den erneuten Audit des endgültigen Lockfiles.
+
+Gezielt aus dem Backend-Verzeichnis unter Node.js 26+ ausführen:
+
+```bash
+yarn test --run test/ci/npm-package-constraints.spec.js test/ci/dependabot-security-resolutions.spec.js test/lib/dependency-runtime-security.spec.js test/lib/dependency-security-october.spec.js
+```
+
+Die drei eigenständigen Abhängigkeitsbäume werden zusätzlich jeweils mit `yarn audit --json` in `backend/`,
+`frontend/` und `.tscanner/` geprüft. Audit-Zahlen sind zeitgebundene Paketnachweise; sie bestätigen keine
+vollständige Sicht auf die private Dependabot-Übersicht oder die Erreichbarkeit eines Angriffs über ShieldPM.
+Ergebnisse der vollständigen Verifikation gehören zum geprüften Commit; laufende oder noch nicht
+ausgeführte Prüfungen gelten nicht als bestanden.
+
+Der lokale Abschlusslauf unter Node.js 26.12.0 und Yarn 1.22.22 besteht mit **2.630 Backendtests** bei den
+unveränderten **56 Umgebungsskips**, einschließlich aller neun neuen Sicherheitsregressionen. Die
+Backend-Typprüfung, die Biome-Prüfung der geänderten Testdateien und die gezielten bisherigen
+Dependency-Kompatibilitätsproben bestehen ebenfalls. Der Backend-Audit meldet nach der Korrektur bei
+522 erfassten Abhängigkeiten in allen Schweregraden null Befunde. Die Frontend- und Scanner-Lockfiles
+bleiben unverändert; ihre Audits melden ebenfalls null Befunde.
+
 ## Regressionen der messbaren Optimierungen vom 17. Oktober
 
 - `frontend/src/pages/Nginx/ProxyHosts/Table.monitor-polling.test.tsx` verwendet die tatsächliche Tabelle, den

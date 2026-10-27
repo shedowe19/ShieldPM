@@ -11,13 +11,13 @@ describe("npm and Yarn dependency constraints", () => {
 		expect(readManifest("backend").resolutions).toEqual({
 			"**/get-uri/basic-ftp": "6.2.2",
 			"@duosecurity/duo_universal/axios": "1.20.0",
-			"ajv/fast-uri": "3.1.8",
+			"ajv/fast-uri": "3.1.9",
 			"archiver/**/brace-expansion": "5.0.12",
 			"dockerode/@grpc/grpc-js": "1.14.5",
 			"express/**/qs": "6.16.0",
 			"express/proxy-addr": "2.0.8",
-			"express-rate-limit/ip-address": "10.7.3",
-			"proxy-agent/**/ip-address": "10.7.3",
+			"express-rate-limit/ip-address": "10.7.4",
+			"proxy-agent/**/ip-address": "10.7.4",
 			"vitest/vite/postcss/nanoid": "3.3.18",
 			"vite/postcss/source-map-js": "1.2.2",
 		});

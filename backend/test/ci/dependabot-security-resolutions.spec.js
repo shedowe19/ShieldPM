@@ -52,9 +52,10 @@ describe("Dependabot security resolutions", () => {
 		assertPatched("backend/yarn.lock", "axios", "1.20.0");
 		assertPatched("backend/yarn.lock", "basic-ftp", "6.2.2");
 		assertPatched("backend/yarn.lock", "brace-expansion", "5.0.12");
-		assertPatched("backend/yarn.lock", "fast-uri", "3.1.8");
+		assertPatched("backend/yarn.lock", "fast-uri", "3.1.9");
+		assertPatched("backend/yarn.lock", "follow-redirects", "1.16.1");
 		assertPatched("backend/yarn.lock", "@grpc/grpc-js", "1.14.5");
-		assertPatched("backend/yarn.lock", "ip-address", "10.7.3");
+		assertPatched("backend/yarn.lock", "ip-address", "10.7.4");
 		assertPatched("backend/yarn.lock", "qs", "6.16.0");
 		assertPatched("backend/yarn.lock", "proxy-addr", "2.0.8");
 		assertPatched("backend/yarn.lock", "source-map-js", "1.2.2");
