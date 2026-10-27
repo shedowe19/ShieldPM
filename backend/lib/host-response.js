@@ -1,8 +1,13 @@
 import _ from "lodash";
-import { redactWasmFilters } from "./wasm-response.js";
+import { readRetiredHostMetadata, retiredHostMetadataFields } from "./retired-host-metadata.js";
 
 // DNS credentials belong to the certificate, never to host responses or audit history.
-export const sanitizeHostMeta = (meta) => _.omit(meta, ["dns_provider_credentials", "dnsProviderCredentials"]);
+export const sanitizeHostMeta = (meta) =>
+	_.omit(readRetiredHostMetadata(meta), [
+		"dns_provider_credentials",
+		"dnsProviderCredentials",
+		...retiredHostMetadataFields,
+	]);
 
 /** Remove connection credentials from a host returned through APIs or audit metadata. */
 export const sanitizeProxyHost = (host) => {
@@ -15,8 +20,6 @@ export const sanitizeProxyHost = (host) => {
 		"terminal_private_key",
 	]);
 	if (row.meta) row.meta = sanitizeHostMeta(row.meta);
-	if (Array.isArray(row.meta?.wasm_filters))
-		row.meta = { ...row.meta, wasm_filters: redactWasmFilters(row.meta.wasm_filters) };
 	if (row.forward_host?.startsWith("/data/websites/")) {
 		row.forward_host = "(managed)";
 	}

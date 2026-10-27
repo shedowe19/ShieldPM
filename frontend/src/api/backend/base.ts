@@ -15,11 +15,8 @@ function convertKeys(value: unknown, convert: (key: string) => string): unknown 
 	return Object.fromEntries(
 		Object.entries(value).map(([key, item]) => [
 			convert(key),
-			// Header names and plugin configuration keys are data, not API field names.
-			["headers", "headers_regex", "headersRegex"].includes(key) ||
-			(key === "configuration" && ("module_id" in value || "moduleId" in value))
-				? item
-				: convertKeys(item, convert),
+			// Header names are data, not API field names.
+			["headers", "headers_regex", "headersRegex"].includes(key) ? item : convertKeys(item, convert),
 		]),
 	);
 }
@@ -174,9 +171,6 @@ interface PostArgs {
 	url: string;
 	params?: queryString.StringifiableRecord;
 	data?: object | FormData;
-	/** Upload bytes unchanged; the caller supplies the binary media type. */
-	rawBody?: Blob;
-	contentType?: string;
 	noAuth?: boolean;
 	silentAuth?: boolean;
 	/** Skip key decamelization — required for WebAuthn payloads where key casing matters */
@@ -278,7 +272,7 @@ export async function downloadPost({ url, params, data, noAuth, silentAuth }: Po
 }
 
 export async function post<T = DynamicResponse>(
-	{ url, params, data, noAuth, silentAuth, rawKeys, rawResponse, rawBody, contentType }: PostArgs,
+	{ url, params, data, noAuth, silentAuth, rawKeys, rawResponse }: PostArgs,
 	abortController?: AbortController,
 ): Promise<T> {
 	const sessionRevision = AuthStore.sessionRevision;
@@ -292,11 +286,8 @@ export async function post<T = DynamicResponse>(
 		};
 	}
 
-	let body: string | FormData | Blob | undefined;
-	if (rawBody) {
-		body = rawBody;
-		headers[contentTypeHeader] = contentType || "application/octet-stream";
-	} else if (data instanceof FormData) {
+	let body: string | FormData | undefined;
+	if (data instanceof FormData) {
 		body = data;
 	} else {
 		// If data is JSON, set the Content-Type header to 'application/json'

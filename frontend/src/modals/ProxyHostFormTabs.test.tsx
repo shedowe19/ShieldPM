@@ -45,7 +45,6 @@ vi.mock("./ProxyHostSslTab", () => ({ default: () => <div data-testid="ssl-tab" 
 
 vi.mock("./ProxyHostUpstreamPoolTab", () => ({ default: () => null }));
 vi.mock("./ProxyHostCacheTab", () => ({ default: () => null }));
-vi.mock("./ProxyHostWasmTab", () => ({ default: () => null }));
 
 const locations = [{ path: "/api" }] as ProxyLocation[];
 

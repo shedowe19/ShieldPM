@@ -17,7 +17,7 @@ Der Benutzer bestätigt dafür genau `RESTORE <Archiv-ID>`.
 ## Inhalt und Verschlüsselung
 
 Gesichert wird der Inhalt von `DATA_PATH`, standardmäßig `/data`: unter anderem Zertifikate, private
-Schlüssel, Instanzschlüssel, `.env`, generierte und eigene Nginx-Konfigurationen sowie Wasm-Artefakte.
+Schlüssel, Instanzschlüssel, `.env`, generierte und eigene Nginx-Konfigurationen sowie weitere private Instanzdateien.
 Das interne Verzeichnis `instance-backups`, ein vorhandenes `.database`-Arbeitsverzeichnis und Laufzeitsockets
 oder Gerätedateien werden ausgelassen. Die aktive SQLite-Datei samt WAL/SHM wird durch einen konsistenten
 nativen SQLite-Snapshot ersetzt. Bei PostgreSQL und MySQL/MariaDB enthält das Archiv stattdessen einen
@@ -89,14 +89,13 @@ lexikalischer Ablehnungsfilter, kein vollständiger SQL-Beweis. SQLite verwendet
 Integritäts-/Manifestprüfungen und besitzt keinen entsprechenden allgemeinen SQL-Sicherheitsfilter.
 
 Nginx wird mit getrennten Konfigurationskopien, umgeschriebenen Daten-/Runtime-Pfaden und eigenen temporären
-Verzeichnissen geprüft. Aktivierte Wasm-Ketten werden zusätzlich mit den gesicherten Instanzschlüsseln in
-einem separaten Arbeitsverzeichnis ausgeführt. Die `.env` erhält eine Syntaxprüfung mit `sh -n`, ohne sie
+Verzeichnissen geprüft. Die `.env` erhält eine Syntaxprüfung mit `sh -n`, ohne sie
 im laufenden Backend auszuführen. Diese Prüfungen garantieren weder spätere Upstream-Erreichbarkeit noch
 funktionierende externe Integrationen und machen vertrauenswürdige eigene Konfiguration nicht überflüssig.
 
 ## Aktivierung, Journal und Rollback
 
-1. Entschlüsseln, Dateihashes und Kompatibilität prüfen, Datenbankprobe durchführen und Nginx/Wasm prüfen.
+1. Entschlüsseln, Dateihashes und Kompatibilität prüfen, Datenbankprobe durchführen und Nginx prüfen.
 2. Geprüfte Dateien und gegebenenfalls den externen Klon privat vormerken. Das laufende System bleibt aktiv.
    Vor dem Neustart lässt sich der ausstehende Restore in der Oberfläche abbrechen; dabei wird sein Klon entfernt.
 3. Beim nächsten Start wendet `backup-restore.js --apply` den Restore vor `.env`, Prerun-Skripten, Migrationen
@@ -145,5 +144,4 @@ sie ersetzen keinen Restore-Test gegen die tatsächlich eingesetzte PostgreSQL-/
 
 - [Instanzbackup-API](../api/instance-backups.md)
 - [GitOps](./gitops.md)
-- [Wasm-Filter](./wasm-filter.md)
 - [Nginx-Engine](./nginx-engine.md)

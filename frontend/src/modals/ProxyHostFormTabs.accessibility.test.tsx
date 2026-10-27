@@ -23,7 +23,6 @@ vi.mock("./ProxyHostSecurityTab", () => ({ default: () => null }));
 vi.mock("./ProxyHostSslTab", () => ({ default: () => null }));
 vi.mock("./ProxyHostUpstreamPoolTab", () => ({ default: () => null }));
 vi.mock("./ProxyHostCacheTab", () => ({ default: () => null }));
-vi.mock("./ProxyHostWasmTab", () => ({ default: () => null }));
 
 import ProxyHostFormTabs from "./ProxyHostFormTabs";
 

@@ -103,9 +103,6 @@ export const cacheNamespaceFor = (host) =>
 				pool: host.meta?.upstream_pool || null,
 				cache: normalizeCachePolicy(host.meta?.cache_policy, host),
 				locations: host.locations || [],
-				filters: (Array.isArray(host.meta?.wasm_filters) ? host.meta.wasm_filters : [])
-					.filter((filter) => filter.enabled === true)
-					.map(({ id, kind }) => ({ id, kind })),
 			}),
 		)
 		.digest("hex")
@@ -131,10 +128,7 @@ export function prepareTrafficRender(host, options = { preview: false }) {
 				name: `spm_cache_${host.id}`,
 				namespace,
 				directory: preview ? path.join(dataPath(), "nginx", "cache", "preview") : cacheDirectory(host.id),
-				protected:
-					Boolean(host.access_list_id) ||
-					(Array.isArray(host.meta?.wasm_filters) &&
-						host.meta.wasm_filters.some((filter) => filter.enabled === true)),
+				protected: Boolean(host.access_list_id),
 			}
 		: null;
 	host.cache_ttl_seconds = host.cache?.routes.find((route) => route.path === "/")?.ttl_seconds ?? null;
@@ -319,10 +313,7 @@ const service = {
 			(counts.UPDATING || 0);
 		return {
 			enabled: policy?.enabled === true,
-			protected_bypass:
-				Boolean(host.access_list_id) ||
-				(Array.isArray(host.meta?.wasm_filters) &&
-					host.meta.wasm_filters.some((filter) => filter.enabled === true)),
+			protected_bypass: Boolean(host.access_list_id),
 			policy,
 			counts,
 			hit_ratio: hits + misses ? hits / (hits + misses) : null,

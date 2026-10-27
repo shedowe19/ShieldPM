@@ -20,9 +20,9 @@
 
 ### Key Features
 
-- **Proxy platform extensions**: Administrator-uploaded Proxy-Wasm modules with ordered host assignments and encrypted module configuration, weighted upstream pools, independent WAF/cache controls and encrypted host revisions. The host workspace was withdrawn at the user's request; its historic migration stays compatible with existing databases. See the [implementation evidence](./docs/wiki-intern/entwicklung/feature-implementation-2026-10-17.md).
+- **Proxy platform extensions**: Weighted upstream pools, independent WAF/cache controls and encrypted host revisions. The host workspace was withdrawn at the user's request; its historic migration stays compatible with existing databases. See the [implementation evidence](./docs/wiki-intern/entwicklung/feature-implementation-2026-10-17.md).
+- **Retired runtime**: Wasm/WASI execution, catalogs, UI, APIs and Nginx hooks were removed at the user's request. Upgrade strips only retired host metadata and ShieldPM-owned runtime fragments; ordinary Lua/auth/cache behavior remains. The separate Nginx-base change removes the compiled module and Wasmtime. See [removal and reference fix](./docs/wiki-intern/entwicklung/gitops-reference-and-runtime-removal-2026-10-27.md).
 - **Operations**: Incident center with measured coverage, durable notifications and alarm mutes; browser session revocation; encrypted full-instance backups with verified next-start restore.
-- **Standalone WASI applications**: Settings → WASI Applications runs administrator-trusted Preview 1 commands through Node's built-in WASI in fixed disposable child processes. Supports explicit arguments/environment/stdin, stdout/stderr, guest exit codes, cancellation, deadlines and bounded output. Catalog/API use `settings:update`; this is independent of Proxy-Wasm HTTP callbacks. See [runtime contract and evidence](./docs/wiki-intern/module/wasi-runtime.md).
 
 - **Proxy Management**: HTTP/HTTPS/HTTP3, Streams (TCP/UDP), Redirections, 404 Hosts.
 - **Proxy Host Observability**: Optional HTTP(S)/TCP upstream checks with bounded history and Telegram status alerts; on-demand DNS, TLS, route, upstream, auth, and WebSocket diagnostics.
@@ -72,7 +72,6 @@ The Agent must be aware of these specific versions and libraries:
   - `ngx_http_geoip2_module` (GeoIP)
   - `lua-nginx-module` (Scripting)
   - `brotli`, `zstd` (Compression)
-  - `api7/wasm-nginx-module` 0.7.0 with Wasmtime 49.0.2 (verified in Nginx 1.31.6). ShieldPM manages administrator-trusted Proxy-Wasm uploads, per-host configuration, immutable artifacts and real execution preflight. Unified artifact upload detects standalone WASI Preview 1 commands, which use the Node WASI runner independently or as per-host HTTP applications/request middleware over a private authenticated Unix bridge. Host application settings are encrypted and write-only. Current contracts: [Wasm HTTP filters](./docs/wiki-intern/module/wasm-filter.md) and [WASI applications](./docs/wiki-intern/module/wasi-runtime.md).
 * **Security Integrations**:
   - **CrowdSec**: IPS via Lua Bouncer.
   - **OpenAppSec**: AI WAF via Attachment Module.

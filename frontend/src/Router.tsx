@@ -40,7 +40,6 @@ const Profile = lazy(() => import("src/pages/Profile"));
 const DuoCallback = lazy(() => import("src/pages/DuoCallback"));
 const Incidents = lazy(() => import("src/pages/Incidents"));
 const Backups = lazy(() => import("src/pages/Settings/Backups"));
-const WasiApplications = lazy(() => import("src/pages/Settings/WasiApplications"));
 
 function Content() {
 	const location = useLocation();
@@ -53,16 +52,6 @@ function Content() {
 						<AnimatedPage>
 							<HasPermission section={PROXY_HOSTS} permission={VIEW}>
 								<Incidents />
-							</HasPermission>
-						</AnimatedPage>
-					}
-				/>
-				<Route
-					path="/settings/wasi"
-					element={
-						<AnimatedPage>
-							<HasPermission section={ADMIN} permission={VIEW}>
-								<WasiApplications />
 							</HasPermission>
 						</AnimatedPage>
 					}

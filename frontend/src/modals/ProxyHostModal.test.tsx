@@ -80,7 +80,6 @@ vi.mock("./ProxyHostSecurityTab", async () => {
 	};
 	return { default: SecurityDraft };
 });
-vi.mock("./ProxyHostWasmTab", () => ({ default: () => null }));
 vi.mock("./ProxyHostUpstreamPoolTab", () => ({ default: () => null }));
 vi.mock("./ProxyHostCacheTab", () => ({ default: () => null }));
 vi.mock("./ProxyHostSslTab", () => ({ default: () => null }));

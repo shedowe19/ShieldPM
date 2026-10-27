@@ -1,5 +1,7 @@
 # Betriebsfehler vom 18. Oktober 2026
 
+> Historischer Prüfbericht. Die damalige Wasm-/WASI-Funktion wurde am 27. Oktober 2026 auf Nutzerwunsch entfernt. Aktueller Stand: [Referenzkorrektur und Entfernung](./gitops-reference-and-runtime-removal-2026-10-27.md).
+
 ## Zweck und Ausgangslage
 
 Nach dem Instanztest von PR #156 meldete die produktive Instanz einen fehlgeschlagenen Nginx-Test mit
@@ -88,7 +90,7 @@ Der private Katalog und die unveränderlichen Artefakte verwenden dieselben gepr
 Die Ausführung verwendet den vorhandenen Node-WASI-Adapter mit festen Kindprozessen, Zeit-/Ausgabelimits
 und ohne vorgeöffnete Verzeichnisse oder geerbte Umgebung. Es werden keine Anwendungs-, Paket- oder
 Binary-Versionen geändert. Der genaue Preview-1-Vertrag und die Vertrauensgrenze stehen unter
-[WASI-Runtime](../module/wasi-runtime.md).
+[WASI-Runtime](./gitops-reference-and-runtime-removal-2026-10-27.md).
 
 ## Abschließender Prüfstand
 
@@ -119,4 +121,4 @@ besteht nach dieser gezielten Test-Isolierung ohne erhöhtes Zeitlimit.
 - [Nginx-Engine](../module/nginx-engine.md)
 - [Host-Versionen](../features/host-revisionen.md)
 - [Umsetzung der Gesamtprüfung](./feature-implementation-2026-10-17.md)
-- [WASI-Anwendungen](../module/wasi-runtime.md)
+- [WASI-Anwendungen](./gitops-reference-and-runtime-removal-2026-10-27.md)

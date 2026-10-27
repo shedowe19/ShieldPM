@@ -6,12 +6,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { PassThrough, Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { fileURLToPath } from "node:url";
 import { createGunzip, createGzip } from "node:zlib";
 import Database from "better-sqlite3";
 import Knex from "knex";
+import { up as removeRetiredHostRuntime } from "../migrations/20261027150000_remove_retired_host_runtime.js";
 import PACKAGE from "../package.json" with { type: "json" };
 import { assertSupportedDatabase, validateMysqlDump, validatePostgresCatalog } from "./backup-database-safety.js";
+import { removeRetiredHostHooks } from "./retired-host-config.js";
 
 const MAGIC = Buffer.from("SPMBKP01");
 export const MAX_BACKUP_BYTES = 8 * 1024 ** 3;
@@ -308,15 +309,6 @@ async function sqliteDescription(filename) {
 	} finally {
 		database.close();
 	}
-}
-function enabledWasmHosts(rows) {
-	if (rows.length > MAX_FILES) throw new Error("Too many hosts for a bounded restore preflight");
-	return rows
-		.map((row) => ({ ...row, meta: typeof row.meta === "string" ? JSON.parse(row.meta) : row.meta }))
-		.filter(
-			(row) =>
-				(row.enabled === true || row.enabled === 1) && row.meta?.wasm_filters?.some((filter) => filter.enabled),
-		);
 }
 async function serverDescription(connection) {
 	await assertSupportedDatabase(connection);
@@ -706,7 +698,7 @@ export class InstanceBackup {
 			await pumping.catch(() => {});
 		}
 	}
-	async restoreDatabase(manifest, data, work, keep = false) {
+	async restoreDatabase(manifest, data, work, keep = false, onRetiredHosts = (_ids) => {}) {
 		const descriptor = manifest.database;
 		const source = path.join(data, safePath(descriptor.file));
 		if (descriptor.engine !== providerName(this.config))
@@ -715,20 +707,20 @@ export class InstanceBackup {
 			const description = await sqliteDescription(source);
 			if (!sameDescription(description, { tables: descriptor.tables, migrations: descriptor.migrations }))
 				throw new Error("Backup database schema differs from its manifest");
-			const database = new Database(source, { readonly: true, fileMustExist: true });
-			try {
-				this.wasmHosts = description.tables.includes("proxy_host")
-					? enabledWasmHosts(
-							database
-								.prepare("SELECT id, enabled, meta FROM proxy_host WHERE is_deleted = 0 LIMIT ?")
-								.all(MAX_FILES + 1),
-						)
-					: [];
-			} finally {
-				database.close();
-			}
 			await fs.mkdir(path.join(data, "shieldpm"), { recursive: true, mode: 0o700 });
 			await fs.copyFile(source, path.join(data, "shieldpm/database.sqlite"));
+			if (description.tables.includes("proxy_host")) {
+				const staged = Knex({
+					client: "better-sqlite3",
+					connection: { filename: path.join(data, "shieldpm/database.sqlite") },
+					useNullAsDefault: true,
+				});
+				try {
+					onRetiredHosts(await staged.transaction(removeRetiredHostRuntime));
+				} finally {
+					await staged.destroy();
+				}
+			}
 			let configuration = {};
 			try {
 				configuration = await readJson(path.join(data, "shieldpm/default.json"));
@@ -773,14 +765,8 @@ export class InstanceBackup {
 			let description;
 			try {
 				description = await serverDescription(restored);
-				this.wasmHosts = description.tables.includes("proxy_host")
-					? enabledWasmHosts(
-							await restored("proxy_host")
-								.select("id", "enabled", "meta")
-								.where("is_deleted", 0)
-								.limit(MAX_FILES + 1),
-						)
-					: [];
+				if (description.tables.includes("proxy_host"))
+					onRetiredHosts(await restored.transaction(removeRetiredHostRuntime));
 			} finally {
 				await restored.destroy();
 			}
@@ -813,6 +799,47 @@ export class InstanceBackup {
 			await connection.raw("DROP DATABASE ??", [clone]);
 		} finally {
 			await connection.destroy();
+		}
+	}
+	async upgradeRestoredHostConfigurations(data, retiredHostIds = []) {
+		const disabled = new Set(retiredHostIds);
+		const directory = path.join(data, "nginx", "proxy_host");
+		let entries;
+		try {
+			const info = await fs.lstat(directory);
+			if (!info.isDirectory() || info.isSymbolicLink())
+				throw new Error("Restored proxy configuration must be a directory");
+			entries = await fs.readdir(directory, { withFileTypes: true });
+		} catch (error) {
+			if (error.code === "ENOENT") return;
+			throw error;
+		}
+		if (entries.length > MAX_FILES) throw new Error("Too many restored proxy configuration files");
+		for (const entry of entries) {
+			const match = /^([0-9]+)\.conf(?:\.(bak|err))?$/.exec(entry.name);
+			if (!match) continue;
+			if (disabled.has(Number(match[1]))) {
+				await fs.unlink(path.join(directory, entry.name));
+				continue;
+			}
+			if (match[2]) continue;
+			const handle = await fs.open(
+				path.join(directory, entry.name),
+				constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+			);
+			try {
+				const info = await handle.stat();
+				if (!info.isFile() || info.size > MAX_MANIFEST)
+					throw new Error("Restored proxy configuration must be a bounded file");
+				const original = await handle.readFile("utf8");
+				const clean = removeRetiredHostHooks(original);
+				if (clean !== original)
+					throw new Error(
+						"Backup contains retired request hooks without matching protected-host metadata; regenerate the host configuration before creating a new backup",
+					);
+			} finally {
+				await handle.close();
+			}
 		}
 	}
 	async nginxCheck(data, work) {
@@ -898,27 +925,6 @@ export class InstanceBackup {
 			{ timeout: 60_000 },
 		);
 	}
-	async wasmCheck(data, work) {
-		if (!this.wasmHosts?.length) return;
-		const isolated = path.join(work, "wasm-validation");
-		await fs.mkdir(path.join(isolated, "shieldpm"), { recursive: true, mode: 0o700 });
-		await fs.copyFile(path.join(data, "shieldpm/keys.json"), path.join(isolated, "shieldpm/keys.json"));
-		try {
-			await fs.cp(path.join(data, "wasm"), path.join(isolated, "wasm"), {
-				recursive: true,
-				mode: constants.COPYFILE_FICLONE,
-			});
-		} catch (error) {
-			if (error.code !== "ENOENT") throw error;
-		}
-		const hosts = path.join(work, "wasm-hosts.json");
-		await privateJson(hosts, this.wasmHosts);
-		await this.command(
-			process.execPath,
-			[fileURLToPath(new URL("../backup-wasm-preflight.js", import.meta.url)), hosts],
-			{ env: { DATA_PATH: isolated }, timeout: 300_000 },
-		);
-	}
 	async verify(id, password, { schedule = false, progress = (_phase) => {}, beforeSchedule = async () => {} } = {}) {
 		await this.initialize();
 		if (schedule && (await this.pending())) throw new Error("A restore is already pending; cancel it first");
@@ -929,10 +935,13 @@ export class InstanceBackup {
 			progress("decrypting");
 			const manifest = await this.decrypt(id, password, work);
 			progress("database");
-			clone = await this.restoreDatabase(manifest, path.join(work, "data"), work, schedule);
+			let retiredHostIds = [];
+			clone = await this.restoreDatabase(manifest, path.join(work, "data"), work, schedule, (ids) => {
+				retiredHostIds = ids;
+			});
 			progress("validating");
+			await this.upgradeRestoredHostConfigurations(path.join(work, "data"), retiredHostIds);
 			await this.validateNginx(path.join(work, "data"), work);
-			await this.wasmCheck(path.join(work, "data"), work);
 			// Validate without executing the backed-up environment file.
 			try {
 				await fs.access(path.join(work, "data/.env"));

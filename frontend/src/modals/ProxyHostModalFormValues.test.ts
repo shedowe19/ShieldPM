@@ -46,7 +46,6 @@ describe("createProxyHostInitialValues", () => {
 			maintenanceReason: "",
 			maintenanceStart: "",
 			meta: {
-				wasmFilters: [],
 				wafRuleset: "crs",
 				upstreamPool: defaultUpstreamPool(),
 				cachePolicy: defaultCachePolicy(),
@@ -251,7 +250,6 @@ describe("createProxyHostInitialValues", () => {
 		const values = createProxyHostInitialValues({ meta });
 		expect(values.meta).toStrictEqual({
 			...meta,
-			wasmFilters: [],
 			wafRuleset: "crs",
 			upstreamPool: defaultUpstreamPool(),
 			cachePolicy: defaultCachePolicy(),
@@ -274,5 +272,21 @@ describe("createProxyHostInitialValues", () => {
 			featureFlag: "preserved",
 			ipFirewall: { enabled: true, listIds: [5], allowlist: [], asnDenylist: [] },
 		});
+	});
+
+	it.each([false, true])("drops retired execution assignments from legacy metadata (json=%s)", (json) => {
+		const meta = {
+			customIntegration: { retained: true },
+			wasmFilters: [{ id: "retired-application", config: { applicationId: "saved" } }],
+			wasm_filters: [{ id: "retired-filter", config: { module_id: "saved" } }],
+		};
+		const values = createProxyHostInitialValues({
+			meta: (json ? JSON.stringify(meta) : meta) as ProxyHost["meta"],
+		});
+		expect(values.meta).toMatchObject({ customIntegration: { retained: true } });
+		expect(values.meta).not.toHaveProperty("wasmFilters");
+		expect(values.meta).not.toHaveProperty("wasm_filters");
+		expect(meta.wasmFilters).toHaveLength(1);
+		expect(meta.wasm_filters).toHaveLength(1);
 	});
 });

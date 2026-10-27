@@ -122,24 +122,6 @@ describe("recovery from an explicit CSRF rejection before route execution", () =
 		expect(new Headers(retried.headers).has("Content-Type")).toBe(false);
 	});
 
-	it("replays identical Wasm bytes and content type after CSRF recovery", async () => {
-		const binary = new File([new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0])], "tenant.wasm", {
-			type: "application/wasm",
-		});
-		const fetchMock = vi
-			.fn()
-			.mockResolvedValueOnce(csrfFailure())
-			.mockResolvedValueOnce(Response.json({ csrfToken: "fresh-csrf" }))
-			.mockResolvedValueOnce(Response.json({ id: "module" }));
-		vi.stubGlobal("fetch", fetchMock);
-		await post({ url: "/nginx/wasm/modules", rawBody: binary, contentType: "application/wasm" });
-		expect(fetchMock.mock.calls[0][1].body).toBe(binary);
-		const retried = fetchMock.mock.calls[2][1];
-		expect(retried.body).toBe(binary);
-		expect(new Headers(retried.headers).get("Content-Type")).toBe("application/wasm");
-		expect(new Headers(retried.headers).get("X-XSRF-TOKEN")).toBe("fresh-csrf");
-	});
-
 	it("recovers an authenticated POST download before creating its file", async () => {
 		const fetchMock = vi
 			.fn()

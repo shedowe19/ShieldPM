@@ -29,10 +29,12 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 
 ### Entwicklung
 
+- [Referenzkorrektur und Entfernung der Ausführungsintegration vom 27. Oktober 2026](./entwicklung/gitops-reference-and-runtime-removal-2026-10-27.md).
+
 - [Betriebsfehler vom 18. Oktober 2026](./entwicklung/runtime-fixes-2026-10-18.md) — beschädigte Nginx-Literale und vollständige temporale Host-Wiederherstellung.
 - [Umsetzung der Gesamtprüfung vom 17. Oktober 2026](./entwicklung/feature-implementation-2026-10-17.md) — Fehlerkorrekturen, Optimierungen und acht neue Funktionsbereiche mit Nachweisen.
 
-- [Gesamtprüfung und neue Features vom 17. Oktober 2026](./entwicklung/feature-review-2026-10-17.md) — neue reproduzierte Befunde, weitere Optimierungen und ausführbarer Wasm-Nachweis mit priorisierten Feature-Vorschlägen.
+- [Gesamtprüfung und neue Features vom 17. Oktober 2026](./entwicklung/feature-review-2026-10-17.md) — neue reproduzierte Befunde, weitere Optimierungen und historische Feature-Vorschläge.
 - [Optimierungsprüfung vom 13. Oktober 2026](./entwicklung/optimierungspruefung-2026-10-13.md) — 13 korrigierte Fehlerfälle und Optimierungen mit Prüfnachweisen.
 - [Messbare Performance-Optimierungen vom 17. Oktober 2026](./entwicklung/performance-optimierung-2026-10-17.md) — Statusabfragen, Monitorhistorie und Nginx-Graph-Ladevorgänge mit Vergleichsmessungen.
 - [Setup](./entwicklung/setup.md)
@@ -46,9 +48,6 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 ### Module (Backend)
 
 - [Modulübersicht](./module/README.md)
-- [Wasm-Filter](./module/wasm-filter.md)
-- [Eigenständige WASI-Anwendungen](./module/wasi-runtime.md)
-- [WASI-HTTP-Einbindung pro Host vom 18. Oktober](./entwicklung/wasi-host-integration-2026-10-18.md)
 - [Upstream-Pools](./module/upstream-pools.md)
 - [Proxy-Cache](./module/proxy-cache.md)
 - [Störungszentrale](./module/incident-center.md)

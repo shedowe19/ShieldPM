@@ -328,5 +328,12 @@
       "persisted_last_ipv4": "1.1.1.1",
       "both_return_success": true
     }
+  },
+  "historical_report": true,
+  "retirement_notice": {
+    "date": "2026-10-27",
+    "feature": "Wasm/WASI",
+    "status": "removed_at_user_request",
+    "current_report": "gitops-reference-and-runtime-removal-2026-10-27.md"
   }
 }

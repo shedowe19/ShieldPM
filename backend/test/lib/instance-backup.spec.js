@@ -4,6 +4,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { backupCommand, InstanceBackup } from "../../lib/instance-backup.js";
+import { access as retiredAccess, headers as retiredHeaders } from "../fixtures/retired-host-config.js";
 
 describe("complete encrypted instance backup", () => {
 	let directory;
@@ -83,25 +84,6 @@ describe("complete encrypted instance backup", () => {
 		expect(await engine.commit()).toBe(true);
 		expect(await engine.pending()).toBeNull();
 	});
-	it("requires Wasm preflight for enabled Proxy-Wasm and WASI policies, excluding disabled or deleted hosts", async () => {
-		const database = new Database(path.join(directory, "shieldpm/database.sqlite"));
-		database.exec(
-			"CREATE TABLE proxy_host (id INTEGER PRIMARY KEY, enabled INTEGER, is_deleted INTEGER, meta TEXT)",
-		);
-		const insert = database.prepare("INSERT INTO proxy_host VALUES (?, ?, ?, ?)");
-		const enabled = JSON.stringify({ wasm_filters: [{ enabled: true, type: "request_headers" }] });
-		insert.run(1, 1, 0, enabled);
-		insert.run(2, 0, 0, enabled);
-		insert.run(3, 1, 1, enabled);
-		insert.run(4, 1, 0, JSON.stringify({ wasm_filters: [{ enabled: false }] }));
-		insert.run(5, 1, 0, JSON.stringify({ wasm_filters: [{ kind: "application", enabled: true }] }));
-		insert.run(6, 1, 0, JSON.stringify({ wasm_filters: [{ kind: "application", enabled: false }] }));
-		database.close();
-		vi.spyOn(engine, "wasmCheck").mockResolvedValue(undefined);
-		const row = await engine.create(password);
-		await engine.verify(row.id, password);
-		expect(engine.wasmHosts.map(({ id }) => id)).toEqual([1, 5]);
-	});
 
 	it("rejects wrong passwords, truncated and modified archives without changing the instance", async () => {
 		const row = await engine.create(password);
@@ -115,6 +97,77 @@ describe("complete encrypted instance backup", () => {
 		await expect(engine.verify(row.id, password)).rejects.toThrow("Invalid backup archive");
 		expect(await engine.pending()).toBeNull();
 		expect(await fs.readFile(path.join(directory, ".env"), "utf8")).toBe("GEOIP_AUTO_UPDATE=false\n");
+	});
+	it.each(["object", "double-encoded", "serialized-bindings", "ambiguous-bindings"])(
+		"restores a legacy protected host as disabled before validation and removes only its staged listener: %s",
+		async (mode) => {
+			const database = new Database(path.join(directory, "shieldpm/database.sqlite"));
+			database.exec(
+				"CREATE TABLE proxy_host (id INTEGER PRIMARY KEY, enabled INTEGER, is_deleted INTEGER, meta TEXT)",
+			);
+			const insert = database.prepare("INSERT INTO proxy_host VALUES (?, ?, ?, ?)");
+			let metadata = { note: "retained", wasm_filters: [{ enabled: true, kind: "api_key" }] };
+			if (mode === "double-encoded") metadata = JSON.stringify(metadata);
+			if (mode === "serialized-bindings") metadata.wasm_filters = JSON.stringify(metadata.wasm_filters);
+			if (mode === "ambiguous-bindings") metadata.wasm_filters = { enabled: true };
+			insert.run(7, 1, 0, JSON.stringify(metadata));
+			insert.run(8, 1, 0, JSON.stringify({ note: "unrelated host" }));
+			database.close();
+			await fs.mkdir(path.join(directory, "nginx/proxy_host"), { recursive: true });
+			const protectedConfig = "# legacy protected listener must not become public\n";
+			const unaffectedConfig = 'server { access_by_lua_block { dofile("/data/custom.lua") } }\n';
+			await fs.writeFile(path.join(directory, "nginx/proxy_host/7.conf"), protectedConfig);
+			await fs.writeFile(path.join(directory, "nginx/proxy_host/8.conf"), unaffectedConfig);
+			validate.mockImplementation(async (data) => {
+				const staged = new Database(path.join(data, "shieldpm/database.sqlite"));
+				try {
+					const protectedHost = staged.prepare("SELECT * FROM proxy_host WHERE id=7").get();
+					expect(protectedHost.enabled).toBe(0);
+					expect(JSON.parse(protectedHost.meta)).toEqual({ note: "retained", nginx_online: false });
+					expect(staged.prepare("SELECT enabled FROM proxy_host WHERE id=8").get().enabled).toBe(1);
+				} finally {
+					staged.close();
+				}
+				await expect(fs.stat(path.join(data, "nginx/proxy_host/7.conf"))).rejects.toMatchObject({
+					code: "ENOENT",
+				});
+				expect(await fs.readFile(path.join(data, "nginx/proxy_host/8.conf"), "utf8")).toBe(unaffectedConfig);
+			});
+			const row = await engine.create(password);
+			await engine.verify(row.id, password, { schedule: true });
+			expect(await fs.readFile(path.join(directory, "nginx/proxy_host/7.conf"), "utf8")).toBe(protectedConfig);
+			await engine.apply();
+			await expect(fs.stat(path.join(directory, "nginx/proxy_host/7.conf"))).rejects.toMatchObject({
+				code: "ENOENT",
+			});
+			expect(await fs.readFile(path.join(directory, "nginx/proxy_host/8.conf"), "utf8")).toBe(unaffectedConfig);
+		},
+	);
+	it("rejects a backup whose active generated request protection disagrees with its host metadata", async () => {
+		const database = new Database(path.join(directory, "shieldpm/database.sqlite"));
+		database.exec(
+			"CREATE TABLE proxy_host (id INTEGER PRIMARY KEY, enabled INTEGER, is_deleted INTEGER, meta TEXT)",
+		);
+		database
+			.prepare("INSERT INTO proxy_host VALUES (?, ?, ?, ?)")
+			.run(7, 1, 0, JSON.stringify({ wasm_filters: [], note: "keep" }));
+		database.close();
+		await fs.mkdir(path.join(directory, "nginx/proxy_host"), { recursive: true });
+		const active = `server {\n${retiredHeaders}access_by_lua_block {\n${retiredAccess}}\nlocation / { proxy_pass http://private-upstream; }\n}\n`;
+		await fs.writeFile(path.join(directory, "nginx/proxy_host/7.conf"), active);
+		const row = await engine.create(password);
+		await expect(engine.verify(row.id, password, { schedule: true })).rejects.toThrow(
+			"without matching protected-host metadata",
+		);
+		expect(validate).not.toHaveBeenCalled();
+		expect(await engine.pending()).toBeNull();
+		expect(await fs.readFile(path.join(directory, "nginx/proxy_host/7.conf"), "utf8")).toBe(active);
+		const live = new Database(path.join(directory, "shieldpm/database.sqlite"));
+		try {
+			expect(live.prepare("SELECT enabled FROM proxy_host WHERE id=7").get().enabled).toBe(1);
+		} finally {
+			live.close();
+		}
 	});
 	it("does not schedule incompatible versions or failed Nginx rehearsals", async () => {
 		const row = await engine.create(password);

@@ -34,6 +34,12 @@ ShieldPM automatisiert die Zertifikatsverwaltung über Let's Encrypt (ACME) und 
 - Custom-Uploads schreiben das vollständige Dateipaar zunächst in ein privates Staging-Verzeichnis. Austausch, Reload und Datenbankänderung laufen unter der gemeinsamen Nginx-Konfigurationssperre; scheitert die Aktivierung, wird das vorige Dateipaar wiederhergestellt. Die Datenbank wird erst nach erfolgreichem Reload aktualisiert. Backup-Bereinigungsfehler werden protokolliert, ohne eine bereits erfolgreiche Aktivierung rückgängig zu machen.
 - Upload, manuelle Erneuerung und Löschen desselben Zertifikats schließen sich gegenseitig aus. Ein Zertifikatsprovider kann nach Erstellung nicht gewechselt werden, weil damit andere Dateipfade und ein anderer Lebenszyklus verbunden wären.
 - IDs werden vollständig als positive sichere Ganzzahlen geprüft; Werte wie `1abc` werden nicht mehr als Zertifikat 1 interpretiert. Mehrere Upload-Dateien für dasselbe PEM-Feld liefern einen Validierungsfehler.
+- Für Zertifikatszuordnungen eines Hosts sind `0` und die ältere Zeichenkette `"0"` die ausdrückliche Auswahl
+  „kein Zertifikat“. Die gemeinsame Host-Referenzprüfung lädt dafür kein Zertifikat 0; die SSL-/HSTS-Bereinigung
+  normalisiert die Auswahl auf die Zahl 0 und deaktiviert erzwungenes SSL sowie beide HSTS-Schalter. Positive
+  numerische Zeichenketten werden weiterhin mit den normalen Ressourcen- und Eigentümerrechten geprüft.
+  Das bestehende `anyOf`-Schema mit AJV-Typkonvertierung kann auch eine ursprünglich numerische Null als
+  gültige Zeichenkette zurückgeben. Die Hostprüfung ist unabhängig davon, ob GitOps eingeschaltet ist.
 - Erstellungsanfragen verwenden ein eigenes Schema (`certificate-request.json`): Let's Encrypt/interne Zertifikate brauchen mindestens einen gültigen DNS-Namen, DNS-Challenges zusätzlich Provider und nichtleere Zugangsdaten, interne Laufzeiten liegen zwischen 1 und 10 Jahren. Interne Einzelhostnamen und internationale Domainnamen werden unterstützt. Das Antwortschema beschreibt die booleschen PEM-Präsenzmarker getrennt von Eingabedaten.
 - Fehlgeschlagene interne Ausstellungen entfernen ihre Teildateien. Scheitert erst das Audit nach erfolgreicher Ausstellung, bleibt das ausgestellte Zertifikat erhalten. Alle erfolgreichen Erstellungsarten lösen den GitOps-Autopush aus.
 - Downloadnamen enthalten eine zufällige UUID; fehlende Quelldateien brechen das Archiv ab, statt ein unvollständiges ZIP als erfolgreichen Download zurückzugeben. Fehlerhafte Archive werden entfernt.
@@ -59,6 +65,8 @@ ShieldPM automatisiert die Zertifikatsverwaltung über Let's Encrypt (ACME) und 
 - `backend/test/routes/certificate-issuance-permissions.spec.js`
 - `backend/test/schema/certificate-validation.spec.js`
 - `backend/test/internal/host-expansion-permissions.spec.js` (tatsächliche Berechtigungsschemata, SQLite und interne Konfigurationspfade)
+- `backend/test/internal/third-proxy-reference-ownership.spec.js` (tatsächlicher API-Validator, numerische und
+  textuelle Nullauswahl, SSL-/HSTS-Bereinigung sowie unveränderte Eigentümerprüfung positiver Referenzen)
 
 ## Abhängigkeiten
 

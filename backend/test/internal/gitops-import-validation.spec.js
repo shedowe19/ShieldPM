@@ -904,118 +904,99 @@ describe("GitOps import sanitization and safe restore", () => {
 		expect(result.success).toBe(false);
 		expect(mocks.prunes.some(({ name }) => name === "ProxyHostMonitor")).toBe(false);
 	});
-	it.each([false, true])("rejects imported Wasm ciphertext before writing, JSON-string meta=%s", async (encoded) => {
-		const meta = {
-			wasm_filters: [
-				{
-					id: "auth",
-					kind: "api_key",
-					enabled: true,
-					failure_mode: "closed",
-					config: { header: "x-api-key", sealed_value: "foreign-ciphertext" },
-				},
-			],
-		};
-		file("proxy-hosts", {
-			id: 1,
-			forward_scheme: "http",
-			forward_host: "127.0.0.1",
-			domain_names: ["wasm.example"],
-			meta: encoded ? JSON.stringify(meta) : meta,
-		});
-		const result = await gitops.importConfig(access, { overwrite: true });
-		expect(result.success).toBe(false);
-		expect(result.errors.join(" ")).toContain("Wasm");
-		expect(mocks.writes.some((entry) => entry.name === "ProxyHost")).toBe(false);
-	});
-	it("restores a redacted Wasm API-key policy by stable ID without replacing its stored key", async () => {
-		const filter = {
-			id: "auth",
-			kind: "api_key",
-			enabled: true,
-			failure_mode: "closed",
-			config: { header: "x-api-key", sealed_value: "existing-instance-ciphertext" },
-		};
-		const prior = { id: 1, forward_scheme: "http", forward_host: "127.0.0.1", meta: { wasm_filters: [filter] } };
-		mocks.rows.ProxyHost = [prior];
-		const exported = gitops.sanitizeForExport(prior, []);
-		file("proxy-hosts", { ...exported, domain_names: ["wasm.example"] });
-		expect(await gitops.importConfig(access, { overwrite: true })).toMatchObject({ success: true });
-		expect(mocks.writes.find((entry) => entry.name === "ProxyHost").data.meta.wasm_filters[0].config).toEqual({
-			header: "x-api-key",
-			sealed_value: "existing-instance-ciphertext",
-		});
-	});
-	it("rejects a redacted API-key filter on a new host until a new key is supplied", async () => {
-		file("proxy-hosts", {
-			id: 1,
-			forward_scheme: "http",
-			forward_host: "127.0.0.1",
-			domain_names: ["wasm.example"],
-			meta: {
-				wasm_filters: [
-					{
-						id: "auth",
-						kind: "api_key",
-						enabled: true,
-						failure_mode: "closed",
-						config: { header: "x-api-key", has_secret: true },
-					},
-				],
-			},
-		});
-		const result = await gitops.importConfig(access, { overwrite: true });
-		expect(result.success).toBe(false);
-		expect(result.errors.join(" ")).toContain("requires a key");
-		expect(mocks.writes.some((entry) => entry.name === "ProxyHost")).toBe(false);
-	});
-	it("exports neither plaintext Wasm credentials nor instance ciphertext", () => {
+	it.each([false, true])(
+		"drops retired host module metadata from older backups, JSON-string meta=%s",
+		async (encoded) => {
+			const meta = {
+				note: "Preserve unrelated metadata",
+				wasm_filters: [{ config: { sealed_value: "retired-ciphertext", value: "retired-secret" } }],
+			};
+			file("proxy-hosts", {
+				id: 1,
+				forward_scheme: "http",
+				forward_host: "127.0.0.1",
+				domain_names: ["legacy.example"],
+				meta: encoded ? JSON.stringify(meta) : meta,
+			});
+			expect(await gitops.importConfig(access, { overwrite: true })).toMatchObject({ success: true });
+			const written = mocks.writes.find((entry) => entry.name === "ProxyHost").data;
+			expect(written.meta).toMatchObject({ note: "Preserve unrelated metadata" });
+			expect(written.meta).not.toHaveProperty("wasm_filters");
+			expect(JSON.stringify(written)).not.toMatch(/retired-ciphertext|retired-secret/);
+		},
+	);
+	it("omits retired module secrets when exporting an older host", () => {
 		const exported = gitops.sanitizeForExport(
 			{
 				id: 1,
 				meta: {
+					note: "Preserved",
 					wasm_filters: [
-						{
-							id: "auth",
-							kind: "api_key",
-							enabled: true,
-							failure_mode: "closed",
-							config: {
-								header: "x-api-key",
-								value: "plaintext-do-not-export",
-								sealed_value: "ciphertext-do-not-export",
-							},
-						},
+						{ config: { value: "plaintext-do-not-export", sealed_value: "ciphertext-do-not-export" } },
 					],
 				},
 			},
 			[],
+			true,
 		);
+		expect(exported.meta).toEqual({ note: "Preserved", nginx_online: false });
+		expect(exported.enabled).toBe(0);
 		expect(JSON.stringify(exported)).not.toMatch(/plaintext-do-not-export|ciphertext-do-not-export|sealed_value/);
-		expect(exported.meta.wasm_filters[0].config).toEqual({ header: "x-api-key", has_secret: true });
 	});
-	it("preserves current pool and sealed Wasm settings when an import changes unrelated metadata", async () => {
-		const filters = [
-			{
-				id: "auth",
-				kind: "api_key",
+	it("retains certificate DNS credentials required for a GitOps restore", () => {
+		const certificate = { id: 1, provider: "letsencrypt", meta: { dns_provider_credentials: "private-dns-token" } };
+		expect(gitops.sanitizeForExport(certificate, ["is_deleted"])).toEqual(certificate);
+	});
+	it.each(["api_key", "custom", "application"])(
+		"keeps an imported host disabled when removing an active legacy %s binding",
+		async (kind) => {
+			file("proxy-hosts", {
+				id: 1,
+				forward_scheme: "http",
+				forward_host: "127.0.0.1",
+				domain_names: ["private.example"],
 				enabled: true,
-				failure_mode: "closed",
-				config: { header: "x-api-key", sealed_value: "existing-ciphertext" },
-			},
-		];
+				meta: { note: "Keep private", wasm_filters: [{ id: "old", enabled: true, kind }] },
+			});
+			expect(await gitops.importConfig(access, { overwrite: true })).toMatchObject({ success: true });
+			const written = mocks.writes.find((entry) => entry.name === "ProxyHost").data;
+			expect(written.enabled).toBe(0);
+			expect(written.meta).not.toHaveProperty("wasm_filters");
+			expect(written.meta.note).toBe("Keep private");
+		},
+	);
+	it.each(["wasm_filters", "wasmFilters"])(
+		"exports a disabled host before removing active legacy bindings under %s",
+		(field) => {
+			const original = { id: 1, enabled: true, meta: { note: "Preserved", [field]: [{ enabled: true }] } };
+			const result = gitops.sanitizeForExport(original, [], true);
+			expect(result.enabled).toBe(0);
+			expect(result.meta).not.toHaveProperty(field);
+			expect(original.enabled).toBe(true);
+			expect(original.meta).toHaveProperty(field);
+		},
+	);
+	it("keeps an ordinary host enabled when its former bindings were all disabled", () => {
+		const result = gitops.sanitizeImportData("ProxyHost", {
+			id: 1,
+			enabled: true,
+			meta: { wasm_filters: [{ enabled: false }], wasmFilters: [], note: "Keep enabled" },
+		});
+		expect(result.enabled).toBe(true);
+		expect(result.meta).toEqual({ note: "Keep enabled" });
+	});
+	it("preserves the current upstream-pool policy when an import changes unrelated metadata", async () => {
 		mocks.rows.ProxyHost = [
 			{
 				id: 1,
 				forward_scheme: "http",
 				forward_host: "127.0.0.1",
-				meta: { wasm_filters: filters, upstream_pool: { enabled: false, targets: [] } },
+				meta: { upstream_pool: { enabled: false, targets: [] } },
 			},
 		];
 		file("proxy-hosts", { id: 1, meta: { note: "Unrelated restored metadata" } });
 		expect(await gitops.importConfig(access, { overwrite: true })).toMatchObject({ success: true });
 		const written = mocks.writes.find((entry) => entry.name === "ProxyHost").data;
-		expect(written.meta.wasm_filters).toEqual(filters);
 		expect(written.meta.upstream_pool).toMatchObject({ enabled: false, targets: [] });
 	});
 });

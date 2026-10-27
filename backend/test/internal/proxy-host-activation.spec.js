@@ -67,12 +67,8 @@ import errs from "../../lib/error.js";
 import { up } from "../../migrations/20261017190500_host_revisions.js";
 import router from "../../routes/nginx/proxy_hosts.js";
 
-const oldMeta = {
-	nginx_online: true,
-	wasm_filters: [
-		{ id: "old-filter", enabled: true, kind: "request_header", config: { header: "x-old", value: "old" } },
-	],
-};
+const oldMeta = { nginx_online: true, note: "previous host metadata" };
+
 describe.each(["sqlite", "postgres"])("Proxy Host activation HTTP contract with %s", (engine) => {
 	let embedded;
 	let directory;
@@ -209,17 +205,17 @@ describe.each(["sqlite", "postgres"])("Proxy Host activation HTTP contract with 
 		expect(await fs.readFile(config, "utf8")).toBe("# previous active filters\n");
 	});
 	it.each(["throw", "offline"])(
-		"preserves prior DB/filter/domain/config when activation reports %s",
+		"preserves prior DB/metadata/domain/config when activation reports %s",
 		async (mode) => {
 			vi.spyOn(nginx, "configureHost").mockImplementation(async () => {
 				await fs.writeFile(config, "# failed candidate filters\n");
-				if (mode === "throw") throw new errs.ConfigurationError("Wasm execution preflight failed");
+				if (mode === "throw") throw new errs.ConfigurationError("Nginx preflight failed");
 				return { nginx_online: false, nginx_err: "syntax rejected" };
 			});
 			const response = await update({
 				forward_host: "candidate.internal",
 				domain_names: ["candidate.test"],
-				meta: { wasm_filters: [{ id: "candidate-filter", enabled: true }] },
+				meta: { note: "candidate metadata" },
 			});
 			expect(response.status).toBe(400);
 			const saved = await state.db("proxy_host").where("id", 1).first();
@@ -236,7 +232,7 @@ describe.each(["sqlite", "postgres"])("Proxy Host activation HTTP contract with 
 		nginx.getConfigName.mockImplementation((_type, id) => path.join(directory, `${id}.conf`));
 		vi.spyOn(nginx, "configureHost").mockImplementation(async (_model, _type, host) => {
 			await fs.writeFile(nginx.getConfigName("proxy_host", host.id), "candidate");
-			throw new errs.ConfigurationError("Wasm execution failed");
+			throw new errs.ConfigurationError("Nginx execution failed");
 		});
 		const response = await fetch(`${origin}/api/nginx/proxy-hosts`, {
 			method: "POST",
@@ -246,7 +242,7 @@ describe.each(["sqlite", "postgres"])("Proxy Host activation HTTP contract with 
 				forward_scheme: "http",
 				forward_host: "candidate.internal",
 				forward_port: 80,
-				meta: { wasm_filters: [] },
+				meta: { note: "new host metadata" },
 			}),
 		});
 		expect(response.status).toBe(400);
@@ -261,7 +257,7 @@ describe.each(["sqlite", "postgres"])("Proxy Host activation HTTP contract with 
 		await fs.rm(config);
 		vi.spyOn(nginx, "configureHost").mockImplementation(async () => {
 			await fs.writeFile(config, "candidate");
-			throw new errs.ConfigurationError("Wasm execution failed");
+			throw new errs.ConfigurationError("Nginx execution failed");
 		});
 		const response = await fetch(`${origin}/api/nginx/proxy-hosts/1/enable`, { method: "POST" });
 		expect(response.status).toBe(400);
@@ -283,7 +279,7 @@ describe.each(["sqlite", "postgres"])("Proxy Host activation HTTP contract with 
 		});
 		const response = await update({ forward_host: "new.internal" });
 		expect(response.status).toBe(200);
-		expect(JSON.parse((await state.db("proxy_host").first()).meta).wasm_filters).toEqual(oldMeta.wasm_filters);
+		expect(JSON.parse((await state.db("proxy_host").first()).meta).note).toEqual(oldMeta.note);
 		expect(await state.db("proxy_host_revision")).toHaveLength(2);
 		expect(response.body.forward_host).toBe("new.internal");
 	});

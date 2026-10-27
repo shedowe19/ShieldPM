@@ -70,7 +70,14 @@ Nach erfolgreichem Revert wird ausschließlich der Backend-Prozess per SIGTERM n
 
 Proxy-Host-Änderungen einschließlich Full-Sync-Löschungen werden bis zur erfolgreichen Nginx-Aktivierung als Kandidaten behandelt. Scheitert die Aktivierung, stellt GitOps die vorherigen Datenbankfelder, Domainrelationen, Domain-Claims und exakten Konfigurationsdateien wieder her und lädt den vorherigen Stand erneut. Neue abgewiesene Hosts bleiben ausgeblendet. Vorherige und neue Domainnamen bleiben bis zum Aktivierungsergebnis reserviert. Die kurzen Datenbanktransaktionen enden vor den Nginx-Prüfungen und Reloads; dabei laufen keine langsamen Nginx-Befehle unter einer offenen Schreibtransaktion. Revisionshistorie und Laufzeitdienste übernehmen erst den angenommenen Stand.
 
-Redaktierte Wasm-Schlüssel werden innerhalb des kurzen Host-Schreibvorgangs mit dem aktuellen gespeicherten Filter desselben Hosts zusammengeführt. Eine Rotation nach dem ersten Import-Lesezugriff wird dadurch nicht durch einen älteren Ciphertext ersetzt. `gitops-proxy-activation.spec.js` prüft dies mit echten SQLite-Modellen, fehlgeschlagene Aktivierungen, Domain-Claim-Rücknahme, Full-Sync-Löschungen und exakte Dateiwiederherstellung.
+Die Metadaten früherer Host-Module werden beim Import älterer Backups und beim Export vorhandener Hosts verworfen.
+Ein Host mit zuvor aktiven Bindungen wird vor dieser Bereinigung deaktiviert, damit die Entfernung einer früheren
+Zugriffsprüfung keine zuvor geschützte Anwendung freigibt. Dies gilt für beide historischen Schreibweisen der
+Metadaten. Hosts ohne Bindungen oder mit ausschließlich deaktivierten Bindungen behalten ihren Aktivierungszustand.
+Die Bereinigung gilt für Host-Metadaten; die DNS-Zugangsdaten eines Zertifikats bleiben für dessen Wiederherstellung
+erhalten. `gitops-import-validation.spec.js` prüft beide Grenzen. `gitops-proxy-activation.spec.js` prüft mit echten
+SQLite-Modellen weiterhin fehlgeschlagene Aktivierungen, Domain-Claim-Rücknahme, Full-Sync-Löschungen und exakte
+Dateiwiederherstellung.
 
 Der Import ist weiterhin nicht als Gesamttransaktion über alle Module implementiert. Bereits erfolgreich importierte Benutzer, Zertifikate, Einstellungen und externe Integrationen können bei späteren Fehlern bestehen bleiben. ACL- und Proxy-Kandidaten erhalten die oben beschriebene Aktivierungskompensation; ein bereits erfolgreich aktivierter Stand wird wegen eines nachfolgenden Integrationsfehlers nicht zurückgenommen. GitOps verwendet `isomorphic-git` über HTTP(S); native SSH-Schlüssel-Authentifizierung wird nicht unterstützt. Die Oberfläche bietet deshalb ausschließlich Token-Authentifizierung an.
 
@@ -81,6 +88,18 @@ Die GitOps-Seite zeigt bei fehlgeschlagener Erstabfrage keine speicherbaren Stan
 Import- und Revert-Dialoge schließen nur bei einer Antwort mit `success: true`. Die Seitenzustände werden in `frontend/src/pages/Settings/GitOps.test.tsx` geprüft.
 
 ### Synchronisation und Wiederholungen
+
+Bei deaktivierter GitOps-Konfiguration werden weder Startup-Pull noch automatischer Export oder Push ausgeführt.
+Die deaktivierte Konfiguration wird unmittelbar vor der automatischen Ausführung erneut gelesen; manuelle Push-
+und Pull-Aufrufe lehnen den Netzwerkzugriff ebenfalls ab. Das Speichern von `enabled: false`, `auto_push: false`
+oder einer leeren Repository-URL entfernt zusätzlich einen noch ausstehenden Debounce-Timer. Er wird durch
+späteres Wiedereinschalten nicht wiederbelebt; erst eine neue Konfigurationsänderung plant einen neuen Backup-Lauf.
+Bereits gestartete Netzwerkoperationen werden durch das Entfernen eines Timers nicht rückwirkend abgebrochen.
+`gitops-disabled.spec.js` prüft diese Grenzen mit den tatsächlichen Service-Einstiegspunkten und kontrollierter Zeit.
+
+Die Referenzprüfung beim Erstellen eines Hosts läuft vor dessen GitOps-Autopush. `certificate_id: 0` und die
+Zeichenkette `"0"` bedeuten dort ausdrücklich „kein Zertifikat“ und dürfen keine Zertifikat-0-Abfrage auslösen.
+Dies gilt unabhängig vom GitOps-Schalter; die Ressourcenprüfung für andere Zertifikate bleibt erhalten.
 
 Jedes exportierte Modul enthält eine `.gitkeep`-Datei. Damit bleibt auch ein leeres Modul im Git-Commit erhalten und ein vollständiger Restore kann dessen letztes Objekt löschen. Fehlende Verzeichnisse älterer Backups bleiben weiterhin unverändert. `overwrite` akzeptiert nur einen echten Boolean; Fehler beim Abruf zu löschender Objekte werden als Importfehler zurückgegeben.
 

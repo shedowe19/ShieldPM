@@ -24,8 +24,6 @@ const state = vi.hoisted(() => ({
 	trafficStop: vi.fn(),
 	cleanupStart: vi.fn(),
 	cleanupStop: vi.fn(),
-	bridgePrepare: vi.fn(async () => {}),
-	bridgeStop: vi.fn(async () => {}),
 }));
 vi.mock("../../app.js", async () => {
 	const { default: express } = await import("express");
@@ -77,10 +75,6 @@ vi.mock("../../internal/terminal.js", () => ({ default: { init: state.terminal }
 vi.mock("../../internal/tor.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/wireguard.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/upload-relay.js", () => ({ default: { init: vi.fn(), stop: vi.fn(async () => {}) } }));
-vi.mock("../../internal/wasi-host-bridge.js", () => ({
-	prepareWasiHostBridge: state.bridgePrepare,
-	stopWasiHostBridges: state.bridgeStop,
-}));
 vi.mock("../../lib/db-migrate.js", () => ({ default: async () => {} }));
 vi.mock("../../lib/utils.js", () => ({ default: { execFile: vi.fn() } }));
 vi.mock("../../logger.js", () => ({ global: { info: state.info, error: state.error } }));
@@ -99,8 +93,6 @@ describe("backend listener lifecycle", () => {
 		state.backupCommit.mockResolvedValue(undefined);
 		state.migrate.mockResolvedValue(undefined);
 		state.configurationLock.mockImplementation(async (callback) => callback());
-		state.bridgePrepare.mockResolvedValue(undefined);
-		state.bridgeStop.mockResolvedValue(undefined);
 		// index-dev intentionally replaces reload; restore the production fixture per case.
 		(await import("../../internal/nginx.js")).default.reload = state.reload;
 		vi.stubEnv("SKIP_IP_RANGES", "true");
@@ -130,14 +122,12 @@ describe("backend listener lifecycle", () => {
 		vi.unstubAllEnvs();
 	});
 	it.each(["production", "development"])(
-		"waits for migrations, the WASI bridge and analytics initialization before listening in %s mode",
+		"waits for migrations and analytics initialization before listening in %s mode",
 		async (mode) => {
 			const migration = Promise.withResolvers();
 			const initialization = Promise.withResolvers();
-			const bridgeInitialization = Promise.withResolvers();
 			state.migrate.mockReturnValueOnce(migration.promise);
 			state.analyticsInit.mockReturnValueOnce(initialization.promise);
-			state.bridgePrepare.mockReturnValueOnce(bridgeInitialization.promise);
 			try {
 				if (mode === "production") await import("../../index.js");
 				else await import("../../index-dev.js");
@@ -145,10 +135,8 @@ describe("backend listener lifecycle", () => {
 				expect(state.analyticsInit).not.toHaveBeenCalled();
 				expect(state.servers).toHaveLength(0);
 				migration.resolve();
-				await vi.waitFor(() => expect(state.bridgePrepare).toHaveBeenCalledOnce());
 				expect(state.analyticsInit).not.toHaveBeenCalled();
 				expect(state.servers).toHaveLength(0);
-				bridgeInitialization.resolve();
 				await vi.waitFor(() => expect(state.analyticsInit).toHaveBeenCalledOnce());
 				expect(state.servers).toHaveLength(0);
 				initialization.resolve();
@@ -156,7 +144,6 @@ describe("backend listener lifecycle", () => {
 				expect(state.servers).toHaveLength(1);
 			} finally {
 				migration.resolve();
-				bridgeInitialization.resolve();
 				initialization.resolve();
 				await vi.waitFor(() => expect(state.completed).toBe(true));
 			}
@@ -164,12 +151,10 @@ describe("backend listener lifecycle", () => {
 	);
 
 	it.each(["production", "development"])(
-		"waits for analytics draining and WASI bridge shutdown before process exit in %s mode",
+		"waits for analytics draining before process exit in %s mode",
 		async (mode) => {
 			const stopping = Promise.withResolvers();
-			const bridgeStopping = Promise.withResolvers();
 			state.analyticsStop.mockReturnValueOnce(stopping.promise);
-			state.bridgeStop.mockReturnValueOnce(bridgeStopping.promise);
 			try {
 				if (mode === "production") await import("../../index.js");
 				else await import("../../index-dev.js");
@@ -180,16 +165,12 @@ describe("backend listener lifecycle", () => {
 				expect(handler).toBeTypeOf("function");
 				handler();
 				await vi.waitFor(() => expect(state.analyticsStop).toHaveBeenCalledOnce());
-				expect(state.bridgeStop).not.toHaveBeenCalled();
 				expect(process.exit).not.toHaveBeenCalled();
 				stopping.resolve();
-				await vi.waitFor(() => expect(state.bridgeStop).toHaveBeenCalledOnce());
 				expect(process.exit).not.toHaveBeenCalled();
-				bridgeStopping.resolve();
 				await vi.waitFor(() => expect(process.exit).toHaveBeenCalledExactlyOnceWith(0));
 			} finally {
 				stopping.resolve();
-				bridgeStopping.resolve();
 			}
 		},
 	);

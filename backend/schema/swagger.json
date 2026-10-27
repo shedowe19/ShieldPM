@@ -79,10 +79,6 @@
 		{
 			"name": "incidents",
 			"description": "Host incidents, measured availability, alarm mutes and notification delivery"
-		},
-		{
-			"name": "wasi-applications",
-			"description": "Administrator-trusted standalone WASI Preview 1 command applications"
 		}
 	],
 	"paths": {
@@ -633,21 +629,6 @@
 				"$ref": "./paths/tokens/sessions/familyID/delete.json"
 			}
 		},
-		"/nginx/wasm": {
-			"get": {
-				"$ref": "./paths/nginx/wasm/get.json"
-			}
-		},
-		"/nginx/wasm/self-test": {
-			"post": {
-				"$ref": "./paths/nginx/wasm/self-test/post.json"
-			}
-		},
-		"/nginx/wasm/hosts/{hostID}": {
-			"get": {
-				"$ref": "./paths/nginx/wasm/hosts/hostID/get.json"
-			}
-		},
 		"/nginx/proxy-hosts/{hostID}/revisions": {
 			"get": {
 				"$ref": "./paths/nginx/proxy-hosts/hostID/revisions/get.json"
@@ -765,48 +746,6 @@
 		"/nginx/proxy-hosts/options": {
 			"get": {
 				"$ref": "./paths/nginx/proxy-hosts/options/get.json"
-			}
-		},
-		"/nginx/wasm/modules": {
-			"get": {
-				"$ref": "./paths/nginx/wasm/modules/get.json"
-			},
-			"post": {
-				"$ref": "./paths/nginx/wasm/modules/post.json"
-			}
-		},
-		"/nginx/wasm/modules/{moduleID}": {
-			"get": {
-				"$ref": "./paths/nginx/wasm/modules/moduleID/get.json"
-			},
-			"delete": {
-				"$ref": "./paths/nginx/wasm/modules/moduleID/delete.json"
-			}
-		},
-		"/nginx/wasm/applications": {
-			"get": {
-				"$ref": "./paths/nginx/wasm/applications/get.json"
-			},
-			"post": {
-				"$ref": "./paths/nginx/wasm/applications/post.json"
-			}
-		},
-		"/nginx/wasm/applications/{applicationID}": {
-			"delete": {
-				"$ref": "./paths/nginx/wasm/applications/applicationID/delete.json"
-			}
-		},
-		"/nginx/wasm/applications/{applicationID}/run": {
-			"post": {
-				"$ref": "./paths/nginx/wasm/applications/applicationID/run/post.json"
-			}
-		},
-		"/nginx/wasm/artifacts": {
-			"get": {
-				"$ref": "./paths/nginx/wasm/artifacts/get.json"
-			},
-			"post": {
-				"$ref": "./paths/nginx/wasm/artifacts/post.json"
 			}
 		}
 	}

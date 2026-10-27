@@ -127,11 +127,23 @@ describe("createProxyHostPayload", () => {
 		expect(payload).toMatchObject({ accessListId: 7, meta, note: "Unrelated edit" });
 		expect(payload.meta).toStrictEqual({
 			...meta,
-			wasmFilters: [],
 			wafRuleset: "crs",
 			upstreamPool: defaultUpstreamPool(),
 			cachePolicy: defaultCachePolicy(),
 		});
 		expect(payload).not.toHaveProperty("ipFirewall");
+	});
+
+	it("does not resubmit retired execution assignments from an older open draft", () => {
+		const values = createProxyHostInitialValues();
+		values.meta = {
+			retained: { value: "keep" },
+			wasmFilters: [{ id: "retired-filter" }],
+			wasm_filters: [{ id: "retired-application" }],
+		};
+		const payload = createProxyHostPayload({ id: 73, values });
+		expect(payload.meta).toStrictEqual({ retained: { value: "keep" } });
+		expect(values.meta.wasmFilters).toHaveLength(1);
+		expect(values.meta.wasm_filters).toHaveLength(1);
 	});
 });

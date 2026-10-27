@@ -35,7 +35,7 @@ nicht automatisch umgeschrieben.
 Standardmäßig werden nur bekannte statische Dateiendungen gespeichert. Eine ausdrückliche
 Umstellung erlaubt andere öffentliche Antworten. Der Cache-Key enthält Scheme, Host und originale
 Request-URI; optional dürfen Query-Parameter ausschließlich im Static-Assets-Modus ignoriert
-werden. Ein zusätzlicher Hash aus Origin, Pool, Locations und Cache-/Wasm-Policy trennt
+werden. Ein zusätzlicher Hash aus Origin, Pool, Locations und Cache-Policy trennt
 Konfigurationsrevisionen: Eine Origin- oder Policyänderung verwendet keine alten Antworten.
 Gleichzeitige erste Abrufe teilen sich über `proxy_cache_lock` den Cache-Aufbau.
 
@@ -45,7 +45,7 @@ Es werden ausschließlich erfolgreiche 200-Antworten auf GET/HEAD gespeichert; H
 Nginx' GET-Konvertierung. Folgende Fälle umgehen sowohl das Lesen als auch das Schreiben:
 
 - Authorization-Header, Cookie-Header oder WebSocket-Upgrade.
-- Hosts mit einer Access List oder einem aktivierten Wasm-Filter, einschließlich eigener API-Key-Header.
+- Hosts mit einer Access List.
 - Antworten mit `Set-Cookie`; die native Behandlung von `private`, `no-store`, `Vary` und
   anderen Origin-Cache-Anweisungen wird nicht abgeschaltet.
 
@@ -99,8 +99,7 @@ mit einer verständlichen Eingabevalidierung abgewiesen.
 `host-traffic-policy.spec.js` prüft Grenzen, unbekannte Metadaten, Legacy-JSON, WAF-Migration,
 Purge-Berechtigung und Host-Isolation, Symlinks und begrenzte Logbeobachtung. Der echte Nginx-
 Integrationstest prüft HIT/MISS, gemeinsame GET/HEAD-Antworten, Auth-/Cookie-/Origin-Privacy-
-Bypass, unterschiedliche Route-TTLs und tatsächliches Purge. Die Wasm-Sicherheitsintegration
-wird zusätzlich mit der tatsächlichen Filterruntime geprüft.
+Bypass, unterschiedliche Route-TTLs und tatsächliches Purge.
 
 ## Verwandte Seiten
 

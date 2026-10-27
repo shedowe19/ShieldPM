@@ -190,9 +190,6 @@
 				"cache_policy": {
 					"$ref": "./cache-policy.json"
 				},
-				"wasm_filters": {
-					"$ref": "./wasm-filters.json"
-				},
 				"waf_ruleset": {
 					"enum": [
 						"base",

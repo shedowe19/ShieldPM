@@ -57,7 +57,6 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 import gitops from "../../internal/gitops.js";
 import nginx from "../../internal/nginx.js";
 import { reconcileRestoredHost } from "../../internal/proxy-host.js";
-import { decrypt, encrypt } from "../../lib/encryption.js";
 import { withHostDomainClaims } from "../../lib/host-domain-claims.js";
 import HostDomain from "../../models/host_domain.js";
 import { HostDomainClaimOwner } from "../../models/host_domain_claim.js";
@@ -65,15 +64,6 @@ import ProxyHost from "../../models/proxy_host.js";
 import Revision from "../../models/proxy_host_revision.js";
 
 const access = { can: async () => ({ permission_visibility: "all" }), token: { getUserId: () => 1 } };
-const filters = (value) => [
-	{
-		id: "auth",
-		kind: "api_key",
-		enabled: true,
-		failure_mode: "closed",
-		config: { header: "x-api-key", sealed_value: encrypt(value) },
-	},
-];
 const configFile = (id) => path.join(state.directory, `${id}.conf`);
 const importedFile = (id) => path.join(state.directory, "shieldpm-config", "proxy-hosts", `${id}.yaml`);
 const writeImport = (data) => fs.writeFile(importedFile(data.id), JSON.stringify(data));
@@ -104,7 +94,7 @@ describe("GitOps proxy accepted-state boundary with real SQLite and configuratio
 				forward_port: 8080,
 				forward_scheme: "http",
 				enabled: true,
-				meta: { nginx_online: true, wasm_filters: filters("old-key") },
+				meta: { nginx_online: true, note: "accepted metadata" },
 				host_domains: [{ domain_name: "old.example" }],
 			}),
 		);
@@ -123,31 +113,6 @@ describe("GitOps proxy accepted-state boundary with real SQLite and configuratio
 		await fs.rm(state.directory, { recursive: true, force: true });
 	});
 	afterAll(async () => state.database.destroy());
-	it("preserves a secret rotated after the initial read when the imported key is redacted", async () => {
-		await writeImport({
-			id: 1,
-			domain_names: ["old.example"],
-			meta: {
-				wasm_filters: [
-					{
-						id: "auth",
-						kind: "api_key",
-						enabled: true,
-						failure_mode: "closed",
-						config: { header: "x-api-key", has_secret: true },
-					},
-				],
-			},
-		});
-		state.validation = async () => {
-			state.validation = null;
-			await ProxyHost.query()
-				.findById(1)
-				.patch({ meta: { nginx_online: true, wasm_filters: filters("rotated-key") } });
-		};
-		expect(await importAll()).toMatchObject({ success: true, imported: 1 });
-		expect(decrypt((await row()).meta.wasm_filters[0].config.sealed_value)).toBe("rotated-key");
-	});
 	it("records a successfully activated import and releases only the previous domain claims", async () => {
 		await writeImport({ id: 1, domain_names: ["accepted.example"], forward_port: 9000 });
 		vi.mocked(nginx.bulkGenerateConfigGroupsUnlocked).mockImplementationOnce(async () => {
@@ -187,17 +152,7 @@ describe("GitOps proxy accepted-state boundary with real SQLite and configuratio
 			id: 1,
 			domain_names: ["candidate.example"],
 			forward_port: 9000,
-			meta: {
-				wasm_filters: [
-					{
-						id: "auth",
-						kind: "api_key",
-						enabled: true,
-						failure_mode: "closed",
-						config: { header: "x-api-key", value: "candidate-key" },
-					},
-				],
-			},
+			meta: { note: "candidate metadata" },
 		});
 		vi.mocked(nginx.bulkGenerateConfigGroupsUnlocked).mockImplementationOnce(async (_groups, options) => {
 			expect(options).toEqual({ throwOnError: true, reload: true });
@@ -207,7 +162,7 @@ describe("GitOps proxy accepted-state boundary with real SQLite and configuratio
 				"old.example",
 			]);
 			await fs.writeFile(configFile(1), "# rejected candidate configuration\n");
-			throw new Error("Wasm preflight rejected candidate");
+			throw new Error("Nginx rejected candidate");
 		});
 		expect(await importAll()).toMatchObject({ success: false, imported: 0 });
 		expect(JSON.parse(JSON.stringify(await row()))).toEqual(previous);

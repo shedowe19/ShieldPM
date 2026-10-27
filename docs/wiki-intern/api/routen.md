@@ -44,21 +44,6 @@ Detaillierte Auflistung aller API-Routen-Dateien.
 | `ddns_providers.js`    | `/api/nginx/ddns-providers`                   |
 | `analytics.js`         | `/api/nginx/analytics`                        |
 | `upload-relay.js`      | `/api/nginx/proxy-hosts/:hostId/upload-relay` |
-| `wasm.js`              | `/api/nginx/wasm`                             |
-| `wasi-applications.js` | `/api/nginx/wasm/applications`                |
-
-### Eigenständige WASI-Anwendungen
-
-`GET/POST /api/nginx/wasm/artifacts` bietet die gemeinsame Hostauswahl und den automatisch erkannten
-Upload als `{runtime, artifact}`. Lesen benötigt `proxy_hosts:list`, Upload `settings:update`.
-WASI-Hostbindungen werden über die bestehende Host-CRUD-API in `meta.wasm_filters` gespeichert;
-der private Unix-Ausführungsadapter ist ausdrücklich kein öffentlicher API-Endpunkt.
-
-`GET`/`POST /api/nginx/wasm/applications`, `DELETE /:applicationID` und
-`POST /:applicationID/run` erfordern `settings:update`. Sie verwalten eigenständige WASI-Preview-1-Kommandos
-mit `_start` unabhängig von den Proxy-Wasm-HTTP-Filtern. Die Startantwort enthält Ausgabe, Status und
-WASI-Exitcode; ein Verbindungsabbruch beendet die tatsächliche Ausführung. Verträge, Ressourcenlimits
-und Vertrauensgrenzen stehen unter [WASI-Anwendungen](../module/wasi-runtime.md).
 
 ### Proxy-Host-Konfigurationsvorschau
 

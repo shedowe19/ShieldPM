@@ -1,8 +1,0 @@
-{
-  "version": "1.0.0",
-  "abi": "0.2.1",
-  "module": "api7/wasm-nginx-module",
-  "file": "policy.wasm",
-  "sha256": "1909012204c72bde2ada72537bc0cd404f7b58be65f7d6ecbb2823a30b8c4ba0",
-  "source_sha256": "64510466fb8cf68e41e4e740d234d045e27a1d4224a4d978b4a80300f0601dea"
-}

@@ -17,7 +17,6 @@ import ProxyHostNotesTab from "./ProxyHostNotesTab";
 import ProxyHostSecurityTab from "./ProxyHostSecurityTab";
 import ProxyHostSslTab from "./ProxyHostSslTab";
 import ProxyHostUpstreamPoolTab from "./ProxyHostUpstreamPoolTab";
-import ProxyHostWasmTab from "./ProxyHostWasmTab";
 
 type Props = {
 	errorMessage?: ReactNode;
@@ -43,9 +42,6 @@ const ProxyHostFormTabs = ({ errorMessage, hostId, locations }: Props) => (
 				</TabsTrigger>
 				<TabsTrigger value="cache">
 					<T id="traffic.cache.tab" />
-				</TabsTrigger>
-				<TabsTrigger value="wasm">
-					<T id="proxy-host.wasm.tab" />
 				</TabsTrigger>
 				<TabsTrigger value={PROXY_HOST_TAB.SECURITY} aria-label={intl.formatMessage({ id: "user.security" })}>
 					<IconShieldLock size={20} />
@@ -98,7 +94,6 @@ const ProxyHostFormTabs = ({ errorMessage, hostId, locations }: Props) => (
 				<ProxyHostSslTab />
 				<ProxyHostUpstreamPoolTab hostId={hostId} />
 				<ProxyHostCacheTab hostId={hostId} />
-				<ProxyHostWasmTab />
 				<ProxyHostSecurityTab />
 				<ProxyHostAdvancedTab />
 				<ProxyHostMaintenanceTab />

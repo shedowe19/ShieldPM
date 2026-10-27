@@ -250,8 +250,8 @@ describe.each(["sqlite", "postgres"])("access-list activation with %s", (engine)
 			await fs.writeFile(path.join(directory, "index.html"), "WORKING");
 			await fs.mkdir(path.join(directory, "logs"));
 			const master = path.join(directory, "running.conf");
-			const luaPath = process.env.SHIELDPM_NGINX_TEST_LUA_PATH || process.env.SHIELDPM_WASM_LUA_PATH;
-			const luaCpath = process.env.SHIELDPM_NGINX_TEST_LUA_CPATH || process.env.SHIELDPM_WASM_LUA_CPATH;
+			const luaPath = process.env.SHIELDPM_NGINX_TEST_LUA_PATH;
+			const luaCpath = process.env.SHIELDPM_NGINX_TEST_LUA_CPATH;
 			const original = `server { listen 127.0.0.1:${port}; root ${directory}; location / { auth_basic "test"; auth_basic_user_file ${auth}; } }\n`;
 			await fs.writeFile(hostfile, original);
 			await fs.writeFile(

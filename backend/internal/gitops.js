@@ -16,8 +16,9 @@ import { normalizeFirewallPolicy } from "../lib/firewall-policy.js";
 import { assertNoSymlinkPath, assertSafeConfigTree, writeConfigFile } from "../lib/gitops-files.js";
 import { withImportedIdSequence } from "../lib/gitops-sequences.js";
 import { withHostDomainClaims } from "../lib/host-domain-claims.js";
+import { sanitizeHostMeta } from "../lib/host-response.js";
 import { notifyProxyHostDomainsChanged } from "../lib/proxy-host-domain-events.js";
-import { redactWasmFilters } from "../lib/wasm-response.js";
+import { retireHostRuntime } from "../lib/retired-host-metadata.js";
 import { global as logger } from "../logger.js";
 import AccessList from "../models/access_list.js";
 import Certificate from "../models/certificate.js";
@@ -317,8 +318,15 @@ const sanitizeImportData = (modelName, data) => {
 		}
 		Object.assign(result, normalized);
 	}
-	if (modelName === "ProxyHost" && result.meta && Object.hasOwn(result.meta, "ip_firewall")) {
-		result.meta = { ...result.meta, ip_firewall: normalizeFirewallPolicy(result.meta.ip_firewall) };
+	if (modelName === "ProxyHost" && result.meta !== undefined) {
+		let meta = result.meta;
+		for (let depth = 0; depth < 2 && typeof meta === "string"; depth++) meta = JSON.parse(meta);
+		if (!meta || typeof meta !== "object" || Array.isArray(meta))
+			throw new errs.ValidationError("Imported Proxy Host metadata must be an object");
+		Object.assign(result, retireHostRuntime({ ...result, meta }));
+		result.meta = sanitizeHostMeta(result.meta);
+		if (Object.hasOwn(result.meta, "ip_firewall"))
+			result.meta.ip_firewall = normalizeFirewallPolicy(result.meta.ip_firewall);
 	}
 	return result;
 };
@@ -467,6 +475,13 @@ const internalGitOps = {
 				value: newConfig.enabled ? "enabled" : "disabled",
 				meta: newConfig,
 			});
+		if (
+			(!newConfig.enabled || !newConfig.auto_push || !newConfig.repository_url) &&
+			internalGitOps._autoPushTimer
+		) {
+			clearTimeout(internalGitOps._autoPushTimer);
+			internalGitOps._autoPushTimer = null;
+		}
 
 		logger.info("GitOps configuration updated");
 		return internalGitOps.getConfig();
@@ -593,7 +608,7 @@ const internalGitOps = {
 		for (const host of proxyHosts) {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "proxy-hosts", filename);
-			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"]);
+			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"], true);
 			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -625,7 +640,7 @@ const internalGitOps = {
 		for (const host of redirectionHosts) {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "redirection-hosts", filename);
-			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"]);
+			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"], true);
 			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -635,7 +650,7 @@ const internalGitOps = {
 		for (const host of deadHosts) {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "dead-hosts", filename);
-			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"]);
+			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"], true);
 			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -645,7 +660,7 @@ const internalGitOps = {
 		for (const stream of streams) {
 			const filename = `${stream.id}-${stream.incoming_port || "unknown"}.yaml`;
 			const filePath = path.join(configDir, "streams", filename);
-			const exportData = internalGitOps.sanitizeForExport(stream, ["is_deleted"]);
+			const exportData = internalGitOps.sanitizeForExport(stream, ["is_deleted"], true);
 			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -860,12 +875,13 @@ const internalGitOps = {
 	 * Sanitize an object for export (remove sensitive/internal fields)
 	 * @param {Object} obj
 	 * @param {string[]} excludeFields
+	 * @param {boolean} [hostMetadata] - Apply host-only metadata rules without stripping certificate credentials.
 	 * @returns {Object}
 	 */
-	sanitizeForExport: (obj, excludeFields) => {
-		const result = { ...obj };
-		if (Array.isArray(result.meta?.wasm_filters))
-			result.meta = { ...result.meta, wasm_filters: redactWasmFilters(result.meta.wasm_filters) };
+	sanitizeForExport: (obj, excludeFields, hostMetadata = false) => {
+		const result = hostMetadata ? retireHostRuntime(obj) : { ...obj };
+		if (hostMetadata && result.meta && typeof result.meta === "object" && !Array.isArray(result.meta))
+			result.meta = sanitizeHostMeta(result.meta);
 		for (const field of excludeFields) {
 			delete result[field];
 		}
@@ -2030,6 +2046,7 @@ const internalGitOps = {
 
 		// Debounce: wait 5 seconds before pushing (batch multiple changes)
 		internalGitOps._autoPushTimer = setTimeout(async () => {
+			internalGitOps._autoPushTimer = null;
 			try {
 				const config = await internalGitOps.getConfigInternal();
 				if (!config.enabled || !config.auto_push || !config.repository_url) {

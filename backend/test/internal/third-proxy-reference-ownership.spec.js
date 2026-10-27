@@ -19,6 +19,8 @@ vi.mock("../../internal/certbot.js", () => ({}));
 vi.mock("../../internal/pki.js", () => ({ default: {} }));
 
 import host from "../../internal/host.js";
+import apiValidator from "../../lib/validator/api.js";
+import common from "../../schema/common.json" with { type: "json" };
 
 const access = (visibility) => ({
 	can: vi.fn().mockResolvedValue({ permission_visibility: visibility }),
@@ -50,6 +52,36 @@ describe("host resource ownership through real service queries", () => {
 	it.each(["certificate_id", "access_list_id"])("permits the owner's %s", async (field) => {
 		await expect(host.validateReferences(access("user"), { [field]: 1 })).resolves.toBeUndefined();
 	});
+	it.each([0, "0"])("accepts a cleared certificate reference %s through the actual API validator", async (id) => {
+		const data = await apiValidator(
+			{ type: "object", properties: { certificate_id: common.properties.certificate_id } },
+			{ certificate_id: id, ssl_forced: true, hsts_enabled: true, hsts_subdomains: true },
+		);
+		await expect(host.validateReferences(access("user"), data)).resolves.toBeUndefined();
+		expect(host.cleanSslHstsData(false, data)).toMatchObject({
+			certificate_id: 0,
+			ssl_forced: false,
+			hsts_enabled: false,
+			hsts_subdomains: false,
+		});
+	});
+	it.each(["certificate_id", "access_list_id"])("accepts a legacy string zero for %s", async (field) => {
+		const user = access("user");
+		await expect(host.validateReferences(user, { [field]: "0" })).resolves.toBeUndefined();
+		expect(user.can).not.toHaveBeenCalled();
+	});
+	it.each(["certificate_id", "access_list_id"])(
+		"keeps string references subject to owner authorization for %s",
+		async (field) => {
+			await expect(host.validateReferences(access("user"), { [field]: "1" })).resolves.toBeUndefined();
+			await expect(host.validateReferences(access("user"), { [field]: "2" })).rejects.toMatchObject({
+				status: 404,
+			});
+			await expect(host.validateReferences(access("all"), { [field]: "3" })).rejects.toMatchObject({
+				status: 404,
+			});
+		},
+	);
 	it.each(["certificate_id", "access_list_id"])("rejects another owner's %s", async (field) => {
 		await expect(host.validateReferences(access("user"), { [field]: 2 })).rejects.toMatchObject({ status: 404 });
 	});

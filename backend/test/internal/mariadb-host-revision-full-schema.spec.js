@@ -67,6 +67,10 @@ suite("MariaDB host revisions with every production migration", () => {
 			backendSourcePath("lib", "host-domain-claim-key.js"),
 			path.join(state.directory, "lib", "host-domain-claim-key.js"),
 		);
+		await fs.copyFile(
+			backendSourcePath("lib", "retired-host-metadata.js"),
+			path.join(state.directory, "lib", "retired-host-metadata.js"),
+		);
 		await fs.writeFile(
 			path.join(state.directory, "logger.js"),
 			"export const migrate = { info() {}, warn() {} };\n",

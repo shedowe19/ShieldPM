@@ -17,7 +17,6 @@ import type {
 	UiColor,
 } from "src/types/enums";
 import type { CachePolicy, UpstreamPoolPolicy } from "./hostTrafficPolicy";
-import type { WasmFilter } from "./wasm";
 
 export interface UserPermissions {
 	id?: number;
@@ -193,7 +192,6 @@ export interface ProxyHost {
 		ipFirewall?: FirewallPolicy;
 		nginxOnline?: boolean;
 		nginxErr?: string;
-		wasmFilters?: WasmFilter[];
 		upstreamPool?: UpstreamPoolPolicy;
 		cachePolicy?: CachePolicy;
 		wafRuleset?: "base" | "crs";

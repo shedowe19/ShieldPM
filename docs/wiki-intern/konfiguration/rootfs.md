@@ -177,6 +177,13 @@ Die Infrastrukturtests prüfen Dateirechte, wiederholte Pfadkonfiguration, Defau
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
+## Zurückgenommene Ausführungsintegration
+
+Die früheren Wasm-/WASI-Build- und Image-Smokes sind entfernt; die übrigen Nginx-, GeoIP-, Auth-, Native- und
+LXC-Prüfungen bleiben aktiv. Beim Start wird nur der alte verwaltete Runtimeblock samt Anwendungslua bereinigt.
+Die kompilierte Basis wird über den separaten Nginx-PR zurückgenommen. Reihenfolge und Übergangsregeln stehen
+im [Entfernungsbericht](../entwicklung/gitops-reference-and-runtime-removal-2026-10-27.md).
+
 ## Verwandte Seiten
 
 - [Build](../entwicklung/build.md)

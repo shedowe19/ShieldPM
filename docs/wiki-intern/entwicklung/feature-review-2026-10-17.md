@@ -1,5 +1,7 @@
 # Gesamtprüfung und neue Features vom 17. Oktober 2026
 
+> Historischer Prüfbericht. Die damalige Wasm-/WASI-Funktion wurde am 27. Oktober 2026 auf Nutzerwunsch entfernt. Aktueller Stand: [Referenzkorrektur und Entfernung](./gitops-reference-and-runtime-removal-2026-10-27.md).
+
 ## Zweck und Prüfstand
 
 Erneute Prüfung von ShieldPM auf Fehler, weitere Optimierungen und neue Funktionen, besonders Wasm.

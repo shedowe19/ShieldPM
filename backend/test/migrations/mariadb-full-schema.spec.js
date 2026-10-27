@@ -48,6 +48,10 @@ const createMigrationDirectory = () => {
 		backendSourcePath("lib", "host-domain-claim-key.js"),
 		join(root, "lib", "host-domain-claim-key.js"),
 	);
+	fs.copyFileSync(
+		backendSourcePath("lib", "retired-host-metadata.js"),
+		join(root, "lib", "retired-host-metadata.js"),
+	);
 	fs.writeFileSync(join(root, "logger.js"), "export const migrate = { info() {}, warn() {} };\n");
 	fs.writeFileSync(
 		join(root, "internal", "nginx.js"),

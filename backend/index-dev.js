@@ -22,7 +22,6 @@ const [
 	{ migrateUp },
 	{ getCompiledSchema },
 	{ default: setup },
-	{ prepareWasiHostBridge, stopWasiHostBridges },
 ] = await Promise.all([
 	import("./app.js"),
 	import("./internal/analytics.js"),
@@ -38,7 +37,6 @@ const [
 	import("./migrate.js"),
 	import("./schema/index.js"),
 	import("./setup.js"),
-	import("./internal/wasi-host-bridge.js"),
 ]);
 
 // Monkey patch internalNginx
@@ -88,7 +86,6 @@ async function start() {
 	try {
 		logger.info("Starting DB Migration...");
 		await migrateUp();
-		await prepareWasiHostBridge();
 		await analyticsService.init();
 		logger.info("Starting Setup...");
 		await setup();
@@ -121,7 +118,6 @@ async function start() {
 					await internalHostTraffic.stop();
 					await internalSessionCleanup.stop();
 					await analyticsService.stop();
-					await stopWasiHostBridges();
 					process.exit(0);
 				});
 			};

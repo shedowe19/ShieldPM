@@ -37,7 +37,7 @@ vi.mock("../../internal/host.js", () => ({
 vi.mock("../../internal/upload-relay.js", () => ({ validateRelayConfigForHost: vi.fn() }));
 vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn() } }));
 
-import service, { captureHostState, redactRevision } from "../../internal/host-revisions.js";
+import service, { captureHostState, redactRevision, restoreHostState } from "../../internal/host-revisions.js";
 import nginx from "../../internal/nginx.js";
 import { up } from "../../migrations/20261017190500_host_revisions.js";
 import Revision from "../../models/proxy_host_revision.js";
@@ -136,7 +136,7 @@ describe.each(["sqlite", "postgres"])("host revisions with %s", (engine) => {
 			forward_port: 80,
 			advanced_config: "proxy_set_header Authorization SUPERSECRET;",
 			terminal_password: "SECRET-ENCRYPTED-PASSWORD",
-			meta: JSON.stringify({ wasm: { configuration: { authorization: "SECRET" } } }),
+			meta: JSON.stringify({ policy: { configuration: { authorization: "SECRET" } } }),
 			domain_names: "[]",
 			locations: "[]",
 		});
@@ -169,6 +169,53 @@ describe.each(["sqlite", "postgres"])("host revisions with %s", (engine) => {
 			nested: { configuration: "[REDACTED]" },
 		});
 		expect((await service.list(access(), 1))[0]).not.toHaveProperty("encrypted_snapshot");
+	});
+	it("keeps a captured legacy protected host disabled instead of restoring its obsolete listener", async () => {
+		await state
+			.db("proxy_host")
+			.where("id", 1)
+			.update({
+				enabled: true,
+				meta: JSON.stringify({ note: "keep", wasm_filters: [{ enabled: true, kind: "api_key" }] }),
+			});
+		const previous = await captureHostState(1);
+		const before = structuredClone(previous);
+		await fs.writeFile(config, "candidate configuration");
+		await restoreHostState(previous);
+		const row = await state.db("proxy_host").where("id", 1).first();
+		expect(Boolean(row.enabled)).toBe(false);
+		expect(JSON.parse(row.meta)).toEqual({ note: "keep", nginx_online: false });
+		await expect(fs.stat(config)).rejects.toMatchObject({ code: "ENOENT" });
+		expect(previous).toEqual(before);
+	});
+	it("plans and restores an old protected revision as disabled instead of exposing its upstream", async () => {
+		await state
+			.db("proxy_host")
+			.where("id", 1)
+			.update({
+				enabled: true,
+				meta: JSON.stringify({ note: "historical", wasm_filters: [{ enabled: true, kind: "api_key" }] }),
+			});
+		const revision = await service.record(access(), 1);
+		await state
+			.db("proxy_host")
+			.where("id", 1)
+			.update({ meta: JSON.stringify({ note: "current" }) });
+		const plan = await service.plan(access(), 1, revision.id);
+		expect(plan.target.enabled).toBe(0);
+		expect(plan.target.meta).not.toHaveProperty("wasm_filters");
+		vi.spyOn(nginx, "configureHost").mockImplementation(async () => {
+			const candidate = await state.db("proxy_host").where("id", 1).first();
+			expect(Boolean(candidate.enabled)).toBe(false);
+			expect(JSON.parse(candidate.meta)).not.toHaveProperty("wasm_filters");
+			await fs.rm(config, { force: true });
+			return { nginx_online: false, nginx_err: null };
+		});
+		await expect(service.restore(access(), 1, revision.id, plan.expected_fingerprint)).resolves.toMatchObject({
+			action: "restored",
+		});
+		expect(Boolean((await state.db("proxy_host").where("id", 1).first()).enabled)).toBe(false);
+		await expect(fs.stat(config)).rejects.toMatchObject({ code: "ENOENT" });
 	});
 	it("hides other owners and unknown revision IDs", async () => {
 		const revision = await service.record(access(), 1);

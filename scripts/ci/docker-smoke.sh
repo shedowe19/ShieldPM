@@ -388,11 +388,6 @@ GRPC_SMOKE
 sed 's|../../backend/|/app/|g' "$(dirname "$0")/ip-firewall-smoke.mjs" > "$fixture/ip-firewall-smoke.mjs"
 cp "$(dirname "$0")/nginx-smoke-modules.mjs" "$fixture/nginx-smoke-modules.mjs"
 cp "$(dirname "$0")/nginx-smoke-endpoints.mjs" "$fixture/nginx-smoke-endpoints.mjs"
-sed 's|../../backend/|/app/|g' "$(dirname "$0")/wasi-host-smoke.mjs" > "$fixture/wasi-host-smoke.mjs"
-mkdir -p "$fixture/wasi-fixtures"
-for filename in standalone-wasi-http-stdio standalone-wasi-http-filter standalone-wasi-http-response standalone-wasi-trap; do
-    cp "$(dirname "$0")/../../backend/test/fixtures/$filename.wasm" "$fixture/wasi-fixtures/$filename.wasm"
-done
 cp "$(dirname "$0")/mmdb-oracle.py" "$fixture/mmdb-oracle.py"
 cp "$(dirname "$0")/fixtures/GeoIP2-Country-Test.mmdb" "$fixture/GeoIP2-Country-Test.mmdb"
 cp "$(dirname "$0")/fixtures/GeoLite2-ASN-Test.mmdb" "$fixture/GeoLite2-ASN-Test.mmdb"
@@ -471,7 +466,6 @@ for service_uid in 0 1000; do
         nginx -e stderr -s reload
         healthcheck.sh
         node /data/grpc-smoke.mjs
-        WASI_SMOKE_FIXTURES=/data/wasi-fixtures node /data/wasi-host-smoke.mjs
         # Reuse the image module paths and require the actual ModSecurity directive.
         NGINX_SMOKE_DISCOVER_MODULES=true NGINX_REQUIRE_MODSECURITY=true \
             NGINX_GEOIP_DATABASE=/data/GeoIP2-Country-Test.mmdb \

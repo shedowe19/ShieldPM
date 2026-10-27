@@ -20,7 +20,12 @@ export const parseProxyHostMeta = (value: unknown): ProxyHost["meta"] => {
 			return {};
 		}
 	}
-	return value && typeof value === "object" && !Array.isArray(value) ? (value as ProxyHost["meta"]) : {};
+	if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+	const meta = { ...value } as ProxyHost["meta"];
+	// Retired host execution assignments must not be reintroduced by older API responses or stored drafts.
+	delete meta.wasmFilters;
+	delete meta.wasm_filters;
+	return meta;
 };
 
 export const createProxyHostFirewallPolicy = (policy?: Partial<FirewallPolicy>): FirewallPolicy => ({
@@ -45,7 +50,6 @@ const createProxyHostInitialMeta = (value: unknown): ProxyHost["meta"] => {
 	return {
 		...meta,
 		ipFirewall: createProxyHostFirewallPolicy(meta.ipFirewall),
-		wasmFilters: Array.isArray(meta.wasmFilters) ? meta.wasmFilters : [],
 		upstreamPool: meta.upstreamPool ?? defaultUpstreamPool(),
 	};
 };

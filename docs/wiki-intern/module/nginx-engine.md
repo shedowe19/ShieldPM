@@ -94,20 +94,13 @@ die Startwiederherstellung; normale sicherheitsrelevante Sammeländerungen bleib
 
 Nach einem erfolgreichen `configure()` wird `internalAnubis.generatePolicy()` **asynchron** aufgerufen (non-blocking). Dies aktualisiert die Anubis-Sicherheitspolicy basierend auf der neuen Nginx-Konfiguration, ohne den Configure-Flow zu blockieren. Fehler werden separat protokolliert und rollen eine bereits akzeptierte Nginx-Konfiguration nicht zurück.
 
-## Wasm-Lieferumfang und Produktanbindung
+## Entfernte Ausführungsintegration
 
-Die am 17. Oktober 2026 geprüfte Nginx-Runtime 1.31.6 enthält statisch API7s `wasm-nginx-module` 0.7.0
-mit Wasmtime 49.0.2. Lua-Helfer und Runtime-Bibliothek werden auch im nativen Archiv ausgeliefert.
-ShieldPM verwaltet eigene hochgeladene Proxy-Wasm-Module und deren Zuordnung zu Hosts. Die Anbindung erfolgt
-über `resty.proxy-wasm` und gemeinsame Lua-Phasen; benötigte globale Runtime-Direktiven werden beim Aktivieren
-geprüft. Modulinhalte erhalten unveränderliche SHA-256-Pfade, Konfigurationen bleiben verschlüsselt und werden
-vor der Host-Aktivierung in einer isolierten echten Nginx-Runtime ausgeführt.
-
-`nginx -t` allein führt Filter nicht aus und kann sogar eine ungültige Wasm-Datei unbemerkt lassen.
-Die zusätzliche Ausführungsprüfung testet deshalb jedes Modul und anschließend die gesamte Kette, bevor sie
-akzeptiert wird. Ein allgemeines WASI-Kommandozeilenprogramm ist kein Proxy-Wasm-HTTP-Filter. Maßgeblich sind
-die von API7 bereitgestellten Hostfunktionen; nicht unterstützte Imports werden abgewiesen.
-Aktuelle Schnittstellen, Nachweise und Laufzeitgrenzen stehen unter [Wasm-Filter](./wasm-filter.md).
+Die frühere Wasm-/WASI-Anbindung wurde am 27. Oktober 2026 zurückgenommen. Die aktuelle Engine rendert keine
+Modul-Hooks und startet keine Ausführungsadapter mehr. Der geänderte Generator-Fingerprint veranlasst die
+Neuerzeugung bestehender Hosts. Beim Start werden nur der frühere ShieldPM-eigene globale Runtimeblock und
+die beiden veralteten Lua-Helfer entfernt; eigene Direktiven und sonstige Lua-Funktionen bleiben erhalten.
+Details stehen im [Entfernungsbericht](../entwicklung/gitops-reference-and-runtime-removal-2026-10-27.md).
 
 ## Abhängigkeiten der Konfigurationsengine
 

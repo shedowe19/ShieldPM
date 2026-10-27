@@ -44,10 +44,6 @@ elif args[0] == 'cp':
     assert (fixture / 'ip-firewall-smoke.mjs').is_file()
     assert (fixture / 'nginx-smoke-modules.mjs').is_file()
     assert (fixture / 'nginx-smoke-endpoints.mjs').is_file()
-    assert (fixture / 'wasi-host-smoke.mjs').is_file()
-    for name in ('standalone-wasi-http-stdio', 'standalone-wasi-http-filter', 'standalone-wasi-http-response', 'standalone-wasi-trap'):
-        data = (fixture / 'wasi-fixtures' / (name + '.wasm')).read_bytes()
-        assert data[:8] == bytes((0, 97, 115, 109, 1, 0, 0, 0))
     assert (fixture / 'mmdb-oracle.py').is_file()
     retained_log = (fixture / 'logs/ip_firewall_ci.log').read_text()
     assert retained_log.splitlines()[0] == 'CI retained firewall log marker'
@@ -71,10 +67,6 @@ elif args[0] == 'exec' and mode == 'firewall-failure':
     assert any('node /data/ip-firewall-smoke.mjs' in arg for arg in args)
     print('IP firewall HTTP403 check failed', file=sys.stderr)
     sys.exit(44)
-elif args[0] == 'exec' and mode == 'wasi-failure':
-    assert any('WASI_SMOKE_FIXTURES=/data/wasi-fixtures node /data/wasi-host-smoke.mjs' in arg for arg in args)
-    print('WASI generated host binary response check failed', file=sys.stderr)
-    sys.exit(45)
 elif args[0] == 'logs':
     print('diagnostic container logs')
 """)
@@ -116,7 +108,6 @@ elif args[0] == 'logs':
             self.assertTrue(any("NGINX_ASN_DATABASE=/data/GeoLite2-ASN-Test.mmdb" in arg and "NGINX_REQUIRE_ASN_STARTUP=true" in arg for arg in call))
             self.assertTrue(any("NGINX_SMOKE_DISCOVER_MODULES=true" in arg and "NGINX_REQUIRE_MODSECURITY=true" in arg for arg in call))
             self.assertFalse(any("NGINX_MODSECURITY_STATIC=true" in arg for arg in call))
-            self.assertTrue(any("WASI_SMOKE_FIXTURES=/data/wasi-fixtures node /data/wasi-host-smoke.mjs" in arg for arg in call))
             self.assertTrue(any("CI retained firewall log marker" in arg and "CI service UID $1 append probe" in arg for arg in call))
             self.assertTrue(any('stat -c %u /data/logs' in arg and 'stat -c %a /data/logs' in arg for arg in call))
         transfers = [call for call in calls if call[0] == "cp" and ":" in call[1]]
@@ -172,13 +163,6 @@ elif args[0] == 'logs':
         result, calls = self.run_smoke("firewall-failure")
         self.assertEqual(result.returncode, 44)
         self.assertIn("IP firewall HTTP403 check failed", result.stderr)
-        self.assertIn("diagnostic container logs", result.stderr)
-        self.assert_cleaned(calls, 1)
-
-    def test_wasi_request_failure_fails_the_gate_and_cleans_up(self):
-        result, calls = self.run_smoke("wasi-failure")
-        self.assertEqual(result.returncode, 45)
-        self.assertIn("WASI generated host binary response check failed", result.stderr)
         self.assertIn("diagnostic container logs", result.stderr)
         self.assert_cleaned(calls, 1)
 

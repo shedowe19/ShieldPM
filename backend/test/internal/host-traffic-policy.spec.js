@@ -61,6 +61,17 @@ afterEach(async () => {
 	await fs.rm(directory, { recursive: true, force: true });
 });
 describe("structured traffic policy", () => {
+	it("renders a legacy protected host without a listener or any retired runtime hooks", async () => {
+		const legacy = host({
+			meta: { wasm_filters: [{ enabled: true, kind: "api_key", config: { sealed_value: "unavailable" } }] },
+		});
+		const before = structuredClone(legacy);
+		const rendered = await nginx.renderConfig("proxy_host", legacy);
+		expect(rendered).not.toContain("server_name");
+		expect(rendered).not.toContain("wasm");
+		expect(rendered).not.toContain("dofile");
+		expect(legacy).toEqual(before);
+	});
 	it("preserves unrelated metadata and seeds the prior WAF choice once", () => {
 		const previous = host({
 			caching_enabled: true,
@@ -157,23 +168,13 @@ describe("structured traffic policy", () => {
 			assets_only: true,
 		});
 	});
-	it("always bypasses shared cache for enabled Wasm policies and separates origin revisions", async () => {
+	it("separates origin revisions and bypasses shared cache for Access Lists", async () => {
 		const base = host({ meta: { cache_policy: { enabled: true } } });
 		const changed = { ...base, forward_port: 8081 };
 		expect(cacheNamespaceFor(changed)).not.toBe(cacheNamespaceFor(base));
-		const filtered = host({
-			meta: {
-				cache_policy: { enabled: true },
-				wasm_filters: [{ id: "key", kind: "api_key", enabled: true, config: { header: "x-api-key" } }],
-			},
-		});
-		const rendered = await nginx.renderConfig("proxy_host", filtered);
-		expect(rendered).toContain("$http_cookie $http_upgrade 1;");
-		const inactive = {
-			...filtered,
-			meta: { ...filtered.meta, wasm_filters: [{ ...filtered.meta.wasm_filters[0], enabled: false }] },
-		};
-		expect(await nginx.renderConfig("proxy_host", inactive)).not.toContain("$http_cookie $http_upgrade 1;");
+		const protectedHost = host({ access_list_id: 2, meta: base.meta });
+		expect(await nginx.renderConfig("proxy_host", protectedHost)).toContain("$http_cookie $http_upgrade 1;");
+		expect(await nginx.renderConfig("proxy_host", base)).not.toContain("$http_cookie $http_upgrade 1;");
 	});
 	it("retains legacy non-HTTP hosts while rejecting newly enabled unsupported caches", async () => {
 		const legacy = host({

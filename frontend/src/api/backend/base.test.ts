@@ -103,34 +103,6 @@ describe("successful response bodies", () => {
 		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("invalid", { status: 200 })));
 		await expect(get({ url: "nginx/proxy-hosts" })).rejects.toThrow();
 	});
-	it("preserves module-defined configuration keys in requests and responses", async () => {
-		const configuration = {
-			TenantID: "demo",
-			nested_key: { ExactCase: true },
-			rules: [{ header_name: "x-tenant" }],
-		};
-		vi.stubGlobal(
-			"fetch",
-			vi.fn().mockResolvedValue(
-				new Response(
-					JSON.stringify({
-						wasm_filters: [{ failure_mode: "closed", config: { module_id: "module", configuration } }],
-					}),
-					{ status: 200 },
-				),
-			),
-		);
-		const result = await post<{ wasmFilters: unknown[] }>({
-			url: "nginx/proxy-hosts/7",
-			data: { wasmFilters: [{ failureMode: "closed", config: { moduleId: "module", configuration } }] },
-		});
-		expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]?.body as string)).toEqual({
-			wasm_filters: [{ failure_mode: "closed", config: { module_id: "module", configuration } }],
-		});
-		expect(result).toEqual({
-			wasmFilters: [{ failureMode: "closed", config: { moduleId: "module", configuration } }],
-		});
-	});
 	it("still converts API-owned revision configuration fields", async () => {
 		vi.stubGlobal(
 			"fetch",
@@ -143,29 +115,6 @@ describe("successful response bodies", () => {
 		await expect(get({ url: "nginx/proxy-hosts/7/revisions/1/preview" })).resolves.toEqual({
 			configuration: { currentSha256: "current", targetSha256: "target" },
 		});
-	});
-
-	it("uploads raw Wasm bytes without JSON conversion and retains authenticated request headers", async () => {
-		vi.mocked(AuthStore).csrfToken = "module-upload-csrf";
-		vi.stubGlobal(
-			"fetch",
-			vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: "module" }), { status: 201 })),
-		);
-		const binary = new Blob([new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0])], { type: "application/wasm" });
-		await expect(
-			post({
-				url: "nginx/wasm/modules",
-				params: { name: "Tenant filter", filename: "tenant.wasm" },
-				rawBody: binary,
-				contentType: "application/wasm",
-			}),
-		).resolves.toEqual({ id: "module" });
-		const [url, options] = vi.mocked(fetch).mock.calls[0];
-		expect(url).toContain("filename=tenant.wasm");
-		expect(options?.body).toBe(binary);
-		expect(options?.credentials).toBe("include");
-		expect(options?.headers).toEqual({ "Content-Type": "application/wasm", "X-XSRF-TOKEN": "module-upload-csrf" });
-		vi.mocked(AuthStore).csrfToken = null;
 	});
 });
 

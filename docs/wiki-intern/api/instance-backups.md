@@ -142,7 +142,7 @@ erfolgreichen HTTP-Annahmestatus keine Wiederherstellbarkeit ableiten.
 Preflight und Vormerken verlangen dieselbe ShieldPM-Version und denselben Datenbankprovider, vorhandene
 Migrationsdateien sowie zur Manifestbeschreibung passende Tabellen-/Migrationslisten. Sie prüfen
 Dateihashes, sichere Pfade und Links, begrenzte Größen und Eintragszahlen, Datenbankintegrität beziehungsweise
-Providerimport sowie Nginx und aktivierte Wasm-Ketten. `.env` wird nur auf Shell-Syntax geprüft.
+Providerimport sowie Nginx. `.env` wird nur auf Shell-Syntax geprüft.
 Nicht geprüft wird die spätere Erreichbarkeit sämtlicher Upstreams oder externer Integrationen.
 
 Audit-Einträge verwenden den vorhandenen Typ `setting`, `setting_id: "instance-backups"` und beschreiben

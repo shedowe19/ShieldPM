@@ -256,28 +256,18 @@ Echte HTTP-, RSA-, Cookie- und CSRF-Verträge sichern alle Sitzungsübergänge u
 
 Weitere Tests verwenden Telegrafs tatsächlich installierte Legacy-Abbruchsignale, erzeugen echte Express-Portkonflikte und prüfen die automatische GeoIP-Auswahl durch den Validator im Kindprozess. Der Workflow prüft Backend-JSDoc-Typen vor den Tests. Alle Abdeckungszahlen, Nachweise und verbleibenden Betriebsgrenzen stehen im [Prüfbericht](./code-audit-2026-09.md).
 
-## Betriebsfehler und WASI vom 18. Oktober 2026
+## Betriebsfehler und zurückgenommene Ausführungsintegration
 
 Die [Betriebsnachprüfung](./runtime-fixes-2026-10-18.md) reproduziert beschädigte JSON-Logvariablen durch
 den entfernten Nginx-Formatierer sowie MariaDB-Fehler bei vollständiger temporaler Host-Wiederherstellung.
 Reale Nginx- und MariaDB-Regressionen ergänzen die normalen SQLite-/PGlite-Suiten.
 
-Die [eigenständigen WASI-Anwendungen](../module/wasi-runtime.md) haben getrennte Belege: echte
-Node-/WASI-Kommandos für Ein-/Ausgabe und Ressourcenlimits, Katalogprüfungen mit unveränderlichen Dateien,
-echte HTTP-Starts einschließlich Prozessabbruch sowie Bedienprüfungen im Chromium-Browser. Der Browser
-verwendet gemockte API-Antworten und wird nicht als Beleg für die eigentliche WASI-Ausführung gewertet.
-Ausführungsargumente und Ausgaben erscheinen nicht im Audit-Log.
-
-Der Docker-Smoke führt zusätzlich `scripts/ci/wasi-host-smoke.mjs` mit dem tatsächlich gebauten
-Image auf beiden nativen Architekturen jeweils als root und UID 1000 aus. Sieben aus den produktiven
-Vorlagen gerenderte Hosts prüfen den privaten Unix-Socket einschließlich Besitzer und Modus `0600`,
-WASI-Standardausgabe, Argumente und HTTP-Metadaten, binäre JSON-Antworten, leere HTTP-204-/304-Antworten,
-Header-/Body-Änderungen vor einem echten lokalen Upstream und einen geschlossen fehlschlagenden Trap.
-Der Smoke verwendet einen getrennten temporären Datenpfad und validierte Fixture-Bytes im privaten
-Katalog; er erhebt keinen Nachweis für den öffentlichen Upload-/Authentifizierungsablauf. Ein echter
-Unix-Transport ist verpflichtend; der für diesen eingeschränkten lokalen Executor mögliche Test-TCP-
-Transport wird ausdrücklich deaktiviert. Die Python-Orchestrierung prüft Fehlerweitergabe und vollständige
-Container-/Volume-Bereinigung auch bei einem fehlgeschlagenen WASI-HTTP-Aufruf.
+Die frühere Wasm-/WASI-Funktion ist entfernt. Ihre ausschließlich funktionsbezogenen Tests und Bytecode-Fixtures
+werden nicht mehr ausgeliefert. Weiterhin geprüft werden die Host-Aktivierung, Authentifizierung, Cache-Regeln,
+Backups und vollständige Dateiwiederherstellung. Die Startup-Regressionen prüfen die idempotente Entfernung
+nur des alten verwalteten Runtimeblocks und seiner Lua-Helfer. Alte Zuweisungen dürfen nach Migration, GitOps-
+Import oder historischer Wiederherstellung keine Ausführung aktivieren. Der aktuelle Nachweis steht im
+[Entfernungsbericht](./gitops-reference-and-runtime-removal-2026-10-27.md).
 
 ## Verwandte Seiten
 

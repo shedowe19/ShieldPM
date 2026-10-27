@@ -16,7 +16,6 @@ on:
       - scripts/ci/mmdb-oracle.py
       - scripts/ci/nginx-smoke-modules.mjs
       - scripts/ci/nginx-smoke-endpoints.mjs
-      - scripts/ci/wasi-host-smoke.mjs
       - scripts/ci/fixtures/**
       - global/certbot-dns-plugins.json
       - frontend/**
@@ -41,7 +40,6 @@ on:
       - scripts/ci/mmdb-oracle.py
       - scripts/ci/nginx-smoke-modules.mjs
       - scripts/ci/nginx-smoke-endpoints.mjs
-      - scripts/ci/wasi-host-smoke.mjs
       - scripts/ci/fixtures/**
       - global/certbot-dns-plugins.json
       - frontend/**
