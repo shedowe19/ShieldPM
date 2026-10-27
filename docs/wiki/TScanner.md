@@ -1,5 +1,12 @@
 # TScanner für ShieldPM
 
+## Abhängigkeitsprüfung des Scanners
+
+Der ausschließlich für die Entwicklung verwendete Scanner löst Zod einschließlich transitiver Installation
+auf `4.6.6` auf. Damit ist [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5)
+korrigiert, wegen dessen die verpflichtende CI-Prüfung das bisherige `4.6.5` abgewiesen hat. Frozen-Install,
+Audit, Integrationstests und Projektregeln bleiben aktiv. Laufzeitabhängigkeiten der Anwendung ändern sich nicht.
+
 ## Zweck und Umfang
 
 TScanner ergänzt die vorhandenen Biome-, TypeScript-, Test-, Dependency-Audit- und CodeQL-Prüfungen um

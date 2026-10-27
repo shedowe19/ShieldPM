@@ -84,6 +84,17 @@ Anwendungsänderungen allein weder gemergt noch auf einer produktiven Instanz in
   Umgebungsskips. Backend-TypeScript und TScanner bestehen ohne Fehler oder Hinweise. Der bestätigte
   GitHub-Prüfstand wird im PR dokumentiert.
 
+## Nachprüfung der Scanner-Abhängigkeit
+
+Der erste neue GitHub-Lauf scheiterte vor der Quellcodeprüfung am unverändert verpflichtenden Audit der
+Scanner-Abhängigkeiten. Zod 4.6.5 im Entwicklungswerkzeug ist von
+[GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5) betroffen; der Advisory nennt 4.6.6
+als korrigierte Version. Die Scanner-Auflösung und ihr Lockfile sind deshalb gezielt auf 4.6.6 gesetzt.
+Die Laufzeitabhängigkeiten und Versionsdateien der Anwendung werden dadurch nicht verändert.
+Der erneute Audit meldet null Schwachstellen. Alle 73 bestehenden Scanner-Integrationstests und der
+CI-äquivalente Branch-Scan mit 110 Dateien bestehen ohne Fehler oder Hinweise. Audit- und Scannerregeln
+bleiben aktiv. Der endgültige CI-Stand steht im PR.
+
 ## Wiki-Prüfung
 
 - Geprüfte Wiki-Seiten: GitOps, Zertifikate, Proxy-Host, Host-Revisionen, Nginx-Engine, Backups, Cache, Rootfs,
