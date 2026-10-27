@@ -31,7 +31,7 @@ ShieldPM abstrahiert Let's Encrypt via Certbot. Dieses Modul kümmert sich um di
 - Die statische Challenge-Location deaktiviert geerbtes Basic-Auth, `auth_request` und Lua-Accesshandler. OAuth2, Authentik und OIDC führen vorhandene Challenge-Dateien damit nicht zur Anmeldung um. Die vorgelagerten serverseitigen mTLS-Prüfungen und erzwungenen HTTPS-Redirects bleiben erhalten; diese Einstellungen sind bei HTTP-01-Ausstellungen weiterhin zu berücksichtigen.
 - Der externe HTTP-Test hat einen Socket-Timeout von 15 Sekunden und behandelt Fehler oder abgebrochene Antworten. Die Ziel-URL wird korrekt als Formularfeld kodiert.
 - Regressionen: `backend/test/internal/certbot-processing.spec.js` (alle externen Aufrufe gemockt).
-- `backend/test/lib/certbot-plugins.spec.js` prüft Installationsziel und Fehlerweitergabe sowie mit einer echten lokalen Python-Virtualenv die Auflistung und das Laden von Plugin-Entry-Points aus Basis- und Zielverzeichnis. Diese Prüfung verwendet synthetische Pakete ohne Downloads und benötigt `python3` mit dem Modul `venv`.
+- `backend/test/lib/certbot-plugins.spec.js` prüft Installationsziel und Fehlerweitergabe sowie mit dem tatsächlichen Python-Interpreter in einer isolierten PEP-405-Umgebung die Auflistung und das Laden von Plugin-Entry-Points aus Basis- und Zielverzeichnis. Synthetische Pakete, `pyvenv.cfg` und ein eigenes `site-packages` ersetzen die aufwendigere Vorbereitung durch den `venv`-Installer; virtuelle Umgebung, ausgeschaltete Benutzerpakete und Vorrang der Zielabhängigkeiten werden ausdrücklich geprüft. Benötigt wird `python3`; Paketdownloads, Aktivierungsskripte und Pip sind für diesen Test nicht erforderlich.
 
 ## Abhängigkeiten
 

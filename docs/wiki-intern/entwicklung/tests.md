@@ -182,6 +182,25 @@ die Frontend-Testumgebung verwendet nun `happy-dom` 21.0.4. Der vollständige Ve
 Umgebungsskips bleiben erhalten. Die aktuellen Paketangaben stehen in den
 [externen Abhängigkeiten](../architektur/externe-abhaengigkeiten.md).
 
+### CI-Stabilität der Unterprozess-Tests
+
+Der [PR-Quality-Lauf vom 27. Oktober](https://github.com/shedowe19/ShieldPM/actions/runs/40538916547/job/122311637402)
+erreichte bei zwei Tests die Fünf-Sekunden-Grenze; der Push-Lauf desselben Commits bestand. Die Fixtures
+begrenzen deshalb ihre Vorbereitung auf den tatsächlichen Prüfgegenstand:
+
+- `upload-relay-maintenance.spec.js` beginnt beim DELETE-Rennen mit einer gespeicherten Sitzung, die der echte
+  Relay-Lesepfad validiert. Der echte DELETE und die anschließende Wartung laufen weiterhin gegen das Dateisystem;
+  reine Speicherfehlerfälle benötigen keine Sitzung. Promise-Signale warten auf den Wiederherstellungsdurchlauf
+  beziehungsweise die tatsächliche Fehlerprotokollierung statt auf zeitgesteuertes Polling. Alle Fälle starten
+  einen echten Node-Prozess mit `--unhandled-rejections=strict` und unveränderter Prozessgrenze von fünf Sekunden.
+- `certbot-plugins.spec.js` verwendet für die synthetischen Plugin-Verteilungen eine kleine PEP-405-Umgebung
+  mit dem tatsächlichen Python-Interpreter, `pyvenv.cfg` und isoliertem `site-packages`. Dadurch entfällt der
+  Aufruf des allgemeinen `venv`-Installers. Der Test prüft die virtuelle Umgebung und ausgeschaltete Benutzerpakete
+  sowie die echte `importlib.metadata`-Erkennung und das Laden der Basis-/Ziel-Plugins mit Vorrang der Zielabhängigkeit.
+
+Die regulären Testzeitlimits und die Produktionsimplementierungen bleiben unverändert. Die übrigen Relay-Tests
+prüfen weiterhin das Anlegen und dauerhafte Schreiben von Upload-Sitzungen.
+
 ## Regressionen der messbaren Optimierungen vom 17. Oktober
 
 - `frontend/src/pages/Nginx/ProxyHosts/Table.monitor-polling.test.tsx` verwendet die tatsächliche Tabelle, den
