@@ -43,8 +43,8 @@ The Agent must be aware of these specific versions and libraries:
 
 - **Runtime**: Node.js `v26+` (Debian Trixie via NodeSource APT)
 
-* **Framework**: Express.js `v5.2`
-* **ORM**: Objection.js `v3.1` / Knex.js `v3.3`
+* **Framework**: Express.js `v5.3`
+* **ORM**: Objection.js `v4.4` / Knex.js `v3.3`
 * **Database**:
   - **Development**: SQLite (`better-sqlite3` v13)
   - **Production**: MySQL (`mysql2`) or PostgreSQL (`pg`)
@@ -58,7 +58,7 @@ The Agent must be aware of these specific versions and libraries:
 
 * **Build Tool**: Vite `v8.3`
 * **Framework**: React `v19.3` (TypeScript)
-* **State Management**: React Query `v5.104`
+* **State Management**: React Query `v5.105`
 * **Styling**: Tailwind CSS `v4.3`, shadcn/ui (Radix UI)
 * **Path**: `/frontend`
 

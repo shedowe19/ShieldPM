@@ -18,7 +18,9 @@ verpflichtender Peer kann diese Typdefinitionen unter Yarn Classic auch in die P
 
 Die verbleibenden Backend-Resolution-Warnungen für Axios und Basic FTP stammen aus den noch älteren
 Versionsanforderungen von Duo beziehungsweise `get-uri`. Die Sicherheits-Pins bleiben bei Axios 1.20.0 und
-Basic FTP 6.2.2; der FTP-Kompatibilitätsadapter ist im [Deployment-Vertrag](./deployment.md) beschrieben.
+Basic FTP 6.2.2 im gezielten `get-uri`-Pfad. Die direkte Backend-Abhängigkeit `basic-ftp` ist seit
+PR #157 auf 6.2.3 aktualisiert; der FTP-Kompatibilitätsadapter ist im
+[Deployment-Vertrag](./deployment.md) beschrieben.
 Warnungen über `bare`, `bun`, `deno` oder `pnpm` als unbekannte Engines betreffen Metadaten von Drittpaketen:
 Yarn Classic kennt diese Engine-Namen nicht. Die unterstützten Node-Versionen werden weiterhin geprüft;
 `--ignore-engines` wird dafür nicht verwendet.

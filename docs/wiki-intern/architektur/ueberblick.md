@@ -45,8 +45,8 @@ ShieldPM ist eine klassische 3-Schichten-Webanwendung mit einer Nginx-Konfigurat
 | Technologie    | Version | Zweck                       |
 | -------------- | ------- | --------------------------- |
 | Node.js        | v26+    | Runtime                     |
-| Express.js     | v5.2    | Web-Framework               |
-| Objection.js   | v3.1    | ORM                         |
+| Express.js     | v5.3    | Web-Framework               |
+| Objection.js   | v4.4    | ORM                         |
 | Knex.js        | v3.3    | Query-Builder / Migrationen |
 | better-sqlite3 | v13     | SQLite-Treiber (Standard)   |
 | mysql2         | v3.24   | MySQL/MariaDB-Treiber       |
@@ -59,12 +59,12 @@ ShieldPM ist eine klassische 3-Schichten-Webanwendung mit einer Nginx-Konfigurat
 | React                | v19.3   | UI-Framework            |
 | TypeScript           | v7.0    | Typsicherheit           |
 | Vite                 | v8.3    | Build-Tool              |
-| TanStack React Query | v5.104  | Server-State-Management |
+| TanStack React Query | v5.105  | Server-State-Management |
 | Tailwind CSS         | v4.3    | Styling                 |
 | shadcn/ui (Radix)    | aktuell | UI-Komponenten          |
 | react-router-dom     | v7.18   | Routing                 |
-| Framer Motion        | v13.4   | Animationen             |
-| i18next              | v26.4   | Internationalisierung   |
+| Framer Motion        | v14.7   | Animationen             |
+| i18next              | v26.5   | Internationalisierung   |
 
 ### Infrastruktur
 
