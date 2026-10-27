@@ -11,6 +11,9 @@ const accepts = (contract, payload) => {
 };
 
 describe("published host and certificate contracts", () => {
+	it("publishes no retired module upload, execution, status or application endpoints", () => {
+		expect(Object.keys(schema.paths).filter((name) => /wasm|wasi/i.test(name))).toEqual([]);
+	});
 	it("accepts both proxy-host collection modes returned by getAll", () => {
 		const contract = response("/nginx/proxy-hosts");
 		accepts(contract, []);

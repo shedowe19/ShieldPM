@@ -17,6 +17,13 @@ const state = vi.hoisted(() => ({
 	firewallStop: vi.fn(async () => {}),
 	configurationLock: vi.fn(),
 	reload: vi.fn(async () => {}),
+	backupCommit: vi.fn(async () => {}),
+	incidentStart: vi.fn(),
+	incidentStop: vi.fn(),
+	trafficStart: vi.fn(),
+	trafficStop: vi.fn(),
+	cleanupStart: vi.fn(),
+	cleanupStop: vi.fn(),
 }));
 vi.mock("../../app.js", async () => {
 	const { default: express } = await import("express");
@@ -26,8 +33,8 @@ vi.mock("../../app.js", async () => {
 			listen: (_socket, ...args) => {
 				const callback = args.at(-1);
 				// Exercise Express's actual success/error callback contract over a local TCP socket.
-				const server = app.listen(state.port, "127.0.0.1", (error) => {
-					callback(error);
+				const server = app.listen(state.port, "127.0.0.1", async (error) => {
+					await callback(error);
 					state.completed = true;
 				});
 				state.servers.push(server);
@@ -36,12 +43,20 @@ vi.mock("../../app.js", async () => {
 		},
 	};
 });
+vi.mock("../../internal/instance-backups.js", () => ({ default: { commitStartupRestore: state.backupCommit } }));
+vi.mock("../../internal/incidents.js", () => ({ default: { init: state.incidentStart, stop: state.incidentStop } }));
+vi.mock("../../internal/host-traffic-policy.js", () => ({
+	default: { init: state.trafficStart, stop: state.trafficStop },
+}));
+vi.mock("../../internal/auth-session-cleanup.js", () => ({
+	default: { initTimer: state.cleanupStart, stop: state.cleanupStop },
+}));
 vi.mock("../../internal/analytics.js", () => ({ default: { init: state.analyticsInit, stop: state.analyticsStop } }));
 vi.mock("../../internal/certificate.js", () => ({ default: { initTimer: async () => {} } }));
 vi.mock("../../internal/chat.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/cloudflared.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/ddns.js", () => ({ default: { initTimer: () => {} } }));
-vi.mock("../../internal/docker.js", () => ({ default: { init: async () => {} } }));
+vi.mock("../../internal/docker.js", () => ({ default: { init: async () => {}, stop: async () => {} } }));
 vi.mock("../../internal/firewall-list.js", () => ({
 	default: { initTimer: state.firewallStart, stopTimer: state.firewallStop },
 }));
@@ -75,6 +90,7 @@ describe("backend listener lifecycle", () => {
 		state.firewallStop.mockResolvedValue(undefined);
 		state.analyticsStop.mockResolvedValue(undefined);
 		state.analyticsInit.mockResolvedValue(undefined);
+		state.backupCommit.mockResolvedValue(undefined);
 		state.migrate.mockResolvedValue(undefined);
 		state.configurationLock.mockImplementation(async (callback) => callback());
 		// index-dev intentionally replaces reload; restore the production fixture per case.
@@ -119,6 +135,8 @@ describe("backend listener lifecycle", () => {
 				expect(state.analyticsInit).not.toHaveBeenCalled();
 				expect(state.servers).toHaveLength(0);
 				migration.resolve();
+				expect(state.analyticsInit).not.toHaveBeenCalled();
+				expect(state.servers).toHaveLength(0);
 				await vi.waitFor(() => expect(state.analyticsInit).toHaveBeenCalledOnce());
 				expect(state.servers).toHaveLength(0);
 				initialization.resolve();
@@ -149,6 +167,7 @@ describe("backend listener lifecycle", () => {
 				await vi.waitFor(() => expect(state.analyticsStop).toHaveBeenCalledOnce());
 				expect(process.exit).not.toHaveBeenCalled();
 				stopping.resolve();
+				expect(process.exit).not.toHaveBeenCalled();
 				await vi.waitFor(() => expect(process.exit).toHaveBeenCalledExactlyOnceWith(0));
 			} finally {
 				stopping.resolve();
@@ -171,6 +190,8 @@ describe("backend listener lifecycle", () => {
 		);
 		expect(state.info.mock.calls.flat().join(" ")).not.toContain("listening");
 		expect(state.terminal).not.toHaveBeenCalled();
+		expect(state.incidentStart).not.toHaveBeenCalled();
+		expect(state.trafficStart).not.toHaveBeenCalled();
 		expect(state.monitorStart).not.toHaveBeenCalled();
 		expect(state.monitorStop).not.toHaveBeenCalled();
 		if (mode === "production") expect(state.firewallStart).toHaveBeenCalledOnce();
@@ -240,5 +261,24 @@ describe("backend listener lifecycle", () => {
 		expect(server.listening).toBe(false);
 		expect(process.listeners("SIGINT")).toEqual(listeners.get("SIGINT"));
 		expect(process.listeners("SIGTERM")).toEqual(listeners.get("SIGTERM"));
+	});
+	it("commits a staged restore only after initialization and a successful socket bind", async () => {
+		const commit = Promise.withResolvers();
+		state.backupCommit.mockReturnValueOnce(commit.promise);
+		await import("../../index.js");
+		await vi.waitFor(() => expect(state.backupCommit).toHaveBeenCalledOnce());
+		expect(state.servers[0].listening).toBe(true);
+		expect(state.migrate).toHaveBeenCalledOnce();
+		expect(state.analyticsInit).toHaveBeenCalledOnce();
+		expect(state.completed).toBe(false);
+		expect(state.incidentStart).not.toHaveBeenCalled();
+		commit.resolve();
+		await vi.waitFor(() => expect(state.completed).toBe(true));
+	});
+	it("closes the listener and exits if the staged restore cannot be committed", async () => {
+		state.backupCommit.mockRejectedValueOnce(new Error("checkpoint unavailable"));
+		await import("../../index.js");
+		await vi.waitFor(() => expect(process.exit).toHaveBeenCalledExactlyOnceWith(1));
+		expect(state.servers[0].listening).toBe(false);
 	});
 });

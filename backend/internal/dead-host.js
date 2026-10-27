@@ -2,6 +2,7 @@ import fs from "node:fs";
 import _ from "lodash";
 import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
+import { withHostDomainClaims } from "../lib/host-domain-claims.js";
 import { sanitizeHostMeta } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import deadHostModel from "../models/dead_host.js";
@@ -37,22 +38,6 @@ const internalDeadHost = {
 		await internalHost.validateReferences(access, data);
 		internalHost.validateDomainNames(data.domain_names);
 
-		// Get a list of the domain names and check each of them against existing records
-		const domainNameCheckPromises = [];
-
-		data.domain_names.map((domain_name) => {
-			domainNameCheckPromises.push(internalHost.isHostnameTaken(domain_name));
-			return true;
-		});
-
-		const check_results = await Promise.all(domainNameCheckPromises);
-		check_results.map((result) => {
-			if (result.is_taken) {
-				throw new errs.ValidationError(`${result.hostname} is already in use`);
-			}
-			return true;
-		});
-
 		// At this point the domains should have been checked
 		data.owner_user_id = access.token.getUserId(1);
 		const thisData = internalHost.cleanSslHstsData(createCertificate, data);
@@ -68,7 +53,9 @@ const internalDeadHost = {
 			...thisData,
 			meta: sanitizeHostMeta(thisData.meta),
 		});
-		let row = await deadHostModel.query().insertAndFetch(persistedData);
+		let row = await withHostDomainClaims({ hostType: "dead", domainNames: thisData.domain_names }, async (trx) =>
+			deadHostModel.query(trx).insertAndFetch(persistedData),
+		);
 		row = utils.omitRow(omissions())(row);
 
 		// Add to audit log
@@ -128,23 +115,8 @@ const internalDeadHost = {
 
 		await access.can("dead_hosts:update", thisData.id);
 
-		// Get a list of the domain names and check each of them against existing records
-		const domainNameCheckPromises = [];
-		if (typeof thisData.domain_names !== "undefined") {
-			internalHost.validateDomainNames(thisData.domain_names);
-			thisData.domain_names.map((/** @type {any} */ domainName) => {
-				domainNameCheckPromises.push(internalHost.isHostnameTaken(domainName, "dead", thisData.id));
-				return true;
-			});
+		if (thisData.domain_names !== undefined) internalHost.validateDomainNames(thisData.domain_names);
 
-			const checkResults = await Promise.all(domainNameCheckPromises);
-			checkResults.map((/** @type {any} */ result) => {
-				if (result.is_taken) {
-					throw new errs.ValidationError(`${result.hostname} is already in use`);
-				}
-				return true;
-			});
-		}
 		const row = await internalDeadHost.get(access, { id: thisData.id });
 		await internalHost.validateReferences(access, thisData, row);
 
@@ -182,7 +154,20 @@ const internalDeadHost = {
 		thisData.meta = sanitizeHostMeta(thisData.meta);
 
 		// do the row update
-		await deadHostModel.query().where({ id: data.id }).patch(thisData);
+		await withHostDomainClaims(
+			{ hostType: "dead", hostId: thisData.id, domainNames: thisData.domain_names },
+			async (trx) => {
+				const grant = await access.can("dead_hosts:get", thisData.id);
+				const current = await deadHostModel.query(trx).findById(thisData.id).forUpdate();
+				if (
+					!current ||
+					current.is_deleted ||
+					(grant.permission_visibility !== "all" && current.owner_user_id !== access.token.getUserId(1))
+				)
+					throw new errs.ItemNotFoundError(thisData.id);
+				return deadHostModel.query(trx).where({ id: data.id }).patch(thisData);
+			},
+		);
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -269,7 +254,7 @@ const internalDeadHost = {
 			const hadConfig = fs.existsSync(internalNginx.getConfigName("dead_host", row.id));
 			await internalNginx.backupConfig("dead_host", row);
 			try {
-				await deadHostModel.transaction(async (trx) => {
+				await withHostDomainClaims({ hostType: "dead", hostId: row.id, domainNames: [] }, async (trx) => {
 					await deadHostModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
 					await internalNginx.deleteConfig("dead_host", row);
 					await internalNginx.reload();

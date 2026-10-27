@@ -1,0 +1,339 @@
+{
+  "review_date": "2026-10-17",
+  "timezone": "Europe/Berlin",
+  "scope": "repository-wide review, no production changes",
+  "sources": {
+    "shieldpm_develop": "32a3a9d5dde3182dfc10d3700366d531a7462fa3",
+    "shieldpm_review": "e3641526f0378caf1b2ff9b88384f524e5d850a6",
+    "shieldpm_pr": 155,
+    "nginx_repository": "https://github.com/shedowe19/shieldpm-nginx",
+    "nginx_commit": "a0db913b0495783bc1e7e9fd8ed39624c7fff2bc",
+    "nginx_version": "1.31.6",
+    "wasm_module_version": "0.7.0",
+    "wasm_module_commit": "0b4b31d6ecfdbc587e8ea455ed6e920a98aadff1",
+    "wasmtime_version": "49.0.2",
+    "primary_references": [
+      "https://github.com/shedowe19/shieldpm-nginx/blob/a0db913b0495783bc1e7e9fd8ed39624c7fff2bc/Dockerfile",
+      "https://github.com/api7/wasm-nginx-module/blob/0b4b31d6ecfdbc587e8ea455ed6e920a98aadff1/README.md",
+      "https://github.com/api7/wasm-nginx-module/blob/0b4b31d6ecfdbc587e8ea455ed6e920a98aadff1/proxy_wasm_abi.md",
+      "https://ajv.js.org/guide/managing-schemas.html"
+    ]
+  },
+  "validation": {
+    "node": "26.12.0",
+    "yarn": "1.22.22",
+    "backend_typecheck": "pass",
+    "backend": {
+      "passed": 2176,
+      "skipped": 7,
+      "passed_files": 232,
+      "skipped_files": 3,
+      "seconds": 78.75
+    },
+    "frontend": {
+      "passed": 943,
+      "passed_files": 213,
+      "seconds": 110.78
+    },
+    "locales": "pass",
+    "frontend_typecheck_and_production_build": "pass",
+    "bundle_budget": {
+      "result": "pass",
+      "largest_javascript_bytes": 106550,
+      "largest_javascript_budget": 299000,
+      "total_javascript_bytes": 1111738,
+      "total_javascript_budget": 1290000,
+      "css_bytes": 16325,
+      "css_budget": 16600
+    },
+    "biome": {
+      "backend": "no errors; six existing warnings",
+      "frontend": "no errors; configuration information remains"
+    },
+    "tscanner": {
+      "files": 679,
+      "new_errors": 0,
+      "existing_errors": 0,
+      "advisory_findings": 0,
+      "scanner_failures": 0
+    },
+    "tscanner_tests": {
+      "passed": 73,
+      "skipped": 0
+    },
+    "infrastructure": {
+      "suite_total": 164,
+      "suite_passed": 143,
+      "suite_skipped": 21,
+      "subsequently_exercised_skipped_nginx_case_passed": 1,
+      "unique_exercised_passes": 144,
+      "still_unexecuted": 20
+    },
+    "extra_probes": {
+      "wasm_assertions": 8,
+      "frontend_accessibility_reproductions": 2,
+      "integration_controls_and_reproductions": 16,
+      "nginx_analytics_reproductions_and_candidate": 4
+    },
+    "limits": [
+      "No local full Docker deployment or ARM64 Wasm execution",
+      "No real installation, production update, external IdP, ACME issuance or provider credentials",
+      "Analytics bulk candidate only executed on SQLite; times synthetic under other audit activity",
+      "Passing assertions in defect probes reproduce current defect; do not mean fixed",
+      "Six broad manual review areas; not every tracked file manually read"
+    ]
+  },
+  "findings": [
+    {
+      "id": "B01",
+      "severity": "P1",
+      "finding": "Access-List-Rollback erfasst CA-/Passwortdateien nicht. `backend/internal/access-list.js:265–365,616–650`; `backend/internal/nginx.js:171–179,609–618`",
+      "evidence": "Tatsächliches Update, temporäre Dateien und echtes `nginx -tq`: Eine vom Schema akzeptierte ungültige mTLS-CA ersetzt die bisherige `.crt`. Die alte `.conf` wird restauriert, referenziert aber die neue kaputte CA; die erneute Syntaxprüfung schlägt fehl. Die Passwortdatei und DB sind ebenfalls bereits geändert.",
+      "proposed_fix": "CA vorab parsen; DB, CA, htpasswd, abhängige Konfiguration und Aktivierung als zusammengehörigen Wechsel behandeln. Alle Dateien innerhalb derselben Konfigurationssperre sichern und restaurieren.",
+      "status": "open_reproduced_not_fixed"
+    },
+    {
+      "id": "B02",
+      "severity": "P2",
+      "finding": "Request-Validator behält neu erzeugte Schemas dauerhaft. `backend/lib/validator/index.js:28`; z. B. `backend/routes/users.js:162–174`, `backend/routes/nginx/proxy_hosts.js:56–64`",
+      "evidence": "100 echte HTTP-Aufrufe des gemounteten Users-Routers: AJV-Cache 10 → 110, nach GC belegter Heap 25.578.488 → 28.398.392 Bytes. Nur die Businessmethode war kontrolliert ersetzt. Frische Objektliterale werden jeweils neu kompiliert und behalten.",
+      "proposed_fix": "Statische Route-Schemas einmal erzeugen/kompilieren; Wiederholungstests auf begrenzte Cachegröße einschließlich Coercion und Fehlerfällen. Der separate `apiValidator` mit stabilen Schemas ist nicht betroffen.",
+      "status": "open_reproduced_not_fixed"
+    },
+    {
+      "id": "B03",
+      "severity": "P2",
+      "finding": "Gleichzeitige Host-Anlage kann dieselbe Domain doppelt beanspruchen. `backend/internal/proxy-host.js:128–141,171–175`; `backend/migrations/20260222000000_normalize_domain_names.js`",
+      "evidence": "Tatsächlicher Create-Service und SQLite: Beide echten Vorabprüfungen melden frei, danach entstehen zwei Hosts mit `race.example.test`. Auch Docker Discovery reproduziert den Konflikt. Echtes Nginx akzeptiert doppelte Servernamen mit Exit 0 und ignoriert einen Listener.",
+      "proposed_fix": "Normalisierte Domain innerhalb des Writes atomar beanspruchen, gemeinsam für Proxy/Redirect/Dead Hosts und Umbenennungen; eindeutiges Domainregister für mehrere Prozesse.",
+      "status": "open_reproduced_not_fixed"
+    },
+    {
+      "id": "B04",
+      "severity": "P2",
+      "finding": "Docker Discovery verbindet den Eventstream nicht neu. `backend/internal/docker.js:47,100,181–225`",
+      "evidence": "Tatsächliche Serviceklasse mit kontrolliertem Stream: Nach `end`/`close` und erneutem `init()` bleibt es bei einem `getEvents()`-Aufruf. `initialized` bleibt gesetzt; weitere Events gehen verloren.",
+      "proposed_fix": "Reconnect mit Backoff, genau einem Stream pro Client und vollständigem Abgleich nach Wiederverbindung; Stop muss Timer und Stream entfernen.",
+      "status": "open_reproduced_not_fixed"
+    },
+    {
+      "id": "B05",
+      "severity": "P2",
+      "finding": "Direkter GitOps-Import aktiviert neue/geänderte Cloudflared-Tunnel nicht. `backend/internal/gitops.js:1192–1238,1290,1388`",
+      "evidence": "Echte SQLite-Modelle und Migrationen, kontrollierte Prozesse: Neuer Tunnel meldet Importerfolg ohne gestarteten Prozess; geänderter Token liegt in der DB, während der alte Prozess weiterläuft.",
+      "proposed_fix": "Importierte Zustände über die serialisierte Tunnel-Lifecycle-Logik abgleichen; Aktivierungsfehler berichten und unveränderte Tunnel erhalten.",
+      "status": "open_reproduced_not_fixed"
+    },
+    {
+      "id": "B06",
+      "severity": "P2",
+      "finding": "Manueller DDNS-Test umgeht die Update-Queue. `backend/internal/ddns-provider.js:141–145`; `backend/internal/ddns.js:360–377`",
+      "evidence": "Produktionsfunktionen mit kontrollierten HTTP-/DB-Grenzen: verzögerter Test schreibt alte IP `.1` nach dem erfolgreichen Scheduler-Write `.2`; externer Schreibverlauf `.2, .1`, gespeicherter Endstand `.1`, beide Antworten erfolgreich.",
+      "proposed_fix": "Gemeinsame Queue je Provider für Test und Scheduler, Konfiguration innerhalb der Queue erneut lesen.",
+      "status": "open_reproduced_not_fixed"
+    },
+    {
+      "id": "B07",
+      "severity": "P2",
+      "finding": "ACME-Registrierung blockiert den Erststart vor der Oberfläche. `rootfs/usr/local/bin/launch.sh:16–44,147–151`",
+      "evidence": "Tatsächlicher Startskript-Präfix mit leerem temporären Accountverzeichnis und kontrolliertem Certbot-Fehler erreicht `sleep inf`, bevor Dienste starten. Kontrollfall mit vorhandenem Account erreicht den Dienststart. Betrifft auch Installationen mit eigenen Zertifikaten.",
+      "proposed_fix": "Registrierung bei der ersten ACME-Anforderung oder begrenzter, nicht blockierender Bootstrap mit sichtbarem Status.",
+      "status": "open_reproduced_not_fixed"
+    },
+    {
+      "id": "B08",
+      "severity": "P2",
+      "finding": "Datenbankauswahl im Installer wird durch Legacy-Konfiguration überstimmt. `scripts/install.sh:704–754`; `backend/lib/config.js:18–40`",
+      "evidence": "Originale Installer-Hilfen schreiben PostgreSQL in `.env` und melden Erfolg. Das tatsächliche Konfigurationsmodul wählt weiterhin MySQL aus dem bestehenden `default.json`. Keine DB wurde dabei geöffnet.",
+      "proposed_fix": "Effektiven Provider und Quelle anzeigen; Legacy-Konfiguration vor einer Erfolgsmeldung ausdrücklich auflösen. Ein Providerwechsel braucht einen gesonderten Datenmigrationsweg.",
+      "status": "open_reproduced_not_fixed"
+    },
+    {
+      "id": "B09",
+      "severity": "P2",
+      "finding": "Mehrere Proxy-Host-Tabs haben keinen zugänglichen Namen. `frontend/src/modals/ProxyHostFormTabs.tsx:38–55`",
+      "evidence": "Tatsächliche Radix-Tabs: fünf namenlose Tabs bei Pfad-Hosts, vier bei HTTP. Screenreader können Security, Advanced, Maintenance, Notes und Git Sync nicht zuordnen.",
+      "proposed_fix": "Übersetzte `aria-label`- oder `sr-only`-Beschriftungen; Regression mit echten Komponenten.",
+      "status": "open_reproduced_not_fixed"
+    },
+    {
+      "id": "B10",
+      "severity": "P2",
+      "finding": "Domainfeld-Label verweist nicht auf den Eingabeknoten. `frontend/src/components/Form/DomainNamesField.tsx:57–64`",
+      "evidence": "Tatsächliches React Select: Combobox hat keinen zugänglichen Namen; `getByLabelText` findet sie nicht. Gemeinsames Feld mehrerer Host-/Zertifikatsdialoge.",
+      "proposed_fix": "`inputId` mit dem Label verbinden; Label-Fokus und Name mit echtem React Select testen.",
+      "status": "open_reproduced_not_fixed"
+    },
+    {
+      "id": "B11",
+      "severity": "P2",
+      "finding": "„Cache Assets“ erzeugt keine Asset-Cache-Konfiguration. `backend/templates/proxy_host.conf:266`, `backend/templates/_proxy_logic.conf:296`; `docs/wiki/Proxy-Hosts.md`",
+      "evidence": "Echtes Liquid-Rendering: Ohne Block Exploits ist die Ausgabe mit/ohne Flag identisch. Mit Block Exploits ändert sich nur die gewählte ModSecurity-Konfigurationsdatei. Keine Asset-Cache-Direktiven werden ergänzt.",
+      "proposed_fix": "Versprochene Cache-Semantik definieren und tatsächlich rendern; WAF-Auswahl getrennt behandeln. Grundlage für F06.",
+      "status": "open_reproduced_not_fixed"
+    },
+    {
+      "id": "B12",
+      "severity": "P2",
+      "finding": "Upload-Relay formatiert ungekapselte IPv6-Upstreams falsch. `backend/templates/_upload_relay.conf:8`",
+      "evidence": "Akzeptiertes `forward_host=\"::1\"` ergibt öffentlich `proxy_pass http://::1:PORT$request_uri;`. Tatsächliches Rendering und Nginx mit IPv6-Echo-Origin: HTTP 500, `invalid port in upstream`; dieselbe Zeile mit `[::1]` erreicht den Origin mit HTTP 200. Beide Formen bestehen `nginx -tq`.",
+      "proposed_fix": "Vor dem Zusammenbauen den vorhandenen `nginxUpstreamHost`-Filter anwenden; öffentliche Relay-Routen mit IPv4, DNS und beiden IPv6-Schreibweisen tatsächlich abrufen.",
+      "status": "open_reproduced_not_fixed"
+    }
+  ],
+  "probes": {
+    "wasm": {
+      "missing_key": {
+        "status": 403,
+        "body": "WASM_DENIED",
+        "wasm_header": "active"
+      },
+      "wrong_key": {
+        "status": 403,
+        "body": "WASM_DENIED",
+        "wasm_header": "active"
+      },
+      "valid_key": {
+        "status": 200,
+        "body": "PLAN=beta\n",
+        "wasm_header": "active"
+      },
+      "trap": {
+        "status": 503,
+        "body": "<html>\r\n<head><title>503 Service Temporarily Unavailable</title></head>\r\n<body>\r\n<center><h1>503 Service Temporarily Unavailable</h1></center>\r\n</body>\r\n</html>\r\n",
+        "wasm_header": null
+      },
+      "health_after_trap": {
+        "status": 200,
+        "body": "HEALTHY",
+        "wasm_header": null
+      },
+      "invalid_binary": {
+        "status": 503,
+        "body": "<html>\r\n<head><title>503 Service Temporarily Unavailable</title></head>\r\n<body>\r\n<center><h1>503 Service Temporarily Unavailable</h1></center>\r\n</body>\r\n</html>\r\n",
+        "wasm_header": null
+      },
+      "health_after_invalid": {
+        "status": 200,
+        "body": "HEALTHY",
+        "wasm_header": null
+      },
+      "valid_after_errors": {
+        "status": 200,
+        "body": "PLAN=beta\n",
+        "wasm_header": "active"
+      }
+    },
+    "analytics_upsert": {
+      "engine": "SQLite in-memory (better-sqlite3)",
+      "runtime": "Node 26.12.0; Knex 3.3.0; current service vs scratch Knex candidate",
+      "rowsPerFlush": 500,
+      "flushesPerSample": 2,
+      "warmup": "one sample per candidate discarded; three alternating measured rounds",
+      "countsAndGlobalNullSemanticsPreserved": true,
+      "samples": [
+        {
+          "round": 0,
+          "name": "bulk",
+          "ms": 8.643672000000038,
+          "insertStatements": 4
+        },
+        {
+          "round": 0,
+          "name": "serial",
+          "ms": 125.93729000000008,
+          "insertStatements": 1000
+        },
+        {
+          "round": 1,
+          "name": "serial",
+          "ms": 144.68634999999995,
+          "insertStatements": 1000
+        },
+        {
+          "round": 1,
+          "name": "bulk",
+          "ms": 8.604273999999918,
+          "insertStatements": 4
+        },
+        {
+          "round": 2,
+          "name": "bulk",
+          "ms": 9.55225699999994,
+          "insertStatements": 4
+        },
+        {
+          "round": 2,
+          "name": "serial",
+          "ms": 114.07054699999992,
+          "insertStatements": 1000
+        }
+      ],
+      "limitations": [
+        "Synthetic local timing, other audit jobs may run; query counts deterministic",
+        "No PostgreSQL or MySQL execution of candidate; counter expression needs dialect-specific SQL",
+        "Candidate bypasses Objection multi-insert restriction through Knex; no production code changed"
+      ]
+    },
+    "validator_http": {
+      "requests": 100,
+      "endpoint": "GET /users/1",
+      "status": 200,
+      "ajv_cache_before": 10,
+      "ajv_cache_after": 110,
+      "gc_heap_bytes_before": 25578488,
+      "gc_heap_bytes_after": 28398392,
+      "real": "Express users router and singleton validator",
+      "controlled": "internalUser.get business method",
+      "production_timing_claim": false
+    },
+    "validator_direct": {
+      "fresh_schema_calls": 200,
+      "ajv_cache_before": 10,
+      "ajv_cache_after": 210,
+      "gc_heap_bytes_before": 12473224,
+      "gc_heap_bytes_after": 15500040,
+      "fresh_schema_total_ms": 278.7,
+      "same_object_total_ms": 0.9,
+      "production_timing_claim": false
+    },
+    "auth_session_retention": {
+      "actual_sqlite_rotations": 96,
+      "total_rows": 97,
+      "rotated_rows": 96,
+      "current_rows": 1
+    },
+    "duplicate_hostname": {
+      "service": "internalProxyHost.create",
+      "database": "actual SQLite/Objection",
+      "control": "barrier after both genuine preflight reads; Nginx/audit/GitOps side effects mocked",
+      "creates_succeeded": 2,
+      "same_domain_rows": 2,
+      "real_nginx_duplicate_config_exit": 0,
+      "real_nginx_warning": "conflicting server name ignored"
+    },
+    "ipv6_relay": {
+      "upstream": "::1",
+      "real_nginx": "ShieldPM/1.31.6",
+      "unbracketed_response_status": 500,
+      "bracketed_response_status": 200,
+      "both_nginx_syntax_checks_exit": 0,
+      "error": "invalid port in upstream"
+    },
+    "ddns_order": {
+      "control": "production functions with controlled HTTP/database effects",
+      "manual_test_ip": "1.1.1.1",
+      "scheduled_ip": "1.1.1.2",
+      "external_write_order": ["1.1.1.2", "1.1.1.1"],
+      "persisted_last_ipv4": "1.1.1.1",
+      "both_return_success": true
+    }
+  },
+  "historical_report": true,
+  "retirement_notice": {
+    "date": "2026-10-27",
+    "feature": "Wasm/WASI",
+    "status": "removed_at_user_request",
+    "current_report": "gitops-reference-and-runtime-removal-2026-10-27.md"
+  }
+}

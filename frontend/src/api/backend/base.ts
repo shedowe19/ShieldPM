@@ -15,7 +15,7 @@ function convertKeys(value: unknown, convert: (key: string) => string): unknown 
 	return Object.fromEntries(
 		Object.entries(value).map(([key, item]) => [
 			convert(key),
-			// Header names are data, not API field names. Renaming them changes Anubis rules.
+			// Header names are data, not API field names.
 			["headers", "headers_regex", "headersRegex"].includes(key) ? item : convertKeys(item, convert),
 		]),
 	);
@@ -287,8 +287,6 @@ export async function post<T = DynamicResponse>(
 	}
 
 	let body: string | FormData | undefined;
-	// Check if the data is an instance of FormData
-	// If data is FormData, let the browser set the Content-Type header
 	if (data instanceof FormData) {
 		body = data;
 	} else {

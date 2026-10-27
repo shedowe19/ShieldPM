@@ -139,3 +139,43 @@ describe("useAnalyticsLiveMetrics", () => {
 		expect(getDbStats).toHaveBeenCalledTimes(3);
 	});
 });
+
+describe("live metric request cancellation", () => {
+	afterEach(() => {
+		cleanup();
+		vi.restoreAllMocks();
+	});
+	it("cancels both independent network requests when hidden and on unmount", () => {
+		vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+		const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+		vi.mocked(getAnalyticsStatus)
+			.mockReset()
+			.mockImplementation(() => new Promise(() => {}));
+		vi.mocked(getDbStats)
+			.mockReset()
+			.mockImplementation(() => new Promise(() => {}));
+		const { unmount } = renderHook(() => useAnalyticsLiveMetrics());
+		const network = vi.mocked(getAnalyticsStatus).mock.calls[0][0] as AbortSignal;
+		const database = vi.mocked(getDbStats).mock.calls[0][0] as AbortSignal;
+		expect(network).toBeInstanceOf(AbortSignal);
+		expect(database).toBeInstanceOf(AbortSignal);
+		expect(network).not.toBe(database);
+		act(() => {
+			visibility.mockReturnValue("hidden");
+			document.dispatchEvent(new Event("visibilitychange"));
+		});
+		expect(network.aborted).toBe(true);
+		expect(database.aborted).toBe(true);
+		act(() => {
+			visibility.mockReturnValue("visible");
+			document.dispatchEvent(new Event("visibilitychange"));
+		});
+		const refreshedNetwork = vi.mocked(getAnalyticsStatus).mock.calls[1][0] as AbortSignal;
+		const refreshedDatabase = vi.mocked(getDbStats).mock.calls[1][0] as AbortSignal;
+		expect(refreshedNetwork.aborted).toBe(false);
+		expect(refreshedDatabase.aborted).toBe(false);
+		unmount();
+		expect(refreshedNetwork.aborted).toBe(true);
+		expect(refreshedDatabase.aborted).toBe(true);
+	});
+});

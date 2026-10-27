@@ -17,7 +17,12 @@ vi.mock("../../lib/config.js", () => ({
 	getEncryptionKey: () => "0".repeat(64),
 }));
 vi.mock("../../internal/nginx.js", () => ({
-	default: { bulkGenerateConfigGroups: vi.fn(), reload: vi.fn(), withConfigurationLock: (callback) => callback() },
+	default: {
+		bulkGenerateConfigGroups: vi.fn(),
+		bulkGenerateConfigGroupsUnlocked: vi.fn(),
+		reload: vi.fn(),
+		withConfigurationLock: (callback) => callback(),
+	},
 }));
 vi.mock("../../internal/proxy-host-monitor.js", () => ({ assertMonitorConfig: vi.fn(), default: {} }));
 vi.mock("../../logger.js", () => ({
@@ -197,5 +202,48 @@ describe("GitOps Cloudflared pruning uses the process lifecycle", () => {
 		expect(await importConfig()).toMatchObject({ success: true, deleted: 1, errors: [] });
 		expect(child.kill).toHaveBeenCalledTimes(2);
 		expect((await Tunnel.query().findById(tunnel.id)).status).toBe(0);
+	});
+	it("starts newly restored tunnels and activates changed credentials without restarting unchanged ones", async () => {
+		const { tunnel, child } = await startTunnel();
+		await fs.writeFile(
+			path.join(tunnelDirectory(), `${tunnel.id}.yaml`),
+			`id: ${tunnel.id}\nname: Restored tunnel\ntoken: replacement-token\nowner_user_id: 1\nmeta: {}\n`,
+		);
+		await fs.writeFile(
+			path.join(tunnelDirectory(), "99.yaml"),
+			"id: 99\nname: New tunnel\ntoken: new-token\nowner_user_id: 1\nmeta: {}\n",
+		);
+		const importing = importConfig();
+		await vi.waitFor(() => expect(state.children).toHaveLength(2));
+		await vi.advanceTimersByTimeAsync(2500);
+		await vi.waitFor(() => expect(state.children).toHaveLength(3));
+		await vi.advanceTimersByTimeAsync(2500);
+		expect(await importing).toMatchObject({ success: true, errors: [] });
+		expect(child.kill).toHaveBeenCalledOnce();
+		expect((await Tunnel.query().findById(tunnel.id)).status).toBe(2);
+		expect((await Tunnel.query().findById(99)).status).toBe(2);
+		const unchanged = importConfig();
+		await vi.advanceTimersByTimeAsync(5000);
+		expect(await unchanged).toMatchObject({ success: true });
+		expect(state.children).toHaveLength(3);
+	});
+	it("reports imported tunnel activation failure and retries it on the next import", async () => {
+		await fs.writeFile(
+			path.join(tunnelDirectory(), "99.yaml"),
+			"id: 99\nname: New tunnel\ntoken: new-token\nowner_user_id: 1\nmeta: {}\n",
+		);
+		const importing = importConfig();
+		await vi.waitFor(() => expect(state.children).toHaveLength(1));
+		state.children[0].emit("error", new Error("synthetic spawn failure"));
+		await vi.advanceTimersByTimeAsync(2500);
+		expect(await importing).toMatchObject({
+			success: false,
+			errors: [expect.stringContaining("could not be activated")],
+		});
+		expect((await Tunnel.query().findById(99)).status).toBe(3);
+		const retry = importConfig();
+		await vi.waitFor(() => expect(state.children).toHaveLength(2));
+		await vi.advanceTimersByTimeAsync(2500);
+		expect(await retry).toMatchObject({ success: true });
 	});
 });

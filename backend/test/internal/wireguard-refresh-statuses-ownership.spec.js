@@ -6,7 +6,10 @@ const mocks = vi.hoisted(() => ({
 	peerQuery: vi.fn(),
 }));
 
-vi.mock("node:child_process", () => ({ execSync: mocks.execSync, spawn: vi.fn() }));
+vi.mock("node:child_process", async () => {
+	const { legacyWireguardExecFile } = await import("../helpers/legacy-wireguard-exec.js");
+	return { execSync: mocks.execSync, spawn: vi.fn(), execFile: legacyWireguardExecFile(mocks.execSync) };
+});
 vi.mock("../../logger.js", () => ({ global: mocks.logger }));
 vi.mock("../../models/setting.js", () => ({ default: {} }));
 vi.mock("../../models/wireguard_peer.js", () => ({ default: { query: mocks.peerQuery } }));
@@ -23,6 +26,7 @@ const createPeerQuery = (peers) => {
 		),
 	);
 	Object.assign(query, {
+		select: () => query,
 		andWhere: (field, operator, value) => {
 			filters.push({ field, operator: value === undefined ? "=" : operator, value: value ?? operator });
 			return query;

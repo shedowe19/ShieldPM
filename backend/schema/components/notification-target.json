@@ -1,0 +1,65 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"id",
+		"owner_user_id",
+		"name",
+		"type",
+		"enabled",
+		"host_ids",
+		"version",
+		"has_credentials",
+		"created_on",
+		"modified_on"
+	],
+	"properties": {
+		"id": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 9007199254740991
+		},
+		"owner_user_id": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 9007199254740991
+		},
+		"name": {
+			"type": "string"
+		},
+		"type": {
+			"enum": [
+				"webhook",
+				"ntfy",
+				"discord"
+			]
+		},
+		"enabled": {
+			"type": "boolean"
+		},
+		"host_ids": {
+			"type": "array",
+			"items": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 9007199254740991
+			},
+			"maxItems": 1000
+		},
+		"version": {
+			"type": "integer",
+			"minimum": 1
+		},
+		"has_credentials": {
+			"type": "boolean"
+		},
+		"created_on": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"modified_on": {
+			"type": "string",
+			"format": "date-time"
+		}
+	}
+}

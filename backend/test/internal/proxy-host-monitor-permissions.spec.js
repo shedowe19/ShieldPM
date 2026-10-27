@@ -31,6 +31,7 @@ import Access from "../../lib/access.js";
 import { up } from "../../migrations/20260923000000_add_proxy_host_monitor.js";
 import { up as addTlsOptions } from "../../migrations/20260923000001_add_proxy_host_monitor_tls_options.js";
 import { up as addSkipCertificateVerification } from "../../migrations/20260924000000_add_proxy_host_monitor_skip_certificate_verification.js";
+import { up as addIncidentCenter } from "../../migrations/20261017190300_incident_center.js";
 
 const settings = {
 	enabled: true,
@@ -87,6 +88,7 @@ describe("proxy host monitor visibility with real capability schemas", () => {
 		await up(state.database);
 		await addTlsOptions(state.database);
 		await addSkipCertificateVerification(state.database);
+		await addIncidentCenter(state.database);
 		await state.database("user").insert({ id: 7, roles: "[]", is_deleted: 0, is_disabled: 0 });
 		await state
 			.database("user_permission")
@@ -102,6 +104,16 @@ describe("proxy host monitor visibility with real capability schemas", () => {
 		monitor.stop();
 		vi.clearAllMocks();
 		state.requests = 0;
+		for (const table of [
+			"notification_delivery",
+			"notification_target",
+			"monitor_incident",
+			"monitor_observation",
+			"monitor_daily",
+			"monitor_latency",
+			"monitor_mute",
+		])
+			await state.database(table).delete();
 		await state.database("proxy_host_monitor_check").delete();
 		await state.database("proxy_host_monitor").delete();
 		await state.database("proxy_host").delete();

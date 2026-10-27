@@ -29,7 +29,14 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 
 ### Entwicklung
 
+- [Referenzkorrektur und Entfernung der Ausführungsintegration vom 27. Oktober 2026](./entwicklung/gitops-reference-and-runtime-removal-2026-10-27.md).
+
+- [Betriebsfehler vom 18. Oktober 2026](./entwicklung/runtime-fixes-2026-10-18.md) — beschädigte Nginx-Literale und vollständige temporale Host-Wiederherstellung.
+- [Umsetzung der Gesamtprüfung vom 17. Oktober 2026](./entwicklung/feature-implementation-2026-10-17.md) — Fehlerkorrekturen, Optimierungen und acht neue Funktionsbereiche mit Nachweisen.
+
+- [Gesamtprüfung und neue Features vom 17. Oktober 2026](./entwicklung/feature-review-2026-10-17.md) — neue reproduzierte Befunde, weitere Optimierungen und historische Feature-Vorschläge.
 - [Optimierungsprüfung vom 13. Oktober 2026](./entwicklung/optimierungspruefung-2026-10-13.md) — 13 korrigierte Fehlerfälle und Optimierungen mit Prüfnachweisen.
+- [Messbare Performance-Optimierungen vom 17. Oktober 2026](./entwicklung/performance-optimierung-2026-10-17.md) — Statusabfragen, Monitorhistorie und Nginx-Graph-Ladevorgänge mit Vergleichsmessungen.
 - [Setup](./entwicklung/setup.md)
 - [Setup-Interna](./entwicklung/setup-intern.md)
 - [Lokale Entwicklung](./entwicklung/lokale-entwicklung.md)
@@ -41,6 +48,11 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 ### Module (Backend)
 
 - [Modulübersicht](./module/README.md)
+- [Upstream-Pools](./module/upstream-pools.md)
+- [Proxy-Cache](./module/proxy-cache.md)
+- [Störungszentrale](./module/incident-center.md)
+- [Verschlüsselte Instanzbackups](./module/instance-backups.md)
+- [Host-Versionen](./features/host-revisionen.md)
 - [Nginx-Engine](./module/nginx-engine.md)
 - [Nginx-Templates](./module/nginx-templates.md)
 - [Proxy-Host](./module/proxy-host.md)
@@ -102,6 +114,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 ### API
 
 - [API-Überblick](./api/ueberblick.md)
+- [Instanzbackup-API](./api/instance-backups.md)
 - [Proxy-Host-Diagnose](./features/proxy-host-diagnostics.md)
 - [Routen](./api/routen.md)
 - [Nginx-Analytics Routes](./api/nginx-analytics.md)
@@ -197,6 +210,7 @@ _Zuletzt aktualisiert: 2026-10-08._
 - [Architektur-Überblick](./architektur/ueberblick.md)
 - [Module](./module/README.md)
 - [API-Überblick](./api/ueberblick.md)
+- [Instanzbackup-API](./api/instance-backups.md)
 - [Wiki-Pflege](./wiki-pflege.md)
 
 ## Codeprüfung

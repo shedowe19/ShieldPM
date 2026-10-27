@@ -1,4 +1,5 @@
 import type { ProxyHost } from "src/api/backend";
+import { defaultCachePolicy, defaultUpstreamPool } from "src/api/backend/hostTrafficPolicy";
 import { FORWARD_SCHEME, ICON_TYPE, PHP_VERSION, TERMINAL_AUTH_TYPE, TIME_UNIT } from "src/types/enums";
 import { describe, expect, it } from "vitest";
 import { createProxyHostInitialValues } from "./ProxyHostModalFormValues";
@@ -6,6 +7,7 @@ import { createProxyHostInitialValues } from "./ProxyHostModalFormValues";
 describe("createProxyHostInitialValues", () => {
 	it("initializes every ProxyHost form field with the existing safe defaults", () => {
 		expect(createProxyHostInitialValues({})).toStrictEqual({
+			id: undefined,
 			accessListId: 0,
 			advancedConfig: "",
 			advLimitReqBurst: undefined,
@@ -44,6 +46,9 @@ describe("createProxyHostInitialValues", () => {
 			maintenanceReason: "",
 			maintenanceStart: "",
 			meta: {
+				wafRuleset: "crs",
+				upstreamPool: defaultUpstreamPool(),
+				cachePolicy: defaultCachePolicy(),
 				ipFirewall: {
 					enabled: false,
 					listIds: [],
@@ -243,7 +248,12 @@ describe("createProxyHostInitialValues", () => {
 			},
 		};
 		const values = createProxyHostInitialValues({ meta });
-		expect(values.meta).toStrictEqual(meta);
+		expect(values.meta).toStrictEqual({
+			...meta,
+			wafRuleset: "crs",
+			upstreamPool: defaultUpstreamPool(),
+			cachePolicy: defaultCachePolicy(),
+		});
 		expect(values.meta?.ipFirewall?.listIds).not.toBe(meta.ipFirewall.listIds);
 		expect(values.meta?.ipFirewall?.denylist[0]).not.toBe(meta.ipFirewall.denylist[0]);
 		expect(values.meta?.ipFirewall?.asnDenylist).not.toBe(meta.ipFirewall.asnDenylist);
@@ -262,5 +272,21 @@ describe("createProxyHostInitialValues", () => {
 			featureFlag: "preserved",
 			ipFirewall: { enabled: true, listIds: [5], allowlist: [], asnDenylist: [] },
 		});
+	});
+
+	it.each([false, true])("drops retired execution assignments from legacy metadata (json=%s)", (json) => {
+		const meta = {
+			customIntegration: { retained: true },
+			wasmFilters: [{ id: "retired-application", config: { applicationId: "saved" } }],
+			wasm_filters: [{ id: "retired-filter", config: { module_id: "saved" } }],
+		};
+		const values = createProxyHostInitialValues({
+			meta: (json ? JSON.stringify(meta) : meta) as ProxyHost["meta"],
+		});
+		expect(values.meta).toMatchObject({ customIntegration: { retained: true } });
+		expect(values.meta).not.toHaveProperty("wasmFilters");
+		expect(values.meta).not.toHaveProperty("wasm_filters");
+		expect(meta.wasmFilters).toHaveLength(1);
+		expect(meta.wasm_filters).toHaveLength(1);
 	});
 });

@@ -1,0 +1,56 @@
+{
+	"operationId": "retryNotificationDelivery",
+	"summary": "Retry an owned failed, pending or muted delivery",
+	"tags": [
+		"incidents"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.manage"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": [
+							"success"
+						],
+						"properties": {
+							"success": {
+								"type": "boolean"
+							}
+						}
+					}
+				}
+			}
+		},
+		"400": {
+			"description": "Invalid input or stale configuration"
+		},
+		"403": {
+			"description": "Permission denied"
+		},
+		"404": {
+			"description": "Object not found within caller scope"
+		}
+	},
+	"parameters": [
+		{
+			"in": "path",
+			"name": "deliveryID",
+			"required": true,
+			"schema": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 9007199254740991
+			}
+		}
+	]
+}

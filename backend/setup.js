@@ -228,7 +228,39 @@ export const regenerateAllHosts = async () => {
 		if (streams?.length) {
 			batches.push({ model: streamModel, hostType: "stream", hosts: streams });
 		}
-		if (batches.length) await internalNginx.bulkGenerateConfigGroups(batches);
+		if (batches.length) {
+			try {
+				await internalNginx.bulkGenerateConfigGroups(batches, { throwOnError: true });
+			} catch (error) {
+				// start.sh clears active host files when the fingerprint changes. A
+				// failed atomic rebuild therefore cannot restore healthy listeners.
+				// Isolate startup hosts after that rollback, keeping shared-resource
+				// edits elsewhere atomic. appStart performs the final validated reload.
+				logger.error(`Startup host batch failed; retrying hosts individually: ${error.message}`);
+				let failedHosts = 0;
+				for (const { model, hostType, hosts } of batches) {
+					for (const host of hosts) {
+						try {
+							await internalNginx.bulkGenerateConfigGroups([{ model, hostType, hosts: [host] }], {
+								throwOnError: true,
+							});
+						} catch (hostError) {
+							failedHosts++;
+							// A generation error happens before the stage enters the batch,
+							// so the ordinary rollback may not have recorded its failure.
+							await internalNginx.updateHostStatus(model, host, {
+								nginx_online: false,
+								nginx_err: `Startup configuration failed: ${hostError.message}`,
+							});
+							logger.error(`Startup ${hostType} ${host.id} failed: ${hostError.message}`);
+						}
+					}
+				}
+				// Keep the previous/missing fingerprint so the next startup retries
+				// failed hosts. The UI can still start to allow their repair.
+				if (failedHosts) return;
+			}
+		}
 
 		await utils.writeHash();
 	}

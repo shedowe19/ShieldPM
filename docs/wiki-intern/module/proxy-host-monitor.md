@@ -74,6 +74,10 @@ Kandidaten. `backend/test/internal/proxy-host-monitor.spec.js` prüft die begren
   erscheint „–“. Bei einem Timeout beschreibt der Wert die Dauer der fehlgeschlagenen Probe bis zum Abbruch und
   keine bestätigte Netzwerklatenz. Im Dialog „Host-Überwachung“ bleibt die Antwortzeit beim letzten Check und im
   Verlauf sichtbar.
+- Sind Dienstprüfung und Latenz in der Host-Tabelle gleichzeitig ausgeblendet, pausiert deren Status-Polling.
+  Das erneute Einblenden einer der beiden Spalten fordert aktuelle Daten an. React Query reicht sein AbortSignal
+  bis zum API-Client weiter und bricht eine laufende Statusabfrage ab, sobald sie keinen aktiven Verbraucher mehr
+  hat. Andere Verbraucher desselben Query-Keys, der Überwachungsdialog und die Backend-Probes bleiben aktiv.
 - Die Konfiguration begrenzt Intervalle auf 15–3600 Sekunden und Timeouts auf 500–15000 Millisekunden; der Timeout
   muss kürzer als das Intervall sein. Manuelle Checks teilen sich die Begrenzung auf fünf Verbindungen und sind
   zusätzlich auf zehn Aufrufe je Minute und IP begrenzt.
@@ -82,6 +86,22 @@ Kandidaten. `backend/test/internal/proxy-host-monitor.spec.js` prüft die begren
   ebenso ein geändertes `upstream_ca`, `upstream_server_name` oder `skip_certificate_verification`. Dabei wird auch
   der Alarmstatus zurückgesetzt.
   Die Änderung von Intervall, Timeout oder Benachrichtigung erhält bisherige Messungen.
+  Speichern von Status und neuer Messung sowie Verlaufsbegrenzung gehören zu derselben Transaktion. Ein Fehler bei
+  der Bereinigung rollt den gesamten Schreibvorgang zurück; danach wird kein Alarm für diese Messung versendet.
+  Die Bereinigung liest nur die ID des hundertsten noch nicht abgelaufenen Eintrags und entfernt mit einem
+  hostbezogenen DELETE sowohl ältere IDs als auch abgelaufene Zeitstempel. Dadurch genügen zwei Abfragen, ohne
+  eine MySQL-inkompatible Unterabfrage auf dieselbe Zieltabelle zu verwenden. Die Grenze wird anhand gültiger
+  Zeitstempel ermittelt, damit später importierte, bereits abgelaufene Einträge keine gültigen Messungen verdrängen.
+- MariaDB-Snapshot-Konflikte (`ER_CHECKREAD`/1020), Deadlocks (1213) und Lock-Wartezeitüberschreitungen (1205)
+  wiederholen ausschließlich den Datenbank-Speichervorgang in einer neuen Transaktion: höchstens drei Versuche,
+  mit 25 beziehungsweise 50 Millisekunden Pause. Bei aktiviertem `innodb_snapshot_isolation` kann MariaDB die
+  gesamte Transaktion verwerfen; ein erneutes DELETE in derselben Transaktion wäre deshalb falsch.
+  Jeder Versuch lädt den aktuellen Monitor unter Rowlock und prüft Version, aktivierten Host, Upstream-Identität,
+  Alarmzustand und Stummschaltung erneut. Probe und externe Benachrichtigungen laufen außerhalb dieser Wiederholung.
+  Status, Historie, Vorfälle, Messwertsummen und Zustellaufträge bleiben gemeinsam atomar. Andere Fehler sowie
+  ausgeschöpfte Wiederholungen werden weiterhin gemeldet. Ein Stop oder zwischenzeitlich geänderte Einstellungen
+  verwerfen das alte Messergebnis. Die Wiederholung gilt nur für exakt zugeordnete MySQL-/MariaDB-Fehlercodes.
+  Grundlage: [MariaDB: innodb_snapshot_isolation](https://mariadb.com/docs/server/server-usage/storage-engines/innodb/innodb-system-variables#innodb_snapshot_isolation).
 - Ein täglicher Cleanup entfernt auch bei pausierten Monitoren Einträge nach 30 Tagen und beseitigt Konfigurationen,
   deren Proxy-Host inzwischen gelöscht wurde (höchstens 200 verwaiste Hosts pro Durchgang).
 - Die erste erfolgreiche Messung erzeugt keinen Telegram-Alarm; ein erster Fehler und spätere Up-/Down-Wechsel
@@ -112,6 +132,21 @@ Kandidaten. `backend/test/internal/proxy-host-monitor.spec.js` prüft die begren
   GitOps exportiert nur Monitor-Einstellungen und keine historischen Messergebnisse. Backups vor Einführung dieses
   Features besitzen keinen Monitor-Ordner; ihr Import lässt lokal vorhandene Monitore unberührt.
 
+## Upstream-Pools und Incident-Center
+
+Bei einem aktivierten Upstream-Pool prüft der Monitor dessen Ziele anstelle des historischen Einzelziels.
+Primäre Ziele werden vor Backups geprüft; ein erfolgreiches Ziel genügt für den Gesamtzustand `up`.
+Die Probes laufen innerhalb desselben begrenzten Worker-Slots nacheinander und teilen sich das konfigurierte
+Zeitbudget. Eine ausgeschöpfte Teilzeit bleibt `unknown`, weil sie keinen vollständigen Ziel-Timeout beweist.
+Explizite Verbindungsfehler oder unerwartete HTTP-Statuswerte bleiben `down`. Host-Header und TLS-Servername
+folgen der Pool-Identität; ausdrücklich gesetzte Monitor-CA-, SNI- und Zertifikatsoptionen haben Vorrang.
+
+Der Pool-Tab zeigt die letzten zielbezogenen Monitor-Beobachtungen getrennt von den dort abgefragten
+TCP-Snapshots. Sie verfallen nach fünf Minuten und passen nur zur unveränderten Pool-Konfiguration.
+Das [Incident-Center](./incident-center.md) speichert akzeptierte Zustandswechsel, tägliche Verfügbarkeit,
+Latenzen und Benachrichtigungsaufträge dauerhaft. Seine Alarm-Stummschaltung pausiert weder die Checks
+noch die Wartungsseite und wird auch von Telegram-Alarmen berücksichtigt.
+
 ## Schnittstellen
 
 Der Dialog lädt beim Öffnen aktuelle Einstellungen, bevor das Bearbeitungsformular erscheint. Ein Fehler dieses
@@ -132,6 +167,13 @@ simulierten API-Antworten.
 - [Proxy-Host](./proxy-host.md) — Ziel und Besitzer
 - [ChatOps](./chatops.md) — Telegram-Integration
 - [Datenmodell](../daten/datenmodell.md) — Datenbanktabellen
+
+### Dauerhafte Vorfälle und zusätzliche Kanäle
+
+Akzeptierte Messungen aktualisieren zusätzlich das [Incident-Center](./incident-center.md) in derselben
+Transaktion. Vorfälle, tägliche Verfügbarkeit und Latenzminuten überleben die 100er-Checkhistorie; fehlende
+Messungen zählen als unbekannt. Geplante Alarm-Stummschaltung wirkt auf neue und erneut versuchte
+Kanalzustellungen sowie Telegram, ohne die bestehende Wartungsseite oder Checks anzuhalten.
 
 ## Offene Fragen
 

@@ -1,7 +1,137 @@
 #!/usr/bin/env sh
 
-# These files survive native service and Docker container restarts. Always
-# replace the current value, rather than matching only the shipped default.
+# Native overlays retain files removed from later application versions.
+# Retire only ShieldPM's own runtime block and its two obsolete Lua helpers.
+remove_legacy_wasm_runtime() {
+    python3 - "$1" "${2:-/usr/local/share/lua/5.1/shieldpm}" <<'PY'
+import os
+from pathlib import Path
+import re
+import stat
+import sys
+import tempfile
+
+filename, lua_root = map(Path, sys.argv[1:])
+for directory in (lua_root, *lua_root.parents):
+    if directory.is_symlink():
+        raise RuntimeError(f"Refusing a symlink Lua directory: {directory}")
+content = filename.read_text()
+begin = "# ShieldPM managed Wasm runtime begin"
+end = "# ShieldPM managed Wasm runtime end"
+pattern = (r"^[ \t]*" + re.escape(begin) + r"[ \t]*\r?\n"
+           r"[ \t]*wasm_vm[ \t]+wasmtime;[ \t]*\r?\n"
+           r"[ \t]*" + re.escape(end) + r"[ \t]*(?:\r?\n|$)")
+cleaned, count = re.subn(pattern, "", content, flags=re.MULTILINE)
+if content.count(begin) != count or content.count(end) != count or count > 1:
+    raise RuntimeError("Malformed legacy ShieldPM runtime block; retain and review the original Nginx configuration")
+if cleaned != content:
+    descriptor, temporary = tempfile.mkstemp(prefix=".shieldpm-runtime-", dir=filename.parent)
+    try:
+        with os.fdopen(descriptor, "w") as handle:
+            handle.write(cleaned)
+            os.fchmod(handle.fileno(), filename.stat().st_mode & 0o777)
+        os.replace(temporary, filename)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+for name in ("wasm.lua", "wasi.lua"):
+    obsolete = lua_root / name
+    try:
+        mode = obsolete.lstat().st_mode
+    except FileNotFoundError:
+        continue
+    if not (stat.S_ISREG(mode) or stat.S_ISLNK(mode)):
+        raise RuntimeError(f"Obsolete Lua helper is not a regular file: {obsolete}")
+    obsolete.unlink()
+PY
+}
+
+# Native binary overlays do not delete libraries removed by a newer base image.
+# Keep the old library until both the current binary and its linkage prove it is unused.
+remove_legacy_wasm_binary_support() {
+    python3 - "${1:-nginx}" "${2:-/usr/local}" <<'PY'
+import os
+from pathlib import Path
+import re
+import shutil
+import stat
+import subprocess
+import sys
+
+def identity(info):
+    return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns, info.st_mode)
+
+def open_directory(directory):
+    if not directory.is_absolute() or ".." in directory.parts:
+        raise ValueError("Invalid native runtime directory")
+    descriptor = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        for component in directory.parts[1:]:
+            following = os.open(component, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = following
+        return descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+def cleanup():
+    directories = []
+    try:
+        candidates = []
+        prefix = Path(sys.argv[2])
+        targets = ((prefix / "lib", re.compile(r"libwasmtime\.so(?:\.[0-9]+)*")),
+                   (prefix / "share/lua/5.1/resty", re.compile(r"proxy-wasm\.lua")))
+        for directory, names in targets:
+            try:
+                descriptor = open_directory(directory)
+            except FileNotFoundError:
+                continue
+            directories.append(descriptor)
+            for name in os.listdir(descriptor):
+                if not names.fullmatch(name):
+                    continue
+                info = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+                if not (stat.S_ISREG(info.st_mode) or stat.S_ISLNK(info.st_mode)):
+                    raise ValueError("Retired native runtime path is not a regular file")
+                candidates.append((descriptor, name, identity(info)))
+        if not candidates:
+            return
+        command = shutil.which(sys.argv[1])
+        if not command:
+            raise ValueError("Nginx binary cannot be resolved")
+        command = Path(command).absolute()
+        binary = command.resolve(strict=True)
+        before = identity(binary.stat())
+        build = subprocess.run([str(binary), "-V"], capture_output=True, text=True, timeout=10, check=False)
+        version = build.stdout + build.stderr
+        if build.returncode or "nginx version:" not in version or "configure arguments:" not in version:
+            raise ValueError("Nginx build information is unavailable")
+        if "wasm-nginx-module" in version:
+            return
+        linked = subprocess.run(["ldd", str(binary)], capture_output=True, text=True, timeout=10, check=False)
+        libraries = linked.stdout + linked.stderr
+        if linked.returncode or not libraries.strip() or "not found" in libraries.lower():
+            raise ValueError("Nginx linkage cannot be confirmed")
+        if "wasmtime" in libraries.lower():
+            return
+        if command.resolve(strict=True) != binary or identity(binary.stat()) != before:
+            raise ValueError("Nginx binary changed during runtime cleanup")
+        for descriptor, name, before_file in candidates:
+            if identity(os.stat(name, dir_fd=descriptor, follow_symlinks=False)) != before_file:
+                raise ValueError("Retired native runtime file changed during cleanup")
+        for descriptor, name, _before_file in candidates:
+            os.unlink(name, dir_fd=descriptor)
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        print(f"Retaining legacy native runtime files: {error}", file=sys.stderr)
+    finally:
+        for descriptor in directories:
+            os.close(descriptor)
+
+cleanup()
+PY
+}
+
 prepare_runtime_directory() {
     runtime_root=$1
     runtime_uid=$2

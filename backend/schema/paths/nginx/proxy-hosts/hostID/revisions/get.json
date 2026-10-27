@@ -1,0 +1,41 @@
+{
+	"operationId": "getNginxProxyHosts{Hostid}Revisions",
+	"summary": "List accepted host configuration versions",
+	"tags": [
+		"proxy-hosts"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.view"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Successful operation",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "array",
+						"items": {
+							"type": "object"
+						}
+					}
+				}
+			}
+		}
+	},
+	"parameters": [
+		{
+			"in": "path",
+			"name": "hostID",
+			"required": true,
+			"schema": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 9007199254740991
+			}
+		}
+	]
+}

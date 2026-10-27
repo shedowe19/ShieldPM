@@ -1,0 +1,43 @@
+{
+	"operationId": "createInstanceBackup",
+	"summary": "Create a complete encrypted instance backup",
+	"description": "Starts one bounded background operation. Uses SQLite backup, transactional MySQL/MariaDB dump or PostgreSQL custom dump, includes instance files and private keys, and encrypts with AES-256-GCM/scrypt. Password is never stored. Maximum 50 archives and 8 GiB per archive/payload; extra free working space is required.",
+	"tags": [
+		"instance-backups"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"responses": {
+		"403": {
+			"description": "Administrator permission required; backups disabled in demo mode"
+		},
+		"400": {
+			"description": "Invalid input or another instance operation is running"
+		},
+		"202": {
+			"description": "Operation accepted",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../components/instance-backup-job.json"
+					}
+				}
+			}
+		}
+	},
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"$ref": "../../components/instance-backup-input.json"
+				}
+			}
+		}
+	}
+}

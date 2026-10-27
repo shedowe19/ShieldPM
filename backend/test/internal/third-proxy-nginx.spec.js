@@ -18,6 +18,8 @@ const host = (overrides = {}) => ({
 	id: 7,
 	enabled: true,
 	domain_names: ["example.test"],
+	host_domains: [{ domain_name: "example.test" }],
+	$fetchGraph: async () => {},
 	forward_scheme: "http",
 	forward_host: "127.0.0.1",
 	forward_port: 8080,
@@ -42,7 +44,7 @@ describe("third review Nginx activation and static location regressions", () => 
 		transaction: (callback) => callback({}),
 		query: () => ({
 			findById: () => ({
-				withGraphFetched: async () => host({ enabled, is_deleted: false }),
+				withGraphJoined: async () => host({ enabled, is_deleted: false }),
 				forUpdate: async () => host({ enabled }),
 			}),
 			where: () => ({ patch: vi.fn().mockResolvedValue(1) }),

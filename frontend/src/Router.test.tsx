@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
 	setup: true,
 	renderDashboard: vi.fn(),
 	renderLogin: vi.fn(),
+	roles: ["admin"],
 }));
 
 vi.mock("src/components/AnimatedPage", () => ({
@@ -51,6 +52,9 @@ vi.mock("src/hooks/useHealth", () => ({
 		isLoading: false,
 	}),
 }));
+vi.mock("src/hooks/useUser", () => ({
+	useUser: () => ({ data: { roles: mocks.roles, permissions: {} }, isLoading: false }),
+}));
 vi.mock("src/pages/DuoCallback", () => ({
 	default: () => <div>Duo callback</div>,
 }));
@@ -80,6 +84,7 @@ describe("Router", () => {
 		mocks.authenticated = false;
 		mocks.loading = false;
 		mocks.setup = true;
+		mocks.roles = ["admin"];
 		mocks.renderLogin.mockReset().mockReturnValue(<div>Login</div>);
 		mocks.failAnalyticsImport = false;
 		mocks.failDashboard = false;
@@ -90,6 +95,15 @@ describe("Router", () => {
 			return <div>Dashboard</div>;
 		});
 		window.history.replaceState({}, "", "/duo-callback?duo_code=duo-code");
+	});
+
+	it.each([true, false])("returns not found for a retired application route (admin=%s)", async (admin) => {
+		mocks.authenticated = true;
+		mocks.roles = admin ? ["admin"] : [];
+		window.history.replaceState({}, "", "/settings/wasi");
+		const { default: Router } = await import("./Router");
+		render(<Router />);
+		expect(await screen.findByText("Not found")).toBeInTheDocument();
 	});
 
 	it.each([true, false])("waits for session restoration before mounting login (restored=%s)", async (restored) => {

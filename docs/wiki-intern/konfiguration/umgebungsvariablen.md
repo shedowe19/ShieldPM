@@ -111,21 +111,21 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 
 ## Nginx (Erweitert)
 
-| Variable                        | Standard     | Beschreibung                                                                |
-| ------------------------------- | ------------ | --------------------------------------------------------------------------- |
-| `SKIP_IP_RANGES`                | `true`       | Cloudflare IP-Ranges nicht automatisch aktualisieren                        |
-| `FULLCLEAN`                     | `false`      | Volles Cleanup bei Nginx-Reload aktivieren                                  |
-| `IPRT`                          | `1`          | Multiplikator für IP-Ranges-Aktualisierungsintervall                        |
-| `NC_AIO`                        | —            | Nextcloud AIO-Modus aktivieren                                              |
-| `NC_DOMAIN`                     | —            | Nextcloud AIO Domain (erforderlich wenn NC_AIO=true)                        |
-| `NGINX_404_REDIRECT`            | `false`      | 404-Anfragen auf Standard-Site umleiten                                     |
-| `NGINX_HSTS_SUBDOMAINS`         | `true`       | HSTS-Header für Subdomains einschließen                                     |
-| `NGINX_LOG_NOT_FOUND`           | `false`      | 404-Fehler (Not Found) in Nginx-Logs protokollieren                         |
-| `NGINX_WORKER_PROCESSES`        | `auto`       | Anzahl der Nginx-Worker-Prozesse                                            |
-| `NGINX_WORKER_CONNECTIONS`      | `512`        | Anzahl der Verbindungen pro Worker                                          |
-| `X_FRAME_OPTIONS`               | `sameorigin` | Header-Wert: `none`, `sameorigin` oder `deny` (kleingeschrieben)            |
-| `DISABLE_NGINX_BEAUTIFIER`      | `false`      | Nginx Config Beautifier deaktivieren (Config wird unformatiert geschrieben) |
-| `NGINX_DISABLE_PROXY_BUFFERING` | `false`      | Proxy-Buffering global für alle Proxy-Verbindungen deaktivieren             |
+| Variable                        | Standard     | Beschreibung                                                             |
+| ------------------------------- | ------------ | ------------------------------------------------------------------------ |
+| `SKIP_IP_RANGES`                | `true`       | Cloudflare IP-Ranges nicht automatisch aktualisieren                     |
+| `FULLCLEAN`                     | `false`      | Volles Cleanup bei Nginx-Reload aktivieren                               |
+| `IPRT`                          | `1`          | Multiplikator für IP-Ranges-Aktualisierungsintervall                     |
+| `NC_AIO`                        | —            | Nextcloud AIO-Modus aktivieren                                           |
+| `NC_DOMAIN`                     | —            | Nextcloud AIO Domain (erforderlich wenn NC_AIO=true)                     |
+| `NGINX_404_REDIRECT`            | `false`      | 404-Anfragen auf Standard-Site umleiten                                  |
+| `NGINX_HSTS_SUBDOMAINS`         | `true`       | HSTS-Header für Subdomains einschließen                                  |
+| `NGINX_LOG_NOT_FOUND`           | `false`      | 404-Fehler (Not Found) in Nginx-Logs protokollieren                      |
+| `NGINX_WORKER_PROCESSES`        | `auto`       | Anzahl der Nginx-Worker-Prozesse                                         |
+| `NGINX_WORKER_CONNECTIONS`      | `512`        | Anzahl der Verbindungen pro Worker                                       |
+| `X_FRAME_OPTIONS`               | `sameorigin` | Header-Wert: `none`, `sameorigin` oder `deny` (kleingeschrieben)         |
+| `DISABLE_NGINX_BEAUTIFIER`      | ignoriert    | Altvariable; generierte Konfiguration wird immer unverändert geschrieben |
+| `NGINX_DISABLE_PROXY_BUFFERING` | `false`      | Proxy-Buffering global für alle Proxy-Verbindungen deaktivieren          |
 
 ## Nginx-Module
 

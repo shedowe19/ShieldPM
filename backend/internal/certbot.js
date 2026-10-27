@@ -24,6 +24,44 @@ let processing = false;
  */
 export const isProcessing = () => processing;
 
+/** Prepare lazy account registration without making service startup depend on ACME. */
+export const acmeRegistrationArguments = async () => {
+	const email = process.env.ACME_EMAIL;
+	const args = email ? ["--email", email] : ["--register-unsafely-without-email"];
+	let kid = process.env.ACME_EAB_KID;
+	let hmac = process.env.ACME_EAB_HMAC_KEY;
+	const server = new URL(process.env.ACME_SERVER || "https://acme-v02.api.letsencrypt.org/directory");
+	if (server.hostname === "acme.zerossl.com" && !kid && !hmac) {
+		const accounts = `${process.env.DATA_PATH || "/data"}/tls/certbot/accounts/${server.hostname}`;
+		if (
+			fs.existsSync(accounts) &&
+			fs.readdirSync(accounts, { recursive: true, withFileTypes: true }).some((entry) => entry.isFile())
+		)
+			return args;
+		if (!email) throw new errs.ConfigurationError("ACME_EMAIL is required to register a ZeroSSL account");
+		try {
+			const response = await fetch("https://api.zerossl.com/acme/eab-credentials-email", {
+				method: "POST",
+				body: new URLSearchParams({ email }),
+				signal: AbortSignal.timeout(30_000),
+			});
+			if (!response.ok) throw new errs.ConfigurationError("ZeroSSL account registration is unavailable");
+			const credentials = await response.json();
+			if (typeof credentials.eab_kid !== "string" || typeof credentials.eab_hmac_key !== "string") {
+				throw new errs.ConfigurationError("ZeroSSL returned invalid account credentials");
+			}
+			kid = credentials.eab_kid;
+			hmac = credentials.eab_hmac_key;
+		} catch {
+			throw new errs.ConfigurationError(
+				"ZeroSSL account registration failed; retry the certificate request later",
+			);
+		}
+	}
+	if (kid && hmac) args.push("--eab-kid", kid, "--eab-hmac-key", hmac);
+	return args;
+};
+
 /** Execute all ACME operations under the same lock, including scheduled renewals. */
 export const runCertbot = async (args, prepare) => {
 	if (processing) {
@@ -32,7 +70,8 @@ export const runCertbot = async (args, prepare) => {
 	processing = true;
 	try {
 		if (prepare) await prepare();
-		return await utils.execFile("certbot", args);
+		const registration = args.includes("certonly") ? await acmeRegistrationArguments() : [];
+		return await utils.execFile("certbot", [...args, ...registration]);
 	} finally {
 		processing = false;
 	}

@@ -44,6 +44,7 @@ Dokumentation des Test-Setups und der Test-Strategien.
 - Regressionstests für entfernte statische Abhängigkeiten lesen bei großen Seiten die Quelldatei statt sie parallel
   dynamisch zu importieren. Der Produktions-Build prüft die Typen und Modulauflösung; der gezielte Quelltest verhindert
   zugleich, dass der entfernte Import wieder eingeführt wird, ohne an Vitests Fünf-Sekunden-Import-Timeout zu geraten.
+- Die Unit-Grenzen in `routes/proxy-host-monitor.spec.js`, `internal/proxy-host-pagination.spec.js` und `internal/third-proxy-references.spec.js` mocken außerhalb ihres Prüfgegenstands liegende Revisions-, Traffic- beziehungsweise Domain-Claim-Services ausdrücklich. Ein Datenbank-Mock wirft bei versehentlicher Runtime-Initialisierung. Dadurch verlangen diese Fixtures weder persistente JWT-Schlüssel noch ein beschreibbares `/data`. Die unveränderten Assertions bestehen auch mit schreibgeschütztem `DATA_PATH` unter `/proc` und mit einem nicht vorhandenen Datenverzeichnis; dabei wird kein Runtime-Verzeichnis angelegt.
 
 ### Browsernahe E2E-Smokes
 
@@ -62,6 +63,36 @@ Dokumentation des Test-Setups und der Test-Strategien.
   damit bleibt der Worktree auch nach einem fehlgeschlagenen Browser-Smoke frei von Testausgaben.
 
 ## Backend-Tests
+
+### Produktionsregressionen vom 17. Oktober
+
+- `internal/proxy-host-monitor-retry.spec.js` prüft den vollständigen Transaktions-Rollback, begrenzte Wiederholungen,
+  neue Versionen/Zieladressen, Stop, Stummschaltung und genau einmal ausgeführte Probe und Benachrichtigung.
+- `internal/mariadb-monitor-concurrency.spec.js` erzeugt `ER_CHECKREAD` mit zwei echten Verbindungen,
+  `REPEATABLE READ` und aktivierter Snapshot-Isolation. Der Fehler stammt vom Server, nicht aus einem Mock.
+- `internal/docker-reconnect.spec.js` prüft den optionalen fehlenden Standardsocket, begrenzte Logs,
+  Wiederverbindung nach späterer Bereitstellung und verspätete Fehler nach Stop.
+- `internal/certificate-datetime.spec.js` und `internal/mariadb-certificate-datetime.spec.js` prüfen strikte
+  DATETIME-Spalten einschließlich Offset-/Sommerzeit-Roundtrips bei unveränderter mysql2-Verbindungszeitzone.
+- `internal/mariadb-proxy-host-update.spec.js` führt den echten manuellen Host-Service aus. Geladene
+  Zertifikats-/Access-List-Relationen und serververwaltete Zeitstempel dürfen nicht in dessen Schreibgraph gelangen;
+  der vollständige verschlüsselte Snapshot bleibt für Versionen und Rollback erhalten.
+- `internal/mariadb-host-revision-full-schema.spec.js` führt sämtliche produktiven Migrationen aus und prüft
+  den Snapshot-Roundtrip aller 68 Host-Spalten mit normalen und Onion-Domains. Zwei echte Verbindungen erzeugen
+  einen `ER_CHECKREAD` unmittelbar vor dem Host-Patch. Ein einmaliger Konflikt muss vollständig wiederhergestellt
+  werden, wiederkehrende Konflikte müssen nach drei Versuchen abbrechen, und ein echter permanenter Fehler 1054
+  darf nicht wiederholt werden. Claims, Domains, Konfigurationsbytes und Dateirechte werden mitgeprüft.
+- `lib/host-rollback.spec.js`, `internal/host-update-regressions.spec.js` und `internal/host-revisions.spec.js`
+  prüfen die unveränderte ursprüngliche Fehlerinstanz nach erfolgreichem Rollback sowie beide privaten Ursachen
+  bei gescheiterter Kompensation oder Reload. Begrenzte Diagnosen dürfen weder lange SQL-Abfragen noch Geheimnisse
+  enthalten; selbst ein Fehler der Logausgabe darf die Ursachen nicht verdrängen.
+- `integration/startup-nginx-recovery-runtime.spec.js` startet echtes Nginx mit leerem Hostbestand und einer
+  ungültigen Konfiguration. Gültige manuelle und Docker-Hosts müssen anschließend HTTP 200 liefern; der fehlerhafte
+  Host bleibt ausgeschlossen, und ein später reparierter Host wird erneut erzeugt.
+
+Die internen `mariadb-*.spec.js` laufen gemeinsam mit den Migrationsfällen im vorhandenen MariaDB-11.8.3-CI-Service
+bei `SHIELDPM_TEST_MARIADB=1`. Ohne ausdrücklich bereitgestellten Testserver werden diese Serverfälle übersprungen;
+die übrigen Regressionen benötigen keine produktive Datenbank.
 
 - Pfad: `backend/test/`
 - Enthalten Unit-Tests für `backend/lib/` (z.B. helpers, user-id-from-me) und `backend/internal/` (z.B. 2fa-service, ai, auth-session-service, certificate, ddns, tokens-2fa).
@@ -89,7 +120,7 @@ Dokumentation des Test-Setups und der Test-Strategien.
 - CI-Regressionstests unter `backend/test/ci/` prüfen Runtime-, Installations-, Workflow- und Paketverträge einschließlich Node 26, eingefrorener Yarn-Installationen, Update-Recovery, Notice-Generierung und Versionsdokumentation. Der Dependency-Updater aktualisiert die Manifeste auf aktuelle Paketversionen, prüft Tests und Build und synchronisiert anschließend die verifizierten Tool-Versionen. Gezielte transitive Sicherheitsauflösungen bleiben im Lockfile erhalten. <!-- verified-vite-baseline:start -->Vite und Vitest verwenden gemeinsam Vite 8.3.3/Rolldown 1.2.13.<!-- verified-vite-baseline:end --> Ergebnisse der aktuellen Sicherheitsprüfung stehen unter [Externe Abhängigkeiten](../architektur/externe-abhaengigkeiten.md).
 - `backend/test/migrations/full-schema.spec.js` baut die komplette Migrationskette in einer Transaktion auf SQLite und PostgreSQL auf. `@electric-sql/pglite` ist hierfür eine explizite Dev-Dependency: Der Adapter verwendet Knexs PostgreSQL-Dialekt und die tatsächliche eingebettete PostgreSQL-Engine. SQL-Abfragen, Bindings, Fehler und Transaktionsabbrüche werden wirklich ausgeführt; externe Nginx-Prozessaktionen sind gemockt. Netzwerkprotokoll, Serverbetrieb und Mehrverbindungsrennen werden damit nicht geprüft.
 - `backend/test/migrations/data-preservation.spec.js` prüft geänderte Domain- und mTLS-Werte bei Rollback sowie vollständig abgewartete Schemaänderungen in beiden Engines. `backend/test/lib/password-reset.spec.js` und `test/internal/audit-log-sqlite-dates.spec.js` testen atomaren Notfall-Reset und UTC-Grenzen gegen echte SQLite-Dateien beziehungsweise Tabellen.
-- `backend/test/migrations/mariadb-full-schema.spec.js` und `mariadb-interrupted-zstd-runner.spec.js` laufen nur mit `SHIELDPM_TEST_MARIADB=1`. Der CI-Job stellt dafür einen echten MariaDB-11.8.3-Service bereit und führt alle `mariadb-*.spec.js` aus. Der Full-Schema-Test erzeugt eine isolierte leere Datenbank, wendet **jede** Datei aus `backend/migrations/` über den produktiven `runMigrations()`-Runner an, vergleicht die vollständig registrierte Migrationsliste mit dem Verzeichnisinhalt, prüft zentrale Tabellen/Spalten und startet denselben Runner erneut ohne neue Migrationen. Damit historische Regenerierungs-Migrationen keinen CI-Runtime-DB-/Schlüsselpfad berühren, führt der Test eine temporäre Kopie derselben Migrationsdateien mit ausschließlich gestubbten Logger- und Nginx-Außeneffekten aus; Abhängigkeiten und der produktive Knex-Runner bleiben real. Der Recovery-Test bildet zusätzlich eine bereits vorhandene Zstd-Spalte ohne Migrationseintrag nach und prüft deren nachträgliche Knex-Registrierung.
+- Die MariaDB-Fälle in `backend/test/migrations/mariadb-full-schema.spec.js` und `mariadb-interrupted-zstd-runner.spec.js` laufen mit `SHIELDPM_TEST_MARIADB=1`. Der CI-Job stellt dafür einen echten MariaDB-11.8.3-Service bereit und führt alle `mariadb-*.spec.js` aus. Der Full-Schema-Test erzeugt eine isolierte leere Datenbank, wendet **jede** Datei aus `backend/migrations/` über den produktiven `runMigrations()`-Runner an, vergleicht die vollständig registrierte Migrationsliste mit dem Verzeichnisinhalt, prüft zentrale Tabellen/Spalten und startet denselben Runner erneut ohne neue Migrationen. Damit historische Regenerierungs-Migrationen keinen CI-Runtime-DB-/Schlüsselpfad berühren, führt der Test eine temporäre Kopie derselben Migrationsdateien mit ausschließlich gestubbten Logger- und Nginx-Außeneffekten aus; Abhängigkeiten und der produktive Knex-Runner bleiben real. Dazu gehört der unveränderte Hash-Helfer `lib/host-domain-claim-key.js`. Ein zusätzlicher, immer ausgeführter SQLite-Fall lässt denselben isolierten Migrationsbaum durch den produktiven Runner laufen und prüft dessen vollständige Historie. Fehlende relative ESM-Abhängigkeiten scheitern damit bereits lokal ohne MariaDB-Service. Der Recovery-Test bildet zusätzlich eine bereits vorhandene Zstd-Spalte ohne Migrationseintrag nach und prüft deren nachträgliche Knex-Registrierung.
 - `backend/test/internal/analytics-ingestion-performance.spec.js` verarbeitet 1.000 synthetische Access-Log-Zeilen gegen den echten Parser und prüft die vollständig gefüllten Puffer sowie eine großzügige Laufzeitgrenze. Zusammen mit dem Frontend-Budget ist dies ein reproduzierbarer Frühindikator, kein Ersatz für Lasttests mit Produktionsverkehr.
 - `backend/test/ci/frontend-bundle-budget.spec.js` prüft Erfolgs- und Fehlerpfad des Bundle-Skripts mit temporären Assets. Das Workflow-Contract-Testset stellt außerdem sicher, dass das Build-Gate und der MariaDB-Service nicht versehentlich aus der CI entfernt werden.
 
@@ -122,6 +153,24 @@ Die Testbestandsprüfung unterscheidet Strukturprüfung und vertiefte Funktionsp
 - `scripts/tests/test_dockerlint.py` führt das tatsächliche Dockerlint-Gate mit kontrolliertem Linter aus: Erfolg, Toolabsturz ohne Regelkennung, stderr, alle Dateien nach Fehlern, ungewöhnliche Dateinamen, fehlende Dateien sowie Discovery-/Logfehler. Details im [Build-Vertrag](./build.md).
 
 Der [isolierte Kompatibilitätslauf](https://github.com/shedowe19/ShieldPM/actions/runs/38466520461) prüft die korrigierten Quellen getrennt mit der festgehaltenen und der neuesten Dependency-Linie: beide Jobs erfolgreich, jeweils 2.161 bestandene Backendtests mit vier beabsichtigten Skips, 931 Frontendtests und sieben Browser-Smokes. Typen, Locales, Produktionsbuild und Bundlebudget sowie 73 Scanner-Integrationstests bestehen ebenfalls. Die Infrastruktur schließt lokal 164 Fälle mit 21 Umgebungsskips ab; in CI bleiben zwei erwartete Skips, die echten Containersmokes decken die entsprechenden Laufzeitpfade ab. Die nur für diesen Nachweis angelegte read-only Pipeline wird nach dem Abruf der generierten Lockfiles und Paketnachweise entfernt; die regulären PR-Checks bleiben aktiv.
+
+## Regressionen der messbaren Optimierungen vom 17. Oktober
+
+- `frontend/src/pages/Nginx/ProxyHosts/Table.monitor-polling.test.tsx` verwendet die tatsächliche Tabelle, den
+  QueryClient, den Status-Hook und den API-Client mit kontrolliertem Fetch. Die Tests zählen Requests bei
+  ausgeblendeten beziehungsweise sichtbaren Spalten, prüfen sofortiges Auffrischen trotz frischem Cache sowie
+  Abbruch, Fokus, Reconnect, Invalidierung und einen weiteren aktiven Verbraucher derselben Statusabfrage.
+- `backend/test/internal/proxy-host-monitor-history.spec.js` führt die Begrenzung auf 100 Messungen und 30 Tage
+  gegen SQLite und PostgreSQL/PGlite aus. Exakte Zeitgrenzen, später eingefügte abgelaufene IDs, Host-Isolation,
+  zwei Bereinigungsabfragen und Transaktionsrollback bleiben unabhängig von Laufzeitmessungen geprüft.
+  `proxy-host-monitor.spec.js` ergänzt fehlgeschlagene Bereinigung, konkurrierende Hosts und veraltete Probes.
+- `backend/test/internal/sixth-nginx-current-state.spec.js` prüft zusätzlich vollständige Domains, Zertifikate und
+  Access-Lists, die begrenzte Abfrageanzahl ohne Sammlungskreuzprodukt sowie Änderungen an einem späteren Host
+  während des laufenden Sammelauftrags. Die vorhandenen Batch-, Fehler- und Rollbacktests bleiben aktiv.
+- Die Opt-in-Profile für Nginx-Erzeugung und Monitorpersistenz verwenden identische synthetische Ausgangsdaten,
+  Aufwärmläufe und wechselnde Reihenfolge. Sie gehören nicht zur normalen Testlaufzeit; reguläre Tests prüfen
+  stattdessen deterministische Korrektheits- und Abfragegrenzen. Messbefehle, Ergebnisse und Grenzen stehen im
+  [Prüfbericht vom 17. Oktober](./performance-optimierung-2026-10-17.md).
 
 ## Typprüfung des Backends
 
@@ -206,6 +255,19 @@ Die neuen Regressionen prüfen aktuelle Hostgraphen und Metadaten bei verzögert
 Echte HTTP-, RSA-, Cookie- und CSRF-Verträge sichern alle Sitzungsübergänge und den verspäteten Health-/Refresh-Fall. Nur eine ausdrücklich markierte CSRF-Ablehnung vor Ausführung der Route erlaubt nach aktuellem Health-Zustand einen einmaligen Client-Retry. Normale 403, eine zweite Ablehnung, Sitzungswechsel und Abbruch erlauben keine weitere Wiederholung. UI-Tests prüfen verspätete zweite Faktoren, Duo-Callbacks, Profilregistrierung und Setup sowie Fehleransichten bei lazy geladenen Modulen.
 
 Weitere Tests verwenden Telegrafs tatsächlich installierte Legacy-Abbruchsignale, erzeugen echte Express-Portkonflikte und prüfen die automatische GeoIP-Auswahl durch den Validator im Kindprozess. Der Workflow prüft Backend-JSDoc-Typen vor den Tests. Alle Abdeckungszahlen, Nachweise und verbleibenden Betriebsgrenzen stehen im [Prüfbericht](./code-audit-2026-09.md).
+
+## Betriebsfehler und zurückgenommene Ausführungsintegration
+
+Die [Betriebsnachprüfung](./runtime-fixes-2026-10-18.md) reproduziert beschädigte JSON-Logvariablen durch
+den entfernten Nginx-Formatierer sowie MariaDB-Fehler bei vollständiger temporaler Host-Wiederherstellung.
+Reale Nginx- und MariaDB-Regressionen ergänzen die normalen SQLite-/PGlite-Suiten.
+
+Die frühere Wasm-/WASI-Funktion ist entfernt. Ihre ausschließlich funktionsbezogenen Tests und Bytecode-Fixtures
+werden nicht mehr ausgeliefert. Weiterhin geprüft werden die Host-Aktivierung, Authentifizierung, Cache-Regeln,
+Backups und vollständige Dateiwiederherstellung. Die Startup-Regressionen prüfen die idempotente Entfernung
+nur des alten verwalteten Runtimeblocks und seiner Lua-Helfer. Alte Zuweisungen dürfen nach Migration, GitOps-
+Import oder historischer Wiederherstellung keine Ausführung aktivieren. Der aktuelle Nachweis steht im
+[Entfernungsbericht](./gitops-reference-and-runtime-removal-2026-10-27.md).
 
 ## Verwandte Seiten
 

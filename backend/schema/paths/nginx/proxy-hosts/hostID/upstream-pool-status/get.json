@@ -1,0 +1,54 @@
+{
+  "operationId": "getUpstreamPoolStatus",
+  "summary": "Observe bounded TCP reachability and recently routed requests",
+  "tags": ["proxy-hosts"],
+  "security": [
+    {
+      "bearerAuth": ["proxy_hosts.view"]
+    }
+  ],
+  "parameters": [
+    {
+      "in": "path",
+      "name": "hostID",
+      "required": true,
+      "schema": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 9007199254740991
+      }
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "Current host policy result",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "required": ["enabled", "targets", "observation"],
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "targets": {
+                "type": "array",
+                "maxItems": 16,
+                "items": {
+                  "type": "object"
+                }
+              },
+              "observation": {
+                "type": "string",
+                "enum": ["tcp"]
+              },
+              "checked_at": {
+                "type": ["string", "null"]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

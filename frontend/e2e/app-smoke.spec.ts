@@ -39,11 +39,59 @@ const auditEvent = {
 	user_id: 1,
 };
 
+const mockHost = {
+	id: 7,
+	domain_names: ["api.e2e.test"],
+	forward_scheme: "http",
+	forward_host: "127.0.0.1",
+	forward_port: 8080,
+	enabled: true,
+	certificate_id: 0,
+	access_list_id: 0,
+	advanced_config: "",
+	locations: [],
+	created_on: "2026-10-17T12:00:00Z",
+	modified_on: "2026-10-17T12:00:00Z",
+	owner: { id: 1, name: "E2E Administrator", email: "admin@e2e.test", avatar: "" },
+	meta: {
+		retained: { custom_value: "preserved" },
+		waf_ruleset: "base",
+		upstream_pool: {
+			enabled: true,
+			connect_timeout: 5,
+			read_timeout: 60,
+			tls_verify: true,
+			targets: [
+				{
+					id: "primary",
+					label: "Primary",
+					host: "127.0.0.1",
+					port: 8080,
+					weight: 1,
+					backup: false,
+					max_fails: 1,
+					fail_timeout: 10,
+				},
+			],
+		},
+		cache_policy: {
+			enabled: true,
+			assets_only: true,
+			cache_key: "uri",
+			ttl_seconds: 3600,
+			max_size_mb: 256,
+			inactive_seconds: 86400,
+			routes: [{ path: "/", ttl_seconds: 3600 }],
+		},
+	},
+};
+
 async function installMockApi(page: Page) {
 	let authenticated = false;
 	const notes: DashboardNote[] = [];
 	const requests: ApiRequest[] = [];
 	const topHostSorts: string[] = [];
+	const backupJobs: unknown[] = [];
 
 	const fulfill = async (route: Route, body: unknown, status = 200) => {
 		await route.fulfill({
@@ -119,6 +167,121 @@ async function installMockApi(page: Page) {
 
 		if (method === "GET" && path === "/api/nginx/certificates") {
 			return fulfill(route, []);
+		}
+
+		if (method === "GET" && path === "/api/nginx/proxy-hosts")
+			return fulfill(route, {
+				items: [mockHost],
+				pagination: { page: 1, limit: 100, total_items: 1, total_pages: 1 },
+			});
+		if (method === "GET" && path === "/api/nginx/proxy-hosts/options")
+			return fulfill(route, [{ id: 7, domain_names: ["api.e2e.test"] }]);
+		if (method === "GET" && path === "/api/nginx/proxy-hosts/monitors/status")
+			return fulfill(route, [{ host_id: 7, state: "up", checked_at: "2026-10-17T12:00:00Z", response_ms: 25 }]);
+		if (method === "GET" && path === "/api/nginx/proxy-hosts/7") return fulfill(route, mockHost);
+		if (method === "PUT" && path === "/api/nginx/proxy-hosts/7")
+			return fulfill(route, { ...mockHost, ...(body as object) });
+		if (method === "GET" && path === "/api/nginx/access-lists") return fulfill(route, []);
+		if (method === "GET" && path === "/api/nginx/proxy-hosts/7/upstream-pool/status")
+			return fulfill(route, {
+				enabled: true,
+				observation: "tcp",
+				checked_at: "2026-10-17T12:00:00Z",
+				targets: [
+					{
+						...mockHost.meta.upstream_pool.targets[0],
+						state: "up",
+						response_ms: 4,
+						observed_requests: 12,
+						monitor: {
+							state: "up",
+							response_ms: 25,
+							checked_at: "2026-10-17T12:00:00Z",
+							status_code: 200,
+							message: "HTTP 200",
+						},
+					},
+				],
+			});
+		if (method === "GET" && path === "/api/nginx/proxy-hosts/7/cache/status")
+			return fulfill(route, {
+				enabled: true,
+				protected_bypass: false,
+				policy: mockHost.meta.cache_policy,
+				counts: { HIT: 8, MISS: 2 },
+				hit_ratio: 0.8,
+				sample_requests: 10,
+				sample_limit_bytes: 1048576,
+			});
+		if (method === "DELETE" && path === "/api/nginx/proxy-hosts/7/cache")
+			return fulfill(route, { removed: 2, path: url.searchParams.get("path") });
+		if (method === "GET" && path === "/api/incidents/hosts")
+			return fulfill(route, [{ id: 7, domain_names: ["api.e2e.test"], enabled: true, owned: true }]);
+		if (method === "GET" && path === "/api/incidents")
+			return fulfill(route, [
+				{
+					id: 11,
+					host_id: 7,
+					opened_at: "2026-10-17T12:00:00Z",
+					resolved_at: null,
+					last_seen_at: "2026-10-17T12:05:00Z",
+					resolution: null,
+					failure_count: 3,
+					message: "E2E origin unavailable",
+				},
+			]);
+		if (method === "GET" && ["/api/incidents/targets", "/api/incidents/deliveries"].includes(path))
+			return fulfill(route, []);
+		if (method === "GET" && path === "/api/incidents/hosts/7")
+			return fulfill(route, {
+				host_id: 7,
+				mute: null,
+				current: { state: "down", checked_at: "2026-10-17T12:05:00Z" },
+				daily: [
+					{
+						day: "2026-10-17",
+						up_ms: 600000,
+						down_ms: 60000,
+						unknown_ms: 0,
+						coverage_percent: 100,
+						uptime_percent: 90.9,
+						checks: 11,
+					},
+				],
+				latency: [
+					{ bucket: "2026-10-17T12:00:00Z", samples: 1, avg_ms: 25, min_ms: 25, max_ms: 25 },
+					{ bucket: "2026-10-17T12:01:00Z", samples: 1, avg_ms: 40, min_ms: 40, max_ms: 40 },
+				],
+			});
+		if (method === "GET" && path === "/api/backups")
+			return fulfill(route, {
+				backups: [
+					{
+						id: "backup-e2e",
+						name: "E2E encrypted backup",
+						created_on: "2026-10-17T12:00:00Z",
+						app_version: "4.4.1",
+						database: "sqlite",
+						size: 4096,
+					},
+				],
+				jobs: backupJobs,
+				pending: null,
+				limits: { max_bytes: 1073741824 },
+				activation: "next_restart",
+			});
+		if (method === "POST" && path === "/api/backups/backup-e2e/preflight") {
+			const job = {
+				id: "job-e2e",
+				kind: "preflight",
+				phase: "completed",
+				status: "completed",
+				created_on: "2026-10-17T12:00:00Z",
+				error: null,
+				result: { valid: true, activation: null },
+			};
+			backupJobs.push(job);
+			return fulfill(route, job);
 		}
 
 		if (method === "GET" && path === "/api/audit-log") {
@@ -299,4 +462,70 @@ test("shows audit row icons at their intended size and preserves filter and deta
 	await row.getByRole("button", { name: "View Details", exact: true }).click();
 	await expect(page.getByRole("dialog")).toBeVisible();
 	await expect(page.getByRole("dialog")).toContainText("E2E Firewall List");
+});
+
+test("configures upstream and cache policies in the real host dialog", async ({ page }, testInfo) => {
+	await page.setViewportSize({ width: 1440, height: 1100 });
+	const api = await installMockApi(page);
+	await signIn(page);
+	await page.goto("/nginx/proxy");
+	const row = page.getByRole("row").filter({ hasText: "api.e2e.test" });
+	await expect(row).toBeVisible();
+	await row.getByRole("button", { name: "Open action menu", exact: true }).click();
+	await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
+	const dialog = page.getByRole("dialog");
+	await expect(dialog).toBeVisible();
+	await expect(dialog.getByRole("combobox", { name: "Domain Names", exact: true })).toBeVisible();
+	await expect(dialog.getByRole("tab", { name: /wasm|wasi|webassembly/i })).toHaveCount(0);
+	await dialog.getByRole("tab", { name: "Upstreams", exact: true }).click();
+	await expect(dialog.getByText("HTTP 200", { exact: false })).toBeVisible();
+	await dialog.getByLabel("Weight / canary share", { exact: true }).fill("3");
+	await expect(dialog.getByRole("button", { name: "Delete", exact: true })).toBeVisible();
+	await dialog.screenshot({ path: testInfo.outputPath("host-upstream.png"), animations: "disabled" });
+	await dialog.getByRole("tab", { name: "Cache", exact: true }).click();
+	await dialog.getByLabel("TTL (seconds)", { exact: true }).fill("120");
+	await expect(dialog.getByRole("button", { name: "Delete", exact: true })).toBeDisabled();
+	await dialog.getByLabel("Exact request URI to purge (blank: entire host)", { exact: true }).fill("/app.js?v=2");
+	await dialog.getByRole("button", { name: "Purge saved cache", exact: true }).click();
+	await expect(dialog.getByText("Removed cache entries: 2", { exact: true })).toBeVisible();
+	await dialog.screenshot({ path: testInfo.outputPath("host-cache.png"), animations: "disabled" });
+	await dialog.getByRole("button", { name: "Save", exact: true }).click();
+	await expect(dialog).toBeHidden();
+	const update = api.requests.find((r) => r.method === "PUT" && r.path === "/api/nginx/proxy-hosts/7");
+	expect(update?.body).toMatchObject({
+		meta: {
+			retained: { custom_value: "preserved" },
+			waf_ruleset: "base",
+			upstream_pool: { targets: [{ weight: 3 }] },
+			cache_policy: { routes: [{ path: "/", ttl_seconds: 120 }] },
+		},
+	});
+
+	expect(api.requests.filter((r) => r.method === "DELETE" && r.path.endsWith("/cache"))).toHaveLength(1);
+});
+
+test("navigates incident details and verifies a backup without requesting activation", async ({ page }, testInfo) => {
+	const api = await installMockApi(page);
+	await signIn(page);
+	await page.getByRole("link", { name: "Incident center", exact: true }).click();
+	await expect(page.getByRole("heading", { name: "Incident center", exact: true })).toBeVisible();
+	await expect(page.getByText("E2E origin unavailable", { exact: true })).toBeVisible();
+	await page.getByRole("button", { name: "api.e2e.test", exact: true }).click();
+	await expect(page.getByRole("img", { name: "Latency · last 24 hours", exact: true })).toBeVisible();
+	await page
+		.getByTestId("app-content")
+		.screenshot({ path: testInfo.outputPath("incident-detail.png"), animations: "disabled" });
+	await page.getByRole("link", { name: "Instance backups", exact: true }).click();
+	await expect(page.getByText("E2E encrypted backup", { exact: true })).toBeVisible();
+	await page.getByRole("button", { name: "Select for verification or restore", exact: true }).click();
+	await page.getByLabel("Archive password", { exact: true }).fill("e2e-archive-password");
+	await page.getByRole("button", { name: "Verify with isolated restore", exact: true }).click();
+	await expect.poll(() => api.requests.filter((r) => r.path.endsWith("/preflight")).length).toBe(1);
+	await expect(
+		page.getByText("Archive authentication, hashes, database and Nginx checks passed.", { exact: true }),
+	).toBeVisible();
+	expect(api.requests.filter((r) => r.path.endsWith("/restore"))).toEqual([]);
+	await page
+		.getByTestId("app-content")
+		.screenshot({ path: testInfo.outputPath("backup-verification.png"), animations: "disabled" });
 });

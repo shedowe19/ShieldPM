@@ -1,4 +1,5 @@
 import type { FirewallPolicy, ProxyHost } from "src/api/backend";
+import { defaultCachePolicy, defaultUpstreamPool } from "src/api/backend/hostTrafficPolicy";
 import { formatMaintenanceDateTime } from "src/lib/maintenanceDateTime";
 import { FORWARD_SCHEME, ICON_TYPE, PHP_VERSION, TERMINAL_AUTH_TYPE, TIME_UNIT } from "src/types/enums";
 
@@ -19,7 +20,12 @@ export const parseProxyHostMeta = (value: unknown): ProxyHost["meta"] => {
 			return {};
 		}
 	}
-	return value && typeof value === "object" && !Array.isArray(value) ? (value as ProxyHost["meta"]) : {};
+	if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+	const meta = { ...value } as ProxyHost["meta"];
+	// Retired host execution assignments must not be reintroduced by older API responses or stored drafts.
+	delete meta.wasmFilters;
+	delete meta.wasm_filters;
+	return meta;
 };
 
 export const createProxyHostFirewallPolicy = (policy?: Partial<FirewallPolicy>): FirewallPolicy => ({
@@ -41,11 +47,25 @@ export const createProxyHostFirewallPolicy = (policy?: Partial<FirewallPolicy>):
 
 const createProxyHostInitialMeta = (value: unknown): ProxyHost["meta"] => {
 	const meta = parseProxyHostMeta(value);
-	return { ...meta, ipFirewall: createProxyHostFirewallPolicy(meta.ipFirewall) };
+	return {
+		...meta,
+		ipFirewall: createProxyHostFirewallPolicy(meta.ipFirewall),
+		upstreamPool: meta.upstreamPool ?? defaultUpstreamPool(),
+	};
 };
 
 export const createProxyHostInitialValues = (data: Partial<ProxyHost> = {}): ProxyHostFormValues => ({
-	meta: createProxyHostInitialMeta(data.meta),
+	id: data.id,
+	meta: {
+		...createProxyHostInitialMeta(data.meta),
+		wafRuleset:
+			parseProxyHostMeta(data.meta).wafRuleset ?? (data.id ? (data.cachingEnabled ? "crs" : "base") : "crs"),
+		cachePolicy:
+			parseProxyHostMeta(data.meta).cachePolicy ??
+			defaultCachePolicy(
+				Boolean(data.cachingEnabled) && ["http", "https"].includes(data.forwardScheme || "http"),
+			),
+	},
 	// Details tab
 	domainNames: data.domainNames || [],
 	forwardScheme: data.forwardScheme || FORWARD_SCHEME.HTTP,

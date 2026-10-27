@@ -1,0 +1,59 @@
+{
+	"type": "object",
+	"required": [
+		"backups",
+		"jobs",
+		"pending",
+		"limits",
+		"activation"
+	],
+	"properties": {
+		"backups": {
+			"type": "array",
+			"items": {
+				"$ref": "./instance-backup-record.json"
+			}
+		},
+		"jobs": {
+			"type": "array",
+			"maxItems": 50,
+			"items": {
+				"$ref": "./instance-backup-job.json"
+			}
+		},
+		"pending": {
+			"type": [
+				"object",
+				"null"
+			],
+			"properties": {
+				"id": {
+					"type": "string"
+				},
+				"phase": {
+					"enum": [
+						"pending",
+						"rejected",
+						"activating",
+						"activated"
+					]
+				},
+				"created_on": {
+					"type": "string"
+				}
+			}
+		},
+		"limits": {
+			"type": "object",
+			"properties": {
+				"max_bytes": {
+					"type": "integer",
+					"maximum": 8589934592
+				}
+			}
+		},
+		"activation": {
+			"const": "next_restart"
+		}
+	}
+}

@@ -52,9 +52,9 @@ Detaillierte Auflistung aller API-Routen-Dateien.
 Referenzprüfung einen Entwurf ohne Speicherung. Die Antwort enthält `config`, `diff`, `hasCurrent`,
 `nginxValidated: false` und `limitations` (`render-only`, bei neuen Hosts `id-pending`, bei noch
 auszustellenden Zertifikaten `certificate-pending`, bei zusammengefassten Firewall-Tabellen
-`firewall-rule-summaries`). Die gerenderte Konfiguration ist vor der optionalen
-Formatierung und maskiert bekannte Geheimnisse; der Diff vergleicht mit der aktiven Konfiguration nur
-des berechtigten Hosts. Ein `nginx -tq` der vorgeschlagenen Konfiguration erfolgt erst beim Speichern.
+`firewall-rule-summaries`). Die gerenderte Konfiguration maskiert bekannte Geheimnisse; ein
+nachträglicher externer Formatierer wird nicht aufgerufen. Der Diff vergleicht nur mit der aktiven
+Konfiguration des berechtigten Hosts. Ein `nginx -tq` des Entwurfs erfolgt erst beim Speichern.
 
 Automatisch generierte Firewall-CIDR-Tabellen werden in Entwurf und aktivem Vergleich als Anzahl und
 SHA-256-Prüfsumme dargestellt; die produktive Konfiguration behält alle Regeln. Die Vorschau prüft zusätzlich

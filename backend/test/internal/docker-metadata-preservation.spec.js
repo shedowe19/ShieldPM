@@ -62,6 +62,8 @@ describe("Docker rediscovery preserves current host metadata", () => {
 	beforeEach(async () => {
 		vi.clearAllMocks();
 		state.createCertificate.mockReset();
+		await state.database("host_domain_claim_owner").delete();
+		await state.database("host_domain_claim").delete();
 		await state.database("host_domain").delete();
 		await state.database("proxy_host").delete();
 		await state.database("certificate").delete();
@@ -150,5 +152,27 @@ describe("Docker rediscovery preserves current host metadata", () => {
 		expect(host.domain_names).toEqual(["docker.example.com"]);
 		expect(host).toMatchObject({ enabled: true, ssl_forced: false, caching_enabled: false, access_list_id: 0 });
 		expect(host.meta.ip_firewall).toBeUndefined();
+	});
+	it("loads the complete host/domain snapshot once for an initial multi-container scan", async () => {
+		const containers = Array.from({ length: 10 }, (_, index) => ({
+			...container(),
+			Id: `scan-${index}`,
+			Labels: { "shieldpm.hostname": `scan-${index}.example.test` },
+		}));
+		docker.stopped = false;
+		docker.clients = [{ isConnected: true, name: "indexed", docker: { listContainers: async () => containers } }];
+		const scans = [];
+		const observe = (query) => {
+			if (/^select `proxy_host`\.\* from `proxy_host` where `is_deleted` = \?$/.test(query.sql))
+				scans.push(query.sql);
+		};
+		state.database.on("query", observe);
+		try {
+			await docker.sync();
+		} finally {
+			state.database.off("query", observe);
+		}
+		expect(await ProxyHost.query().resultSize()).toBe(10);
+		expect(scans).toHaveLength(1);
 	});
 });

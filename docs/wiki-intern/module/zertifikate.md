@@ -34,6 +34,12 @@ ShieldPM automatisiert die Zertifikatsverwaltung über Let's Encrypt (ACME) und 
 - Custom-Uploads schreiben das vollständige Dateipaar zunächst in ein privates Staging-Verzeichnis. Austausch, Reload und Datenbankänderung laufen unter der gemeinsamen Nginx-Konfigurationssperre; scheitert die Aktivierung, wird das vorige Dateipaar wiederhergestellt. Die Datenbank wird erst nach erfolgreichem Reload aktualisiert. Backup-Bereinigungsfehler werden protokolliert, ohne eine bereits erfolgreiche Aktivierung rückgängig zu machen.
 - Upload, manuelle Erneuerung und Löschen desselben Zertifikats schließen sich gegenseitig aus. Ein Zertifikatsprovider kann nach Erstellung nicht gewechselt werden, weil damit andere Dateipfade und ein anderer Lebenszyklus verbunden wären.
 - IDs werden vollständig als positive sichere Ganzzahlen geprüft; Werte wie `1abc` werden nicht mehr als Zertifikat 1 interpretiert. Mehrere Upload-Dateien für dasselbe PEM-Feld liefern einen Validierungsfehler.
+- Für Zertifikatszuordnungen eines Hosts sind `0` und die ältere Zeichenkette `"0"` die ausdrückliche Auswahl
+  „kein Zertifikat“. Die gemeinsame Host-Referenzprüfung lädt dafür kein Zertifikat 0; die SSL-/HSTS-Bereinigung
+  normalisiert die Auswahl auf die Zahl 0 und deaktiviert erzwungenes SSL sowie beide HSTS-Schalter. Positive
+  numerische Zeichenketten werden weiterhin mit den normalen Ressourcen- und Eigentümerrechten geprüft.
+  Das bestehende `anyOf`-Schema mit AJV-Typkonvertierung kann auch eine ursprünglich numerische Null als
+  gültige Zeichenkette zurückgeben. Die Hostprüfung ist unabhängig davon, ob GitOps eingeschaltet ist.
 - Erstellungsanfragen verwenden ein eigenes Schema (`certificate-request.json`): Let's Encrypt/interne Zertifikate brauchen mindestens einen gültigen DNS-Namen, DNS-Challenges zusätzlich Provider und nichtleere Zugangsdaten, interne Laufzeiten liegen zwischen 1 und 10 Jahren. Interne Einzelhostnamen und internationale Domainnamen werden unterstützt. Das Antwortschema beschreibt die booleschen PEM-Präsenzmarker getrennt von Eingabedaten.
 - Fehlgeschlagene interne Ausstellungen entfernen ihre Teildateien. Scheitert erst das Audit nach erfolgreicher Ausstellung, bleibt das ausgestellte Zertifikat erhalten. Alle erfolgreichen Erstellungsarten lösen den GitOps-Autopush aus.
 - Downloadnamen enthalten eine zufällige UUID; fehlende Quelldateien brechen das Archiv ab, statt ein unvollständiges ZIP als erfolgreichen Download zurückzugeben. Fehlerhafte Archive werden entfernt.
@@ -42,14 +48,25 @@ ShieldPM automatisiert die Zertifikatsverwaltung über Let's Encrypt (ACME) und 
 - Das Löschen interner Zertifikate räumt `/data/tls/internal/` auf. Die Bereinigung verwaister Zertifikatsverweise lädt Domains und Zugriffslisten nach, entfernt Konfigurationen deaktivierter Hosts und setzt den erfolgreichen Nginx-Status erst nach dem validierten Reload.
 - Die Bereinigung ergänzt diesen Status mit dem gemeinsamen atomischen Nginx-Meta-Merge unter einer kurzen Zeilensperre. Während des Reloads gespeicherte Einstellungen bleiben erhalten. Ein Fehler stellt weiterhin die vorherigen Zertifikats-/SSL-Felder und Konfigurationsdateien wieder her; bereits geschriebene eigene `nginx_online`-/`nginx_err`-Felder werden zurückgesetzt, ohne die übrigen aktuellen Metadaten zu überschreiben. `certificate-cleanup-metadata.spec.js` prüft Erfolg, Reloadfehler und Fehler nach einem ersten Statuscommit mit tatsächlichen Objection-Modellen in SQLite und einem eingebetteten PostgreSQL-Engine-Lauf.
 - Zertifikatsdaten werden als GMT interpretiert; der Common Name wird gezielt aus `CN` gelesen, auch wenn im Subject zuerst Länder- oder Organisationsfelder stehen.
+- Für MySQL/MariaDB prüft das Zertifikatsmodell zonierte ISO-Werte in `expires_on`, `created_on` und
+  `modified_on` vor dem Schreiben und bindet sie als echte `Date`-Werte mit Sekundenpräzision. Der mysql2-Treiber
+  verwendet dadurch dieselbe Verbindungszeitzone wie beim Lesen. Einfaches Ersetzen von `T`/`Z` durch einen
+  UTC-SQL-String würde bei einer lokalen Verbindungszeitzone bestehende Zeitpunkte verschieben. Ungültige
+  Kalenderdaten werden abgewiesen; vorhandene SQL-Zeitstempel und `NOW()`-Ausdrücke bleiben erhalten.
+  Die öffentliche JSON-Darstellung sowie PostgreSQL und SQLite ändern sich nicht.
 - Expandierte Proxy-, Weiterleitungs-, 404-Hosts und Streams in Einzel- und Listenantworten beachten unabhängig die Berechtigung des jeweiligen Hosttyps. `hidden` liefert dafür keine Hosts, Sichtbarkeit `user` nur eigene aktive Hosts und `all` alle aktiven Zuordnungen. Die interne Bereinigung fehlender Zertifikate bearbeitet weiterhin alle betroffenen Hosts unabhängig von öffentlichen Ansichtsrechten.
 
 ## Regressionstests
 
 - `backend/test/internal/certificate-lifecycle.spec.js`
+- `backend/test/internal/certificate-datetime.spec.js` — strikte Datumsprüfung, Sekundenpräzision und Dialektgrenzen
+- `backend/test/internal/mariadb-certificate-datetime.spec.js` — echter strikter Server, ISO-Update, Offset- und
+  Europe/Berlin-Roundtrips einschließlich Sommer-/Winterzeit
 - `backend/test/routes/certificate-issuance-permissions.spec.js`
 - `backend/test/schema/certificate-validation.spec.js`
 - `backend/test/internal/host-expansion-permissions.spec.js` (tatsächliche Berechtigungsschemata, SQLite und interne Konfigurationspfade)
+- `backend/test/internal/third-proxy-reference-ownership.spec.js` (tatsächlicher API-Validator, numerische und
+  textuelle Nullauswahl, SSL-/HSTS-Bereinigung sowie unveränderte Eigentümerprüfung positiver Referenzen)
 
 ## Abhängigkeiten
 

@@ -103,6 +103,19 @@ describe("successful response bodies", () => {
 		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("invalid", { status: 200 })));
 		await expect(get({ url: "nginx/proxy-hosts" })).rejects.toThrow();
 	});
+	it("still converts API-owned revision configuration fields", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi
+				.fn()
+				.mockResolvedValue(
+					Response.json({ configuration: { current_sha256: "current", target_sha256: "target" } }),
+				),
+		);
+		await expect(get({ url: "nginx/proxy-hosts/7/revisions/1/preview" })).resolves.toEqual({
+			configuration: { currentSha256: "current", targetSha256: "target" },
+		});
+	});
 });
 
 describe("download", () => {

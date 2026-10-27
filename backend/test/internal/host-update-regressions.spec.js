@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	proxyQuery: vi.fn(),
@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
 	deadQuery: vi.fn(),
 	redirectQuery: vi.fn(),
 	configure: vi.fn(),
+	reload: vi.fn(),
+	restoreHostState: vi.fn(),
 	encrypt: vi.fn((value) => `encrypted:${value}`),
 }));
 vi.mock("../../models/proxy_host.js", () => ({
@@ -16,7 +18,14 @@ vi.mock("../../models/dead_host.js", () => ({ default: { query: mocks.deadQuery 
 vi.mock("../../models/redirection_host.js", () => ({ default: { query: mocks.redirectQuery } }));
 vi.mock("../../models/access_list.js", () => ({ default: {} }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: vi.fn() } }));
-vi.mock("../../internal/nginx.js", () => ({ default: { configure: mocks.configure } }));
+vi.mock("../../internal/nginx.js", () => ({
+	default: {
+		withConfigurationLock: (write) => write(),
+		configure: mocks.configure,
+		configureHost: mocks.configure,
+		reload: mocks.reload,
+	},
+}));
 vi.mock("../../internal/certificate.js", () => ({
 	default: {
 		createQuickCertificate: vi.fn().mockResolvedValue({ id: 8 }),
@@ -24,15 +33,26 @@ vi.mock("../../internal/certificate.js", () => ({
 	},
 }));
 vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: vi.fn() } }));
-vi.mock("../../internal/git-deploy.js", () => ({ default: { startPollingForHost: vi.fn() } }));
+vi.mock("../../internal/git-deploy.js", () => ({
+	default: { startPollingForHost: vi.fn(), stopPolling: vi.fn() },
+}));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: {} }));
 vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: { resetHost: vi.fn(), removeHost: vi.fn() } }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: mocks.encrypt }));
 vi.mock("../../lib/config.js", () => ({ isPostgres: () => false }));
 
+vi.mock("../../lib/host-domain-claims.js", () => ({ withHostDomainClaims: async (_options, write) => write({}) }));
+vi.mock("../../internal/host-revisions.js", () => ({
+	default: { record: vi.fn() },
+	captureHostState: async (id) => ({ host: await mocks.proxyQuery().findById(id), files: [] }),
+	restoreHostState: mocks.restoreHostState,
+}));
+
 import internalDeadHost from "../../internal/dead-host.js";
 import internalProxyHost from "../../internal/proxy-host.js";
 import internalStream from "../../internal/stream.js";
+import errs from "../../lib/error.js";
+import { global as logger } from "../../logger.js";
 
 const access = () => ({
 	can: vi.fn().mockResolvedValue({ permission_visibility: "all" }),
@@ -49,6 +69,8 @@ const createStore = (source, queryMock) => {
 			allowGraph: vi.fn().mockReturnThis(),
 			withGraphFetched: vi.fn().mockReturnThis(),
 			first: vi.fn().mockReturnThis(),
+			findById: vi.fn().mockReturnThis(),
+			forUpdate: vi.fn().mockReturnThis(),
 			select: vi.fn().mockImplementation(() => {
 				collision = true;
 				return query;
@@ -85,7 +107,67 @@ describe("host update regressions", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.configure.mockResolvedValue({ nginx_online: true, nginx_err: null });
+		mocks.reload.mockResolvedValue(undefined);
+		mocks.restoreHostState.mockResolvedValue(undefined);
 	});
+	afterEach(() => vi.restoreAllMocks());
+
+	it("returns the original activation error after a successful proxy update rollback", async () => {
+		createStore(
+			{
+				id: 5,
+				domain_names: ["rollback.test"],
+				forward_host: "10.0.0.1",
+				access_list_id: 0,
+				enabled: true,
+				meta: {},
+			},
+			mocks.proxyQuery,
+		);
+		const original = new errs.ConfigurationError("activation failed");
+		mocks.configure.mockRejectedValueOnce(original);
+		await expect(internalProxyHost.update(access(), { id: 5, forward_port: 8096 })).rejects.toBe(original);
+		expect(mocks.restoreHostState).toHaveBeenCalledOnce();
+		expect(mocks.reload).toHaveBeenCalledOnce();
+	});
+
+	it.each(["restore", "reload"])(
+		"keeps the activation cause when proxy update recovery fails during %s",
+		async (phase) => {
+			createStore(
+				{
+					id: 5,
+					domain_names: ["rollback.test"],
+					forward_host: "10.0.0.1",
+					access_list_id: 0,
+					enabled: true,
+					meta: {},
+				},
+				mocks.proxyQuery,
+			);
+			const original = new errs.ConfigurationError("activation secret");
+			const rollback = Object.assign(new Error("query secret"), {
+				nativeError: { code: "ER_CHECKREAD", errno: 1020, sqlState: "HY000", sql: "private query" },
+			});
+			mocks.configure.mockRejectedValueOnce(original);
+			(phase === "restore" ? mocks.restoreHostState : mocks.reload).mockRejectedValueOnce(rollback);
+			const log = vi.spyOn(logger, "error").mockImplementation(() => {});
+			const failure = await internalProxyHost
+				.update(access(), { id: 5, forward_port: 8096 })
+				.catch((error) => error);
+			expect(failure).toBeInstanceOf(errs.InternalError);
+			expect(failure.previous).toBe(original);
+			expect(failure.cause).toBe(rollback);
+			expect(failure.message).not.toContain("restored");
+			expect(mocks.restoreHostState).toHaveBeenCalledOnce();
+			expect(mocks.reload).toHaveBeenCalledTimes(phase === "restore" ? 0 : 1);
+			expect(log).toHaveBeenCalledOnce();
+			expect(log.mock.calls[0][0]).toContain(`"phase":"${phase}"`);
+			expect(log.mock.calls[0][0]).toContain('"code":"ER_CHECKREAD"');
+			expect(log.mock.calls[0][0]).not.toContain("secret");
+			expect(log.mock.calls[0][0]).not.toContain("private query");
+		},
+	);
 
 	it("retains managed web roots through updates while masking the response", async () => {
 		const state = createStore(

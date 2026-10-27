@@ -1,0 +1,37 @@
+{
+	"operationId": "deleteTokensSessions{Familyid}",
+	"summary": "Revoke one own browser refresh session",
+	"tags": [
+		"tokens"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"authenticated"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Successful operation",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object"
+					}
+				}
+			}
+		}
+	},
+	"parameters": [
+		{
+			"in": "path",
+			"name": "familyID",
+			"required": true,
+			"schema": {
+				"type": "string",
+				"format": "uuid"
+			}
+		}
+	]
+}

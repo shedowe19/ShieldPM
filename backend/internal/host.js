@@ -6,16 +6,25 @@ import deadHostModel from "../models/dead_host.js";
 import proxyHostModel from "../models/proxy_host.js";
 import redirectionHostModel from "../models/redirection_host.js";
 
+/** API union validation and legacy payloads can leave numeric resource IDs as strings. */
+const referenceId = (value) => {
+	if (typeof value !== "string" || !/^\d+$/.test(value)) return value;
+	const number = Number(value);
+	return Number.isSafeInteger(number) ? number : value;
+};
+
 const internalHost = {
 	/** Validate newly assigned resources with their own read permissions and owner scope. */
 	validateReferences: async (access, data, existing = {}) => {
-		if (data.certificate_id && data.certificate_id !== "new" && data.certificate_id !== existing.certificate_id) {
+		const certificateId = referenceId(data.certificate_id);
+		const accessListId = referenceId(data.access_list_id);
+		if (certificateId && certificateId !== "new" && certificateId !== referenceId(existing.certificate_id)) {
 			const { default: internalCertificate } = await import("./certificate.js");
-			await internalCertificate.get(access, { id: data.certificate_id });
+			await internalCertificate.get(access, { id: certificateId });
 		}
-		if (data.access_list_id && data.access_list_id !== existing.access_list_id) {
+		if (accessListId && accessListId !== referenceId(existing.access_list_id)) {
 			const { default: internalAccessList } = await import("./access-list.js");
-			await internalAccessList.get(access, { id: data.access_list_id });
+			await internalAccessList.get(access, { id: accessListId });
 		}
 	},
 	/** A domain is one Nginx server_name token, never a directive or comment. */
@@ -45,6 +54,8 @@ const internalHost = {
 	 */
 	cleanSslHstsData: (newCert, data, existingData) => {
 		const combinedData = _.assign({}, existingData || {}, data);
+		if (combinedData.certificate_id !== undefined)
+			combinedData.certificate_id = referenceId(combinedData.certificate_id);
 
 		if (!combinedData.certificate_id && !newCert) {
 			combinedData.hsts_subdomains = false;

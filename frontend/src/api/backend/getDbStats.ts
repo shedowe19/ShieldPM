@@ -15,6 +15,6 @@ export interface DbStats {
 	};
 }
 
-export async function getDbStats(): Promise<DbStats> {
-	return await api.get({ url: "/analytics/db-stats" });
+export async function getDbStats(signal?: AbortSignal): Promise<DbStats> {
+	return await api.get({ url: "/analytics/db-stats" }, signal ? { signal } : undefined);
 }

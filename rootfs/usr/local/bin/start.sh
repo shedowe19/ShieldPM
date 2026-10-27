@@ -338,6 +338,8 @@ else
 fi
 configure_nginx_toggles /usr/local/nginx/conf/nginx.conf || exit 1
 configure_nginx_modules /usr/local/nginx/conf/nginx.conf || exit 1
+remove_legacy_wasm_runtime /usr/local/nginx/conf/nginx.conf || exit 1
+remove_legacy_wasm_binary_support || exit 1
 configure_nginx_runtime /usr/local/nginx/conf/nginx.conf /run/shieldpm || exit 1
 configure_nginx_runtime /usr/local/nginx/conf/conf.d/shieldpm.conf /run/shieldpm || exit 1
 configure_nginx_runtime /usr/local/nginx/conf/conf.d/include/goaccess.conf /run/shieldpm || exit 1

@@ -1,0 +1,58 @@
+{
+	"type": "object",
+	"required": [
+		"id",
+		"kind",
+		"phase",
+		"status",
+		"created_on",
+		"result",
+		"error"
+	],
+	"additionalProperties": false,
+	"properties": {
+		"id": {
+			"type": "string"
+		},
+		"kind": {
+			"enum": [
+				"create",
+				"preflight",
+				"restore"
+			]
+		},
+		"phase": {
+			"enum": [
+				"queued",
+				"snapshot",
+				"encrypting",
+				"decrypting",
+				"database",
+				"validating",
+				"completed"
+			]
+		},
+		"status": {
+			"enum": [
+				"running",
+				"completed",
+				"failed"
+			]
+		},
+		"created_on": {
+			"type": "string"
+		},
+		"result": {
+			"type": [
+				"object",
+				"null"
+			]
+		},
+		"error": {
+			"type": [
+				"string",
+				"null"
+			]
+		}
+	}
+}

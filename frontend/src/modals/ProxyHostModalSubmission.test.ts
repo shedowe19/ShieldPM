@@ -1,3 +1,4 @@
+import { defaultCachePolicy, defaultUpstreamPool } from "src/api/backend/hostTrafficPolicy";
 import { describe, expect, it } from "vitest";
 import { createProxyHostInitialValues, type ProxyHostFormValues } from "./ProxyHostModalFormValues";
 import { createProxyHostPayload } from "./ProxyHostModalSubmission";
@@ -99,6 +100,11 @@ describe("createProxyHostPayload", () => {
 		expect(payload).toHaveProperty("id", undefined);
 	});
 
+	it("uses the modal identity rather than any saved or draft identity", () => {
+		expect(createProxyHostPayload({ id: "new", values: createValues({ id: 0 }) }).id).toBeUndefined();
+		expect(createProxyHostPayload({ id: 73, values: createValues({ id: 42 }) }).id).toBe(73);
+	});
+
 	it("preserves unrelated metadata, access lists and disabled firewall rules when saving another setting", () => {
 		const meta = {
 			customSetting: { retained: "value" },
@@ -119,7 +125,25 @@ describe("createProxyHostPayload", () => {
 		const values = createProxyHostInitialValues({ accessListId: 7, meta });
 		const payload = createProxyHostPayload({ id: 73, values: { ...values, note: "Unrelated edit" } });
 		expect(payload).toMatchObject({ accessListId: 7, meta, note: "Unrelated edit" });
-		expect(payload.meta).toStrictEqual(meta);
+		expect(payload.meta).toStrictEqual({
+			...meta,
+			wafRuleset: "crs",
+			upstreamPool: defaultUpstreamPool(),
+			cachePolicy: defaultCachePolicy(),
+		});
 		expect(payload).not.toHaveProperty("ipFirewall");
+	});
+
+	it("does not resubmit retired execution assignments from an older open draft", () => {
+		const values = createProxyHostInitialValues();
+		values.meta = {
+			retained: { value: "keep" },
+			wasmFilters: [{ id: "retired-filter" }],
+			wasm_filters: [{ id: "retired-application" }],
+		};
+		const payload = createProxyHostPayload({ id: 73, values });
+		expect(payload.meta).toStrictEqual({ retained: { value: "keep" } });
+		expect(values.meta.wasmFilters).toHaveLength(1);
+		expect(values.meta.wasm_filters).toHaveLength(1);
 	});
 });

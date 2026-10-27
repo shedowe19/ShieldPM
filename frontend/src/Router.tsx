@@ -3,6 +3,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { AnimatedPage } from "src/components/AnimatedPage";
 import { ErrorNotFound } from "src/components/ErrorNotFound";
+import { HasPermission } from "src/components/HasPermission";
 import { LoadingPage } from "src/components/LoadingPage";
 import { Page } from "src/components/Page";
 import { RouteErrorBoundary } from "src/components/RouteErrorBoundary";
@@ -14,6 +15,7 @@ import { Unhealthy } from "src/components/Unhealthy";
 import { useAuthState } from "src/context";
 import { useHealth } from "src/hooks/useHealth";
 import { T } from "src/locale";
+import { ADMIN, PROXY_HOSTS, VIEW } from "src/modules/Permissions";
 
 const Setup = lazy(() => import("src/pages/Setup"));
 const Login = lazy(() => import("src/pages/Login"));
@@ -36,12 +38,34 @@ const WireguardTunnels = lazy(() => import("src/pages/Nginx/WireguardTunnels"));
 const ChatOps = lazy(() => import("src/pages/ChatOps"));
 const Profile = lazy(() => import("src/pages/Profile"));
 const DuoCallback = lazy(() => import("src/pages/DuoCallback"));
+const Incidents = lazy(() => import("src/pages/Incidents"));
+const Backups = lazy(() => import("src/pages/Settings/Backups"));
 
 function Content() {
 	const location = useLocation();
 	const routes = (
 		<AnimatePresence mode="wait">
 			<Routes location={location} key={location.pathname}>
+				<Route
+					path="/incidents"
+					element={
+						<AnimatedPage>
+							<HasPermission section={PROXY_HOSTS} permission={VIEW}>
+								<Incidents />
+							</HasPermission>
+						</AnimatedPage>
+					}
+				/>
+				<Route
+					path="/settings/backups"
+					element={
+						<AnimatedPage>
+							<HasPermission section={ADMIN} permission={VIEW}>
+								<Backups />
+							</HasPermission>
+						</AnimatedPage>
+					}
+				/>
 				<Route
 					path="*"
 					element={

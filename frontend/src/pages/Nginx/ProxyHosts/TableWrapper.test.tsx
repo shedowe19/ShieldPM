@@ -131,6 +131,27 @@ describe("Proxy host table pagination", () => {
 		);
 	});
 
+	it("requests only visible relation columns and restores each expansion when revealed", () => {
+		window.localStorage.setItem(
+			"shieldpm.proxy-host-columns",
+			JSON.stringify({ owner: false, accessList: false, certificate: false }),
+		);
+		render(<TableWrapper />);
+		expect(mocks.useProxyHostsPage).toHaveBeenLastCalledWith([], expect.objectContaining({ page: 1, limit: 100 }));
+		fireEvent.pointerDown(screen.getByRole("button", { name: /proxy-host\.columns/ }), {
+			button: 0,
+			ctrlKey: false,
+		});
+		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: /column\.ssl/ }));
+		expect(mocks.useProxyHostsPage).toHaveBeenLastCalledWith(["certificate"], expect.any(Object));
+		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: /column\.access/ }));
+		expect(mocks.useProxyHostsPage).toHaveBeenLastCalledWith(["access_list", "certificate"], expect.any(Object));
+		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: /proxy-host\.column-owner/ }));
+		expect(mocks.useProxyHostsPage).toHaveBeenLastCalledWith(
+			["owner", "access_list", "certificate"],
+			expect.any(Object),
+		);
+	});
 	it("renders only the first 100 of 1,000 hosts and exposes next-page navigation", () => {
 		render(<TableWrapper />);
 

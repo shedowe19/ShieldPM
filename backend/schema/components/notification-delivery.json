@@ -1,0 +1,128 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"id",
+		"target_id",
+		"incident_id",
+		"host_id",
+		"event",
+		"payload",
+		"status",
+		"attempts",
+		"next_attempt_at",
+		"last_error",
+		"created_on",
+		"sent_at",
+		"target_name"
+	],
+	"properties": {
+		"id": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 9007199254740991
+		},
+		"target_id": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 9007199254740991
+		},
+		"incident_id": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 9007199254740991
+		},
+		"host_id": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 9007199254740991
+		},
+		"event": {
+			"enum": [
+				"incident.opened",
+				"incident.resolved"
+			]
+		},
+		"payload": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"event",
+				"incident_id",
+				"host_id",
+				"state",
+				"message",
+				"checked_at"
+			],
+			"properties": {
+				"event": {
+					"enum": [
+						"incident.opened",
+						"incident.resolved"
+					]
+				},
+				"incident_id": {
+					"type": "integer",
+					"minimum": 1,
+					"maximum": 9007199254740991
+				},
+				"host_id": {
+					"type": "integer",
+					"minimum": 1,
+					"maximum": 9007199254740991
+				},
+				"state": {
+					"enum": [
+						"up",
+						"down"
+					]
+				},
+				"message": {
+					"type": "string"
+				},
+				"checked_at": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
+		},
+		"status": {
+			"enum": [
+				"pending",
+				"sending",
+				"sent",
+				"failed",
+				"muted",
+				"cancelled"
+			]
+		},
+		"attempts": {
+			"type": "integer",
+			"minimum": 0
+		},
+		"next_attempt_at": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"last_error": {
+			"type": [
+				"string",
+				"null"
+			]
+		},
+		"created_on": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"sent_at": {
+			"type": [
+				"string",
+				"null"
+			],
+			"format": "date-time"
+		},
+		"target_name": {
+			"type": "string"
+		}
+	}
+}

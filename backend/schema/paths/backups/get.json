@@ -1,0 +1,33 @@
+{
+	"operationId": "listInstanceBackups",
+	"summary": "List encrypted instance backups and job progress",
+	"description": "Administrator only. Contains public metadata and bounded job history, never passwords, keys or decrypted manifests. Pending restores activate only at next restart.",
+	"tags": [
+		"instance-backups"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"responses": {
+		"403": {
+			"description": "Administrator permission required; backups disabled in demo mode"
+		},
+		"400": {
+			"description": "Invalid input or another instance operation is running"
+		},
+		"200": {
+			"description": "Successful response",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../components/instance-backup-state.json"
+					}
+				}
+			}
+		}
+	}
+}

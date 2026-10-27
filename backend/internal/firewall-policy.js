@@ -72,16 +72,18 @@ export const validateFirewallPreviewReferences = async (access, data, existing =
  * @param {Object} data
  * @param {Object} existing
  * @param {() => Promise<T>} write
+ * @param {{lockHeld?: boolean}} [options]
  * @returns {Promise<T>}
  */
-export const withFirewallReferences = async (data, existing, write) => {
+export const withFirewallReferences = async (data, existing, write, options = {}) => {
 	const meta = readMeta(data.meta === undefined ? existing.meta : data.meta);
 	const ids = meta?.ip_firewall?.list_ids || [];
 	if (!ids.length) return write();
 	const { default: lists } = await import("./firewall-list.js");
 	const { default: nginx } = await import("./nginx.js");
-	return nginx.withConfigurationLock(async () => {
+	const validateAndWrite = async () => {
 		await lists.assertExistForHost(ids);
 		return write();
-	});
+	};
+	return options.lockHeld ? validateAndWrite() : nginx.withConfigurationLock(validateAndWrite);
 };

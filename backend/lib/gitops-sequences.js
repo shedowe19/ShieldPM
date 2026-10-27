@@ -4,21 +4,23 @@
  * @template T
  * @param {import("objection").ModelClass<import("objection").Model>} model
  * @param {(transaction?: import("knex").Knex.Transaction) => Promise<T>} write
+ * @param {import("knex").Knex.Transaction} [existingTransaction]
  * @returns {Promise<T>}
  */
-export const withImportedIdSequence = async (model, write) => {
+export const withImportedIdSequence = async (model, write, existingTransaction) => {
 	const database = model.knex?.();
-	if (!["pg", "postgres", "postgresql"].includes(database?.client?.config?.client)) return write();
+	if (!["pg", "postgres", "postgresql"].includes(database?.client?.config?.client))
+		return existingTransaction ? write(existingTransaction) : write();
 	const idColumn = model.idColumn;
-	if (typeof idColumn !== "string") return write();
+	if (typeof idColumn !== "string") return existingTransaction ? write(existingTransaction) : write();
 	const tableName = model.tableName;
-	const result = await database.raw("SELECT pg_get_serial_sequence(?, ?) AS sequence_name", [
+	const result = await (existingTransaction || database).raw("SELECT pg_get_serial_sequence(?, ?) AS sequence_name", [
 		database.ref(tableName).toString(),
 		idColumn,
 	]);
 	const sequence = result.rows[0]?.sequence_name;
-	if (!sequence) return write();
-	return database.transaction(async (transaction) => {
+	if (!sequence) return existingTransaction ? write(existingTransaction) : write();
+	const perform = async (transaction) => {
 		await transaction.raw("LOCK TABLE ?? IN SHARE ROW EXCLUSIVE MODE", [tableName]);
 		const written = await write(transaction);
 		const { rows } = await transaction.raw(
@@ -34,5 +36,6 @@ export const withImportedIdSequence = async (model, write) => {
 			await transaction.raw("SELECT setval(?::regclass, ?, true)", [sequence, state.maximum_id]);
 		}
 		return written;
-	});
+	};
+	return existingTransaction ? perform(existingTransaction) : database.transaction(perform);
 };

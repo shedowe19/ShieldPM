@@ -1,0 +1,48 @@
+{
+	"operationId": "getNginxProxyHosts{Hostid}Revisions{Revisionid}Plan",
+	"summary": "Compare an encrypted saved version against the current host",
+	"tags": [
+		"proxy-hosts"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"proxy_hosts.view"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Successful operation",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object"
+					}
+				}
+			}
+		}
+	},
+	"parameters": [
+		{
+			"in": "path",
+			"name": "hostID",
+			"required": true,
+			"schema": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 9007199254740991
+			}
+		},
+		{
+			"in": "path",
+			"name": "revisionID",
+			"required": true,
+			"schema": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 9007199254740991
+			}
+		}
+	]
+}

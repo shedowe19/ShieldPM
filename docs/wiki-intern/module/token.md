@@ -17,7 +17,7 @@ Geschützte API-Anfragen benötigen Authentifizierung; öffentliche Anmelde- und
 
 - `backend/lib/config.js` liest/erstellt die Signaturschlüssel unter `/data/shieldpm/keys.json`; `start.sh` verschiebt gegebenenfalls eine ältere `/data/keys.json` an diesen Pfad.
 - Verifiziert eingehende Tokens (Middlewares).
-- Enthält Berechtigungen und User-ID im Payload.
+- Enthält Scopes und User-ID im Payload; aktuelle Rollen und Berechtigungen werden bei der API-Anfrage aus der Datenbank geladen.
 
 ## Abhängigkeiten
 
@@ -32,6 +32,8 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 `backend/lib/access.js` prüft bereits bei `Access.load()` das signierte Token, den aktuellen aktiven Benutzer und dessen zulässige Scopes. Damit ist ein Konto auch dann geprüft, wenn eine Route anschließend nur auf die Benutzer-ID zugreift. Eine ausstehende zweite Faktorprüfung gilt nicht als vollständige Anmeldung. Explizit freigegebene interne Zugriffe ohne Token bleiben für interne Abläufe verfügbar.
 
 Regressionstest: `backend/test/lib/access-authentication.spec.js`.
+
+Die Aktionsvalidatoren werden unabhängig von Benutzeridentitäten wiederverwendet. Benutzer-ID, Rollen und aktuelle Capabilities bleiben Eingabedaten. Die Selbstkonto-Regeln vergleichen die Ziel-ID mit der aktuellen Benutzer-ID; eine erfolgreiche Prüfung für Benutzer A berechtigt Benutzer B nicht zum Zugriff auf A. Details und Cache-Regressionen stehen bei den [Backend-Hilfsbibliotheken](../architektur/backend-lib.md#begrenzte-schema--und-berechtigungsprüfung).
 
 ## Verwandte Seiten
 

@@ -12,8 +12,12 @@ export interface TimeSeriesPoint {
 	timestamp?: string;
 }
 
-export async function getAnalyticsSeries(hostId?: number, range = "24h"): Promise<TimeSeriesPoint[]> {
+export async function getAnalyticsSeries(
+	hostId?: number,
+	range = "24h",
+	signal?: AbortSignal,
+): Promise<TimeSeriesPoint[]> {
 	const url = hostId ? `/nginx/analytics/${hostId}` : "/nginx/analytics/global";
-	const data = await get({ url, params: { range } });
+	const data = await get({ url, params: { range } }, signal ? { signal } : undefined);
 	return data as TimeSeriesPoint[];
 }

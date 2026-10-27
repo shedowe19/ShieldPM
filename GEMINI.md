@@ -20,6 +20,10 @@
 
 ### Key Features
 
+- **Proxy platform extensions**: Weighted upstream pools, independent WAF/cache controls and encrypted host revisions. The host workspace was withdrawn at the user's request; its historic migration stays compatible with existing databases. See the [implementation evidence](./docs/wiki-intern/entwicklung/feature-implementation-2026-10-17.md).
+- **Retired runtime**: Wasm/WASI execution, catalogs, UI, APIs and Nginx hooks were removed at the user's request. Upgrade strips only retired host metadata and ShieldPM-owned runtime fragments; ordinary Lua/auth/cache behavior remains. The separate Nginx-base change removes the compiled module and Wasmtime. See [removal and reference fix](./docs/wiki-intern/entwicklung/gitops-reference-and-runtime-removal-2026-10-27.md).
+- **Operations**: Incident center with measured coverage, durable notifications and alarm mutes; browser session revocation; encrypted full-instance backups with verified next-start restore.
+
 - **Proxy Management**: HTTP/HTTPS/HTTP3, Streams (TCP/UDP), Redirections, 404 Hosts.
 - **Proxy Host Observability**: Optional HTTP(S)/TCP upstream checks with bounded history and Telegram status alerts; on-demand DNS, TLS, route, upstream, auth, and WebSocket diagnostics.
 - **Configuration Preview**: Read-only Nginx draft and active-config diff while creating or editing a proxy host. Saving performs the Nginx syntax check and reload.
@@ -202,6 +206,13 @@ The [October 13 test-quality review](./docs/wiki-intern/entwicklung/tests.md#tes
 
 ### 6.1 Nginx Configuration Engine (`backend/internal/nginx.js`)
 
+The [October 17 performance review](./docs/wiki-intern/entwicklung/performance-optimierung-2026-10-17.md)
+reduces status polling when both monitor columns are hidden, keeps monitor retention inside the result transaction
+with a single boundary ID and two cleanup queries, and refreshes Nginx host graphs using singleton joins plus
+separate collection fetches. Protected-host graph reads drop from six to four without caching stale batch snapshots.
+Opt-in comparisons retain exact rendered-config hashes and distinguish local persistence/embedded-database timings
+from production network performance.
+
 - **Core Logic**: Reads DB state -> Renders Liquid templates (`backend/templates/`) -> Writes `.conf` files to `/data/nginx/`.
 
 * **Reload Strategy**: Serializes host configuration writes; bulk operations use `skip_reload` and a final validated reload.
@@ -211,6 +222,8 @@ The [October 13 test-quality review](./docs/wiki-intern/entwicklung/tests.md#tes
 ### 6.1a Proxy Host Observability
 
 - **Active checks**: `backend/internal/proxy-host-monitor.js` schedules bounded HTTP(S)/TCP checks per host, stores status and limited history, and optionally sends status changes through the owner's configured Telegram integration. See [monitoring internals](./docs/wiki-intern/module/proxy-host-monitor.md).
+- **Database conflicts**: Monitor result persistence retries exact MySQL/MariaDB snapshot/deadlock/lock-timeout conflicts in up to three fresh transactions. Each attempt revalidates the locked monitor and current host; probes and external notifications run once. An absent implicitly added local Docker socket uses informational logging and 30–300 second discovery retries; explicitly configured or different failures remain rate-limited warnings. See [Docker discovery](./docs/wiki-intern/module/docker.md).
+- **Host rollback conflicts**: Trusted host compensation also retries exact MySQL/MariaDB snapshot/deadlock/lock-timeout conflicts in up to three fresh transactions; files and reloads remain outside retry. A failed compensation preserves both private causes and logs compact safe identifiers instead of long SQL. Full-migration MariaDB tests reproduce error 1020 after a concurrent status write. See [host revisions](./docs/wiki-intern/features/host-revisionen.md).
 - **On-demand diagnostics**: `backend/internal/proxy-host-diagnostics.js` checks a stored host's DNS, local TLS and route, upstream connectivity, and applicable authentication or WebSocket behavior. Results are not stored. See [diagnostics internals](./docs/wiki-intern/features/proxy-host-diagnostics.md).
 
 ### 6.1b Proxy Host IP Firewall

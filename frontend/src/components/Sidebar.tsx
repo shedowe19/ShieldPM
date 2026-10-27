@@ -61,6 +61,13 @@ const menuItems: MenuItem[] = [
 		permission: VIEW,
 	},
 	{
+		to: "/incidents",
+		icon: IconActivity,
+		label: "incidents.title",
+		permissionSection: PROXY_HOSTS,
+		permission: VIEW,
+	},
+	{
 		icon: IconDeviceDesktop,
 		label: "hosts",
 		items: [
@@ -159,6 +166,7 @@ const menuItems: MenuItem[] = [
 		label: "settings",
 		permissionSection: ADMIN,
 	},
+	{ to: "/settings/backups", icon: IconShield, label: "backups.title", permissionSection: ADMIN },
 ];
 
 const SidebarItem = ({ item, onClick }: { item: MenuItem; onClick?: () => void }) => {
