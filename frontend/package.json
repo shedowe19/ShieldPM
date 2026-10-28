@@ -75,7 +75,7 @@
     "react-i18next": "^17.1.9",
     "react-intl": "^12.1.6",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.18.4",
+    "react-router-dom": "^7.18.5",
     "react-select": "5.10.2",
     "recharts": "^3.10.1",
     "refractor": "5.0.0",
