@@ -166,11 +166,11 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [express@5.3.0](https://www.npmjs.com/package/express/v/5.3.0) - MIT
 - [fast-deep-equal@3.1.3](https://www.npmjs.com/package/fast-deep-equal/v/3.1.3) - MIT
 - [fast-fifo@1.3.2](https://www.npmjs.com/package/fast-fifo/v/1.3.2) - MIT
-- [fast-uri@3.1.8](https://www.npmjs.com/package/fast-uri/v/3.1.8) - BSD-3-Clause
+- [fast-uri@3.1.9](https://www.npmjs.com/package/fast-uri/v/3.1.9) - BSD-3-Clause
 - [figures@2.0.0](https://www.npmjs.com/package/figures/v/2.0.0) - MIT
 - [finalhandler@2.1.1](https://www.npmjs.com/package/finalhandler/v/2.1.1) - MIT
 - [find-up@2.1.0](https://www.npmjs.com/package/find-up/v/2.1.0) - MIT
-- [follow-redirects@1.16.0](https://www.npmjs.com/package/follow-redirects/v/1.16.0) - MIT
+- [follow-redirects@1.16.2](https://www.npmjs.com/package/follow-redirects/v/1.16.2) - MIT
 - [for-each@0.3.5](https://www.npmjs.com/package/for-each/v/0.3.5) - MIT
 - [form-data@4.0.6](https://www.npmjs.com/package/form-data/v/4.0.6) - MIT
 - [forwarded@0.2.0](https://www.npmjs.com/package/forwarded/v/0.2.0) - MIT
@@ -199,7 +199,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [ignore@5.3.2](https://www.npmjs.com/package/ignore/v/5.3.2) - MIT
 - [inherits@2.0.4](https://www.npmjs.com/package/inherits/v/2.0.4) - ISC
 - [interpret@2.2.0](https://www.npmjs.com/package/interpret/v/2.2.0) - MIT
-- [ip-address@10.7.3](https://www.npmjs.com/package/ip-address/v/10.7.3) - MIT
+- [ip-address@10.7.4](https://www.npmjs.com/package/ip-address/v/10.7.4) - MIT
 - [ipaddr.js@2.5.0](https://www.npmjs.com/package/ipaddr.js/v/2.5.0) - MIT
 - [is-arrayish@0.2.1](https://www.npmjs.com/package/is-arrayish/v/0.2.1) - MIT
 - [is-callable@1.2.7](https://www.npmjs.com/package/is-callable/v/1.2.7) - MIT
@@ -210,7 +210,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [is-stream@4.0.1](https://www.npmjs.com/package/is-stream/v/4.0.1) - MIT
 - [is-typed-array@1.1.15](https://www.npmjs.com/package/is-typed-array/v/1.1.15) - MIT
 - [isarray@2.0.5](https://www.npmjs.com/package/isarray/v/2.0.5) - MIT
-- [isomorphic-git@1.44.5](https://www.npmjs.com/package/isomorphic-git/v/1.44.5) - MIT
+- [isomorphic-git@1.44.7](https://www.npmjs.com/package/isomorphic-git/v/1.44.7) - MIT
 - [jose@6.2.12](https://www.npmjs.com/package/jose/v/6.2.12) - MIT
 - [js-yaml@5.5.0](https://www.npmjs.com/package/js-yaml/v/5.5.0) - MIT
 - [json-parse-better-errors@1.0.2](https://www.npmjs.com/package/json-parse-better-errors/v/1.0.2) - MIT
@@ -750,8 +750,8 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [react-redux@9.3.0](https://www.npmjs.com/package/react-redux/v/9.3.0) - MIT
 - [react-remove-scroll-bar@2.3.8](https://www.npmjs.com/package/react-remove-scroll-bar/v/2.3.8) - MIT
 - [react-remove-scroll@2.7.2](https://www.npmjs.com/package/react-remove-scroll/v/2.7.2) - MIT
-- [react-router-dom@7.18.4](https://www.npmjs.com/package/react-router-dom/v/7.18.4) - MIT
-- [react-router@7.18.4](https://www.npmjs.com/package/react-router/v/7.18.4) - MIT
+- [react-router-dom@7.18.5](https://www.npmjs.com/package/react-router-dom/v/7.18.5) - MIT
+- [react-router@7.18.5](https://www.npmjs.com/package/react-router/v/7.18.5) - MIT
 - [react-select@5.10.2](https://www.npmjs.com/package/react-select/v/5.10.2) - MIT
 - [react-style-singleton@2.2.3](https://www.npmjs.com/package/react-style-singleton/v/2.2.3) - MIT
 - [react-transition-group@4.4.5](https://www.npmjs.com/package/react-transition-group/v/4.4.5) - BSD-3-Clause
@@ -970,4 +970,4 @@ These tools run only during development and CI. They are not included in ShieldP
 - [@babel/traverse@8.0.7](https://www.npmjs.com/package/@babel/traverse/v/8.0.7) - MIT
 - [tscanner@0.1.3](https://www.npmjs.com/package/tscanner/v/0.1.3) - MIT
 
-The above information reflects the installed packages as of October 27, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
+The above information reflects the installed packages as of October 28, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.

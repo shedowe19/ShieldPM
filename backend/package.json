@@ -32,7 +32,7 @@
     "get-uri": "8.0.1",
     "helmet": "8.3.0",
     "ipaddr.js": "^2.5.0",
-    "isomorphic-git": "^1.44.5",
+    "isomorphic-git": "^1.44.7",
     "js-yaml": "^5.5.0",
     "jsonwebtoken": "9.0.3",
     "knex": "3.3.0",
