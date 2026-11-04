@@ -2,6 +2,7 @@
     "tags": [
         "DDNS"
     ],
+    "operationId": "getDdnsProviders",
     "summary": "Get all DDNS Providers",
     "responses": {
         "200": {

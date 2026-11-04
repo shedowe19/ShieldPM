@@ -95,6 +95,30 @@
 		{
 			"name": "upload-relay",
 			"description": "Resumable upload relay for proxy hosts"
+		},
+		{
+			"name": "AI",
+			"description": "AI assistant endpoints"
+		},
+		{
+			"name": "dashboard",
+			"description": "Dashboard notes and widgets"
+		},
+		{
+			"name": "cloudflared-tunnels",
+			"description": "Cloudflare Tunnel management"
+		},
+		{
+			"name": "DDNS",
+			"description": "Dynamic DNS provider management"
+		},
+		{
+			"name": "Tor Onion",
+			"description": "Tor onion service management"
+		},
+		{
+			"name": "wireguard",
+			"description": "WireGuard VPN management"
 		}
 	],
 	"paths": {

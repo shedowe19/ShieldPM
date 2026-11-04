@@ -3,6 +3,7 @@
     "tags": [
         "DDNS"
     ],
+    "operationId": "updateDdnsProvider",
     "parameters": [
         {
             "in": "path",

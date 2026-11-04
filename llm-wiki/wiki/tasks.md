@@ -42,6 +42,11 @@
 
 ## Done
 
+- [x] **T-011 Abschlussprüfung aller geänderten Dateien.** Done 2026-11-04.
+      Beleg: 52 geänderte Dateien geprüft; OpenAPI-Metadaten um sechs fehlende Tags
+      und sechs DDNS-Operation-IDs ergänzt; zwei veraltete Wiki-Stellen korrigiert;
+      Graph neu erzeugt. Prüfungen: Wiki-Werkzeug PASS, Prettier PASS, 15 YAML-Dateien
+      valide, 11 gezielte Tests grün, Lockfiles frozen, CodeQL 0, Dependabot 0.
 - [x] **T-010 CodeQL-Funde im Wiki-Werkzeug und Graphen beheben.** Done 2026-11-04.
       Beleg: `wiki-check.mjs` entfernt HTML-Kommentare und Tags über Scanner statt
       Einzel-Regex; `wiki-graph.html` (generiert, eingebettete Minified-Bundles) ist
@@ -66,7 +71,7 @@
       `backend/schema/swagger.json` enthält 19 neue Pfade mit 22 Operationen:
       Analytics 5, OIDC 3, GitOps 8 Pfade/9 Operationen, Upload-Relay 3 Pfade/5
       Operationen. Alle `$ref`s lösen auf, Operation-IDs sind eindeutig (120 Pfade,
-      162 Operationen).
+      169 Operationen, 168 IDs, 26 Tags).
 - [x] **M-004 Glossare zusammengeführt.** Done 2026-11-04. Beleg:
       `reference/projekt/begriffe.md` verweist nur noch auf `reference/glossar.md`;
       das kuratierte Glossar linkt dieselbe Quelle.

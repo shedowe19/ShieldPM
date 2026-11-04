@@ -2,6 +2,7 @@
     "tags": [
         "DDNS"
     ],
+    "operationId": "testDdnsProvider",
     "summary": "Manual test/update of a DDNS Provider",
     "parameters": [
         {

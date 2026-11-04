@@ -3,6 +3,7 @@
     "tags": [
         "DDNS"
     ],
+    "operationId": "createDdnsProvider",
     "security": [
         {
             "bearerAuth": []

@@ -2,6 +2,7 @@
     "tags": [
         "DDNS"
     ],
+    "operationId": "deleteDdnsProvider",
     "summary": "Delete a DDNS Provider",
     "parameters": [
         {

@@ -83,9 +83,10 @@ export { up, down };
 
 ## Offene Fragen
 
-- TODO: Die Aussage „SQLite nur in Entwicklung“ aus `AGENTS.md` ist veraltet; sie
-  widerspricht der Standardkonfiguration. Siehe
-  [Widerspruch](../contradictions/2026-11-04-sqlite-in-produktion.md).
+- Keine offenen Fragen auf dieser Seite. Der frühere Widerspruch „SQLite nur in
+  Entwicklung“ ist mit `T-001` aufgelöst: `AGENTS.md` und `.cursorrules`
+  beschreiben SQLite als unterstützte Produktionsoption
+  ([Widerspruch](../contradictions/2026-11-04-sqlite-in-produktion.md)).
 
 ## Verwandte Seiten
 

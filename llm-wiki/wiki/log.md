@@ -2,6 +2,29 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-04] audit | Abschlussprüfung aller geänderten Dateien
+
+- Command: „sind wir nun komplett fertig, checke nochmals jeden file ganz genau“.
+- Type: audit
+- Areas affected: `backend/schema`, Wiki (Daten, Architektur, Aufgaben, Graph)
+- Files changed: `swagger.json` (sechs Tags), sechs DDNS-Pfaddateien
+  (Operation-IDs), `migrations.md`, `architecture/overview.md`, `tasks.md`,
+  `wiki-graph.html`, `changelog.md`, `log.md`
+- Wiki pages updated: data/migrations, architecture/overview, tasks, changelog,
+  log
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: keine
+- New decisions: keine
+- Open questions: zwei veraltete Einträge geschlossen (SQLite, Unix-Socket)
+- Next steps: T-007 auf einer laufenden Instanz; Routinen beim nächsten Auslöser
+- Verification: 148 Wiki-Dateien (141 Markdown); Wiki-Werkzeug PASS; Prettier
+  PASS; OpenAPI 120 Pfade, 169 Operationen, 168 eindeutige IDs, 26 Tags, keine
+  fehlenden `$ref`s; 15 YAML-Dateien valide; `node --check` für alle geänderten
+  JS-Dateien; `install.sh` und OpenAppSec-Policy gültig; Lockfiles mit
+  `--frozen-lockfile`; 11 gezielte Tests grün; CodeQL 0 und Dependabot 0 offene
+  Alarme; keine Konfliktmarker, keine Leerdateien, keine Secrets im Repository.
+
 ## [2026-11-04] security | CodeQL-Funde im Wiki-Werkzeug und Graphen behoben
 
 - Command: CodeQL-Ansicht mit vier offenen Funden auf `develop`.

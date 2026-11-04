@@ -93,9 +93,9 @@ Details: [Request-Lebenszyklus](./request-lifecycle.md),
 
 ## Offene Fragen
 
-- Unklar: Ob der Unix-Socket-Pfad bei nativen Installationen identisch ist; das
-  Startskript nutzt ihn, der Installer wurde hier nicht im Detail geprüft.
-  `confidence: low`.
+- Keine offenen Fragen auf dieser Seite. Der Unix-Socket ist bei nativen
+  Installationen `/run/shieldpm/shieldpm.sock` (`scripts/install.sh:1065`,
+  `rootfs/usr/local/bin/start.sh:384`).
 
 ## Verwandte Seiten
 

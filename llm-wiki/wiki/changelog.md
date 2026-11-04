@@ -5,6 +5,9 @@ Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
 ## 2026-11-04
 
+- Abschlussprüfung: OpenAPI-Metadaten ergänzt (sechs Tags, sechs DDNS-
+  Operation-IDs), zwei veraltete Wiki-Stellen korrigiert, Graph neu erzeugt.
+  ([Log](./log.md))
 - CodeQL-Funde behoben: Wiki-Checker bereinigt Kommentare und Tags über
   Scanner; der generierte Offline-Graph ist von der Analyse ausgenommen.
   ([Log](./log.md))
