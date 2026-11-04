@@ -10,10 +10,7 @@ const packageVersions = (lockfilePath, packageName) => {
 	const versions = [];
 	let selected = false;
 
-	for (const line of fs
-		.readFileSync(lockfilePath, "utf8")
-		.replace(/\r\n?/g, "\n")
-		.split("\n")) {
+	for (const line of fs.readFileSync(lockfilePath, "utf8").replace(/\r\n?/g, "\n").split("\n")) {
 		if (line && !line.startsWith(" ") && !line.startsWith("\t") && line.endsWith(":")) {
 			selected = selector.test(line);
 			continue;
