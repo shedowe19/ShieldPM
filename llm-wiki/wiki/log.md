@@ -23,7 +23,8 @@ Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Felder
 - Verification: `node llm-wiki/tools/wiki-check.mjs` → PASS; Regex-Match nach
   CRLF-Normalisierung geprüft (vorher auf Windows-Checkout falsch); Workflow-YAML
   mit PyYAML geparst; `node --check` für den Test; Prettier `--check` ohne
-  Abweichung.
+  Abweichung; CI-Lauf `41894222573` für `1b5acadd` grün, inklusive Schritt
+  „Check internal LLM wiki“, Backend-Tests und Frontend-Build.
 
 ## [2026-11-04] verification | OpenAppSec-Policy gegen v1beta1 validiert
 

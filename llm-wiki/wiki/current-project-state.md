@@ -43,6 +43,8 @@ Testlauf dieser Sitzung:
 - Serielle Schreibvorgänge über `withConfigurationLock` (`backend/internal/nginx.js:77`).
 - API-Validierung über JSON Schema/AJV und Swagger UI unter `/docs`.
 - Multi-Datenbank-Betrieb über Knex/Objection.
+- Die Wiki-Prüfung läuft in der CI (`lint-and-format.yml`, Schritt
+  „Check internal LLM wiki“); Lauf `41894222573` war grün.
 
 ## Was bewusst fehlt
 

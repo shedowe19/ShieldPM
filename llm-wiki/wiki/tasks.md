@@ -46,7 +46,8 @@
       2026-11-04. Beleg: `.github/workflows/lint-and-format.yml` führt im Job
       `quality` `node llm-wiki/tools/wiki-check.mjs` aus;
       `backend/test/ci/openappsec-local-policy.spec.js` normalisiert CRLF, damit der
-      Test auch auf Windows-Checkouts läuft.
+      Test auch auf Windows-Checkouts läuft. CI-Lauf `41894222573` grün, inklusive
+      Wiki-Schritt und Backend-Tests.
 - [x] **T-005 OpenAppSec-Policy an das v1beta1-Schema angepasst.** Done 2026-11-04.
       Beleg: Die vom Installer erzeugte Policy nutzt benannte Practice- und
       Log-Trigger-Ressourcen, validiert gegen das veröffentlichte v1beta1-Schema; der
