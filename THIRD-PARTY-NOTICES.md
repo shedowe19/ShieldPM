@@ -241,7 +241,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [mime-db@1.54.0](https://www.npmjs.com/package/mime-db/v/1.54.0) - MIT
 - [mime-types@3.0.2](https://www.npmjs.com/package/mime-types/v/3.0.2) - MIT
 - [mimic-response@3.1.0](https://www.npmjs.com/package/mimic-response/v/3.1.0) - MIT
-- [minimatch@10.2.5](https://www.npmjs.com/package/minimatch/v/10.2.5) - BlueOak-1.0.0
+- [minimatch@11.0.4](https://www.npmjs.com/package/minimatch/v/11.0.4) - BlueOak-1.0.0
 - [minimist@1.2.8](https://www.npmjs.com/package/minimist/v/1.2.8) - MIT
 - [minimisted@2.0.1](https://www.npmjs.com/package/minimisted/v/2.0.1) - MIT
 - [mkdirp-classic@0.5.3](https://www.npmjs.com/package/mkdirp-classic/v/0.5.3) - MIT
@@ -302,7 +302,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [pvtsutils@1.3.6](https://www.npmjs.com/package/pvtsutils/v/1.3.6) - MIT
 - [pvutils@1.1.5](https://www.npmjs.com/package/pvutils/v/1.1.5) - MIT
 - [qrcode@1.5.4](https://www.npmjs.com/package/qrcode/v/1.5.4) - MIT
-- [qs@6.16.0](https://www.npmjs.com/package/qs/v/6.16.0) - BSD-3-Clause
+- [qs@6.16.1](https://www.npmjs.com/package/qs/v/6.16.1) - BSD-3-Clause
 - [quickjs-wasi@2.2.0](https://www.npmjs.com/package/quickjs-wasi/v/2.2.0) - MIT
 - [range-parser@1.3.0](https://www.npmjs.com/package/range-parser/v/1.3.0) - MIT
 - [raw-body@3.0.2](https://www.npmjs.com/package/raw-body/v/3.0.2) - MIT
@@ -936,7 +936,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [rolldown@1.2.15](https://www.npmjs.com/package/rolldown/v/1.2.15) - MIT
 - [sass@1.106.1](https://www.npmjs.com/package/sass/v/1.106.1) - MIT
 - [seroval-plugins@1.6.8](https://www.npmjs.com/package/seroval-plugins/v/1.6.8) - MIT
-- [seroval@1.6.8](https://www.npmjs.com/package/seroval/v/1.6.8) - MIT
+- [seroval@1.6.11](https://www.npmjs.com/package/seroval/v/1.6.11) - MIT
 - [shieldpm@4.4.1](https://www.npmjs.com/package/shieldpm/v/4.4.1) - UNLICENSED
 - [signal-exit@3.0.7](https://www.npmjs.com/package/signal-exit/v/3.0.7) - ISC
 - [solid-js@1.9.16](https://www.npmjs.com/package/solid-js/v/1.9.16) - MIT
@@ -970,4 +970,4 @@ These tools run only during development and CI. They are not included in ShieldP
 - [@babel/traverse@8.0.7](https://www.npmjs.com/package/@babel/traverse/v/8.0.7) - MIT
 - [tscanner@0.1.3](https://www.npmjs.com/package/tscanner/v/0.1.3) - MIT
 
-The above information reflects the installed packages as of October 27, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
+The above information reflects the installed packages as of November 4, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
