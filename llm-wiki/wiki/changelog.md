@@ -5,6 +5,9 @@ Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
 ## 2026-11-04
 
+- Dependabot-Alarme geschlossen: `qs` auf 6.16.1 (Resolution) und `seroval` im
+  Frontend-Lock auf 1.6.11 gehoben; Lockfiles und Schutztests bestehen.
+  ([Log](./log.md))
 - Wiki-Prüfung läuft jetzt in der CI (`.github/workflows/lint-and-format.yml`);
   der OpenAppSec-Regressionstest normalisiert Zeilenenden und läuft damit auch
   auf Windows-Checkouts. ([Log](./log.md))

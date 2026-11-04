@@ -20,12 +20,13 @@ zuletzt fertig wurde, was bewusst fehlt und welche Risiken gerade aktiv sind.
 - Letzte Version `4.4.1` in `.version`, `backend/package.json` und
   `frontend/package.json`.
 - Wiki versioniert seit `443d764f`; die Nacharbeiten dieser Sitzung betreffen
-  OpenAPI, OpenAppSec und die Wiki-Prüfung in CI.
+  OpenAPI, OpenAppSec, die Wiki-Prüfung in CI und zwei Dependabot-Alarme.
 
 ## Was zuletzt fertig wurde
 
 | Datum      | Ergebnis                                                                                                        | Quelle                                                        |
 | ---------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| 2026-11-04 | Dependabot-Alarme für `qs` und `seroval` geschlossen (`6.16.1`/`1.6.11`)                                        | [Log](./log.md)                                               |
 | 2026-11-04 | Wiki-Prüfung in der CI verankert; OpenAppSec-Regressionstest CRLF-robust                                        | [Log](./log.md)                                               |
 | 2026-11-04 | Internes Wiki auf `llm-wiki/` konsolidiert; `docs/wiki-intern/` nach `llm-wiki/wiki/reference/` übernommen      | [ADR](./decisions/2026-11-04-wiki-struktur.md)                |
 | 2026-10-27 | Sicherheitsupdates für Redirect-, URI- und IP-Parser-Abhängigkeiten (PR #158)                                   | Commit `2324db48`                                             |
@@ -66,6 +67,9 @@ Testlauf dieser Sitzung:
 - Keine bestätigten Produktdefekte in dieser Sitzung.
 - Offene Arbeiten: `T-007` (blockiert, braucht laufenden OpenAppSec-Agent)
   ([Aufgaben](./tasks.md)).
+- Offener Pull Request #159 („chore(deps): update npm dependencies“): alle
+  Prüfungen grün, mergebar; blockiert bis zum Merge den täglichen
+  Abhängigkeits-Updater.
 
 ## Aktive Risiken
 

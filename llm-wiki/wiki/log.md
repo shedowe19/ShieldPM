@@ -2,6 +2,32 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-04] security | Dependabot-Alarme qs und seroval geschlossen
+
+- Command: „Aber nochmals komplett code mit internet checken ob noch was
+  angepasst werden muss etc.“
+- Type: security
+- Areas affected: `backend/package.json`, `backend/yarn.lock`,
+  `frontend/yarn.lock`, `backend/test/ci`
+- Files changed: `backend/package.json` (qs-Resolution 6.16.1),
+  `backend/yarn.lock`, `frontend/yarn.lock` (seroval 1.6.11),
+  `dependabot-security-resolutions.spec.js` (CRLF-Normalisierung),
+  `npm-package-constraints.spec.js` (erwarteter qs-Pin)
+- Wiki pages updated: security/overview, reference/module/openappsec,
+  reference/offene-fragen, tasks, changelog, log
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: keine
+- New decisions: keine; v1beta1 bleibt maßgeblich, v1beta2 ist laut Doku Beta
+- Open questions: T-007 unverändert; PR #159 bleibt offen
+- Next steps: PR #159 prüfen/mergen; direkte Patch-Updates beim nächsten
+  Updater-Lauf
+- Verification: `yarn install --frozen-lockfile` für Backend und Frontend;
+  `vitest run` für `openappsec-local-policy`, `dependabot-security-resolutions`
+  und `npm-package-constraints` (9 Tests grün); Lockfile zeigt `qs@6.16.1` und
+  `seroval@1.6.11`; Dependabot-API vor der Änderung: drei offene moderate
+  Alarme (qs, seroval ×2).
+
 ## [2026-11-04] chore | Wiki-Prüfung in CI und portabler OpenAppSec-Test
 
 - Command: „nochmals komplett checken ob noch was gemacht werden muss“.
