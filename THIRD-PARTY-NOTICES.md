@@ -22,15 +22,16 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [@grpc/grpc-js@1.14.5](https://www.npmjs.com/package/@grpc/grpc-js/v/1.14.5) - Apache-2.0
 - [@grpc/proto-loader@0.7.15](https://www.npmjs.com/package/@grpc/proto-loader/v/0.7.15) - Apache-2.0
 - [@hexagon/base64@1.1.28](https://www.npmjs.com/package/@hexagon/base64/v/1.1.28) - MIT
+- [@isaacs/nonrecursive-glob-match@1.0.3](https://www.npmjs.com/package/@isaacs/nonrecursive-glob-match/v/1.0.3) - BlueOak-1.0.0
 - [@js-sdsl/ordered-map@4.4.2](https://www.npmjs.com/package/@js-sdsl/ordered-map/v/4.4.2) - MIT
 - [@levischuck/tiny-cbor@0.2.11](https://www.npmjs.com/package/@levischuck/tiny-cbor/v/0.2.11) - MIT
-- [@noble/hashes@2.2.0](https://www.npmjs.com/package/@noble/hashes/v/2.2.0) - MIT
-- [@otplib/core@13.5.0](https://www.npmjs.com/package/@otplib/core/v/13.5.0) - MIT
-- [@otplib/hotp@13.5.0](https://www.npmjs.com/package/@otplib/hotp/v/13.5.0) - MIT
-- [@otplib/plugin-base32-scure@13.5.0](https://www.npmjs.com/package/@otplib/plugin-base32-scure/v/13.5.0) - MIT
-- [@otplib/plugin-crypto-noble@13.5.0](https://www.npmjs.com/package/@otplib/plugin-crypto-noble/v/13.5.0) - MIT
-- [@otplib/totp@13.5.0](https://www.npmjs.com/package/@otplib/totp/v/13.5.0) - MIT
-- [@otplib/uri@13.5.0](https://www.npmjs.com/package/@otplib/uri/v/13.5.0) - MIT
+- [@noble/hashes@2.4.0](https://www.npmjs.com/package/@noble/hashes/v/2.4.0) - MIT
+- [@otplib/core@13.6.0](https://www.npmjs.com/package/@otplib/core/v/13.6.0) - MIT
+- [@otplib/hotp@13.6.0](https://www.npmjs.com/package/@otplib/hotp/v/13.6.0) - MIT
+- [@otplib/plugin-base32-scure@13.6.0](https://www.npmjs.com/package/@otplib/plugin-base32-scure/v/13.6.0) - MIT
+- [@otplib/plugin-crypto-noble@13.6.0](https://www.npmjs.com/package/@otplib/plugin-crypto-noble/v/13.6.0) - MIT
+- [@otplib/totp@13.6.0](https://www.npmjs.com/package/@otplib/totp/v/13.6.0) - MIT
+- [@otplib/uri@13.6.0](https://www.npmjs.com/package/@otplib/uri/v/13.6.0) - MIT
 - [@peculiar/asn1-android@2.8.0](https://www.npmjs.com/package/@peculiar/asn1-android/v/2.8.0) - MIT
 - [@peculiar/asn1-asym-key@2.10.0](https://www.npmjs.com/package/@peculiar/asn1-asym-key/v/2.10.0) - MIT
 - [@peculiar/asn1-cms@2.10.0](https://www.npmjs.com/package/@peculiar/asn1-cms/v/2.10.0) - MIT
@@ -56,11 +57,11 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [@protobufjs/pool@1.1.0](https://www.npmjs.com/package/@protobufjs/pool/v/1.1.0) - BSD-3-Clause
 - [@protobufjs/utf8@1.1.2](https://www.npmjs.com/package/@protobufjs/utf8/v/1.1.2) - BSD-3-Clause
 - [@scarf/scarf@1.4.0](https://www.npmjs.com/package/@scarf/scarf/v/1.4.0) - Apache-2.0
-- [@scure/base@2.2.0](https://www.npmjs.com/package/@scure/base/v/2.2.0) - MIT
+- [@scure/base@2.4.0](https://www.npmjs.com/package/@scure/base/v/2.4.0) - MIT
 - [@simplewebauthn/server@14.0.3](https://www.npmjs.com/package/@simplewebauthn/server/v/14.0.3) - MIT
 - [@telegraf/types@7.1.0](https://www.npmjs.com/package/@telegraf/types/v/7.1.0) - MIT
 - [@types/json-schema@7.0.15](https://www.npmjs.com/package/@types/json-schema/v/7.0.15) - MIT
-- [@types/node@26.6.5](https://www.npmjs.com/package/@types/node/v/26.6.5) - MIT
+- [@types/node@26.6.6](https://www.npmjs.com/package/@types/node/v/26.6.6) - MIT
 - [@typescript/typescript-linux-x64@7.0.2](https://www.npmjs.com/package/@typescript/typescript-linux-x64/v/7.0.2) - Apache-2.0
 - [abort-controller@3.0.0](https://www.npmjs.com/package/abort-controller/v/3.0.0) - MIT
 - [accepts@2.0.0](https://www.npmjs.com/package/accepts/v/2.0.0) - MIT
@@ -88,7 +89,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [bare-stream@2.13.3](https://www.npmjs.com/package/bare-stream/v/2.13.3) - Apache-2.0
 - [bare-url@2.4.6](https://www.npmjs.com/package/bare-url/v/2.4.6) - Apache-2.0
 - [base64-js@1.5.1](https://www.npmjs.com/package/base64-js/v/1.5.1) - MIT
-- [basic-ftp@6.2.3](https://www.npmjs.com/package/basic-ftp/v/6.2.3) - MIT
+- [basic-ftp@6.2.5](https://www.npmjs.com/package/basic-ftp/v/6.2.5) - MIT
 - [batchflow@0.4.0](https://www.npmjs.com/package/batchflow/v/0.4.0) - MIT
 - [bcrypt-pbkdf@1.0.2](https://www.npmjs.com/package/bcrypt-pbkdf/v/1.0.2) - BSD-3-Clause
 - [bcryptjs@3.0.3](https://www.npmjs.com/package/bcryptjs/v/3.0.3) - BSD-3-Clause
@@ -125,7 +126,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [cpu-features@0.0.10](https://www.npmjs.com/package/cpu-features/v/0.0.10) - MIT
 - [crc-32@1.2.2](https://www.npmjs.com/package/crc-32/v/1.2.2) - Apache-2.0
 - [crc32-stream@7.0.1](https://www.npmjs.com/package/crc32-stream/v/7.0.1) - MIT
-- [csrf-csrf@4.0.3](https://www.npmjs.com/package/csrf-csrf/v/4.0.3) - ISC
+- [csrf-csrf@4.1.0](https://www.npmjs.com/package/csrf-csrf/v/4.1.0) - ISC
 - [data-uri-to-buffer@8.0.0](https://www.npmjs.com/package/data-uri-to-buffer/v/8.0.0) - MIT
 - [dayjs@1.11.23](https://www.npmjs.com/package/dayjs/v/1.11.23) - MIT
 - [debug@4.4.3](https://www.npmjs.com/package/debug/v/4.4.3) - MIT
@@ -161,16 +162,16 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [event-target-shim@5.0.1](https://www.npmjs.com/package/event-target-shim/v/5.0.1) - MIT
 - [events-universal@1.0.1](https://www.npmjs.com/package/events-universal/v/1.0.1) - Apache-2.0
 - [events@3.3.0](https://www.npmjs.com/package/events/v/3.3.0) - MIT
-- [express-fileupload@1.5.2](https://www.npmjs.com/package/express-fileupload/v/1.5.2) - MIT
-- [express-rate-limit@8.7.1](https://www.npmjs.com/package/express-rate-limit/v/8.7.1) - MIT
+- [express-fileupload@1.6.0](https://www.npmjs.com/package/express-fileupload/v/1.6.0) - MIT
+- [express-rate-limit@8.7.3](https://www.npmjs.com/package/express-rate-limit/v/8.7.3) - MIT
 - [express@5.3.0](https://www.npmjs.com/package/express/v/5.3.0) - MIT
 - [fast-deep-equal@3.1.3](https://www.npmjs.com/package/fast-deep-equal/v/3.1.3) - MIT
 - [fast-fifo@1.3.2](https://www.npmjs.com/package/fast-fifo/v/1.3.2) - MIT
-- [fast-uri@3.1.8](https://www.npmjs.com/package/fast-uri/v/3.1.8) - BSD-3-Clause
+- [fast-uri@3.1.9](https://www.npmjs.com/package/fast-uri/v/3.1.9) - BSD-3-Clause
 - [figures@2.0.0](https://www.npmjs.com/package/figures/v/2.0.0) - MIT
 - [finalhandler@2.1.1](https://www.npmjs.com/package/finalhandler/v/2.1.1) - MIT
 - [find-up@2.1.0](https://www.npmjs.com/package/find-up/v/2.1.0) - MIT
-- [follow-redirects@1.16.0](https://www.npmjs.com/package/follow-redirects/v/1.16.0) - MIT
+- [follow-redirects@1.16.2](https://www.npmjs.com/package/follow-redirects/v/1.16.2) - MIT
 - [for-each@0.3.5](https://www.npmjs.com/package/for-each/v/0.3.5) - MIT
 - [form-data@4.0.6](https://www.npmjs.com/package/form-data/v/4.0.6) - MIT
 - [forwarded@0.2.0](https://www.npmjs.com/package/forwarded/v/0.2.0) - MIT
@@ -199,7 +200,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [ignore@5.3.2](https://www.npmjs.com/package/ignore/v/5.3.2) - MIT
 - [inherits@2.0.4](https://www.npmjs.com/package/inherits/v/2.0.4) - ISC
 - [interpret@2.2.0](https://www.npmjs.com/package/interpret/v/2.2.0) - MIT
-- [ip-address@10.7.3](https://www.npmjs.com/package/ip-address/v/10.7.3) - MIT
+- [ip-address@10.7.4](https://www.npmjs.com/package/ip-address/v/10.7.4) - MIT
 - [ipaddr.js@2.5.0](https://www.npmjs.com/package/ipaddr.js/v/2.5.0) - MIT
 - [is-arrayish@0.2.1](https://www.npmjs.com/package/is-arrayish/v/0.2.1) - MIT
 - [is-callable@1.2.7](https://www.npmjs.com/package/is-callable/v/1.2.7) - MIT
@@ -210,8 +211,8 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [is-stream@4.0.1](https://www.npmjs.com/package/is-stream/v/4.0.1) - MIT
 - [is-typed-array@1.1.15](https://www.npmjs.com/package/is-typed-array/v/1.1.15) - MIT
 - [isarray@2.0.5](https://www.npmjs.com/package/isarray/v/2.0.5) - MIT
-- [isomorphic-git@1.44.5](https://www.npmjs.com/package/isomorphic-git/v/1.44.5) - MIT
-- [jose@6.2.12](https://www.npmjs.com/package/jose/v/6.2.12) - MIT
+- [isomorphic-git@1.44.10](https://www.npmjs.com/package/isomorphic-git/v/1.44.10) - MIT
+- [jose@6.2.15](https://www.npmjs.com/package/jose/v/6.2.15) - MIT
 - [js-yaml@5.5.0](https://www.npmjs.com/package/js-yaml/v/5.5.0) - MIT
 - [json-parse-better-errors@1.0.2](https://www.npmjs.com/package/json-parse-better-errors/v/1.0.2) - MIT
 - [json-schema-traverse@1.0.0](https://www.npmjs.com/package/json-schema-traverse/v/1.0.0) - MIT
@@ -220,7 +221,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [jws@4.0.1](https://www.npmjs.com/package/jws/v/4.0.1) - MIT
 - [knex@3.3.0](https://www.npmjs.com/package/knex/v/3.3.0) - MIT
 - [lazystream@1.0.1](https://www.npmjs.com/package/lazystream/v/1.0.1) - MIT
-- [liquidjs@10.30.0](https://www.npmjs.com/package/liquidjs/v/10.30.0) - MIT
+- [liquidjs@10.30.1](https://www.npmjs.com/package/liquidjs/v/10.30.1) - MIT
 - [load-json-file@4.0.0](https://www.npmjs.com/package/load-json-file/v/4.0.0) - MIT
 - [locate-path@2.0.0](https://www.npmjs.com/package/locate-path/v/2.0.0) - MIT
 - [lodash.camelcase@4.3.0](https://www.npmjs.com/package/lodash.camelcase/v/4.3.0) - MIT
@@ -257,11 +258,11 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [normalize-path@3.0.0](https://www.npmjs.com/package/normalize-path/v/3.0.0) - MIT
 - [oauth4webapi@3.8.8](https://www.npmjs.com/package/oauth4webapi/v/3.8.8) - MIT
 - [object-inspect@1.13.4](https://www.npmjs.com/package/object-inspect/v/1.13.4) - MIT
-- [objection@4.4.1](https://www.npmjs.com/package/objection/v/4.4.1) - MIT
+- [objection@4.4.2](https://www.npmjs.com/package/objection/v/4.4.2) - MIT
 - [on-finished@2.4.1](https://www.npmjs.com/package/on-finished/v/2.4.1) - MIT
 - [once@1.4.0](https://www.npmjs.com/package/once/v/1.4.0) - ISC
-- [openid-client@6.8.8](https://www.npmjs.com/package/openid-client/v/6.8.8) - MIT
-- [otplib@13.5.0](https://www.npmjs.com/package/otplib/v/13.5.0) - MIT
+- [openid-client@6.8.9](https://www.npmjs.com/package/openid-client/v/6.8.9) - MIT
+- [otplib@13.6.0](https://www.npmjs.com/package/otplib/v/13.6.0) - MIT
 - [p-limit@1.3.0](https://www.npmjs.com/package/p-limit/v/1.3.0) - MIT
 - [p-locate@2.0.0](https://www.npmjs.com/package/p-locate/v/2.0.0) - MIT
 - [p-timeout@4.1.0](https://www.npmjs.com/package/p-timeout/v/4.1.0) - MIT
@@ -352,7 +353,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [supports-preserve-symlinks-flag@1.0.0](https://www.npmjs.com/package/supports-preserve-symlinks-flag/v/1.0.0) - MIT
 - [swagger-ui-dist@5.32.11](https://www.npmjs.com/package/swagger-ui-dist/v/5.32.11) - Apache-2.0
 - [swagger-ui-express@5.0.1](https://www.npmjs.com/package/swagger-ui-express/v/5.0.1) - MIT
-- [systeminformation@5.33.16](https://www.npmjs.com/package/systeminformation/v/5.33.16) - MIT
+- [systeminformation@5.33.19](https://www.npmjs.com/package/systeminformation/v/5.33.19) - MIT
 - [tail@2.2.6](https://www.npmjs.com/package/tail/v/2.2.6) - MIT
 - [tar-fs@2.1.5](https://www.npmjs.com/package/tar-fs/v/2.1.5) - MIT
 - [tar-stream@3.2.0](https://www.npmjs.com/package/tar-stream/v/3.2.0) - MIT
@@ -381,7 +382,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [which-typed-array@1.1.22](https://www.npmjs.com/package/which-typed-array/v/1.1.22) - MIT
 - [wrap-ansi@7.0.0](https://www.npmjs.com/package/wrap-ansi/v/7.0.0) - MIT
 - [wrappy@1.0.2](https://www.npmjs.com/package/wrappy/v/1.0.2) - ISC
-- [ws@8.22.0](https://www.npmjs.com/package/ws/v/8.22.0) - MIT
+- [ws@8.22.1](https://www.npmjs.com/package/ws/v/8.22.1) - MIT
 - [xtend@4.0.2](https://www.npmjs.com/package/xtend/v/4.0.2) - MIT
 - [y18n@5.0.8](https://www.npmjs.com/package/y18n/v/5.0.8) - ISC
 - [yargs-parser@21.1.1](https://www.npmjs.com/package/yargs-parser/v/21.1.1) - ISC
@@ -392,10 +393,10 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [@apidevtools/openapi-schemas@2.1.0](https://www.npmjs.com/package/@apidevtools/openapi-schemas/v/2.1.0) - MIT
 - [@apidevtools/swagger-methods@3.0.2](https://www.npmjs.com/package/@apidevtools/swagger-methods/v/3.0.2) - MIT
 - [@apidevtools/swagger-parser@13.1.0](https://www.npmjs.com/package/@apidevtools/swagger-parser/v/13.1.0) - MIT
-- [@biomejs/biome@2.6.3](https://www.npmjs.com/package/@biomejs/biome/v/2.6.3) - MIT OR Apache-2.0
-- [@biomejs/cli-linux-x64-musl@2.6.3](https://www.npmjs.com/package/@biomejs/cli-linux-x64-musl/v/2.6.3) - MIT OR Apache-2.0
-- [@biomejs/cli-linux-x64@2.6.3](https://www.npmjs.com/package/@biomejs/cli-linux-x64/v/2.6.3) - MIT OR Apache-2.0
-- [@electric-sql/pglite@0.5.12](https://www.npmjs.com/package/@electric-sql/pglite/v/0.5.12) - Apache-2.0
+- [@biomejs/biome@2.6.5](https://www.npmjs.com/package/@biomejs/biome/v/2.6.5) - MIT OR Apache-2.0
+- [@biomejs/cli-linux-x64-musl@2.6.5](https://www.npmjs.com/package/@biomejs/cli-linux-x64-musl/v/2.6.5) - MIT OR Apache-2.0
+- [@biomejs/cli-linux-x64@2.6.5](https://www.npmjs.com/package/@biomejs/cli-linux-x64/v/2.6.5) - MIT OR Apache-2.0
+- [@electric-sql/pglite@0.5.15](https://www.npmjs.com/package/@electric-sql/pglite/v/0.5.15) - Apache-2.0
 - [@jridgewell/resolve-uri@3.1.2](https://www.npmjs.com/package/@jridgewell/resolve-uri/v/3.1.2) - MIT
 - [@jridgewell/sourcemap-codec@1.6.0](https://www.npmjs.com/package/@jridgewell/sourcemap-codec/v/1.6.0) - MIT
 - [@jridgewell/trace-mapping@0.3.31](https://www.npmjs.com/package/@jridgewell/trace-mapping/v/0.3.31) - MIT
@@ -406,8 +407,8 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [@types/chai@5.2.3](https://www.npmjs.com/package/@types/chai/v/5.2.3) - MIT
 - [@types/deep-eql@4.0.2](https://www.npmjs.com/package/@types/deep-eql/v/4.0.2) - MIT
 - [@types/estree@1.0.9](https://www.npmjs.com/package/@types/estree/v/1.0.9) - MIT
-- [@vitest/mocker@5.0.5](https://www.npmjs.com/package/@vitest/mocker/v/5.0.5) - MIT
-- [@vitest/spy@5.0.5](https://www.npmjs.com/package/@vitest/spy/v/5.0.5) - MIT
+- [@vitest/mocker@5.1.0](https://www.npmjs.com/package/@vitest/mocker/v/5.1.0) - MIT
+- [@vitest/spy@5.1.0](https://www.npmjs.com/package/@vitest/spy/v/5.1.0) - MIT
 - [ajv-draft-04@1.0.0](https://www.npmjs.com/package/ajv-draft-04/v/1.0.0) - MIT
 - [assertion-error@2.0.1](https://www.npmjs.com/package/assertion-error/v/2.0.1) - MIT
 - [bl@4.1.0](https://www.npmjs.com/package/bl/v/4.1.0) - MIT
@@ -444,7 +445,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [tinyglobby@0.2.17](https://www.npmjs.com/package/tinyglobby/v/0.2.17) - MIT
 - [util-deprecate@1.0.2](https://www.npmjs.com/package/util-deprecate/v/1.0.2) - MIT
 - [vite@8.3.5](https://www.npmjs.com/package/vite/v/8.3.5) - MIT
-- [vitest@5.0.5](https://www.npmjs.com/package/vitest/v/5.0.5) - MIT
+- [vitest@5.1.0](https://www.npmjs.com/package/vitest/v/5.1.0) - MIT
 - [which-module@2.0.1](https://www.npmjs.com/package/which-module/v/2.0.1) - ISC
 - [why-is-node-running@3.2.1](https://www.npmjs.com/package/why-is-node-running/v/3.2.1) - MIT
 
@@ -458,7 +459,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [@babel/helper-string-parser@7.29.7](https://www.npmjs.com/package/@babel/helper-string-parser/v/7.29.7) - MIT
 - [@babel/helper-validator-identifier@7.29.7](https://www.npmjs.com/package/@babel/helper-validator-identifier/v/7.29.7) - MIT
 - [@babel/parser@7.29.7](https://www.npmjs.com/package/@babel/parser/v/7.29.7) - MIT
-- [@babel/runtime@8.0.8](https://www.npmjs.com/package/@babel/runtime/v/8.0.8) - MIT
+- [@babel/runtime@8.1.0](https://www.npmjs.com/package/@babel/runtime/v/8.1.0) - MIT
 - [@babel/template@7.29.7](https://www.npmjs.com/package/@babel/template/v/7.29.7) - MIT
 - [@babel/traverse@7.29.7](https://www.npmjs.com/package/@babel/traverse/v/7.29.7) - MIT
 - [@babel/types@7.29.7](https://www.npmjs.com/package/@babel/types/v/7.29.7) - MIT
@@ -481,7 +482,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [@formatjs/icu-messageformat-parser@3.5.22](https://www.npmjs.com/package/@formatjs/icu-messageformat-parser/v/3.5.22) - MIT
 - [@formatjs/icu-skeleton-parser@2.1.12](https://www.npmjs.com/package/@formatjs/icu-skeleton-parser/v/2.1.12) - MIT
 - [@formatjs/intl@6.1.4](https://www.npmjs.com/package/@formatjs/intl/v/6.1.4) - MIT
-- [@hookform/resolvers@6.0.1](https://www.npmjs.com/package/@hookform/resolvers/v/6.0.1) - MIT
+- [@hookform/resolvers@7.0.2](https://www.npmjs.com/package/@hookform/resolvers/v/7.0.2) - MIT
 - [@jridgewell/gen-mapping@0.3.13](https://www.npmjs.com/package/@jridgewell/gen-mapping/v/0.3.13) - MIT
 - [@jridgewell/resolve-uri@3.1.2](https://www.npmjs.com/package/@jridgewell/resolve-uri/v/3.1.2) - MIT
 - [@jridgewell/sourcemap-codec@1.6.0](https://www.npmjs.com/package/@jridgewell/sourcemap-codec/v/1.6.0) - MIT
@@ -535,8 +536,8 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [@standard-schema/utils@0.3.0](https://www.npmjs.com/package/@standard-schema/utils/v/0.3.0) - MIT
 - [@tabler/icons-react@3.50.0](https://www.npmjs.com/package/@tabler/icons-react/v/3.50.0) - MIT
 - [@tabler/icons@3.50.0](https://www.npmjs.com/package/@tabler/icons/v/3.50.0) - MIT
-- [@tanstack/query-core@5.105.0](https://www.npmjs.com/package/@tanstack/query-core/v/5.105.0) - MIT
-- [@tanstack/react-query@5.105.0](https://www.npmjs.com/package/@tanstack/react-query/v/5.105.0) - MIT
+- [@tanstack/query-core@5.105.3](https://www.npmjs.com/package/@tanstack/query-core/v/5.105.3) - MIT
+- [@tanstack/react-query@5.105.3](https://www.npmjs.com/package/@tanstack/react-query/v/5.105.3) - MIT
 - [@tanstack/react-store@0.11.2](https://www.npmjs.com/package/@tanstack/react-store/v/0.11.2) - MIT
 - [@tanstack/react-table@9.3.1](https://www.npmjs.com/package/@tanstack/react-table/v/9.3.1) - MIT
 - [@tanstack/store@0.11.2](https://www.npmjs.com/package/@tanstack/store/v/0.11.2) - MIT
@@ -568,7 +569,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [@types/unist@3.0.3](https://www.npmjs.com/package/@types/unist/v/3.0.3) - MIT
 - [@types/use-sync-external-store@0.0.6](https://www.npmjs.com/package/@types/use-sync-external-store/v/0.0.6) - MIT
 - [@typescript/typescript-linux-x64@7.0.2](https://www.npmjs.com/package/@typescript/typescript-linux-x64/v/7.0.2) - Apache-2.0
-- [@uiw/react-textarea-code-editor@3.1.2](https://www.npmjs.com/package/@uiw/react-textarea-code-editor/v/3.1.2) - MIT
+- [@uiw/react-textarea-code-editor@3.1.3](https://www.npmjs.com/package/@uiw/react-textarea-code-editor/v/3.1.3) - MIT
 - [@ungap/structured-clone@1.3.3](https://www.npmjs.com/package/@ungap/structured-clone/v/1.3.3) - ISC
 - [@xterm/addon-fit@0.11.0](https://www.npmjs.com/package/@xterm/addon-fit/v/0.11.0) - MIT
 - [@xterm/addon-web-links@0.12.0](https://www.npmjs.com/package/@xterm/addon-web-links/v/0.12.0) - MIT
@@ -598,7 +599,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [d3-color@3.1.0](https://www.npmjs.com/package/d3-color/v/3.1.0) - ISC
 - [d3-ease@3.0.1](https://www.npmjs.com/package/d3-ease/v/3.0.1) - BSD-3-Clause
 - [d3-format@3.1.2](https://www.npmjs.com/package/d3-format/v/3.1.2) - ISC
-- [d3-geo@3.1.1](https://www.npmjs.com/package/d3-geo/v/3.1.1) - ISC
+- [d3-geo@3.1.2](https://www.npmjs.com/package/d3-geo/v/3.1.2) - ISC
 - [d3-interpolate@3.0.1](https://www.npmjs.com/package/d3-interpolate/v/3.0.1) - ISC
 - [d3-path@3.1.0](https://www.npmjs.com/package/d3-path/v/3.1.0) - ISC
 - [d3-scale@4.0.2](https://www.npmjs.com/package/d3-scale/v/4.0.2) - ISC
@@ -631,7 +632,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [filter-obj@6.1.0](https://www.npmjs.com/package/filter-obj/v/6.1.0) - MIT
 - [find-root@1.1.0](https://www.npmjs.com/package/find-root/v/1.1.0) - MIT
 - [formik@2.4.9](https://www.npmjs.com/package/formik/v/2.4.9) - Apache-2.0
-- [framer-motion@14.7.1](https://www.npmjs.com/package/framer-motion/v/14.7.1) - MIT
+- [framer-motion@14.9.1](https://www.npmjs.com/package/framer-motion/v/14.9.1) - MIT
 - [function-bind@1.1.2](https://www.npmjs.com/package/function-bind/v/1.1.2) - MIT
 - [generate-password-browser@1.1.0](https://www.npmjs.com/package/generate-password-browser/v/1.1.0) - MIT
 - [get-nonce@1.0.1](https://www.npmjs.com/package/get-nonce/v/1.0.1) - MIT
@@ -650,7 +651,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [html-void-elements@3.0.0](https://www.npmjs.com/package/html-void-elements/v/3.0.0) - MIT
 - [humps@2.0.1](https://www.npmjs.com/package/humps/v/2.0.1) - MIT
 - [i18n-iso-countries@7.14.0](https://www.npmjs.com/package/i18n-iso-countries/v/7.14.0) - MIT
-- [i18next@26.5.11](https://www.npmjs.com/package/i18next/v/26.5.11) - MIT
+- [i18next@26.7.1](https://www.npmjs.com/package/i18next/v/26.7.1) - MIT
 - [ieee754@1.2.1](https://www.npmjs.com/package/ieee754/v/1.2.1) - BSD-3-Clause
 - [immer@11.1.15](https://www.npmjs.com/package/immer/v/11.1.15) - MIT
 - [import-fresh@3.3.1](https://www.npmjs.com/package/import-fresh/v/3.3.1) - MIT
@@ -676,7 +677,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [lodash@4.18.1](https://www.npmjs.com/package/lodash/v/4.18.1) - MIT
 - [longest-streak@3.1.0](https://www.npmjs.com/package/longest-streak/v/3.1.0) - MIT
 - [loose-envify@1.4.0](https://www.npmjs.com/package/loose-envify/v/1.4.0) - MIT
-- [lucide-react@1.62.0](https://www.npmjs.com/package/lucide-react/v/1.62.0) - ISC
+- [lucide-react@1.68.0](https://www.npmjs.com/package/lucide-react/v/1.68.0) - ISC
 - [markdown-table@3.0.4](https://www.npmjs.com/package/markdown-table/v/3.0.4) - MIT
 - [mdast-util-find-and-replace@3.0.2](https://www.npmjs.com/package/mdast-util-find-and-replace/v/3.0.2) - MIT
 - [mdast-util-from-markdown@2.0.3](https://www.npmjs.com/package/mdast-util-from-markdown/v/2.0.3) - MIT
@@ -722,7 +723,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [micromark-util-symbol@2.0.1](https://www.npmjs.com/package/micromark-util-symbol/v/2.0.1) - MIT
 - [micromark-util-types@2.0.2](https://www.npmjs.com/package/micromark-util-types/v/2.0.2) - MIT
 - [micromark@4.0.2](https://www.npmjs.com/package/micromark/v/4.0.2) - MIT
-- [motion-dom@14.7.1](https://www.npmjs.com/package/motion-dom/v/14.7.1) - MIT
+- [motion-dom@14.9.1](https://www.npmjs.com/package/motion-dom/v/14.9.1) - MIT
 - [motion-utils@14.7.0](https://www.npmjs.com/package/motion-utils/v/14.7.0) - MIT
 - [ms@2.1.3](https://www.npmjs.com/package/ms/v/2.1.3) - MIT
 - [object-assign@4.1.1](https://www.npmjs.com/package/object-assign/v/4.1.1) - MIT
@@ -743,15 +744,15 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [react-dom@19.3.1](https://www.npmjs.com/package/react-dom/v/19.3.1) - MIT
 - [react-fast-compare@2.0.4](https://www.npmjs.com/package/react-fast-compare/v/2.0.4) - MIT
 - [react-hook-form@7.91.0](https://www.npmjs.com/package/react-hook-form/v/7.91.0) - MIT
-- [react-i18next@17.1.9](https://www.npmjs.com/package/react-i18next/v/17.1.9) - MIT
+- [react-i18next@17.1.12](https://www.npmjs.com/package/react-i18next/v/17.1.12) - MIT
 - [react-intl@12.1.6](https://www.npmjs.com/package/react-intl/v/12.1.6) - BSD-3-Clause
 - [react-is@19.3.1](https://www.npmjs.com/package/react-is/v/19.3.1) - MIT
 - [react-markdown@10.1.0](https://www.npmjs.com/package/react-markdown/v/10.1.0) - MIT
 - [react-redux@9.3.0](https://www.npmjs.com/package/react-redux/v/9.3.0) - MIT
 - [react-remove-scroll-bar@2.3.8](https://www.npmjs.com/package/react-remove-scroll-bar/v/2.3.8) - MIT
 - [react-remove-scroll@2.7.2](https://www.npmjs.com/package/react-remove-scroll/v/2.7.2) - MIT
-- [react-router-dom@7.18.4](https://www.npmjs.com/package/react-router-dom/v/7.18.4) - MIT
-- [react-router@7.18.4](https://www.npmjs.com/package/react-router/v/7.18.4) - MIT
+- [react-router-dom@7.18.5](https://www.npmjs.com/package/react-router-dom/v/7.18.5) - MIT
+- [react-router@7.18.5](https://www.npmjs.com/package/react-router/v/7.18.5) - MIT
 - [react-select@5.10.2](https://www.npmjs.com/package/react-select/v/5.10.2) - MIT
 - [react-style-singleton@2.2.3](https://www.npmjs.com/package/react-style-singleton/v/2.2.3) - MIT
 - [react-transition-group@4.4.5](https://www.npmjs.com/package/react-transition-group/v/4.4.5) - BSD-3-Clause
@@ -786,7 +787,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [supports-preserve-symlinks-flag@1.0.0](https://www.npmjs.com/package/supports-preserve-symlinks-flag/v/1.0.0) - MIT
 - [tailwind-merge@3.7.0](https://www.npmjs.com/package/tailwind-merge/v/3.7.0) - MIT
 - [tailwindcss-animate@1.0.7](https://www.npmjs.com/package/tailwindcss-animate/v/1.0.7) - MIT
-- [tailwindcss@4.3.3](https://www.npmjs.com/package/tailwindcss/v/4.3.3) - MIT
+- [tailwindcss@4.3.4](https://www.npmjs.com/package/tailwindcss/v/4.3.4) - MIT
 - [tiny-invariant@1.3.3](https://www.npmjs.com/package/tiny-invariant/v/1.3.3) - MIT
 - [tiny-warning@1.0.3](https://www.npmjs.com/package/tiny-warning/v/1.0.3) - MIT
 - [topojson-client@3.1.0](https://www.npmjs.com/package/topojson-client/v/3.1.0) - ISC
@@ -820,17 +821,21 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 ### Development Dependencies
 - [@adobe/css-tools@4.5.0](https://www.npmjs.com/package/@adobe/css-tools/v/4.5.0) - MIT
 - [@alloc/quick-lru@5.2.0](https://www.npmjs.com/package/@alloc/quick-lru/v/5.2.0) - MIT
-- [@biomejs/biome@2.6.3](https://www.npmjs.com/package/@biomejs/biome/v/2.6.3) - MIT OR Apache-2.0
-- [@biomejs/cli-linux-x64-musl@2.6.3](https://www.npmjs.com/package/@biomejs/cli-linux-x64-musl/v/2.6.3) - MIT OR Apache-2.0
-- [@biomejs/cli-linux-x64@2.6.3](https://www.npmjs.com/package/@biomejs/cli-linux-x64/v/2.6.3) - MIT OR Apache-2.0
+- [@biomejs/biome@2.6.5](https://www.npmjs.com/package/@biomejs/biome/v/2.6.5) - MIT OR Apache-2.0
+- [@biomejs/cli-linux-x64-musl@2.6.5](https://www.npmjs.com/package/@biomejs/cli-linux-x64-musl/v/2.6.5) - MIT OR Apache-2.0
+- [@biomejs/cli-linux-x64@2.6.5](https://www.npmjs.com/package/@biomejs/cli-linux-x64/v/2.6.5) - MIT OR Apache-2.0
 - [@corvu/utils@0.4.2](https://www.npmjs.com/package/@corvu/utils/v/0.4.2) - MIT
-- [@formatjs/cli-native-linux-x64-musl@1.0.28](https://www.npmjs.com/package/@formatjs/cli-native-linux-x64-musl/v/1.0.28) - MIT
-- [@formatjs/cli-native-linux-x64@1.1.30](https://www.npmjs.com/package/@formatjs/cli-native-linux-x64/v/1.1.30) - MIT
-- [@formatjs/cli@6.16.36](https://www.npmjs.com/package/@formatjs/cli/v/6.16.36) - MIT
+- [@emnapi/core@1.11.3](https://www.npmjs.com/package/@emnapi/core/v/1.11.3) - MIT
+- [@emnapi/runtime@1.11.3](https://www.npmjs.com/package/@emnapi/runtime/v/1.11.3) - MIT
+- [@emnapi/wasi-threads@1.2.3](https://www.npmjs.com/package/@emnapi/wasi-threads/v/1.2.3) - MIT
+- [@formatjs/cli-native-linux-x64-musl@1.0.30](https://www.npmjs.com/package/@formatjs/cli-native-linux-x64-musl/v/1.0.30) - MIT
+- [@formatjs/cli-native-linux-x64@1.1.32](https://www.npmjs.com/package/@formatjs/cli-native-linux-x64/v/1.1.32) - MIT
+- [@formatjs/cli@6.18.0](https://www.npmjs.com/package/@formatjs/cli/v/6.18.0) - MIT
 - [@internationalized/number@3.6.8](https://www.npmjs.com/package/@internationalized/number/v/3.6.8) - Apache-2.0
 - [@jridgewell/remapping@2.3.5](https://www.npmjs.com/package/@jridgewell/remapping/v/2.3.5) - MIT
 - [@kobalte/core@0.13.14](https://www.npmjs.com/package/@kobalte/core/v/0.13.14) - MIT
 - [@kobalte/utils@0.9.2](https://www.npmjs.com/package/@kobalte/utils/v/0.9.2) - MIT
+- [@napi-rs/wasm-runtime@1.2.7](https://www.npmjs.com/package/@napi-rs/wasm-runtime/v/1.2.7) - MIT
 - [@oxc-project/types@0.155.0](https://www.npmjs.com/package/@oxc-project/types/v/0.155.0) - MIT
 - [@parcel/watcher-linux-x64-glibc@2.6.0](https://www.npmjs.com/package/@parcel/watcher-linux-x64-glibc/v/2.6.0) - MIT
 - [@parcel/watcher-linux-x64-musl@2.6.0](https://www.npmjs.com/package/@parcel/watcher-linux-x64-musl/v/2.6.0) - MIT
@@ -853,30 +858,32 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [@solid-primitives/trigger@1.2.4](https://www.npmjs.com/package/@solid-primitives/trigger/v/1.2.4) - MIT
 - [@solid-primitives/utils@6.4.1](https://www.npmjs.com/package/@solid-primitives/utils/v/6.4.1) - MIT
 - [@swc/helpers@0.5.23](https://www.npmjs.com/package/@swc/helpers/v/0.5.23) - Apache-2.0
-- [@tailwindcss/node@4.3.3](https://www.npmjs.com/package/@tailwindcss/node/v/4.3.3) - MIT
-- [@tailwindcss/oxide-linux-x64-gnu@4.3.3](https://www.npmjs.com/package/@tailwindcss/oxide-linux-x64-gnu/v/4.3.3) - MIT
-- [@tailwindcss/oxide-linux-x64-musl@4.3.3](https://www.npmjs.com/package/@tailwindcss/oxide-linux-x64-musl/v/4.3.3) - MIT
-- [@tailwindcss/oxide@4.3.3](https://www.npmjs.com/package/@tailwindcss/oxide/v/4.3.3) - MIT
-- [@tailwindcss/postcss@4.3.3](https://www.npmjs.com/package/@tailwindcss/postcss/v/4.3.3) - MIT
+- [@tailwindcss/node@4.3.4](https://www.npmjs.com/package/@tailwindcss/node/v/4.3.4) - MIT
+- [@tailwindcss/oxide-linux-x64-gnu@4.3.4](https://www.npmjs.com/package/@tailwindcss/oxide-linux-x64-gnu/v/4.3.4) - MIT
+- [@tailwindcss/oxide-linux-x64-musl@4.3.4](https://www.npmjs.com/package/@tailwindcss/oxide-linux-x64-musl/v/4.3.4) - MIT
+- [@tailwindcss/oxide-wasm32-wasi@4.3.4](https://www.npmjs.com/package/@tailwindcss/oxide-wasm32-wasi/v/4.3.4) - MIT
+- [@tailwindcss/oxide@4.3.4](https://www.npmjs.com/package/@tailwindcss/oxide/v/4.3.4) - MIT
+- [@tailwindcss/postcss@4.3.4](https://www.npmjs.com/package/@tailwindcss/postcss/v/4.3.4) - MIT
 - [@tanstack/match-sorter-utils@9.1.2](https://www.npmjs.com/package/@tanstack/match-sorter-utils/v/9.1.2) - MIT
-- [@tanstack/query-devtools@5.105.0](https://www.npmjs.com/package/@tanstack/query-devtools/v/5.105.0) - MIT
-- [@tanstack/react-query-devtools@5.105.0](https://www.npmjs.com/package/@tanstack/react-query-devtools/v/5.105.0) - MIT
+- [@tanstack/query-devtools@5.105.3](https://www.npmjs.com/package/@tanstack/query-devtools/v/5.105.3) - MIT
+- [@tanstack/react-query-devtools@5.105.3](https://www.npmjs.com/package/@tanstack/react-query-devtools/v/5.105.3) - MIT
 - [@testing-library/dom@10.4.2](https://www.npmjs.com/package/@testing-library/dom/v/10.4.2) - MIT
 - [@testing-library/jest-dom@7.0.1](https://www.npmjs.com/package/@testing-library/jest-dom/v/7.0.1) - MIT
 - [@testing-library/react@16.3.3](https://www.npmjs.com/package/@testing-library/react/v/16.3.3) - MIT
+- [@tybys/wasm-util@0.10.3](https://www.npmjs.com/package/@tybys/wasm-util/v/0.10.3) - MIT
 - [@types/aria-query@5.0.4](https://www.npmjs.com/package/@types/aria-query/v/5.0.4) - MIT
 - [@types/chai@5.2.3](https://www.npmjs.com/package/@types/chai/v/5.2.3) - MIT
-- [@types/country-flag-icons@1.2.2](https://www.npmjs.com/package/@types/country-flag-icons/v/1.2.2) - MIT
+- [@types/country-flag-icons@1.6.20](https://www.npmjs.com/package/@types/country-flag-icons/v/1.6.20) - MIT
 - [@types/deep-eql@4.0.2](https://www.npmjs.com/package/@types/deep-eql/v/4.0.2) - MIT
 - [@types/humps@2.0.6](https://www.npmjs.com/package/@types/humps/v/2.0.6) - MIT
-- [@types/node@26.6.5](https://www.npmjs.com/package/@types/node/v/26.6.5) - MIT
+- [@types/node@26.6.6](https://www.npmjs.com/package/@types/node/v/26.6.6) - MIT
 - [@types/topojson-client@3.1.5](https://www.npmjs.com/package/@types/topojson-client/v/3.1.5) - MIT
 - [@types/topojson-specification@1.0.5](https://www.npmjs.com/package/@types/topojson-specification/v/1.0.5) - MIT
 - [@types/whatwg-mimetype@3.0.2](https://www.npmjs.com/package/@types/whatwg-mimetype/v/3.0.2) - MIT
 - [@types/ws@8.18.1](https://www.npmjs.com/package/@types/ws/v/8.18.1) - MIT
-- [@vitejs/plugin-react@6.1.2](https://www.npmjs.com/package/@vitejs/plugin-react/v/6.1.2) - MIT
-- [@vitest/mocker@5.0.5](https://www.npmjs.com/package/@vitest/mocker/v/5.0.5) - MIT
-- [@vitest/spy@5.0.5](https://www.npmjs.com/package/@vitest/spy/v/5.0.5) - MIT
+- [@vitejs/plugin-react@6.2.1](https://www.npmjs.com/package/@vitejs/plugin-react/v/6.2.1) - MIT
+- [@vitest/mocker@5.1.0](https://www.npmjs.com/package/@vitest/mocker/v/5.1.0) - MIT
+- [@vitest/spy@5.1.0](https://www.npmjs.com/package/@vitest/spy/v/5.1.0) - MIT
 - [ansi-regex@5.0.1](https://www.npmjs.com/package/ansi-regex/v/5.0.1) - MIT
 - [ansi-styles@5.2.0](https://www.npmjs.com/package/ansi-styles/v/5.2.0) - MIT
 - [aria-query@5.3.0](https://www.npmjs.com/package/aria-query/v/5.3.0) - Apache-2.0
@@ -894,7 +901,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [detect-libc@2.1.2](https://www.npmjs.com/package/detect-libc/v/2.1.2) - Apache-2.0
 - [dom-accessibility-api@0.5.16](https://www.npmjs.com/package/dom-accessibility-api/v/0.5.16) - MIT
 - [electron-to-chromium@1.5.440](https://www.npmjs.com/package/electron-to-chromium/v/1.5.440) - ISC
-- [enhanced-resolve@5.24.3](https://www.npmjs.com/package/enhanced-resolve/v/5.24.3) - MIT
+- [enhanced-resolve@5.26.1](https://www.npmjs.com/package/enhanced-resolve/v/5.26.1) - MIT
 - [es-module-lexer@2.3.2](https://www.npmjs.com/package/es-module-lexer/v/2.3.2) - MIT
 - [escalade@3.2.0](https://www.npmjs.com/package/escalade/v/3.2.0) - MIT
 - [estree-walker@3.0.3](https://www.npmjs.com/package/estree-walker/v/3.0.3) - MIT
@@ -934,7 +941,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [remove-accents@0.5.0](https://www.npmjs.com/package/remove-accents/v/0.5.0) - MIT
 - [retry@0.12.0](https://www.npmjs.com/package/retry/v/0.12.0) - MIT
 - [rolldown@1.2.15](https://www.npmjs.com/package/rolldown/v/1.2.15) - MIT
-- [sass@1.106.1](https://www.npmjs.com/package/sass/v/1.106.1) - MIT
+- [sass@1.107.1](https://www.npmjs.com/package/sass/v/1.107.1) - MIT
 - [seroval-plugins@1.6.8](https://www.npmjs.com/package/seroval-plugins/v/1.6.8) - MIT
 - [seroval@1.6.11](https://www.npmjs.com/package/seroval/v/1.6.11) - MIT
 - [shieldpm@4.4.1](https://www.npmjs.com/package/shieldpm/v/4.4.1) - UNLICENSED
@@ -957,7 +964,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [update-browserslist-db@1.3.3](https://www.npmjs.com/package/update-browserslist-db/v/1.3.3) - MIT
 - [vite-plugin-checker@0.14.5](https://www.npmjs.com/package/vite-plugin-checker/v/0.14.5) - MIT
 - [vite@8.3.5](https://www.npmjs.com/package/vite/v/8.3.5) - MIT
-- [vitest@5.0.5](https://www.npmjs.com/package/vitest/v/5.0.5) - MIT
+- [vitest@5.1.0](https://www.npmjs.com/package/vitest/v/5.1.0) - MIT
 - [whatwg-mimetype@3.0.0](https://www.npmjs.com/package/whatwg-mimetype/v/3.0.0) - MIT
 - [why-is-node-running@3.2.1](https://www.npmjs.com/package/why-is-node-running/v/3.2.1) - MIT
 - [ws@8.21.1](https://www.npmjs.com/package/ws/v/8.21.1) - MIT
