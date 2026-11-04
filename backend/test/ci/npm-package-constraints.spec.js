@@ -13,6 +13,7 @@ describe("npm and Yarn dependency constraints", () => {
 			"@duosecurity/duo_universal/axios": "1.20.0",
 			"ajv/fast-uri": "3.1.9",
 			"archiver/**/brace-expansion": "5.0.12",
+			"archiver/**/minimatch": "11.0.4",
 			"dockerode/@grpc/grpc-js": "1.14.5",
 			"express/**/qs": "6.16.1",
 			"express/proxy-addr": "2.0.8",

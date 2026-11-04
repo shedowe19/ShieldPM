@@ -2,6 +2,27 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-04] security | Dependabot-Alarm minimatch geschlossen
+
+- Command: Fortsetzung des Internet-Audits.
+- Type: security
+- Areas affected: `backend/package.json`, `backend/yarn.lock`, `backend/test/ci`
+- Files changed: `backend/package.json` (`archiver/**/minimatch` 11.0.4),
+  `backend/yarn.lock`, `dependabot-security-resolutions.spec.js`,
+  `npm-package-constraints.spec.js`
+- Wiki pages updated: security/overview, tasks, current-project-state, changelog,
+  log
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: keine
+- New decisions: keine
+- Open questions: unverändert (T-007)
+- Next steps: PR #159 prüfen/mergen; Patch-Updates dem täglichen Updater überlassen
+- Verification: Advisory `minimatch >= 7.0.0, < 11.0.1`, feste Version 11.0.1;
+  Lockfile auf 11.0.4; `yarn install --frozen-lockfile` besteht; 11 Tests in
+  vier CI-Specs grün (Security-Resolutions, Package-Constraints,
+  Archiver-ESM, OpenAppSec-Policy).
+
 ## [2026-11-04] security | Dependabot-Alarme qs und seroval geschlossen
 
 - Command: „Aber nochmals komplett code mit internet checken ob noch was

@@ -44,8 +44,9 @@
 
 - [x] **T-009 Offene Dependabot-Alarme für `qs` und `seroval` geschlossen.**
       Done 2026-11-04. Beleg: `express/**/qs` von 6.16.0 auf 6.16.1, `seroval` im
-      Frontend-Lock von 1.6.8 auf 1.6.11; `yarn install --frozen-lockfile` und die
-      CI-Tests `dependabot-security-resolutions`/`npm-package-constraints` bestehen.
+      Frontend-Lock von 1.6.8 auf 1.6.11, `archiver/**/minimatch` auf 11.0.4;
+      `yarn install --frozen-lockfile` und die CI-Tests
+      `dependabot-security-resolutions`/`npm-package-constraints` bestehen.
 - [x] **T-008 Wiki-Prüfung in CI verankern und Test portabel machen.** Done
       2026-11-04. Beleg: `.github/workflows/lint-and-format.yml` führt im Job
       `quality` `node llm-wiki/tools/wiki-check.mjs` aus;

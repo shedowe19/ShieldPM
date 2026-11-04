@@ -65,8 +65,8 @@ Anwendungslogik.
 
 - Sicherheitsrelevante transitive Abhängigkeiten werden in
   `backend/package.json` über `resolutions` auf gepatchte Versionen gepinnt.
-  Stand 2026-11-04: `express/**/qs` 6.16.1; im Frontend-Lockfile `seroval`
-  1.6.11.
+  Stand 2026-11-04: `express/**/qs` 6.16.1, `archiver/**/minimatch` 11.0.4; im
+  Frontend-Lockfile `seroval` 1.6.11.
 - `backend/test/ci/dependabot-security-resolutions.spec.js` prüft die Lockfiles
   gegen festgelegte Mindestversionen, `npm-package-constraints.spec.js` die
   erlaubten Pins. Beide laufen in der CI.

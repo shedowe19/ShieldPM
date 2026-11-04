@@ -26,7 +26,7 @@ zuletzt fertig wurde, was bewusst fehlt und welche Risiken gerade aktiv sind.
 
 | Datum      | Ergebnis                                                                                                        | Quelle                                                        |
 | ---------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| 2026-11-04 | Dependabot-Alarme für `qs` und `seroval` geschlossen (`6.16.1`/`1.6.11`)                                        | [Log](./log.md)                                               |
+| 2026-11-04 | Dependabot-Alarme für `qs`, `seroval` und `minimatch` geschlossen                                               | [Log](./log.md)                                               |
 | 2026-11-04 | Wiki-Prüfung in der CI verankert; OpenAppSec-Regressionstest CRLF-robust                                        | [Log](./log.md)                                               |
 | 2026-11-04 | Internes Wiki auf `llm-wiki/` konsolidiert; `docs/wiki-intern/` nach `llm-wiki/wiki/reference/` übernommen      | [ADR](./decisions/2026-11-04-wiki-struktur.md)                |
 | 2026-10-27 | Sicherheitsupdates für Redirect-, URI- und IP-Parser-Abhängigkeiten (PR #158)                                   | Commit `2324db48`                                             |

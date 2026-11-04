@@ -59,6 +59,7 @@ describe("Dependabot security resolutions", () => {
 		assertPatched("backend/yarn.lock", "follow-redirects", "1.16.1");
 		assertPatched("backend/yarn.lock", "@grpc/grpc-js", "1.14.5");
 		assertPatched("backend/yarn.lock", "ip-address", "10.7.4");
+		assertPatched("backend/yarn.lock", "minimatch", "11.0.1");
 		assertPatched("backend/yarn.lock", "qs", "6.16.0");
 		assertPatched("backend/yarn.lock", "proxy-addr", "2.0.8");
 		assertPatched("backend/yarn.lock", "source-map-js", "1.2.2");
