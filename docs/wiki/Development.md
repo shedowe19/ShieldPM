@@ -104,7 +104,7 @@ docker build -t shieldpm:local .
 
 This multi-stage build will compile the frontend, install backend dependencies, and assemble the final Debian Trixie-based image.
 
-The public English Wiki pages live in `docs/wiki/` and are synchronized to the GitHub Wiki by `.github/workflows/wiki-sync.yml` on eligible pushes. The internal German architecture notes live in `docs/wiki-intern/`.
+The public English Wiki pages live in `docs/wiki/` and are synchronized to the GitHub Wiki by `.github/workflows/wiki-sync.yml` on eligible pushes. The internal German notes live in `llm-wiki/`: the entry point and current state under `llm-wiki/wiki/`, the deep-dive reference under `llm-wiki/wiki/reference/`.
 
 ---
 

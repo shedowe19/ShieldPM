@@ -17,11 +17,9 @@ on:
       - scripts/ci/nginx-smoke-modules.mjs
       - scripts/ci/nginx-smoke-endpoints.mjs
       - scripts/ci/fixtures/**
-      - global/certbot-dns-plugins.json
       - frontend/**
       - backend/**
       - rootfs/**
-      - nginx-quic/**
       - .version
       - "**/package.json"
 
@@ -41,11 +39,9 @@ on:
       - scripts/ci/nginx-smoke-modules.mjs
       - scripts/ci/nginx-smoke-endpoints.mjs
       - scripts/ci/fixtures/**
-      - global/certbot-dns-plugins.json
       - frontend/**
       - backend/**
       - rootfs/**
-      - nginx-quic/**
       - .version
       - "**/package.json"
 

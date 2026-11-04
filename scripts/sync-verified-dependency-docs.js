@@ -69,7 +69,7 @@ const synchronize = (root) => {
 	}
 
 	const rolldown = resolveInstalledPackage("rolldown", path.dirname(directVite.packageJsonPath));
-	const documentationPath = path.join(root, "docs/wiki-intern/entwicklung/tests.md");
+	const documentationPath = path.join(root, "llm-wiki/wiki/reference/entwicklung/tests.md");
 	const documentation = fs.readFileSync(documentationPath, "utf8");
 	const start = documentation.indexOf(START_MARKER);
 	const end = documentation.indexOf(END_MARKER);

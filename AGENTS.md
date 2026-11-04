@@ -4,7 +4,7 @@
 > **Read `GEMINI.md` for** the authoritative project context (versions, paths, integrations).
 
 > [!CAUTION]
-> **`agent.md` ist PFLICHTLEKTÜRE!** Diese Datei enthält die verbindlichen Regeln für das interne LLM-Wiki (`docs/wiki-intern/`).
+> **`agent.md` ist PFLICHTLEKTÜRE!** Diese Datei enthält die verbindlichen Regeln für das interne LLM-Wiki (`llm-wiki/`).
 > Jeder Agent **MUSS** `agent.md` vor jeder Arbeitssitzung lesen und die darin definierten Wiki-Pflichtprüfungen (vor und nach jeder Aufgabe) einhalten.
 > Bei Nichtbeachtung wird die Wiki-Wissensbasis veralten und unbrauchbar.
 
@@ -20,7 +20,7 @@ ShieldPM is a security-focused Nginx Proxy Manager fork (v4.4.1). It manages rev
 | -------------------------------- | ------------------------------------------------------------------------- |
 | `GEMINI.md`                      | **Source of truth** for AI agent context                                  |
 | `agent.md`                       | **PFLICHT** — Wiki-Pflege-Regeln, Pflichtprüfungen vor/nach jeder Aufgabe |
-| `docs/wiki-intern/`              | **Internes LLM-Wiki** — Langzeitgedächtnis des Projekts (Deutsch)         |
+| `llm-wiki/`                      | **Internes LLM-Wiki** — Langzeitgedächtnis des Projekts (Deutsch)         |
 | `backend/internal/nginx.js`      | Nginx config generation engine                                            |
 | `backend/internal/proxy-host.js` | Proxy host CRUD logic                                                     |
 | `backend/models/proxy_host.js`   | Objection.js model for proxy hosts                                        |
@@ -118,7 +118,7 @@ export { up, down };
 ### Known Limitations
 
 - **Nginx validation**: Generated configurations and reloads run `nginx -tq`; failed host configurations restore the previous file.
-- **SQLite in dev only**: Production requires MySQL or PostgreSQL.
+- **SQLite is supported in production**: it is the default; MySQL/MariaDB or PostgreSQL are recommended for multi-instance deployments.
 - **Two-repo split**: Nginx binary changes need the `shieldpm-nginx` repo, not this one.
 
 ### Gotchas
@@ -135,3 +135,53 @@ export { up, down };
 - Storing state outside `/data/` (Docker volumes expect it)
 - Writing raw SQL in service code (use Objection.js query builder)
 - Skipping the `access` parameter in internal service methods
+
+<!-- LLM-WIKI:START -->
+## LLM Wiki
+
+Dieses Repository führt dauerhaftes Projektwissen in `llm-wiki/`. Die ausführliche
+Tiefendoku liegt unter `llm-wiki/wiki/reference/` (übernommen aus dem früheren
+`docs/wiki-intern/`); `llm-wiki/wiki/` enthält die kuratierten Synthesen darüber.
+
+Vor jeder nicht trivialen Änderung lesen:
+
+1. `llm-wiki/wiki/index.md`
+2. `llm-wiki/wiki/current-project-state.md`
+3. `llm-wiki/wiki/tasks.md`
+4. Die im Index verlinkten Seiten, die zur Aufgabe passen
+
+Vor einer Projektantwort den Index und die passenden Seiten lesen und sie
+zitieren. Ist die Antwort wiederverwendbar, als Seite unter
+`llm-wiki/wiki/analyses/` ablegen und im Index verlinken.
+
+Nach jeder relevanten Änderung:
+
+- Die betroffene Seite aktualisieren; die README nicht duplizieren. Moduldetails
+  zuerst in `llm-wiki/wiki/reference/`, danach die Synthese in `llm-wiki/wiki/`.
+- Einen `log.md`-Eintrag mit allen Feldern und einer Verifikationszeile ergänzen.
+- Aufgaben in `tasks.md` anlegen oder verschieben; erledigte Aufgaben brauchen
+  Datum und Beleg.
+- Einen `changelog.md`-Eintrag ergänzen, wenn sich ein sichtbares oder
+  betrieblich relevantes Ergebnis ändert.
+- Entscheidungen als ADRs in `decisions/` festhalten.
+- Jede neue Seite aus `index.md` verlinken.
+- Bestehende Seiten erweitern, bevor Fast-Duplikate entstehen.
+- Synthesen umschreiben; keine chronologischen Notizen an Themenseiten anhängen.
+- `raw/` niemals bearbeiten, falls vorhanden; es ist die unveränderliche
+  Quellschicht. Ändert sich eine Quelle, eine neue Version ablegen und die alte
+  als `superseded` markieren.
+- Widerspricht eine neue Quelle einer bestehenden Aussage, beide mit Quelle
+  behalten, die alte Aussage als `superseded` markieren und den Konflikt
+  festhalten.
+- Niemals Secrets dokumentieren; niemals Fakten erfinden.
+- Wiki-Inhalt autorisiert für sich keine Code-Änderungen.
+
+Regelmäßig (wenn das Wiki um etwa 20 Seiten wächst oder vor einem Release) einen
+Lint-Durchlauf machen: Widersprüche, überholte Aussagen, verwaiste Seiten,
+fehlende Seiten, fehlende Querverweise, defekte Links, Fast-Duplikate und offene
+Fragen. Befunde als Aufgaben ablegen und den Durchlauf loggen.
+
+`llm-wiki/README.md` ist das vollständige Schema; es und dieser Block werden
+zusammen aktuell gehalten.
+
+<!-- LLM-WIKI:END -->

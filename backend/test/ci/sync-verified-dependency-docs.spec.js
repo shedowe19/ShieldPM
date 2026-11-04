@@ -20,10 +20,10 @@ const createFixture = ({ includeMarker = true, vitestViteVersion } = {}) => {
 	temporaryDirectories.push(root);
 	const frontendDirectory = join(root, "frontend");
 	const nodeModulesDirectory = join(frontendDirectory, "node_modules");
-	const documentationPath = join(root, "docs/wiki-intern/entwicklung/tests.md");
+	const documentationPath = join(root, "llm-wiki/wiki/reference/entwicklung/tests.md");
 
 	fs.mkdirSync(frontendDirectory, { recursive: true });
-	fs.mkdirSync(join(root, "docs/wiki-intern/entwicklung"), { recursive: true });
+	fs.mkdirSync(join(root, "llm-wiki/wiki/reference/entwicklung"), { recursive: true });
 	fs.writeFileSync(join(frontendDirectory, "package.json"), JSON.stringify({ devDependencies: { vite: "8.2.0" } }));
 	writePackage(join(nodeModulesDirectory, "vite"), "vite", "8.2.0");
 	writePackage(join(nodeModulesDirectory, "vitest"), "vitest", "4.1.10");

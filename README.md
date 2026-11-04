@@ -92,7 +92,8 @@ Full setup guides, configuration options, and advanced usage are in the **[Wiki]
 
 Die interne Entwicklerdokumentation für Entwickler und AI-Agenten befindet sich unter:
 
-- [Internes Projekt-Wiki](docs/wiki-intern/index.md)
+- [LLM-Wiki (Einstieg)](llm-wiki/wiki/index.md) — Zustand, Aufgaben, Architektur
+- [Tiefendoku](llm-wiki/wiki/reference/index.md) — modulweise Details
 
 ---
 

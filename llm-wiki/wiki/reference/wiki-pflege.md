@@ -1,0 +1,118 @@
+# Wiki-Pflege
+
+> Gilt für die Tiefendoku unter `reference/`. Einstieg und Synthesen:
+> [../index.md](../index.md); Schema und Abläufe: [../../README.md](../../README.md).
+
+## Zweck
+
+Regeln und Konventionen für die Pflege der Tiefendoku.
+
+## Grundprinzip
+
+- **Code ist die Quelle der Wahrheit.** Das Wiki erklärt die Quelle der Wahrheit.
+- **Produktiver Code wird nicht aus Wiki-Inhalten verändert.**
+- **Das Wiki wird bei jeder Agent-Ausführung geprüft.**
+
+## Wann aktualisieren?
+
+Das Wiki muss aktualisiert werden bei:
+
+- Neuen Features
+- Architekturänderungen
+- Neuen Modulen oder Services
+- Neuen APIs, Endpunkten, Events
+- Neuen Datenmodellen, Tabellen, Migrationen
+- Neuen Konfigurationen oder Umgebungsvariablen
+- Build-, Setup-, Test- oder Deployment-Änderungen
+- Wichtigen technischen Entscheidungen
+- Neuen Abhängigkeiten
+- Entfernten Funktionen
+- Bekannten Einschränkungen oder Risiken
+
+## Wie aktualisieren?
+
+1. Prüfen, ob eine bestehende Seite aktualisiert werden kann
+2. Keine doppelte Dokumentation erstellen
+3. Links im `index.md` ergänzen, wenn neue Seiten entstehen
+4. Verwandte Seiten am Ende jeder Seite aktualisieren
+
+## Neue Seiten benennen
+
+- Kleinbuchstaben mit Bindestrichen: `mein-modul.md`
+- Unterordner nutzen, wenn thematisch sinnvoll
+- Seitenvorlage verwenden (siehe unten)
+
+## Unterordner nutzen
+
+- Thematisch zusammengehörige Seiten in eigene Ordner gruppieren
+- Jeder Ordner sollte ein `README.md` oder eine Hauptseite haben
+- Bestehende Ordnerstruktur: `projekt/`, `architektur/`, `entwicklung/`, `module/`, `ui/`, `api/`, `daten/`, `konfiguration/`, `entscheidungen/`, `features/`
+- Neue Ordner nur anlegen, wenn mindestens 2-3 zusammengehörige Seiten entstehen
+
+## Seitenvorlage
+
+Das folgende Beispiel ist für eine Seite unter `module/` gedacht; relative Links an den tatsächlichen Speicherort anpassen.
+
+```markdown
+# Seitentitel
+
+## Zweck
+
+Kurze Erklärung.
+
+## Kontext
+
+Wo wird es verwendet?
+
+## Wichtige Dateien
+
+- `backend/internal/mein-modul.js`
+- `backend/models/mein_modell.js`
+
+## Verhalten
+
+Was macht dieser Teil des Systems?
+
+## Abhängigkeiten
+
+Welche Module werden verwendet?
+
+## Offene Fragen
+
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
+
+## Verwandte Seiten
+
+- [Offene Fragen](../offene-fragen.md)
+- [Index](../index.md)
+```
+
+## Unsicherheiten markieren
+
+- `TODO:` — Noch zu untersuchen
+- `Unklar:` — Nicht eindeutig aus dem Code ableitbar
+- `Annahme:` — Basiert auf Vermutung
+
+## Verlinkung
+
+- **Nur relative Markdown-Links** verwenden (Format: link text in eckigen Klammern, dann Pfad in runden Klammern)
+- **Keine** Wiki-Syntax
+- **Keine** echten Secrets dokumentieren
+
+## Formatierung
+
+- Markdown der kuratierten Seiten mit Prettier formatieren; `reference/` bleibt
+  beim Umzug bewusst unformatiert, damit die Verschiebung nachvollziehbar ist.
+- Biome wird im Repo verwendet, ist aber für Markdown nicht zuständig.
+
+## Werkzeuge
+
+- **Beziehungsgraph**: `python3 scripts/wiki-graph.py` erzeugt `llm-wiki/wiki/reference/wiki-graph.html` — eine eigenständige, offline-fähige interaktive Visualisierung aller Wiki-Seiten und ihrer Verlinkungen. Nach jeder größeren Wiki-Änderung neu generieren, um die aktuelle Vernetzung zu inspizieren.
+- Der Generator maskiert Dateinamen für HTML und eingebettete JSON-Daten. Sonderzeichen bleiben in den Graph-IDs erhalten; ein Doppelklick öffnet einen kodierten relativen Pfad. Beim Filtern einer sichtbaren Ordnergruppe bleiben Wurzelseiten und nicht zugeordnete Seiten eingeblendet.
+- Relative Links auf Markdown-Seiten werden auch mit Abschnittsankern erfasst. Der Graph verbindet dabei die Seiten; der Anker erzeugt keinen eigenen Knoten. Mehrere Verweise auf dieselbe Seite bleiben einzeln gezählt, und Ziele außerhalb des Wikis werden weiterhin ausgelassen.
+- **Alternative Tools**: Obsidian (Vault auf `llm-wiki/` setzen, `Strg+G`) oder die VS-Code-Extension "Foam" zeigen den gleichen Graph live.
+
+## Verwandte Seiten
+
+- [Offene Fragen](./offene-fragen.md)
+- [Index](./index.md)

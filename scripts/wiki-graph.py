@@ -2,16 +2,16 @@
 """
 Wiki-Graph-Generator für ShieldPM.
 
-Liest alle .md-Dateien unter docs/wiki-intern/, extrahiert relative Markdown-
+Liest alle .md-Dateien unter llm-wiki/wiki/reference/, extrahiert relative Markdown-
 Links (z.B. [Text](./pfad.md), [Text](../pfad.md)) und erzeugt eine eigenständige,
 interaktive HTML-Datei mit lokal eingebettetem vis-network, die das Wiki als Netzwerk darstellt.
 
 Aufruf:
-    python3 scripts/wiki-graph.py            # nutzt docs/wiki-intern/
+    python3 scripts/wiki-graph.py            # nutzt llm-wiki/wiki/reference/
     python3 scripts/wiki-graph.py docs/wiki  # anderes Wiki
 
 Ausgabe:
-    docs/wiki-intern/wiki-graph.html
+    llm-wiki/wiki/reference/wiki-graph.html
 """
 
 from __future__ import annotations
@@ -541,7 +541,7 @@ def script_json(value) -> str:
 
 def main(argv: list[str]) -> int:
     here = Path(__file__).resolve().parent.parent
-    target_arg = argv[1] if len(argv) > 1 else "docs/wiki-intern"
+    target_arg = argv[1] if len(argv) > 1 else "llm-wiki/wiki/reference"
     root = (here / target_arg).resolve()
     if not root.is_dir():
         print(f"FEHLER: Verzeichnis nicht gefunden: {root}", file=sys.stderr)
