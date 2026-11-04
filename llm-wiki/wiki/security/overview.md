@@ -73,6 +73,16 @@ Anwendungslogik.
 - Offene Dependabot-Alarme werden zusätzlich im Repository überwacht; die
   Lockfiles sind die Quelle der Wahrheit, nicht die Anzeige im Advisory-Dashboard.
 
+## Statische Analyse
+
+- CodeQL analysiert JavaScript auf `develop`, `main`, `master` und `feature/*`.
+- Der Wiki-Checker entfernt HTML-Kommentare und Tags mit Scannern statt mit
+  einem einzelnen Regex; so ist die Bereinigung vollständig und die
+  Zeilennummern bleiben erhalten.
+- Der generierte Graph `llm-wiki/wiki/reference/wiki-graph.html` ist von CodeQL
+  ausgenommen: Er bettet minifizierte Fremdbibliotheken für den Offline-Betrieb
+  ein; die Quelle ist `scripts/wiki-graph.py`.
+
 ## Offene Fragen
 
 - Unklar: Ob die globale Rate-Limit-Grenze für öffentlich erreichbare Instanzen

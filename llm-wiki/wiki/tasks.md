@@ -42,6 +42,10 @@
 
 ## Done
 
+- [x] **T-010 CodeQL-Funde im Wiki-Werkzeug und Graphen beheben.** Done 2026-11-04.
+      Beleg: `wiki-check.mjs` entfernt HTML-Kommentare und Tags über Scanner statt
+      Einzel-Regex; `wiki-graph.html` (generiert, eingebettete Minified-Bundles) ist
+      in `.github/codeql/codeql-config.yml` von der Analyse ausgenommen.
 - [x] **T-009 Offene Dependabot-Alarme für `qs` und `seroval` geschlossen.**
       Done 2026-11-04. Beleg: `express/**/qs` von 6.16.0 auf 6.16.1, `seroval` im
       Frontend-Lock von 1.6.8 auf 1.6.11, `archiver/**/minimatch` auf 11.0.4;

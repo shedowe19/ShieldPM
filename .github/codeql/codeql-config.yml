@@ -2,6 +2,12 @@ name: "ShieldPM CodeQL Config"
 
 disable-default-queries: false
 
+# Generated offline graph with embedded, minified third-party bundles. Its
+# source is scripts/wiki-graph.py, so scanning the generated artifact only
+# reports vendor code.
+paths-ignore:
+  - llm-wiki/wiki/reference/wiki-graph.html
+
 query-filters:
   - exclude:
       id: js/missing-token-validation

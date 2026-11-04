@@ -52,8 +52,50 @@ if (!fs.existsSync(wikiRoot)) {
 
 // Remove HTML comments first, then fenced blocks (``` / ~~~, any length, also
 // after "> ") and inline code. One line per input line keeps line numbers stable.
+const removeComments = (text) => {
+	let out = "";
+	let index = 0;
+	while (index < text.length) {
+		const open = text.indexOf("<!--", index);
+		if (open === -1) {
+			out += text.slice(index);
+			break;
+		}
+		out += text.slice(index, open);
+		const close = text.indexOf("-->", open + 4);
+		if (close === -1) {
+			out += text.slice(open);
+			break;
+		}
+		const removed = text.slice(open, close + 3);
+		out += "\n".repeat(removed.split("\n").length - 1);
+		index = close + 3;
+	}
+	return out;
+};
+
+const stripTags = (text) => {
+	let out = "";
+	let index = 0;
+	while (index < text.length) {
+		const open = text.indexOf("<", index);
+		if (open === -1) {
+			out += text.slice(index);
+			break;
+		}
+		out += text.slice(index, open);
+		const close = text.indexOf(">", open + 1);
+		if (close === -1) {
+			out += text.slice(open);
+			break;
+		}
+		index = close + 1;
+	}
+	return out;
+};
+
 const stripCode = (text) => {
-	const withoutComments = text.replace(/<!--[\s\S]*?-->/g, "");
+	const withoutComments = removeComments(text);
 	const out = [];
 	let inFence = false;
 	let fenceChar = "";
@@ -104,10 +146,9 @@ const exactExists = (abs) => {
 };
 
 const slugify = (heading) =>
-	heading
+	stripTags(heading)
 		.trim()
 		.toLowerCase()
-		.replace(/<[^>]+>/g, "")
 		.replace(/[^\p{L}\p{N}\s_-]/gu, "")
 		.trim()
 		.replace(/\s+/g, "-");

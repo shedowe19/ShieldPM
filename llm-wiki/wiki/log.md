@@ -2,6 +2,24 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-04] security | CodeQL-Funde im Wiki-Werkzeug und Graphen behoben
+
+- Command: CodeQL-Ansicht mit vier offenen Funden auf `develop`.
+- Type: security
+- Areas affected: `llm-wiki/tools/wiki-check.mjs`, `.github/codeql`
+- Files changed: `wiki-check.mjs` (Scanner statt Einzel-Regex),
+  `codeql-config.yml` (`paths-ignore` für den generierten Graphen)
+- Wiki pages updated: tasks, security/overview, changelog, log
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: keine
+- New decisions: generierte Vendor-Artefakte werden nicht mitgescannt
+- Open questions: unverändert (T-007)
+- Next steps: CodeQL-Lauf auf `develop` beobachten; Alarme sollten schließen
+- Verification: `node --check` und `node llm-wiki/tools/wiki-check.mjs` → PASS;
+  Scanner-Verhalten für Tags, verschachtelte Klammern und mehrzeilige Kommentare
+  geprüft; CodeQL-YAML mit PyYAML geparst.
+
 ## [2026-11-04] chore | Abhängigkeits-PR #159 geschlossen, #160 erstellt
 
 - Command: „mach den alten zu und erstell ein neuen“.
