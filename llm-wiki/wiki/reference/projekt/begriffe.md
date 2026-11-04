@@ -2,48 +2,17 @@
 
 ## Zweck
 
-Erklärung wichtiger Fachbegriffe, die im Projekt verwendet werden. Dient als Schnelleinstieg für neue Teammitglieder und LLMs.
+Diese Seite ist zusammengeführt. Die verbindliche Begriffsliste steht im
+[Glossar](../glossar.md).
 
-## Kontext
+## Hinweis
 
-Diese Begriffe tauchen im gesamten Projekt auf — in Code, Konfiguration und Dokumentation.
-
-## Begriffsliste
-
-| Begriff              | Beschreibung                                                                                    |
-| -------------------- | ----------------------------------------------------------------------------------------------- |
-| **Proxy-Host**       | Ein Reverse-Proxy-Eintrag, der eingehende Anfragen an einen Upstream-Server weiterleitet        |
-| **Dead-Host**        | Ein Host, der absichtlich 404 zurückgibt (Domain-Blockierung)                                   |
-| **Stream**           | TCP/UDP-Weiterleitung auf Layer 4 (kein HTTP)                                                   |
-| **Access-List**      | Zugriffskontrolle via Basic Auth, IP-Ranges oder mTLS-Client-Zertifikate                        |
-| **WAF**              | Web Application Firewall — hier ModSecurity oder OpenAppSec                                     |
-| **IPS**              | Intrusion Prevention System — hier CrowdSec                                                     |
-| **CRS**              | Core Rule Set — OWASP ModSecurity Regelwerk (v4)                                                |
-| **ACME**             | Automatic Certificate Management Environment (Let's Encrypt Protokoll)                          |
-| **mTLS**             | Mutual TLS — Client-Zertifikat-Authentifizierung                                                |
-| **QUIC**             | UDP-basiertes Transportprotokoll für HTTP/3                                                     |
-| **Anubis**           | PoW-Gate (Proof of Work) gegen automatisierte Bots und AI-Crawler                               |
-| **OAuth2-Proxy**     | Reverse-Auth-Proxy für SSO (Google, GitHub, Azure, OIDC)                                        |
-| **GitOps**           | Konfigurationsverwaltung über Git-Repositories (isomorphic-git)                                 |
-| **ChatOps**          | Verwaltung über Chat-Plattformen — hier Telegram (telegraf)                                     |
-| **DDNS**             | Dynamic DNS — automatische DNS-Aktualisierung bei IP-Wechsel                                    |
-| **Turbo-Loader**     | Parallele Downloads für große Dateien                                                           |
-| **GoAccess**         | Echtzeit-Web-Analytics-Tool (Port :91)                                                          |
-| **Debounced Reload** | Bündelung von Änderungen vor einem Reload; Docker Auto-Discovery nutzt dafür 2 Sekunden         |
-| **LiquidJS**         | Template-Engine für Nginx-Konfigurationen in `backend/templates/`                               |
-| **Objection.js**     | ORM (Object-Relational Mapping) für Node.js basierend auf Knex                                  |
-| **Knex.js**          | SQL-Query-Builder und Migrationstool für Node.js                                                |
-| **rootfs**           | Docker-Overlay-Dateien, die ins Container-Dateisystem kopiert werden                            |
-| **NPM**              | Nginx Proxy Manager — das Ursprungsprojekt, nicht zu verwechseln mit npm (Node Package Manager) |
-| **NPMplus**          | ZoeyVids Fork von NPM, Basis für ShieldPM                                                       |
-| **Internal**         | Backend-Business-Logik-Schicht (`backend/internal/`)                                            |
-| **ML-KEM**           | Module-Lattice-Based Key-Encapsulation Mechanism — Post-Quantum-Kryptographie                   |
-
-## Offene Fragen
-
-Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
+Früher stand hier eine zweite, fast identische Begriffsliste. Sie wurde am
+2026-11-04 entfernt, damit es nur eine Quelle gibt. Ergänzungen gehören in
+[glossar.md](../glossar.md).
 
 ## Verwandte Seiten
 
-- [Projekt-Überblick](./ueberblick.md)
-- [Glossar (Root-Ebene)](../glossar.md)
+- [Glossar](../glossar.md)
+- [Projektüberblick](./ueberblick.md)
+- [Index](../index.md)

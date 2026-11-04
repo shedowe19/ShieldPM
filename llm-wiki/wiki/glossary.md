@@ -27,9 +27,9 @@ Definitionen stehen in der Tiefendoku; hier steht die Kurzform für den Einstieg
 
 ## Ältere Glossare
 
-`reference/glossar.md` und `reference/projekt/begriffe.md` enthalten
-ausführlichere, teils doppelte Definitionen. Sie bleiben als Tiefendoku erhalten;
-die Zusammenführung ist als Aufgabe `M-004` vorgemerkt.
+Dieses Glossar ist der Einstieg. Die ausführliche Begriffsliste steht unter
+[reference/glossar.md](./reference/glossar.md); `reference/projekt/begriffe.md`
+verweist nur noch dorthin. Damit gibt es eine Quelle.
 
 ## Verwandte Seiten
 

@@ -79,6 +79,22 @@
 		{
 			"name": "incidents",
 			"description": "Host incidents, measured availability, alarm mutes and notification delivery"
+		},
+		{
+			"name": "analytics",
+			"description": "Traffic analytics endpoints"
+		},
+		{
+			"name": "oidc",
+			"description": "OpenID Connect authentication"
+		},
+		{
+			"name": "gitops",
+			"description": "GitOps configuration synchronization"
+		},
+		{
+			"name": "upload-relay",
+			"description": "Resumable upload relay for proxy hosts"
 		}
 	],
 	"paths": {
@@ -746,6 +762,110 @@
 		"/nginx/proxy-hosts/options": {
 			"get": {
 				"$ref": "./paths/nginx/proxy-hosts/options/get.json"
+			}
+		},
+		"/analytics/summary": {
+			"get": {
+				"$ref": "./paths/analytics/summary/get.json"
+			}
+		},
+		"/analytics/series": {
+			"get": {
+				"$ref": "./paths/analytics/series/get.json"
+			}
+		},
+		"/analytics/top-hosts": {
+			"get": {
+				"$ref": "./paths/analytics/top-hosts/get.json"
+			}
+		},
+		"/analytics/status": {
+			"get": {
+				"$ref": "./paths/analytics/status/get.json"
+			}
+		},
+		"/analytics/db-stats": {
+			"get": {
+				"$ref": "./paths/analytics/db-stats/get.json"
+			}
+		},
+		"/oidc": {
+			"get": {
+				"$ref": "./paths/oidc/get.json"
+			}
+		},
+		"/oidc/callback": {
+			"get": {
+				"$ref": "./paths/oidc/callback/get.json"
+			}
+		},
+		"/oidc/claim": {
+			"post": {
+				"$ref": "./paths/oidc/claim/post.json"
+			}
+		},
+		"/gitops/config": {
+			"get": {
+				"$ref": "./paths/gitops/config/get.json"
+			},
+			"put": {
+				"$ref": "./paths/gitops/config/put.json"
+			}
+		},
+		"/gitops/test": {
+			"post": {
+				"$ref": "./paths/gitops/test/post.json"
+			}
+		},
+		"/gitops/export": {
+			"post": {
+				"$ref": "./paths/gitops/export/post.json"
+			}
+		},
+		"/gitops/push": {
+			"post": {
+				"$ref": "./paths/gitops/push/post.json"
+			}
+		},
+		"/gitops/pull": {
+			"post": {
+				"$ref": "./paths/gitops/pull/post.json"
+			}
+		},
+		"/gitops/history": {
+			"get": {
+				"$ref": "./paths/gitops/history/get.json"
+			}
+		},
+		"/gitops/revert": {
+			"post": {
+				"$ref": "./paths/gitops/revert/post.json"
+			}
+		},
+		"/gitops/import": {
+			"post": {
+				"$ref": "./paths/gitops/import/post.json"
+			}
+		},
+		"/nginx/proxy-hosts/{hostID}/upload-relay": {
+			"post": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/upload-relay/post.json"
+			}
+		},
+		"/nginx/proxy-hosts/{hostID}/upload-relay/{uploadID}": {
+			"get": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/upload-relay/uploadID/get.json"
+			},
+			"patch": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/upload-relay/uploadID/patch.json"
+			},
+			"delete": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/upload-relay/uploadID/delete.json"
+			}
+		},
+		"/nginx/proxy-hosts/{hostID}/upload-relay/{uploadID}/finalize": {
+			"post": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/upload-relay/uploadID/finalize/post.json"
 			}
 		}
 	}

@@ -22,7 +22,7 @@ Projekts fest — für Entwickler, neue Teammitglieder und LLM-Agenten.
 
 - [Überblick](./projekt/ueberblick.md)
 - [Ziele](./projekt/ziele.md)
-- [Begriffe](./projekt/begriffe.md)
+- [Begriffe](./projekt/begriffe.md) — Verweis auf das Glossar
 
 ### Architektur
 

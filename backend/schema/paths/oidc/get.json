@@ -1,0 +1,26 @@
+{
+	"operationId": "startOidcLogin",
+	"summary": "Start the OpenID Connect authorization code flow",
+	"tags": [
+		"oidc"
+	],
+	"security": [
+		{
+			"bearerAuth": []
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success"
+		},
+		"400": {
+			"description": "Invalid input"
+		},
+		"401": {
+			"description": "Authentication required"
+		},
+		"403": {
+			"description": "Permission denied"
+		}
+	}
+}

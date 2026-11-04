@@ -5,6 +5,13 @@ Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
 ## 2026-11-04
 
+- T-004 erledigt: OpenAPI kennt jetzt Analytics, OIDC, GitOps und Upload-Relay
+  (19 Pfade, 22 Operationen); `swagger.json` bleibt dereferenzierbar.
+- T-005 vorbereitet: Die Installer-Policy entspricht dem OpenAppSec-v1beta1-Schema
+  (benannte Practice und Log-Trigger) und wird nach dem Schreiben angewendet; der
+  Live-Beleg auf einer laufenden Instanz steht noch aus.
+- M-003/M-004: Offene Fragen triagiert, Glossare auf eine Quelle reduziert.
+  ([Log](./log.md))
 - Wiki-Migration committet (`443d764f`); der Arbeitsbaum ist sauber.
   ([Log](./log.md))
 - T-001 und T-002 behoben: `AGENTS.md` und `.cursorrules` beschreiben SQLite und

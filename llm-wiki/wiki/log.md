@@ -2,6 +2,30 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-04] feature | T-004, T-005-Vorbereitung und M-001–M-004
+
+- Command: „Mach den rest komplett fertig“.
+- Type: feature
+- Areas affected: `backend/schema`, `scripts/install.sh`, Wiki (Fragen, Glossar,
+  Aufgaben, Coverage)
+- Files changed: `backend/schema/swagger.json`, 22 neue Pfad-JSONs,
+  `scripts/install.sh`, `reference/projekt/begriffe.md`, `reference/index.md`,
+  kuratierte Seiten (api, glossary, questions, tasks, coverage, changelog, log)
+- Wiki pages updated: `api/overview`, `api/schemas`, `glossary`, `questions`,
+  `tasks`, `coverage`, `changelog`, `log`, `current-project-state`,
+  `reference/index`, `reference/projekt/begriffe`
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: keine
+- New decisions: keine
+- Open questions: Triage abgeschlossen; beantwortete Fragen ausgelagert
+- Next steps: T-005 (Live-Beleg); M-001/M-002/M-003 beim nächsten Auslöser
+- Verification: `node llm-wiki/tools/wiki-check.mjs` → PASS; `swagger.json`
+  geparst (120 Pfade, 162 eindeutige Operation-IDs, keine fehlenden `$ref`s);
+  Policy-YAML mit PyYAML geparst (Referenzen `shieldpm-default-practice` und
+  `shieldpm-log-trigger`); `install.sh` mit `bash -n` auf LF-Kopie geprüft;
+  Graph neu erzeugt.
+
 ## [2026-11-04] release | Wiki-Migration committet
 
 - Command: „Mach“ (Commit-Freigabe).

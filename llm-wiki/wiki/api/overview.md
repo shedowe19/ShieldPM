@@ -72,8 +72,8 @@ Fehlerformat, Versionierung und Dokumentation. Sie ist die Grundlage für jede
 
 ## Offene Fragen
 
-- TODO: `backend/schema/swagger.json` um Analytics-, OIDC-, GitOps- und
-  Upload-Relay-Routen ergänzen. Aufgabe: **T-004**.
+- Keine offenen Fragen auf dieser Seite; die frühere Swagger-Lücke ist mit
+  `T-004` geschlossen.
 
 ## Verwandte Seiten
 

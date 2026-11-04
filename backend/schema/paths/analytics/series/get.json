@@ -1,0 +1,51 @@
+{
+	"operationId": "getAnalyticsSeries",
+	"summary": "Traffic series for charts",
+	"tags": [
+		"analytics"
+	],
+	"security": [
+		{
+			"bearerAuth": []
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success"
+		},
+		"400": {
+			"description": "Invalid input"
+		},
+		"401": {
+			"description": "Authentication required"
+		},
+		"403": {
+			"description": "Permission denied"
+		}
+	},
+	"parameters": [
+		{
+			"in": "query",
+			"name": "start",
+			"schema": {
+				"type": "integer",
+				"minimum": 0
+			}
+		},
+		{
+			"in": "query",
+			"name": "end",
+			"schema": {
+				"type": "integer",
+				"minimum": 0
+			}
+		},
+		{
+			"in": "query",
+			"name": "interval",
+			"schema": {
+				"type": "string"
+			}
+		}
+	]
+}

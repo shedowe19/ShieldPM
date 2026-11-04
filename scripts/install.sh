@@ -996,28 +996,52 @@ if [[ "$oas_choice" =~ ^[Yy]$ ]]; then
         if [ ! -f "$APPSEC_CONF_DIR/local_policy.yaml" ]; then
             cat > "$APPSEC_CONF_DIR/local_policy.yaml" << 'APPSEC_EOF'
 # OpenAppSec Local Policy for ShieldPM
-# Docs: https://docs.openappsec.io/
+# Schema: v1beta1 (https://docs.openappsec.io/)
+# Policies reference named practice and log-trigger resources.
 policies:
   default:
     mode: detect-learn
     practices:
-      - web-attacks:
-          override-mode: detect-learn
-          minimum-confidence: medium
-      - anti-bot:
-          override-mode: detect-learn
-          injected-URIs: []
-          validated-URIs: []
+      - shieldpm-default-practice
     triggers:
-      - log:
-          verbosity: standard
-          extendedLogging: true
-          logToAgent: true
-          logToCloud: false
+      - shieldpm-log-trigger
+practices:
+  - name: shieldpm-default-practice
+    web-attacks:
+      override-mode: detect-learn
+      minimum-confidence: medium
+    anti-bot:
+      override-mode: detect-learn
+      injected-URIs: []
+      validated-URIs: []
+log-triggers:
+  - name: shieldpm-log-trigger
+    appsec-logging:
+      detect-events: true
+      prevent-events: true
+      all-web-requests: false
+    extended-logging:
+      url-path: true
+      url-query: true
+      http-headers: false
+      request-body: false
+    log-destination:
+      cloud: false
+      stdout:
+        format: json
 APPSEC_EOF
             echo "  > Created default policy at $APPSEC_CONF_DIR/local_policy.yaml"
             echo "  > Default mode: detect-learn (logs only, does not block)"
             echo "  > Change to 'prevent-learn' to enable active blocking"
+        fi
+        if command -v open-appsec-ctl >/dev/null 2>&1; then
+            if open-appsec-ctl --apply-policy; then
+                echo "  > OpenAppSec policy applied"
+            else
+                echo "  > WARNING: open-appsec-ctl --apply-policy failed; check the agent and local_policy.yaml" >&2
+            fi
+        else
+            echo "  > open-appsec-ctl not found; apply the policy after the agent starts"
         fi
     fi
 

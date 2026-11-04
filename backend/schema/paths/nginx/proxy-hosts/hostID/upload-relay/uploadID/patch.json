@@ -1,0 +1,26 @@
+{
+	"operationId": "appendUploadRelayChunk",
+	"summary": "Append a chunk to an upload session",
+	"tags": [
+		"upload-relay"
+	],
+	"security": [
+		{
+			"bearerAuth": []
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success"
+		},
+		"400": {
+			"description": "Invalid input"
+		},
+		"401": {
+			"description": "Authentication required"
+		},
+		"403": {
+			"description": "Permission denied"
+		}
+	}
+}

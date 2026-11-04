@@ -10,12 +10,10 @@
 
 ## Next
 
-- [ ] **T-004 OpenAPI-Spezifikation vervollständigen.** Abnahme:
-      `backend/schema/swagger.json` enthält je einen Pfad für Analytics, OIDC,
-      GitOps und Upload-Relay.
-
-- [ ] **T-005 Native OpenAppSec-Policy an das Agent-Schema anpassen.** Abnahme:
-      `open-appsec-ctl --apply-policy` meldet keinen Schemafehler. Kontext:
+- [ ] **T-005 OpenAppSec-Policy gegen den laufenden Agent prüfen.** Abnahme:
+      `open-appsec-ctl --apply-policy` meldet auf einer laufenden Instanz keinen
+      Schemafehler. Die erzeugte Policy entspricht seit 2026-11-04 dem
+      v1beta1-Schema (benannte Practice und Log-Trigger). Kontext:
       [offene Fragen](./questions/open-questions.md).
 
 ## Backlog-Kandidaten (unbestätigt)
@@ -40,19 +38,24 @@
       20 neue Seiten oder ein Release. Abnahme:
       `node llm-wiki/tools/wiki-check.mjs` meldet PASS; der Lauf ist in `log.md`
       vermerkt.
-- [ ] **M-002 Manuelle Lint-Prüfung.** Gleicher Auslöser. Abnahme: Widersprüche,
-      überholte Aussagen, verwaiste Seiten, fehlende Querverweise, Fast-Duplikate
-      und die Tabelle „Selbstprüfung“ in [Abdeckung](./coverage.md) sind geprüft;
-      Befunde sind als Aufgaben abgelegt.
-- [ ] **M-003 Offene Fragen triage.** Abnahme: Jede Zeile in
-      [Offene Fragen](./questions/open-questions.md) hat eine Prüfstelle und ist
-      beantwortet, als Aufgabe verlinkt oder begründet geschlossen.
-- [ ] **M-004 Glossare zusammenführen.** Abnahme:
-      `reference/glossar.md` und `reference/projekt/begriffe.md` sind auf eine
-      Quelle reduziert, die das [Glossar](./glossary.md) verlinkt.
+- [ ] **M-002 Manuelle Lint-Prüfung.** Letzter Lauf: 2026-11-04. Gleicher
+      Auslöser. Abnahme: Widersprüche, überholte Aussagen, verwaiste Seiten,
+      fehlende Querverweise, Fast-Duplikate und die Tabelle „Selbstprüfung“ in
+      [Abdeckung](./coverage.md) sind geprüft; Befunde sind als Aufgaben abgelegt.
+- [ ] **M-003 Offene Fragen triage.** Letzter Lauf: 2026-11-04. Abnahme: Jede
+      Zeile in [Offene Fragen](./questions/open-questions.md) hat eine Prüfstelle
+      und ist beantwortet, als Aufgabe verlinkt oder begründet geschlossen.
+- [x] **M-004 Glossare zusammengeführt.** Done 2026-11-04. Beleg:
+      `reference/projekt/begriffe.md` verweist nur noch auf `reference/glossar.md`;
+      das kuratierte Glossar linkt dieselbe Quelle.
 
 ## Done
 
+- [x] **T-004 OpenAPI-Spezifikation vervollständigt.** Done 2026-11-04. Beleg:
+      `backend/schema/swagger.json` enthält 19 neue Pfade mit 22 Operationen:
+      Analytics 5, OIDC 3, GitOps 8 Pfade/9 Operationen, Upload-Relay 3 Pfade/5
+      Operationen. Alle `$ref`s lösen auf, Operation-IDs sind eindeutig (120 Pfade,
+      162 Operationen).
 - [x] **T-001 Widerspruch „SQLite nur in Entwicklung“ aufgelöst.** Done 2026-11-04.
       Beleg: `AGENTS.md` nennt SQLite als unterstützte Produktionsoption,
       `.cursorrules` unterscheidet Default/Alternativen; der alte Satz kommt nicht

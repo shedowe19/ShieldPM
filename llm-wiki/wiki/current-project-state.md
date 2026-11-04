@@ -60,7 +60,7 @@ Testlauf dieser Sitzung:
 ## Bekannte Defekte und offene Aufgaben
 
 - Keine bestätigten Produktdefekte in dieser Sitzung.
-- Offene Arbeiten: `T-004`, `T-005` ([Aufgaben](./tasks.md)).
+- Offene Arbeiten: `T-005` ([Aufgaben](./tasks.md)).
 
 ## Aktive Risiken
 

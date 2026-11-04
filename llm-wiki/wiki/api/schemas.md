@@ -52,8 +52,8 @@ dem Repository erzeugt wird. Sie zeigt, wo ein neues Schema hingehört.
 
 ## Offene Fragen
 
-- TODO: Analytics-, OIDC-, GitOps- und Upload-Relay-Routen in `swagger.json`
-  nachziehen. Aufgabe: **T-004**.
+- Keine offenen Fragen auf dieser Seite; Analytics-, OIDC-, GitOps- und
+  Upload-Relay-Pfade sind seit `T-004` in `swagger.json`.
 
 ## Verwandte Seiten
 
