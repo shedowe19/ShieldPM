@@ -72,7 +72,7 @@ Der Installer nutzt `https://downloads.openappsec.io/open-appsec-install` und ka
 ## Konfigurationsdateien
 
 - **`/etc/cp/conf/local_policy.yaml`** — Lokale Policy (detect-learn / prevent-learn)
-- **`/etc/cp/conf/open-appsec-advanced-model.tgz`** — Kopierziel des Native/LXC-Installers für das optionale ML-Archiv; der Installer prüft nicht, ob der laufende Agent das Modell tatsächlich geladen hat.
+- **`/advanced-model/open-appsec-advanced-model.tgz`** - Ablage des Native/LXC-Installers für das optionale ML-Archiv. Bei einer bestehenden Installation extrahiert er das Modell nach `/etc/cp/conf/waap`, startet den Agent über `open-appsec-ctl --stop-agent`/`--start-agent` neu und gibt `--status` aus. Ob der Agent das Modell tatsächlich geladen hat, bleibt mit `open-appsec-ctl --status` zu prüfen (`T-017`).
 - **`/opt/openappsec/conf`** — Nginx-Agent-Konfiguration (Volume)
 - **`/opt/openappsec/data`** — Agent-Daten (Volume)
 - **`/opt/openappsec/logs`** — Logs (Volume)
