@@ -6,9 +6,7 @@ import { describe, expect, it } from "vitest";
 const source = fs
 	.readFileSync(fileURLToPath(new URL("../../../scripts/install.sh", import.meta.url)), "utf8")
 	.replace(/\r\n?/g, "\n");
-const block = source.match(
-	/cat > "\$APPSEC_CONF_DIR\/local_policy\.yaml" << 'APPSEC_EOF'\n([\s\S]*?)\nAPPSEC_EOF/,
-);
+const block = source.match(/cat > "\$APPSEC_CONF_DIR\/local_policy\.yaml" << 'APPSEC_EOF'\n([\s\S]*?)\nAPPSEC_EOF/);
 const policy = block ? load(block[1]) : null;
 const MODES = ["prevent-learn", "detect-learn", "prevent", "detect", "inactive"];
 
