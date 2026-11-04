@@ -21,10 +21,10 @@
 
 ## Backlog-Kandidaten (unbestätigt)
 
-- `llm-wiki/wiki/reference/offene-fragen.md:17` — End-to-End-Beispiel für Authentik als
+- `llm-wiki/wiki/reference/offene-fragen.md:16` — End-to-End-Beispiel für Authentik als
   Auth-Typ `AUTHENTIK_PROXY` fehlt.
-- `llm-wiki/wiki/reference/offene-fragen.md:18` — IP-Ranges-Quellen für weitere CDNs prüfen.
-- `llm-wiki/wiki/reference/offene-fragen.md:16` — Native/LXC-Pfad für das OpenAppSec-
+- `llm-wiki/wiki/reference/offene-fragen.md:17` — IP-Ranges-Quellen für weitere CDNs prüfen.
+- `llm-wiki/wiki/reference/offene-fragen.md:15` — Native/LXC-Pfad für das OpenAppSec-
   Advanced-Modell nachweisen.
 - `backend/models/token.js:80` — Kommentar „Hack: some tokens out in the wild have
   a scope of 'all' instead of 'user'“. Kein Fehler, nur prüfen, ob die
@@ -53,7 +53,7 @@
       in `.github/codeql/codeql-config.yml` von der Analyse ausgenommen.
 - [x] **T-009 Offene Dependabot-Alarme für `qs` und `seroval` geschlossen.**
       Done 2026-11-04. Beleg: `express/**/qs` von 6.16.0 auf 6.16.1, `seroval` im
-      Frontend-Lock von 1.6.8 auf 1.6.11, `archiver/**/minimatch` auf 11.0.4;
+      Frontend-Lock von 1.6.8 auf 1.6.11 (inzwischen 1.6.12), `archiver/**/minimatch` auf 11.0.4;
       `yarn install --frozen-lockfile` und die CI-Tests
       `dependabot-security-resolutions`/`npm-package-constraints` bestehen.
 - [x] **T-008 Wiki-Prüfung in CI verankern und Test portabel machen.** Done
