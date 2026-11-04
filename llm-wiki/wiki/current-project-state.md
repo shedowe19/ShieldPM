@@ -19,8 +19,7 @@ zuletzt fertig wurde, was bewusst fehlt und welche Risiken gerade aktiv sind.
 - Branch `develop`, letzter Commit `9c434181` (Merge PR #158, 2026-10-27).
 - Letzte Version `4.4.1` in `.version`, `backend/package.json` und
   `frontend/package.json`.
-- Arbeitsbaum enthält die noch nicht committete Wiki-Migration (Beleg: [Log](./log.md));
-  `llm-wiki/` ist untracked, daher vor weiterer Arbeit committen.
+- Stand committet: `443d764f` („docs(wiki): replace internal wiki with llm-wiki“).
 
 ## Was zuletzt fertig wurde
 

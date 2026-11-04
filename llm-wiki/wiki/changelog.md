@@ -5,6 +5,8 @@ Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
 ## 2026-11-04
 
+- Wiki-Migration committet (`443d764f`); der Arbeitsbaum ist sauber.
+  ([Log](./log.md))
 - T-001 und T-002 behoben: `AGENTS.md` und `.cursorrules` beschreiben SQLite und
   das Nginx-Reload-Verhalten jetzt korrekt; beide Widersprüche sind als behoben
   markiert. ([Log](./log.md))

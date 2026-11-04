@@ -2,6 +2,23 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-04] release | Wiki-Migration committet
+
+- Command: „Mach“ (Commit-Freigabe).
+- Type: release
+- Areas affected: gesamtes Repository
+- Files changed: Commit `443d764f` (159 Dateien: 109 Löschungen, 11 geänderte
+  Dateien, `llm-wiki/` neu, Renames erkannt)
+- Wiki pages updated: `current-project-state`, `coverage`, `changelog`, `log`
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: keine
+- New decisions: keine
+- Open questions: keine
+- Next steps: T-004, T-005; M-001 bis M-004
+- Verification: `git status --short` leer; `git log -1` = `443d764f`;
+  `node llm-wiki/tools/wiki-check.mjs` → PASS.
+
 ## [2026-11-04] docs | T-001 und T-002 umgesetzt
 
 - Command: „Mach“ auf die Empfehlung, die beiden Doku-Widersprüche zu beheben.

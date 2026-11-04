@@ -13,8 +13,7 @@ für Vollständigkeitsaussagen in diesem Wiki und wird bei jedem Lint nachgezoge
 ## Methode
 
 - Grundlage sind `git ls-files` und Verzeichnislisten, nicht der Arbeitsbaum mit
-  Abhängigkeiten. Bei Flächen, die noch nicht versioniert sind (`llm-wiki/`),
-  zählt der Arbeitsbaum; das ist in der Zeile vermerkt.
+  Abhängigkeiten. `llm-wiki/` ist seit Commit `443d764f` versioniert.
 - Lesestatus: `full` (vollständig bzw. alle genutzten Teile), `sampled` (Struktur,
   Einstiegspunkte und Schlüsseldateien), `skipped` (bewusst nicht gelesen).
 - Zählbasis ist, wo nicht anders angegeben, rekursiv. Abweichungen stehen in der
@@ -45,7 +44,7 @@ für Vollständigkeitsaussagen in diesem Wiki und wird bei jedem Lint nachgezoge
 | `.vscode/`                          | config      | Tooling           |                        2 | skipped | reine Editor-Konfiguration, kein Projektwissen                                 |
 | `docs/wiki/`                        | docs        | Dokumentation     |                       50 | sampled | öffentliche Doku; nur verlinkt, nicht dupliziert                               |
 | `docs/planning/`                    | docs        | Dokumentation     |                        1 | full    | Zweck des Ordners                                                              |
-| `llm-wiki/`                         | docs        | Dokumentation     |                      148 | full    | dieses Wiki inkl. Prüfwerkzeug (Arbeitsbaum, noch nicht versioniert)           |
+| `llm-wiki/`                         | docs        | Dokumentation     |                      148 | full    | dieses Wiki inkl. Prüfwerkzeug (seit `443d764f` versioniert)                   |
 | `llm-wiki/raw/`                     | docs        | Quellen           |                        2 | full    | Manifest und ersetzte `agent.md`-Fassung, unveränderlich                       |
 | Repository-Wurzel                   | docs/config | Projekt           |                       18 | full    | README, GEMINI, AGENTS, .cursorrules, compose, Dockerfile                      |
 | `node_modules/`, Lockfiles          | generated   | Abhängigkeiten    |                        – | skipped | Abhängigkeiten, nicht Quellcode                                                |
