@@ -12,15 +12,16 @@
 
 ## Offene Fragen
 
-- TODO: Den Native/LXC-Pfad für das optionale OpenAppSec-Advanced-Modell im Installer überprüfen und funktionsfähig machen. `scripts/install.sh` kopiert das Archiv derzeit nur nach `/etc/cp/conf/open-appsec-advanced-model.tgz` und bestätigt die Modellaktivierung nicht; die OpenAppSec-Anleitung für Linux Embedded beschreibt eine Bereitstellung unter `/advanced-model` sowie Entpacken und einen Agent-Neustart für bestehende Installationen. Die Aktivierung am laufenden Agent nachweisen ([OpenAppSec](./module/openappsec.md)).
-- TODO: End-to-End-Beispiel mit Authentik (Auth-Typ `AUTHENTIK_PROXY`) für [OAuth2-Proxy](./module/oauth2-proxy.md) ergänzen — der Auth-Typ ist parallel zu oauth2-proxy verfügbar, ein konkretes Setup-Beispiel fehlt aber noch.
-- TODO: IP-Ranges-Quellen für andere CDNs (z. B. Fastly, Akamai) prüfen ([IP-Ranges](./module/ip-ranges.md)).
+Keine bereichsübergreifenden offenen Fragen auf dieser Seite. Die früheren Punkte zu OpenAppSec-Policy, Advanced-Modell, Authentik, CDN-Quellen und Swagger sind beantwortet oder als Aufgabe geführt (T-007, T-017).
 
 ## Gelöste Fragen
 
 ### Aktuelle Session
 
-- ~~OpenAppSec-Policy des nativen Installers~~ → Seit 2026-11-04 schreibt der Installer eine v1beta1-konforme Policy mit benannten Practices und Log-Triggern, ruft `open-appsec-ctl --apply-policy` auf und ist durch `backend/test/ci/openappsec-local-policy.spec.js` abgesichert. Die Anwendung auf einem laufenden Agent bleibt Aufgabe T-007.
+- ~~OpenAppSec-Advanced-Modell im Native-/LXC-Pfad~~ → Der Installer legt das Modell unter `/advanced-model/open-appsec-advanced-model.tgz` ab, extrahiert es nach `/etc/cp/conf/waap` und startet den Agent neu; Live-Prüfung als T-017 ([OpenAppSec](./module/openappsec.md)).
+- ~~End-to-End-Beispiel für Authentik (`AUTHENTIK_PROXY`)~~ → Forward-Auth-Ablauf inklusive Outpost, Host-URL und Nginx-Verhalten dokumentiert ([OAuth2-Proxy](./module/oauth2-proxy.md)).
+- ~~Weitere CDN-Quellen für IP-Ranges~~ → Fastly ergänzt; Akamai bewusst ausgelassen, weil keine stabile öffentliche Liste existiert ([IP-Ranges](./module/ip-ranges.md)).
+- ~~OpenAppSec-Policy des nativen Installers~~ → Seit 2026-11-04 v1beta1-konform (benannte Practice/Log-Trigger), `--apply-policy` im Installer, Regressionstest `backend/test/ci/openappsec-local-policy.spec.js`. Die Anwendung auf einem laufenden Agent bleibt Aufgabe T-007.
 - ~~OpenAPI/Swagger unvollständig~~ → Am 2026-11-04 um Analytics, OIDC, GitOps und Upload-Relay ergänzt (19 Pfade, 22 Operationen); abgeschlossen als T-004 ([API-Schemas](./api/schemas.md)).
 - ~~B01–B12 der Gesamtprüfung vom 17. Oktober~~ → Umgesetzt; die Nachweise stehen in der [Umsetzung der Gesamtprüfung](./entwicklung/feature-implementation-2026-10-17.md). Die Wasm-Bezüge dieses Berichts sind durch die [Entfernung vom 27. Oktober](./entwicklung/gitops-reference-and-runtime-removal-2026-10-27.md) überholt.
 - ~~13 Befunde der Optimierungsprüfung vom 13. Oktober~~ → Umgesetzt mit Secret-Antwortbereinigung und transaktionaler Erhaltung, Nginx-Batch-Rollback, dauerhaftem Wartungs-Retry, frischen Firewall-Snapshots, Monitorworkern, Analytics-Lifecycle, nativen Wartungssperren und Latest-Smokes. Einzelne Nachweise und die unveränderten Betriebsgrenzen stehen im [Prüfbericht](./entwicklung/optimierungspruefung-2026-10-13.md).

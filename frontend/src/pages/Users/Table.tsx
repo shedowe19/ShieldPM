@@ -75,7 +75,6 @@ export default function Table({
 					header: intl.formatMessage({ id: "column.name" }),
 					cell: (info) => {
 						const value = info.getValue();
-						// Hack to reuse domains formatter
 						return (
 							<ValueWithDateFormatter
 								value={value.name}

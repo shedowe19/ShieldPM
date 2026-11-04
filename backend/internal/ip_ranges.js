@@ -15,6 +15,7 @@ const __dirname = dirname(__filename);
 
 const CLOUDFARE_V4_URL = "https://www.cloudflare.com/ips-v4";
 const CLOUDFARE_V6_URL = "https://www.cloudflare.com/ips-v6";
+const FASTLY_URL = "https://api.fastly.com/public-ip-list";
 const requestedMultiplier = Number(process.env.IPRT);
 const renewalMultiplier =
 	Number.isInteger(requestedMultiplier) && requestedMultiplier >= 1 && requestedMultiplier <= 99
@@ -96,6 +97,21 @@ const internalIpRanges = {
 				const cloudflare_v6_data = await internalIpRanges.fetchUrl(CLOUDFARE_V6_URL);
 				const items_v6 = parseRanges(cloudflare_v6_data, "ipv6");
 				ip_ranges = [...ip_ranges, ...items_v6];
+
+				// Fastly is optional: a failure must not block the Cloudflare ranges.
+				try {
+					const fastly_data = JSON.parse(await internalIpRanges.fetchUrl(FASTLY_URL));
+					if (!Array.isArray(fastly_data.addresses) || !Array.isArray(fastly_data.ipv6_addresses)) {
+						throw new errs.ConfigurationError("Invalid Fastly IP range response");
+					}
+					ip_ranges = [
+						...ip_ranges,
+						...parseRanges(fastly_data.addresses.join("\n"), "ipv4"),
+						...parseRanges(fastly_data.ipv6_addresses.join("\n"), "ipv6"),
+					];
+				} catch (err) {
+					logger.warn(`Skipping Fastly IP ranges: ${err.message}`);
+				}
 
 				const clean_ip_ranges = ip_ranges.filter((range) => !!range);
 

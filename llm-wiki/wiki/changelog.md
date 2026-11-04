@@ -5,6 +5,9 @@ Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
 ## 2026-11-04
 
+- Backlog abgearbeitet: Authentik-Beispiel dokumentiert, Fastly-IP-Ranges
+  ergänzt, OpenAppSec-Advanced-Modell im Installer umgesetzt, Legacy-Token-Scope
+  gekapselt, Users-Tabellen-Kommentar entfernt. ([Log](./log.md))
 - Abschlussprüfung: OpenAPI-Metadaten ergänzt (sechs Tags, sechs DDNS-
   Operation-IDs), zwei veraltete Wiki-Stellen korrigiert, Graph neu erzeugt.
   ([Log](./log.md))

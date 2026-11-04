@@ -26,7 +26,8 @@ describe("Cloudflare IP ranges", () => {
 	it("preserves both IPv4 and IPv6 networks", async () => {
 		vi.spyOn(ranges, "fetchUrl")
 			.mockResolvedValueOnce("173.245.48.0/20\n")
-			.mockResolvedValueOnce("2400:cb00::/32\n2606:4700::/32\n");
+			.mockResolvedValueOnce("2400:cb00::/32\n2606:4700::/32\n")
+			.mockResolvedValueOnce(JSON.stringify({ addresses: [], ipv6_addresses: [] }));
 		const generate = vi.spyOn(ranges, "generateConfig").mockResolvedValue(true);
 		await ranges.fetch();
 		expect(generate).toHaveBeenCalledWith(["173.245.48.0/20", "2400:cb00::/32", "2606:4700::/32"]);
@@ -37,7 +38,10 @@ describe("Cloudflare IP ranges", () => {
 			release = resolve;
 		});
 		nginx.withConfigurationLock.mockImplementationOnce((callback) => gate.then(callback));
-		vi.spyOn(ranges, "fetchUrl").mockResolvedValueOnce("173.245.48.0/20").mockResolvedValueOnce("2400:cb00::/32");
+		vi.spyOn(ranges, "fetchUrl")
+			.mockResolvedValueOnce("173.245.48.0/20")
+			.mockResolvedValueOnce("2400:cb00::/32")
+			.mockResolvedValueOnce(JSON.stringify({ addresses: [], ipv6_addresses: [] }));
 		const generate = vi.spyOn(ranges, "generateConfig").mockResolvedValue(true);
 		const pending = ranges.fetch();
 		await Promise.resolve();
@@ -57,4 +61,34 @@ describe("Cloudflare IP ranges", () => {
 			expect(ranges.interval_processing).toBe(false);
 		},
 	);
+
+	it("merges Fastly ranges with the Cloudflare ranges", async () => {
+		vi.spyOn(ranges, "fetchUrl")
+			.mockResolvedValueOnce("173.245.48.0/20\n")
+			.mockResolvedValueOnce("2400:cb00::/32\n")
+			.mockResolvedValueOnce(
+				JSON.stringify({
+					addresses: ["23.235.32.0/20"],
+					ipv6_addresses: ["2a04:4e40::/32"],
+				}),
+			);
+		const generate = vi.spyOn(ranges, "generateConfig").mockResolvedValue(true);
+		await ranges.fetch();
+		expect(generate).toHaveBeenCalledWith([
+			"173.245.48.0/20",
+			"2400:cb00::/32",
+			"23.235.32.0/20",
+			"2a04:4e40::/32",
+		]);
+	});
+
+	it("keeps Cloudflare ranges when Fastly is unavailable", async () => {
+		vi.spyOn(ranges, "fetchUrl")
+			.mockResolvedValueOnce("173.245.48.0/20\n")
+			.mockResolvedValueOnce("2400:cb00::/32\n")
+			.mockRejectedValueOnce(new Error("offline"));
+		const generate = vi.spyOn(ranges, "generateConfig").mockResolvedValue(true);
+		await ranges.fetch();
+		expect(generate).toHaveBeenCalledWith(["173.245.48.0/20", "2400:cb00::/32"]);
+	});
 });

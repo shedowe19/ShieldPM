@@ -18,19 +18,16 @@
       OpenAppSec-Agent, der in dieser Umgebung nicht vorhanden ist. Die Policy
       selbst ist gegen das veröffentlichte v1beta1-Schema validiert und durch
       `backend/test/ci/openappsec-local-policy.spec.js` abgesichert.
+- [ ] **T-017 Advanced-Modell auf einem laufenden Agent verifizieren.** Abnahme:
+      `open-appsec-ctl --status` zeigt das Advanced Model. Blockiert: braucht
+      einen laufenden OpenAppSec-Agent; Installation und Extraktion sind
+      umgesetzt und durch `backend/test/ci/openappsec-advanced-model.spec.js`
+      abgesichert.
 
 ## Backlog-Kandidaten (unbestätigt)
 
-- `llm-wiki/wiki/reference/offene-fragen.md:16` — End-to-End-Beispiel für Authentik als
-  Auth-Typ `AUTHENTIK_PROXY` fehlt.
-- `llm-wiki/wiki/reference/offene-fragen.md:17` — IP-Ranges-Quellen für weitere CDNs prüfen.
-- `llm-wiki/wiki/reference/offene-fragen.md:15` — Native/LXC-Pfad für das OpenAppSec-
-  Advanced-Modell nachweisen.
-- `backend/models/token.js:80` — Kommentar „Hack: some tokens out in the wild have
-  a scope of 'all' instead of 'user'“. Kein Fehler, nur prüfen, ob die
-  Sonderbehandlung noch nötig ist.
-- `frontend/src/pages/Users/Table.tsx:78` — Kommentar „Hack to reuse domains
-  formatter“. Aufräumkandidat ohne bekannten Fehler.
+- Keine offenen Kandidaten; die fünf früheren Punkte sind als T-012 bis T-016
+  erledigt.
 
 ## Routinen
 
@@ -42,6 +39,23 @@
 
 ## Done
 
+- [x] **T-016 Users-Tabellen-Kommentar aufgeräumt.** Done 2026-11-04. Beleg:
+      `pages/Users/Table.tsx` nutzt den generischen Formatter ohne Hack-Kommentar.
+- [x] **T-015 Legacy-Token-Scope gekapselt.** Done 2026-11-04. Beleg:
+      `lib/token-scope.js` normalisiert `all` zu `user`; Test
+      `test/internal/token-scope-compat.spec.js`.
+- [x] **T-014 OpenAppSec-Advanced-Modell im Native-Installer.** Done 2026-11-04.
+      Beleg: Ablage unter `/advanced-model/...`, Extraktion nach
+      `/etc/cp/conf/waap`, `--stop-agent`/`--start-agent`/`--status`; Test
+      `test/ci/openappsec-advanced-model.spec.js`. Live-Prüfung: T-017.
+- [x] **T-013 Fastly-IP-Ranges ergänzt.** Done 2026-11-04. Beleg:
+      `internal/ip_ranges.js` lädt `api.fastly.com/public-ip-list`, validiert
+      IPv4/IPv6 und behandelt Fastly-Ausfälle nicht fatal; Tests in
+      `test/internal/ip-ranges.spec.js`. Akamai ist als nicht verfügbar dokumentiert.
+- [x] **T-012 Authentik-Forward-Auth-Beispiel dokumentiert.** Done 2026-11-04.
+      Beleg: `reference/module/oauth2-proxy.md` beschreibt Provider,
+      Application, Outpost, `authentik_host`, gerenderte Nginx-Locations und den
+      Testablauf.
 - [x] **T-011 Abschlussprüfung aller geänderten Dateien.** Done 2026-11-04.
       Beleg: 52 geänderte Dateien geprüft; OpenAPI-Metadaten um sechs fehlende Tags
       und sechs DDNS-Operation-IDs ergänzt; zwei veraltete Wiki-Stellen korrigiert;

@@ -2,6 +2,30 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-04] feature | Backlog abgearbeitet: Authentik, Fastly, Advanced Model, Tokens, Tabelle
+
+- Command: „Alles bearbeiten außer das du nicht kannst“.
+- Type: feature
+- Areas affected: `backend/internal`, `backend/lib`, `backend/models`,
+  `frontend/src/pages/Users`, `scripts/install.sh`, Wiki
+- Files changed: `ip_ranges.js`, `ip-ranges.spec.js`, `token-scope.js` (neu),
+  `token-scope-compat.spec.js` (neu), `token.js`, `Users/Table.tsx`,
+  `install.sh`, `openappsec-advanced-model.spec.js` (neu), Dokumentationsseiten
+- Wiki pages updated: tasks, questions/open-questions, reference/offene-fragen,
+  reference/module/oauth2-proxy, reference/module/ip-ranges,
+  architecture/overview, current-project-state, coverage, changelog, log
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: keine
+- New decisions: Akamai wird mangels stabiler öffentlicher Liste nicht geladen
+- Open questions: fünf Backlog-Punkte geschlossen; T-017 für die Live-Prüfung
+  des Advanced-Modells ergänzt
+- Next steps: T-007 und T-017 auf einer laufenden Instanz; Routinen beim
+  nächsten Auslöser
+- Verification: 26 gezielte Tests in vier Dateien grün (nach Anpassung der
+  Fastly-Mocks); `node --check` für alle geänderten JS-Dateien; `install.sh`
+  mit `bash -n` auf LF-Kopie; Policy-YAML unverändert valide; Wiki-Werkzeug PASS.
+
 ## [2026-11-04] audit | Abschlussprüfung aller geänderten Dateien
 
 - Command: „sind wir nun komplett fertig, checke nochmals jeden file ganz genau“.

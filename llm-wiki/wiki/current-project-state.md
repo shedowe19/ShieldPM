@@ -24,15 +24,16 @@ zuletzt fertig wurde, was bewusst fehlt und welche Risiken gerade aktiv sind.
 
 ## Was zuletzt fertig wurde
 
-| Datum      | Ergebnis                                                                                                        | Quelle                                                        |
-| ---------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| 2026-11-04 | Dependabot-Alarme für `qs`, `seroval` und `minimatch` geschlossen                                               | [Log](./log.md)                                               |
-| 2026-11-04 | Wiki-Prüfung in der CI verankert; OpenAppSec-Regressionstest CRLF-robust                                        | [Log](./log.md)                                               |
-| 2026-11-04 | Internes Wiki auf `llm-wiki/` konsolidiert; `docs/wiki-intern/` nach `llm-wiki/wiki/reference/` übernommen      | [ADR](./decisions/2026-11-04-wiki-struktur.md)                |
-| 2026-10-27 | Sicherheitsupdates für Redirect-, URI- und IP-Parser-Abhängigkeiten (PR #158)                                   | Commit `2324db48`                                             |
-| 2026-10-27 | Referenzkorrektur und Entfernung der Wasm/WASI-Ausführung                                                       | [ADR](./decisions/2026-10-27-entfernung-der-wasm-laufzeit.md) |
-| 2026-10-27 | Abhängigkeiten in Frontend und Backend aktualisiert (PR #157)                                                   | Commit `afec2978`                                             |
-| 2026-10    | Host-Versionen mit Rollback, Instanzbackups, Störungszentrale, IP-Firewall, Proxy-Host-Überwachung und Diagnose | [Interne Feature-Doku](reference/features/README.md)          |
+| Datum      | Ergebnis                                                                                                           | Quelle                                                        |
+| ---------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| 2026-11-04 | Dependabot-Alarme für `qs`, `seroval` und `minimatch` geschlossen                                                  | [Log](./log.md)                                               |
+| 2026-11-04 | Backlog abgearbeitet: Authentik-Beispiel, Fastly-Ranges, Advanced-Modell, Token-Kompatibilität, Tabellen-Kommentar | [Log](./log.md)                                               |
+| 2026-11-04 | Wiki-Prüfung in der CI verankert; OpenAppSec-Regressionstest CRLF-robust                                           | [Log](./log.md)                                               |
+| 2026-11-04 | Internes Wiki auf `llm-wiki/` konsolidiert; `docs/wiki-intern/` nach `llm-wiki/wiki/reference/` übernommen         | [ADR](./decisions/2026-11-04-wiki-struktur.md)                |
+| 2026-10-27 | Sicherheitsupdates für Redirect-, URI- und IP-Parser-Abhängigkeiten (PR #158)                                      | Commit `2324db48`                                             |
+| 2026-10-27 | Referenzkorrektur und Entfernung der Wasm/WASI-Ausführung                                                          | [ADR](./decisions/2026-10-27-entfernung-der-wasm-laufzeit.md) |
+| 2026-10-27 | Abhängigkeiten in Frontend und Backend aktualisiert (PR #157)                                                      | Commit `afec2978`                                             |
+| 2026-10    | Host-Versionen mit Rollback, Instanzbackups, Störungszentrale, IP-Firewall, Proxy-Host-Überwachung und Diagnose    | [Interne Feature-Doku](reference/features/README.md)          |
 
 ## Was funktioniert
 
@@ -65,8 +66,8 @@ Testlauf dieser Sitzung:
 ## Bekannte Defekte und offene Aufgaben
 
 - Keine bestätigten Produktdefekte in dieser Sitzung.
-- Offene Arbeiten: `T-007` (blockiert, braucht laufenden OpenAppSec-Agent)
-  ([Aufgaben](./tasks.md)).
+- Offene Arbeiten: `T-007` und `T-017` (blockiert, brauchen einen laufenden
+  OpenAppSec-Agent) ([Aufgaben](./tasks.md)).
 - Offener Pull Request #160 („chore(deps): update npm dependencies“): ersetzt den
   geschlossenen #159 und aktualisiert alle direkten Abhängigkeiten. Alle 21
   Prüfungen sind grün.

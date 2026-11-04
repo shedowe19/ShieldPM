@@ -94,7 +94,7 @@ Details: [Request-Lebenszyklus](./request-lifecycle.md),
 ## Offene Fragen
 
 - Keine offenen Fragen auf dieser Seite. Der Unix-Socket ist bei nativen
-  Installationen `/run/shieldpm/shieldpm.sock` (`scripts/install.sh:1065`,
+  Installationen `/run/shieldpm/shieldpm.sock` (`scripts/install.sh:1102`,
   `rootfs/usr/local/bin/start.sh:384`).
 
 ## Verwandte Seiten

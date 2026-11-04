@@ -26,12 +26,12 @@ für Vollständigkeitsaussagen in diesem Wiki und wird bei jedem Lint nachgezoge
 | `backend/internal/`                 | code        | Backend-Fachlogik |                       53 | sampled | Nginx-Engine, Host-Module, Timer, Firewall, Auth gelesen; Rest über Modulliste |
 | `backend/routes/`                   | code        | API               |                       34 | full    | Mount-Punkte und Unter-Router vollständig erfasst                              |
 | `backend/models/`                   | code        | Daten             |       33 Dateien (31 DB) | full    | 31 Objection-Modelle mit `tableName`, dazu `token.js` und `now_helper.js`      |
-| `backend/lib/`                      | code        | Backend-Hilfen    |        58 (51 Top-Level) | sampled | access, config, error, db-migrate, Firewall-Renderer                           |
+| `backend/lib/`                      | code        | Backend-Hilfen    |        59 (52 Top-Level) | sampled | access, config, error, db-migrate, Firewall-Renderer                           |
 | `backend/lib/access/`               | config      | Auth              |                       80 | sampled | Schemadateien gezählt, Aufbau an Beispielen                                    |
 | `backend/templates/`                | config      | Nginx             |                       19 | full    | Vorlagenliste und Aufbau                                                       |
 | `backend/migrations/`               | data        | Daten             |                       91 | sampled | Kette, Namensschema, letzte Migrationen gelesen                                |
 | `backend/schema/`                   | data        | API               | 3 Top-Level / 226 gesamt | full    | OpenAPI-Aufbau; Unterordner nur gezählt                                        |
-| `backend/test/`                     | test        | Tests             |    287 (279 Testdateien) | sampled | Verzeichnisse, Beispiele und CI-Verträge                                       |
+| `backend/test/`                     | test        | Tests             |    289 (281 Testdateien) | sampled | Verzeichnisse, Beispiele und CI-Verträge                                       |
 | `backend/` (Wurzel)                 | code/config | Backend-Start     |                       20 | full    | app, index, db, config, setup, Start                                           |
 | `frontend/src/`                     | code        | Frontend          |                      799 | sampled | Router, Permissions, API-Struktur, package.json                                |
 | `frontend/e2e/`                     | test        | Tests             |                        2 | full    | Smoke-Tests benannt                                                            |

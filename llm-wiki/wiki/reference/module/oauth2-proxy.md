@@ -52,6 +52,15 @@ In `frontend/src/modals/AccessListModal.tsx` als Auswahl-Optionen verdrahtet, in
 
 Authentik kann entweder als eigener Auth-Typ `AUTHENTIK_PROXY` (Feld `authentik_host`, Forward-Auth-Modus) **oder** als generischer OIDC-Provider (`oidc`) im verwalteten oauth2-proxy verwendet werden. Die OAuth2-Proxy-Auswahl enthält keinen separaten Providerwert `authentik`.
 
+### Beispiel: Authentik als Forward Auth
+
+1. In Authentik einen **Proxy-Provider** (Modus *Forward auth (single application)*), eine **Application** und einen **Outpost** anlegen und die Application dem Outpost zuweisen.
+2. In ShieldPM unter **Access Lists → SSO** den Auth-Typ **Authentik Proxy (Forward Auth)** wählen und als **Authentik Host URL** den Ursprung der Authentik-Instanz eintragen, z. B. `https://auth.example.com` (ohne Pfad und ohne abschließenden Slash).
+3. Die Access List dem Proxy-Host zuweisen und speichern. ShieldPM rendert dann `auth_request /outpost.goauthentik.io/auth/nginx;`, `proxy_pass <authentik_host>/outpost.goauthentik.io;` und die Sign-in-Location `@goauthentik_proxy_signin` (`backend/templates/_proxy_logic.conf:223-236,412-427`).
+4. Testen: Eine anonyme Anfrage wird zum Authentik-Login umgeleitet; nach der Anmeldung erreichen die `X-Authentik-*`-Header den Upstream.
+
+ShieldPM speichert nur die Host-URL; Client-ID und Secret bleiben in Authentik. Der generische OIDC-Provider (`oidc`) bleibt die Alternative, wenn Authentik als normaler OIDC-IdP eingebunden werden soll. Felder und Validierung: `meta.authentik_host` in `backend/internal/access-list.js:67-75`, UI in `frontend/src/modals/AccessListSsoTab.tsx`.
+
 ## Abhängigkeiten
 
 - `internal/nginx.js` — Reload nach Konfigurationsänderung

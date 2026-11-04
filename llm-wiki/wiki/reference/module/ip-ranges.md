@@ -1,24 +1,26 @@
-# IP-Ranges (Cloudflare-IPs)
+# IP-Ranges (Cloudflare und Fastly)
 
 ## Zweck
 
-Lädt bei Aktivierung regelmäßig die offiziellen [Cloudflare-IP-Ranges](https://www.cloudflare.com/ips/) und stellt sie Nginx als `set_real_ip_from`-Liste zur Verfügung. **Standardmäßig ist der Abruf deaktiviert** (`SKIP_IP_RANGES=true`); für den automatischen Abruf `SKIP_IP_RANGES=false` setzen.
+Lädt bei Aktivierung regelmäßig die offiziellen [Cloudflare-IP-Ranges](https://www.cloudflare.com/ips/) und [Fastly-IP-Ranges](https://api.fastly.com/public-ip-list) und stellt sie Nginx als `set_real_ip_from`-Liste zur Verfügung. **Standardmäßig ist der Abruf deaktiviert** (`SKIP_IP_RANGES=true`); für den automatischen Abruf `SKIP_IP_RANGES=false` setzen.
 
 ## Kontext
 
-Wenn ShieldPM hinter Cloudflare betrieben wird (Proxy-Modus), kommen Anfragen aus Cloudflare-IPs. Ohne `real_ip`-Konfiguration würden alle Logs/Filter Cloudflare statt des echten Clients sehen.
+Wenn ShieldPM hinter Cloudflare oder Fastly betrieben wird (Proxy-Modus), kommen Anfragen aus deren IPs. Ohne `real_ip`-Konfiguration würden alle Logs/Filter die CDN-IP statt des echten Clients sehen.
 
 ## Wichtige Dateien
 
-- `backend/internal/ip_ranges.js` (~116 Zeilen) — Lädt und cached Cloudflare-IP-Listen
-- `backend/templates/ip_ranges.conf` — Generiertes Nginx-Snippet mit `set_real_ip_from`-Direktiven
+- `backend/internal/ip_ranges.js` (~130 Zeilen) - Lädt und cached die CDN-IP-Listen
+- `backend/templates/ip_ranges.conf` - Generiertes Nginx-Snippet mit `set_real_ip_from`-Direktiven
 - Aufruf: typischerweise im Backend-Boot-Prozess oder per Maintenance-Task
 
 ## Verhalten
 
-1. Holt die aktuellen IPv4-Liste (`https://www.cloudflare.com/ips-v4`) und IPv6-Liste (`https://www.cloudflare.com/ips-v6`) per HTTPS, optional über `proxy-agent`.
-2. Prüft die IPv4-/IPv6-CIDRs vollständig mit `ipaddr.js` und rendert sie via Liquid in `backend/templates/ip_ranges.conf`.
+1. Holt die IPv4-/IPv6-Listen von Cloudflare (`ips-v4`, `ips-v6`) und die JSON-Liste von Fastly (`api.fastly.com/public-ip-list`, Felder `addresses` und `ipv6_addresses`) per HTTPS, optional über `proxy-agent`.
+2. Prüft alle CIDRs vollständig mit `ipaddr.js` und rendert sie via Liquid in `backend/templates/ip_ranges.conf`.
 3. Schreibt das Ergebnis nach `/data/nginx/ip_ranges.conf` und triggert einen Nginx-Reload.
+
+Fastly ist optional: Schlägt der Abruf oder die Validierung fehl, bleiben die Cloudflare-Ranges erhalten und es wird nur eine Warnung geloggt. Cloudflare-Fehler brechen den Lauf wie bisher ab.
 
 ## Konfiguration
 
@@ -26,19 +28,23 @@ Wenn ShieldPM hinter Cloudflare betrieben wird (Proxy-Modus), kommen Anfragen au
 - **Aktivierung**: `backend/index.js` startet Timer und ersten Abruf nur bei `SKIP_IP_RANGES=false`; die Standardvorgabe in `backend/validate-env.cjs` ist `true`.
 - **Manueller Trigger**: AI-Tool `renew_ip_ranges` (siehe `backend/internal/ai/tools.js`) ruft `internalIpRanges.fetch()` direkt auf.
 
+## Weitere CDNs
+
+Akamai wird nicht automatisch geladen: Eine stabile, öffentlich maschinenlesbare IP-Liste gibt es nicht; Site-Shield- und Account-Daten sind erforderlich. Weitere Quellen müssen dieselbe Validierung durchlaufen und dürfen die Cloudflare-Listen nicht blockieren.
+
 ## Abhängigkeiten
 
-- `internal/nginx.js` — Reload
-- `proxy-agent` — Nutzung des System-Proxies (`HTTP_PROXY`/`HTTPS_PROXY`)
-- HTTP(S)-Zugriff zu `cloudflare.com` (Outbound erforderlich)
+- `internal/nginx.js` - Reload
+- `proxy-agent` - Nutzung des System-Proxies (`HTTP_PROXY`/`HTTPS_PROXY`)
+- HTTP(S)-Zugriff zu `cloudflare.com` und `api.fastly.com` (Outbound erforderlich)
 
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
-## Validierung der Cloudflare-Listen
+## Validierung der CDN-Listen
 
-IPv4- und IPv6-CIDRs werden mit `ipaddr.js` vollständig geprüft. Leere Listen, HTML-Fehlerantworten, falsche Adressfamilien und ungültige Präfixe ersetzen die bestehende Konfiguration nicht. HTTP-Fehler und Zeitüberschreitungen werden als Fehler behandelt; der nächste planmäßige Versuch bleibt möglich. Damit werden insbesondere die zuvor durch den fehlerhaften IPv6-Regulärausdruck verlorenen Netze übernommen.
+IPv4- und IPv6-CIDRs werden mit `ipaddr.js` vollständig geprüft. Leere Listen, HTML-Fehlerantworten, falsche Adressfamilien und ungültige Präfixe ersetzen die bestehende Konfiguration nicht. Bei Fastly wird zusätzlich das JSON-Schema (`addresses`, `ipv6_addresses`) geprüft. HTTP-Fehler und Zeitüberschreitungen werden als Fehler behandelt; der nächste planmäßige Versuch bleibt möglich. Damit werden insbesondere die zuvor durch den fehlerhaften IPv6-Regulärausdruck verlorenen Netze übernommen.
 
 ## Atomarer Dateiaustausch
 

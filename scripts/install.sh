@@ -1052,11 +1052,24 @@ APPSEC_EOF
     echo ""
 
     if [ -n "$OAS_MODEL_PATH" ] && [ -f "$OAS_MODEL_PATH" ]; then
-        mkdir -p /etc/cp/conf
-        cp "$OAS_MODEL_PATH" /etc/cp/conf/open-appsec-advanced-model.tgz
-        echo "  > Advanced Model installed at /etc/cp/conf/open-appsec-advanced-model.tgz"
+        mkdir -p /advanced-model /etc/cp/conf/waap
+        cp "$OAS_MODEL_PATH" /advanced-model/open-appsec-advanced-model.tgz
+        echo "  > Advanced Model stored at /advanced-model/open-appsec-advanced-model.tgz"
+        if command -v open-appsec-ctl >/dev/null 2>&1; then
+            open-appsec-ctl --stop-agent >/dev/null 2>&1 || true
+            if tar -xzf /advanced-model/open-appsec-advanced-model.tgz -C /etc/cp/conf/waap; then
+                echo "  > Advanced Model extracted to /etc/cp/conf/waap"
+            else
+                echo "  > WARNING: could not extract the Advanced Model" >&2
+            fi
+            open-appsec-ctl --start-agent >/dev/null 2>&1 || echo "  > WARNING: could not start the OpenAppSec agent" >&2
+            open-appsec-ctl --status 2>/dev/null | grep -i "model" || true
+        else
+            echo "  > open-appsec-ctl not found; extract the model after the agent starts:"
+            echo "    tar -xzf /advanced-model/open-appsec-advanced-model.tgz -C /etc/cp/conf/waap"
+        fi
     elif [ -n "$OAS_MODEL_PATH" ]; then
-        echo "  > File not found: $OAS_MODEL_PATH — skipping Advanced Model."
+        echo "  > File not found: $OAS_MODEL_PATH - skipping Advanced Model."
     fi
 
     # Enable the Nginx module in .env

@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken";
 import _ from "lodash";
 import { getPrivateKey, getPublicKey } from "../lib/config.js";
 import errs from "../lib/error.js";
+import normalizeScope from "../lib/token-scope.js";
 import { global as logger } from "../logger.js";
 
 const ALGO = "RS256";
@@ -77,14 +78,9 @@ export default () => {
 							} else {
 								tokenData = result;
 
-								// Hack: some tokens out in the wild have a scope of 'all' instead of 'user'.
-								// For 30 days at least, we need to replace 'all' with user.
-								if (
-									typeof tokenData.scope !== "undefined" &&
-									_.indexOf(tokenData.scope, "all") !== -1
-								) {
-									tokenData.scope = ["user"];
-								}
+								// Backward compatibility: tokens issued by old NPMplus versions
+								// use the scope "all" instead of "user".
+								tokenData.scope = normalizeScope(tokenData.scope);
 
 								resolve(tokenData);
 							}

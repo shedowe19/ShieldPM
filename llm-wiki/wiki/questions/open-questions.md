@@ -15,9 +15,6 @@ abschließt; Detailfragen stehen auf der verlinkten Seite.
 | Frage                                                                                                                       | Prüfstelle                                                                         | Was sie schließt                                                    |
 | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | OpenAppSec-Policy des nativen Installers gegen den laufenden Agent prüfen ([OpenAppSec](../reference/module/openappsec.md)) | `open-appsec-ctl --apply-policy` auf einer laufenden Instanz                       | **Aufgabe: T-007** (Policy ist v1beta1-validiert, Live-Beleg fehlt) |
-| Advanced-Modell im Native-/LXC-Pfad ist nicht nachgewiesen ([OpenAppSec](../reference/module/openappsec.md))                | `/advanced-model`, Agent-Neustart                                                  | Modell lädt im Agent                                                |
-| Kein End-to-End-Beispiel für Authentik (`AUTHENTIK_PROXY`) ([OAuth2-Proxy](../reference/module/oauth2-proxy.md))            | `frontend/src/modals/AccessListSsoTab.tsx`, `AccessListModalFormValues.ts`         | lauffähiges Beispiel dokumentiert                                   |
-| Weitere CDN-Quellen für IP-Ranges ([IP-Ranges](../reference/module/ip-ranges.md))                                           | `internal/ip_ranges.js`                                                            | Quelle ergänzt oder verworfen                                       |
 | Wird `DATA_PATH` für native Installationen unterstützt?                                                                     | Backend nutzt es teils, Nginx-Vhost-/TLS-Pfade sind fest, Installer setzt es nicht | Policy festlegen oder ausschließen                                  |
 | Soll die Berechtigungsprüfung in Routen und Diensten vereinheitlicht werden?                                                | `backend/routes/**`, `backend/lib/access.js`                                       | eine Schicht als verbindlich festlegen                              |
 | Sollen alle vier Hosttypen Revisionen und Rollback nutzen?                                                                  | `internal/host-revisions.js`, Host-Dienste (derzeit nur Proxy-Hosts)               | Umfang festlegen                                                    |
@@ -27,11 +24,15 @@ abschließt; Detailfragen stehen auf der verlinkten Seite.
 
 ## Beantwortet
 
-| Frage                                                      | Antwort                                       | Beleg                                     |
-| ---------------------------------------------------------- | --------------------------------------------- | ----------------------------------------- |
-| Ist der Unix-Socket bei nativen Installationen derselbe?   | Ja, `/run/shieldpm/shieldpm.sock`             | `scripts/install.sh:1065`, `start.sh:384` |
-| Läuft GeoIP vor der Env-Validierung, mit Cache-Fallback?   | Ja; ohne vollständigen Cache stoppt der Start | `envs.sh:40`, `update-geoip.py:436-458`   |
-| Deckt Swagger Analytics, OIDC, GitOps und Upload-Relay ab? | Ja, seit 2026-11-04                           | `backend/schema/swagger.json`, T-004      |
+| Frage                                                        | Antwort                                                                                                      | Beleg                                                                          |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| Ist der Unix-Socket bei nativen Installationen derselbe?     | Ja, `/run/shieldpm/shieldpm.sock`                                                                            | `scripts/install.sh:1102`, `start.sh:384`                                      |
+| Ist das OpenAppSec-Advanced-Modell im Native-Pfad umgesetzt? | Ja; Ablage unter `/advanced-model`, Extraktion nach `/etc/cp/conf/waap`, Agent-Neustart. Live-Prüfung: T-017 | `scripts/install.sh`, `backend/test/ci/openappsec-advanced-model.spec.js`      |
+| Gibt es ein Authentik-End-to-End-Beispiel?                   | Ja, Forward-Auth-Ablauf dokumentiert                                                                         | [OAuth2-Proxy](../reference/module/oauth2-proxy.md)                            |
+| Welche CDN-Quellen deckt IP-Ranges ab?                       | Cloudflare und Fastly; Akamai hat keine stabile öffentliche Liste                                            | `backend/internal/ip_ranges.js`, [IP-Ranges](../reference/module/ip-ranges.md) |
+| Ist die Legacy-Scope-Behandlung `all` noch nötig?            | Ja, für alte NPMplus-Tokens; als Kompatibilitätsfunktion gekapselt und getestet                              | `backend/lib/token-scope.js`, `token-scope-compat.spec.js`                     |
+| Läuft GeoIP vor der Env-Validierung, mit Cache-Fallback?     | Ja; ohne vollständigen Cache stoppt der Start                                                                | `envs.sh:40`, `update-geoip.py:436-458`                                        |
+| Deckt Swagger Analytics, OIDC, GitOps und Upload-Relay ab?   | Ja, seit 2026-11-04                                                                                          | `backend/schema/swagger.json`, T-004                                           |
 
 ## Verwandte Seiten
 
