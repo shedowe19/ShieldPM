@@ -30,8 +30,8 @@ für Vollständigkeitsaussagen in diesem Wiki und wird bei jedem Lint nachgezoge
 | `backend/lib/access/`               | config      | Auth              |                       80 | sampled | Schemadateien gezählt, Aufbau an Beispielen                                    |
 | `backend/templates/`                | config      | Nginx             |                       19 | full    | Vorlagenliste und Aufbau                                                       |
 | `backend/migrations/`               | data        | Daten             |                       91 | sampled | Kette, Namensschema, letzte Migrationen gelesen                                |
-| `backend/schema/`                   | data        | API               | 3 Top-Level / 204 gesamt | full    | OpenAPI-Aufbau; Unterordner nur gezählt                                        |
-| `backend/test/`                     | test        | Tests             |    286 (278 Testdateien) | sampled | Verzeichnisse, Beispiele und CI-Verträge                                       |
+| `backend/schema/`                   | data        | API               | 3 Top-Level / 226 gesamt | full    | OpenAPI-Aufbau; Unterordner nur gezählt                                        |
+| `backend/test/`                     | test        | Tests             |    287 (279 Testdateien) | sampled | Verzeichnisse, Beispiele und CI-Verträge                                       |
 | `backend/` (Wurzel)                 | code/config | Backend-Start     |                       20 | full    | app, index, db, config, setup, Start                                           |
 | `frontend/src/`                     | code        | Frontend          |                      799 | sampled | Router, Permissions, API-Struktur, package.json                                |
 | `frontend/e2e/`                     | test        | Tests             |                        2 | full    | Smoke-Tests benannt                                                            |
@@ -74,6 +74,7 @@ folgenden Zeilen bilden die Prüftabelle der Wiki-Vorgabe ab.
 | Public-Redaktion       | Werkzeug: IPv4/IPv6, E-Mail, interne Hostnamen, Build-Pfade über alle Textassets                                                                                         | PASS                          |
 | Raw-Manifest           | manuell: jede Datei unter `raw/` steht in der Tabelle                                                                                                                    | PASS                          |
 | Quellcode unberührt    | `git status --short` gegen die erwartete Pfadliste                                                                                                                       | PASS (Ausnahmen dokumentiert) |
+| CI-Erzwingung          | `.github/workflows/lint-and-format.yml` ruft `node llm-wiki/tools/wiki-check.mjs` im Job `quality` auf                                                                   | PASS                          |
 | Scratch-Verzeichnis    | `llm-wiki/.init/` existiert nicht                                                                                                                                        | PASS                          |
 
 ## Was daraus folgt

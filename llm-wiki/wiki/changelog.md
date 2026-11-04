@@ -5,6 +5,9 @@ Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
 ## 2026-11-04
 
+- Wiki-Prüfung läuft jetzt in der CI (`.github/workflows/lint-and-format.yml`);
+  der OpenAppSec-Regressionstest normalisiert Zeilenenden und läuft damit auch
+  auf Windows-Checkouts. ([Log](./log.md))
 - OpenAppSec-Policy gegen das veröffentlichte v1beta1-Schema validiert und mit
   einem Regressionstest abgesichert; der Live-Beleg bleibt als blockierte Aufgabe
   T-007. ([Log](./log.md))

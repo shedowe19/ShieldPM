@@ -38,12 +38,16 @@ aus dem separaten Repository `shieldpm-nginx` (`GEMINI.md:99-108`).
 | `caddy.yml`, `caddy-fmt.yml` | Caddy-Image und Formatprüfung                      |
 | `codeql.yml`                 | statische Sicherheitsanalyse                       |
 | `json.yml`                   | JSON-Validierung                                   |
-| `lint-and-format.yml`        | Biome/Lint/Format                                  |
+| `lint-and-format.yml`        | Biome/Lint/Format, Wiki-Prüfung, Typprüfung, Tests |
 | `npm-updates.yml`            | Abhängigkeitsaktualisierung                        |
 | `shellcheck.yml`             | Shell-Skripte                                      |
 | `spellcheck.yml`             | Rechtschreibung                                    |
 | `tscanner.yml`               | projekt eigene AST-Regeln, read-only               |
 | `wiki-sync.yml`              | `docs/wiki/**` ins GitHub-Wiki spiegeln            |
+
+Der Job `quality` prüft zusätzlich das interne Wiki mit
+`node llm-wiki/tools/wiki-check.mjs` (Links, Index, Struktur, Redaktion und
+Secret-Muster). Der Schritt braucht keine installierten Abhängigkeiten.
 
 Der Docker-Workflow baut bei Änderungen an `backend/**`, `frontend/**`,
 `rootfs/**`, `Dockerfile`, `.version` und weiteren Pfaden

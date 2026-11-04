@@ -51,6 +51,9 @@ jobs:
       - name: Scan added diff lines for recognizable token formats
         run: node backend/scripts/ci/scan-added-diff-secrets.js "${{ steps.base.outputs.sha }}"
 
+      - name: Check internal LLM wiki
+        run: node llm-wiki/tools/wiki-check.mjs
+
       - name: Install backend dependencies
         run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/backend" install --frozen-lockfile
 

@@ -16,15 +16,17 @@ zuletzt fertig wurde, was bewusst fehlt und welche Risiken gerade aktiv sind.
 
 ## Stand
 
-- Branch `develop`, letzter Commit `9c434181` (Merge PR #158, 2026-10-27).
+- Branch `develop`, Arbeitsbaum sauber und synchron mit `origin/develop`.
 - Letzte Version `4.4.1` in `.version`, `backend/package.json` und
   `frontend/package.json`.
-- Stand committet: `443d764f` („docs(wiki): replace internal wiki with llm-wiki“).
+- Wiki versioniert seit `443d764f`; die Nacharbeiten dieser Sitzung betreffen
+  OpenAPI, OpenAppSec und die Wiki-Prüfung in CI.
 
 ## Was zuletzt fertig wurde
 
 | Datum      | Ergebnis                                                                                                        | Quelle                                                        |
 | ---------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| 2026-11-04 | Wiki-Prüfung in der CI verankert; OpenAppSec-Regressionstest CRLF-robust                                        | [Log](./log.md)                                               |
 | 2026-11-04 | Internes Wiki auf `llm-wiki/` konsolidiert; `docs/wiki-intern/` nach `llm-wiki/wiki/reference/` übernommen      | [ADR](./decisions/2026-11-04-wiki-struktur.md)                |
 | 2026-10-27 | Sicherheitsupdates für Redirect-, URI- und IP-Parser-Abhängigkeiten (PR #158)                                   | Commit `2324db48`                                             |
 | 2026-10-27 | Referenzkorrektur und Entfernung der Wasm/WASI-Ausführung                                                       | [ADR](./decisions/2026-10-27-entfernung-der-wasm-laufzeit.md) |
@@ -53,7 +55,7 @@ Testlauf dieser Sitzung:
 ## Nächste Schritte
 
 - **Nächster Lint:** bei etwa 20 neuen Seiten oder vor einem Release; letzter
-  Durchlauf 2026-11-04 ([Aufgaben](./tasks.md), `M-001` bis `M-004`).
+  Durchlauf 2026-11-04 ([Aufgaben](./tasks.md), Routinen `M-001` bis `M-003`).
 - Offene Punkte aus der internen Doku abarbeiten:
   [offene Fragen](./questions/open-questions.md).
 

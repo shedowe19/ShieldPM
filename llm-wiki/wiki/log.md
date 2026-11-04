@@ -2,6 +2,29 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-04] chore | Wiki-Prüfung in CI und portabler OpenAppSec-Test
+
+- Command: „nochmals komplett checken ob noch was gemacht werden muss“.
+- Type: chore
+- Areas affected: `.github/workflows`, `backend/test/ci`, Wiki (Coverage,
+  Infrastruktur, Zustand, Aufgaben)
+- Files changed: `lint-and-format.yml`, `openappsec-local-policy.spec.js`,
+  `coverage.md`, `infrastructure/build-and-release.md`,
+  `current-project-state.md`, `tasks.md`, `changelog.md`, `log.md`,
+  `llm-wiki/README.md`
+- Wiki pages updated: coverage, infrastructure/build-and-release,
+  current-project-state, tasks, changelog, log
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: keine (gefundene Lücke direkt geschlossen)
+- New decisions: keine
+- Open questions: unverändert; T-007 bleibt extern blockiert
+- Next steps: T-007 auf einer laufenden Instanz; Routinen beim nächsten Auslöser
+- Verification: `node llm-wiki/tools/wiki-check.mjs` → PASS; Regex-Match nach
+  CRLF-Normalisierung geprüft (vorher auf Windows-Checkout falsch); Workflow-YAML
+  mit PyYAML geparst; `node --check` für den Test; Prettier `--check` ohne
+  Abweichung.
+
 ## [2026-11-04] verification | OpenAppSec-Policy gegen v1beta1 validiert
 
 - Command: „Komplett machen“ (Rest abschließen).

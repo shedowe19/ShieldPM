@@ -3,7 +3,9 @@ import { fileURLToPath } from "node:url";
 import { load } from "js-yaml";
 import { describe, expect, it } from "vitest";
 
-const source = fs.readFileSync(fileURLToPath(new URL("../../../scripts/install.sh", import.meta.url)), "utf8");
+const source = fs
+	.readFileSync(fileURLToPath(new URL("../../../scripts/install.sh", import.meta.url)), "utf8")
+	.replace(/\r\n?/g, "\n");
 const block = source.match(
 	/cat > "\$APPSEC_CONF_DIR\/local_policy\.yaml" << 'APPSEC_EOF'\n([\s\S]*?)\nAPPSEC_EOF/,
 );

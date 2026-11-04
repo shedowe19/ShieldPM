@@ -84,7 +84,8 @@ Läuft, wenn das Wiki um etwa 20 Seiten wächst oder vor einem Release:
 
 Befunde als Aufgaben ablegen. Den Lint-Durchlauf in `log.md` festhalten.
 Der mechanische Teil läuft über `node llm-wiki/tools/wiki-check.mjs` (Links,
-Index, Struktur, Secrets, Redaktion).
+Index, Struktur, Secrets, Redaktion). Derselbe Befehl läuft in CI im Job
+`quality` (`.github/workflows/lint-and-format.yml`).
 
 ## Regeln
 
