@@ -5,6 +5,9 @@ Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
 ## 2026-11-04
 
+- OpenAppSec-Policy gegen das veröffentlichte v1beta1-Schema validiert und mit
+  einem Regressionstest abgesichert; der Live-Beleg bleibt als blockierte Aufgabe
+  T-007. ([Log](./log.md))
 - T-004 erledigt: OpenAPI kennt jetzt Analytics, OIDC, GitOps und Upload-Relay
   (19 Pfade, 22 Operationen); `swagger.json` bleibt dereferenzierbar.
 - T-005 vorbereitet: Die Installer-Policy entspricht dem OpenAppSec-v1beta1-Schema

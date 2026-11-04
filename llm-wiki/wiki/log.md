@@ -2,6 +2,25 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-04] verification | OpenAppSec-Policy gegen v1beta1 validiert
+
+- Command: „Komplett machen“ (Rest abschließen).
+- Type: verification
+- Areas affected: `scripts/install.sh`, OpenAppSec-Policy, Aufgaben-Board
+- Files changed: `backend/test/ci/openappsec-local-policy.spec.js` (neu),
+  `tasks.md`, `current-project-state`, `questions`, `changelog`, `log`
+- Wiki pages updated: tasks, current-project-state, questions, changelog, log
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: keine
+- New decisions: keine
+- Open questions: OpenAppSec-Zeile auf T-007 umgestellt
+- Next steps: T-007 auf einer laufenden Instanz; M-001–M-003 beim nächsten Auslöser
+- Verification: Policy-YAML gegen das veröffentlichte v1beta1-Schema mit
+  `jsonschema` validiert („POLICY VALID“); Referenzen
+  `shieldpm-default-practice`/`shieldpm-log-trigger` vorhanden; Regressionstest
+  angelegt und `node --check` OK; `install.sh` mit `bash -n` auf LF-Kopie geprüft.
+
 ## [2026-11-04] feature | T-004, T-005-Vorbereitung und M-001–M-004
 
 - Command: „Mach den rest komplett fertig“.

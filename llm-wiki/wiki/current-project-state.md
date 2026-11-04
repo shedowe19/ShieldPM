@@ -60,7 +60,8 @@ Testlauf dieser Sitzung:
 ## Bekannte Defekte und offene Aufgaben
 
 - Keine bestätigten Produktdefekte in dieser Sitzung.
-- Offene Arbeiten: `T-005` ([Aufgaben](./tasks.md)).
+- Offene Arbeiten: `T-007` (blockiert, braucht laufenden OpenAppSec-Agent)
+  ([Aufgaben](./tasks.md)).
 
 ## Aktive Risiken
 
