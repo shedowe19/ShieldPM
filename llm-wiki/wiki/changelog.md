@@ -5,6 +5,8 @@ Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
 ## 2026-11-04
 
+- Abhängigkeits-PR #159 geschlossen; der neue PR #160 aktualisiert alle direkten
+  Abhängigkeiten und ist vollständig grün. ([Log](./log.md))
 - Dependabot-Alarme geschlossen: `qs` auf 6.16.1 (Resolution), `seroval` im
   Frontend-Lock auf 1.6.11 und `minimatch` auf 11.0.4 gehoben; Lockfiles und
   Schutztests bestehen. ([Log](./log.md))

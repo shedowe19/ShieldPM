@@ -2,6 +2,24 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-04] chore | Abhängigkeits-PR #159 geschlossen, #160 erstellt
+
+- Command: „mach den alten zu und erstell ein neuen“.
+- Type: chore
+- Areas affected: GitHub-PR `#159`/`#160`, Workflow `npm-updates.yml`
+- Files changed: keine im Repository; PR #160 ändert Abhängigkeiten,
+  Lockfiles und `THIRD-PARTY-NOTICES.md`
+- Wiki pages updated: current-project-state, log
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: keine
+- New decisions: keine
+- Open questions: unverändert (T-007)
+- Next steps: #160 reviewen und mergen; danach läuft der tägliche Updater weiter
+- Verification: PR #159 mit Begründung geschlossen und Branch gelöscht;
+  Workflow-Lauf `41904085825` erfolgreich, PR #160 aus `update-all-deps`
+  erstellt; alle 21 Prüfungen sind grün.
+
 ## [2026-11-04] security | Dependabot-Alarm minimatch geschlossen
 
 - Command: Fortsetzung des Internet-Audits.

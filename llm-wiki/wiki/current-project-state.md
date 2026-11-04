@@ -67,9 +67,9 @@ Testlauf dieser Sitzung:
 - Keine bestätigten Produktdefekte in dieser Sitzung.
 - Offene Arbeiten: `T-007` (blockiert, braucht laufenden OpenAppSec-Agent)
   ([Aufgaben](./tasks.md)).
-- Offener Pull Request #159 („chore(deps): update npm dependencies“): alle
-  Prüfungen grün, mergebar; blockiert bis zum Merge den täglichen
-  Abhängigkeits-Updater.
+- Offener Pull Request #160 („chore(deps): update npm dependencies“): ersetzt den
+  geschlossenen #159 und aktualisiert alle direkten Abhängigkeiten. Alle 21
+  Prüfungen sind grün.
 
 ## Aktive Risiken
 
