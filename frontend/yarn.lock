@@ -1373,14 +1373,14 @@
     solid-transition-group "^0.2.3"
     superjson "^2.2.6"
 
-"@tanstack/react-query-devtools@^5.105.3":
+"@tanstack/react-query-devtools@^5.106.0":
   version "5.106.0"
   resolved "https://registry.yarnpkg.com/@tanstack/react-query-devtools/-/react-query-devtools-5.106.0.tgz#f1c8993b840069b8183c0ca3df44ceea046ee749"
   integrity sha512-LtdiTUIBeUOvsI8FHao0iTUcic7AagddcdMmqr+wifsuzTGHd3tE2/xa89qZjLLK0/QbjjgCEWCcV3L4Yon6JQ==
   dependencies:
     "@tanstack/query-devtools" "5.106.0"
 
-"@tanstack/react-query@^5.105.3":
+"@tanstack/react-query@^5.106.0":
   version "5.106.0"
   resolved "https://registry.yarnpkg.com/@tanstack/react-query/-/react-query-5.106.0.tgz#49d88ee3b09143ce1cfe381e69ecc83cd33ea9c1"
   integrity sha512-OuP/ST9dEMBwHhisE5A/bBSWMhMmB/xKPfeZ2U0Wy8W/txb9QiGd7iXhxJPQ7jGbfcKlV13sJUHip9Nki54yyg==
