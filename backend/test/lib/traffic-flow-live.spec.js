@@ -192,6 +192,83 @@ describe("native live flow measured rates", () => {
 		);
 		expect(snapshot(unknown).clients[0].current_bytes_per_second).toBeNull();
 	});
+	it("keeps mixed HTTP1/HTTP3 prefix totals unknown with stable measured accounting components", () => {
+		const buffer = new LiveFlowBuffer();
+		pair(buffer);
+		const quality = {
+			client_sent_semantics: "quic_stream_unique_acked",
+			client_received_semantics: "quic_stream_consumed",
+		};
+		buffer.ingest({ ...sample({ request: "h3", protocol: "HTTP/3.0" }), ...quality }, now);
+		buffer.ingest(
+			{
+				...sample({
+					request: "h3",
+					protocol: "HTTP/3.0",
+					time: now / 1000 + 1,
+					client_sent: 64,
+					upstream_received: 64,
+				}),
+				...quality,
+			},
+			now + 1000,
+		);
+		const result = snapshot(buffer);
+		expect(result.client_rate).toBeNull();
+		expect(result.client_mixed_semantics).toBe(true);
+		expect(result.clients[0].current_bytes_per_second).toBeNull();
+		expect(result.clients[0].rate_components).toHaveLength(2);
+		expect(result.clients[0].rate_components.map((component) => component.id)).toEqual([
+			"http_request_received:http_transport_accepted",
+			"quic_stream_consumed:quic_stream_unique_acked",
+		]);
+		expect(result.clients[0].rate_components.map((component) => component.download_bytes_per_second)).toEqual([
+			65536, 64,
+		]);
+		expect(result.targets[0].rate.download_semantics).toEqual(["upstream_transport_received"]);
+	});
+	it("accepts qualified HTTP/3 acknowledged counters but rejects missing quality and incomplete final ACK coverage", () => {
+		const buffer = new LiveFlowBuffer();
+		const quality = {
+			client_sent_semantics: "quic_stream_unique_acked",
+			client_received_semantics: "quic_stream_consumed",
+		};
+		buffer.ingest({ ...sample({ protocol: "HTTP/3.0" }), ...quality }, now);
+		buffer.ingest(
+			{
+				...sample({ protocol: "HTTP/3.0", time: now / 1000 + 1, client_sent: 32768, client_received: 4096 }),
+				...quality,
+				client_queued: 999999999,
+			},
+			now + 1000,
+		);
+		expect(snapshot(buffer).client_rate).toMatchObject({
+			download_bytes_per_second: 32768,
+			upload_bytes_per_second: 4096,
+			download_semantics: ["quic_stream_unique_acked"],
+		});
+		buffer.ingest(
+			{
+				...sample({ protocol: "HTTP/3.0", time: now / 1000 + 2, client_sent: 65536, final: true }),
+				...quality,
+				final_complete: false,
+			},
+			now + 2000,
+		);
+		expect(snapshot(buffer, now + 2000).client_rate).toBeNull();
+		expect(snapshot(buffer, now + 2000).clients[0].unknown_reason).toBe("incomplete_final_acknowledgement");
+		const complete = new LiveFlowBuffer();
+		complete.ingest({ ...sample({ protocol: "HTTP/3.0" }), ...quality }, now);
+		complete.ingest(
+			{
+				...sample({ protocol: "HTTP/3.0", time: now / 1000 + 1, client_sent: 32768, final: true }),
+				...quality,
+				final_complete: true,
+			},
+			now + 1000,
+		);
+		expect(snapshot(complete).client_rate.download_bytes_per_second).toBe(32768);
+	});
 	it("never leaks foreign host source freshness or includes foreign rates in authorized totals", () => {
 		const buffer = new LiveFlowBuffer();
 		buffer.ingest(sample({ host: 2, request: "foreign" }), now);

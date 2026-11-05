@@ -96,8 +96,7 @@ Ohne Modul schlägt Nginx-Validierung fehl; ohne frische unterstützte Samples b
 `current_rates: false`. `lib/traffic-flow-live.js` berechnet vier Richtungsraten
 anhand monotoner Zähler und tatsächlicher Zeitdifferenzen. Die Semantik sind
 HTTP-Transportbytes einschließlich Headern, bei TLS akzeptierte Klartextbytes;
-keine Wire-Bytes, TCP-Bestätigungen oder Zustellgarantien. Unterstützt sind HTTP/1-Proxyverkehr, HTTP/2-Streams und WebSocket-Upgrades; HTTP/3 und andere Upstream-Protokolle bleiben
-unbekannt. Resets, fehlende Baselines und Lücken über 3,5 Sekunden ebenfalls.
+keine Wire-Bytes, TCP-Bestätigungen oder Zustellgarantien. Unterstützt sind HTTP/1-Proxyverkehr, HTTP/2-Streams und WebSocket-Upgrades; HTTP/3 wird mit expliziter Richtungsqualität unterstützt; andere Upstream-Protokolle bleiben unbekannt. Resets, fehlende Baselines und Lücken über 3,5 Sekunden ebenfalls.
 
 Die Oberfläche pollt bei belegter nativer Quelle sekündlich, sonst alle fünf
 Sekunden. Pause/unsichtbarer Tab/Offline stoppen Polling. Die feste logarithmische
@@ -115,8 +114,7 @@ Die ursprünglichen Access-Log-/Lua-Prüfungen bleiben Belege ungeeigneter Quell
 `scripts/benchmarks/traffic-flow-native-measurement.mjs` prüft dagegen mit echtem
 Nginx-Modul und App-Collector Raten vor Download-/Upload-Abschluss, exakte
 Zählerdifferenzen und Präfixmaskierung. Die native Suite prüft zusätzlich HTTPS,
-Retries, Keepalive, Abbrüche und Reloads. Vollständige Protokollabdeckung bleibt
-T-028; siehe [Messentscheidung](../../decisions/2026-11-05-traffic-flow-messgrenzen.md).
+Retries, Keepalive, Abbrüche und Reloads. Andere Upstream-Protokolle sind nicht abgenommen; siehe [Messentscheidung](../../decisions/2026-11-05-traffic-flow-messgrenzen.md).
 
 
 ## Abhängigkeiten
@@ -147,3 +145,21 @@ Alle Chunks eines Detail- oder Aggregationsbatches werden jeweils in einer Trans
 - [Proxy-Host](./proxy-host.md)
 - [GitOps](./gitops.md)
 - [Umgebungsvariablen](../konfiguration/umgebungsvariablen.md)
+
+## HTTP/3-Messqualität
+
+Native HTTP/3-Downloads zählen ausschließlich eindeutige bestätigte QUIC-Streambytes;
+Uploads zählen konsumierte entschlüsselte Streambytes einschließlich HTTP/3-Framing.
+`client_sent_semantics=quic_stream_unique_acked` und
+`client_received_semantics=quic_stream_consumed` sind Pflicht. Queued-Bytes fließen
+nie in Raten ein. Ein Finalsample ohne `final_complete: true` bleibt unbekannt.
+Der native Beobachter lebt über das Requestpool-Ende hinaus bis zum Streamende.
+
+Kantenraten führen Richtungssemantik mit. Inkompatible Gruppen liefern keine Summe;
+expandierbare Komponenten zeigen kompatible Teilgruppen mit stabilen Qualitäts-IDs,
+exakten Zeitfenstern und derselben Skala. Es gibt keine Personen-/Geräteidentität.
+
+Die reale QUIC-Suite bestand mit Verlust, ACK-Verzögerung, drei parallelen Streams,
+Reset/Disconnect und 283 Churn-Streams. App-Captureprüfung: 295 Requests, 63 exakte
+Intervalle, davon 45 aktive Download- und 13 aktive Uploadintervalle, Maskierung
+bestätigt. Reproduzierbar mit `scripts/benchmarks/traffic-flow-native-capture.mjs`.

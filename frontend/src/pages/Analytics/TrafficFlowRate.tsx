@@ -8,7 +8,7 @@ const text = (key: string, values?: Record<string, string | number>) =>
 export const flowLineWidth = (rate: number | null | undefined) =>
 	rate === null || rate === undefined ? 2 : Math.min(16, 2 + Math.log2(1 + Math.max(0, rate) / 1024));
 
-export const rateDescription = (rate?: FlowRate | null, incomplete?: boolean) =>
+export const rateDescription = (rate?: FlowRate | null, incomplete?: boolean, mixed?: boolean, reason?: string) =>
 	rate
 		? text("rate-detail", {
 				upload: String(rate.uploadBytesPerSecond),
@@ -18,19 +18,60 @@ export const rateDescription = (rate?: FlowRate | null, incomplete?: boolean) =>
 				start: rate.windowStart,
 				end: rate.windowEnd,
 				samples: rate.samples,
+				uploadQuality: (rate.uploadSemantics || ["http_request_received"])
+					.map((value) => text(`quality.${value}`))
+					.join(", "),
+				downloadQuality: (rate.downloadSemantics || ["http_transport_accepted"])
+					.map((value) => text(`quality.${value}`))
+					.join(", "),
 			})
-		: text(incomplete ? "rate-incomplete" : "unknown-rate");
+		: text(
+				reason === "incomplete_final_acknowledgement"
+					? "rate-final-ack-unknown"
+					: mixed
+						? "rate-mixed"
+						: incomplete
+							? "rate-incomplete"
+							: "unknown-rate",
+			);
 
-export function FlowRateLabel({ rate, incomplete }: { rate?: FlowRate | null; incomplete?: boolean }) {
+export function FlowRateLabel({
+	rate,
+	incomplete,
+	mixed,
+	reason,
+}: {
+	rate?: FlowRate | null;
+	incomplete?: boolean;
+	mixed?: boolean;
+	reason?: string;
+}) {
 	return (
-		<span>
+		<span title={rateDescription(rate, incomplete, mixed, reason)}>
 			{rate
 				? text("rate-label", {
 						upload: intl.formatNumber(rate.uploadBytesPerSecond, { maximumFractionDigits: 1 }),
 						download: intl.formatNumber(rate.downloadBytesPerSecond, { maximumFractionDigits: 1 }),
 					})
-				: text(incomplete ? "rate-incomplete" : "unknown-rate")}
+				: rateDescription(null, incomplete, mixed, reason)}
 		</span>
+	);
+}
+
+export function FlowRateComponents({ components }: { components?: (FlowRate & { id: string })[] }) {
+	if (!components?.length) return null;
+	return (
+		<details className="mt-1 text-xs">
+			<summary className="cursor-pointer">{text("accounting-groups")}</summary>
+			<ul className="space-y-1">
+				{components.map((rate) => (
+					<li key={rate.id} className="flex items-center">
+						<FlowConnection kind="observed" rate={rate} />
+						<FlowRateLabel rate={rate} />
+					</li>
+				))}
+			</ul>
+		</details>
 	);
 }
 

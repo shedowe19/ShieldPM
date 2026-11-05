@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { FlowHost, TrafficFlowSnapshot } from "src/api/backend/getTrafficFlow";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "src/components/ui/tooltip";
 import { intl } from "src/locale";
-import { FlowConnection, FlowRateLabel, rateDescription } from "./TrafficFlowRate";
+import { FlowConnection, FlowRateComponents, FlowRateLabel, rateDescription } from "./TrafficFlowRate";
 
 export const flowText = (name: string, values?: Record<string, string | number>) =>
 	intl.formatMessage({ id: `analytics.flow.${name}` }, values);
@@ -54,7 +54,7 @@ export function TrafficFlowRows({ hosts, snapshot }: { hosts: FlowHost[]; snapsh
 											.map((client) => (
 												<li key={client.id}>
 													<Detail
-														description={`${rateDescription(client.rate, client.rateIncomplete)} ${flowText(
+														description={`${rateDescription(client.rate, client.rateIncomplete, client.mixedSemantics, client.unknownReason)} ${flowText(
 															"client-detail",
 															{
 																requests: client.requests,
@@ -75,11 +75,14 @@ export function TrafficFlowRows({ hosts, snapshot }: { hosts: FlowHost[]; snapsh
 														<FlowRateLabel
 															rate={client.rate}
 															incomplete={client.rateIncomplete}
+															mixed={client.mixedSemantics}
+															reason={client.unknownReason}
 														/>
 														<div className="text-muted-foreground">
 															{flowText("requests", { count: client.requests })}
 														</div>
 													</Detail>
+													<FlowRateComponents components={client.rateComponents} />
 												</li>
 											))}
 									</ul>
@@ -113,7 +116,7 @@ export function TrafficFlowRows({ hosts, snapshot }: { hosts: FlowHost[]; snapsh
 										<li key={target.id} className="flex items-center">
 											<FlowConnection kind={target.kind} rate={target.rate} />
 											<Detail
-												description={`${rateDescription(target.rate, target.rateIncomplete)} ${flowText(
+												description={`${rateDescription(target.rate, target.rateIncomplete, target.mixedSemantics, target.unknownReason)} ${flowText(
 													"target-detail",
 													{
 														kind: flowText(target.kind),
@@ -130,6 +133,8 @@ export function TrafficFlowRows({ hosts, snapshot }: { hosts: FlowHost[]; snapsh
 													<FlowRateLabel
 														rate={target.rate}
 														incomplete={target.rateIncomplete}
+														mixed={target.mixedSemantics}
+														reason={target.unknownReason}
 													/>
 												</div>
 											</Detail>
@@ -160,7 +165,13 @@ export function TrafficFlowList({ hosts }: { hosts: FlowHost[] }) {
 								{flowText("requests", { count: client.requests })}
 								{", "}
 								{flowText("completed-bytes", { count: client.completedBytes })} · {client.lastSeen} ·{" "}
-								<FlowRateLabel rate={client.rate} incomplete={client.rateIncomplete} />
+								<FlowRateLabel
+									rate={client.rate}
+									incomplete={client.rateIncomplete}
+									mixed={client.mixedSemantics}
+									reason={client.unknownReason}
+								/>
+								<FlowRateComponents components={client.rateComponents} />
 							</li>
 						))}
 					</ul>
@@ -169,7 +180,12 @@ export function TrafficFlowList({ hosts }: { hosts: FlowHost[] }) {
 							<li key={target.id}>
 								#{host.id} → {target.label}: {flowText(target.kind)} ·{" "}
 								{target.lastSeen || flowText("unknown")} ·{" "}
-								<FlowRateLabel rate={target.rate} incomplete={target.rateIncomplete} />
+								<FlowRateLabel
+									rate={target.rate}
+									incomplete={target.rateIncomplete}
+									mixed={target.mixedSemantics}
+									reason={target.unknownReason}
+								/>
 							</li>
 						))}
 					</ul>

@@ -1,6 +1,8 @@
 import { get } from "./base";
 
 export interface FlowRate {
+	uploadSemantics?: string[];
+	downloadSemantics?: string[];
 	uploadBytesPerSecond: number;
 	downloadBytesPerSecond: number;
 	bytesPerSecond: number;
@@ -19,6 +21,9 @@ export interface FlowClient {
 	currentBytesPerSecond: number | null;
 	rate?: FlowRate;
 	rateIncomplete?: boolean;
+	mixedSemantics?: boolean;
+	unknownReason?: string;
+	rateComponents?: (FlowRate & { id: string })[];
 	activeRequests?: number;
 }
 
@@ -31,6 +36,9 @@ export interface FlowTarget {
 	currentBytesPerSecond: number | null;
 	rate?: FlowRate;
 	rateIncomplete?: boolean;
+	mixedSemantics?: boolean;
+	unknownReason?: string;
+	rateComponents?: (FlowRate & { id: string })[];
 	activeRequests?: number;
 }
 

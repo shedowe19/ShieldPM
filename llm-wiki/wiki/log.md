@@ -2,6 +2,21 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-05] feature | HTTP/3-ACK-/Streamraten angebunden
+
+- Command: Verbleibendes HTTP/3 nativ messen und unabhängig in der App validieren.
+- Type: feature
+- Areas affected: Flow-Collector, Qualitätssemantik, UI-Komponenten und Dokumentation
+- Files changed: H3-Gate, Qualitätsgruppen, exakte Tooltips, Captureprüfung und Tests
+- Wiki pages updated: Analytics/API, Messentscheidung, Aufgaben, Projektstand, Changelog und Log
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: keine bestätigten App-Fehler
+- New decisions: Eindeutige ACK-Bytes versus konsumierte Streambytes; inkompatible Summen bleiben unbekannt, kompatible Komponenten expandierbar.
+- Open questions: Veröffentlichung abhängiger Nginx-Basis und weitere Upstream-Protokolle
+- Next steps: Draft-PRs prüfen, kein Merge oder Deployment.
+- Verification: Native QUIC-Suite mit Verlust/ACK-Verzögerung/Reset/Disconnect/Churn bestanden; echter Capture→App-Test: 295 Requests, 63 exakte Intervalle, 45 aktive Download-/13 Uploadintervalle und Maskierung. App-Tests, Chromium und Typecheck bestanden.
+
 ## [2026-11-05] feature | HTTP/2-Streams und WebSockets angebunden
 
 - Command: Verbleibende Protokolle nativ messen und integrieren.

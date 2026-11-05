@@ -38,7 +38,15 @@ export class LiveFlowBuffer {
 		if (![row.generation, row.request_id].every((id) => typeof id === "string" && /^[\w:.-]{1,100}$/.test(id)))
 			return;
 		if (typeof row.supported !== "boolean" || !Array.isArray(row.attempts) || row.attempts.length > 16) return;
-		const supported = row.supported && ["HTTP/1.0", "HTTP/1.1", "HTTP/2.0"].includes(row.protocol);
+		const http3 = row.protocol === "HTTP/3.0";
+		const h3Quality =
+			row.client_sent_semantics === "quic_stream_unique_acked" &&
+			row.client_received_semantics === "quic_stream_consumed";
+		const supported =
+			row.supported &&
+			(http3
+				? h3Quality && !(row.final === true && row.final_complete !== true)
+				: ["HTTP/1.0", "HTTP/1.1", "HTTP/2.0"].includes(row.protocol));
 		if (supported && ![row.client_sent, row.client_received].every(counter)) return;
 		const id = `${row.generation}/${row.request_id}`;
 		const previous = this.requests.get(id);
@@ -51,13 +59,27 @@ export class LiveFlowBuffer {
 			receivedAt: now,
 			values: [row.client_sent, row.client_received],
 			supported,
+			unknownReason:
+				http3 && row.final === true && row.final_complete !== true
+					? "incomplete_final_acknowledgement"
+					: http3 && !h3Quality
+						? "unverified_byte_accounting"
+						: null,
 			final: row.final === true,
 			truncated: row.truncated === true,
 			clientRate: null,
 			attempts: new Map(),
 		};
+		record.semantics = http3
+			? ["quic_stream_consumed", "quic_stream_unique_acked"]
+			: row.protocol === "HTTP/2.0"
+				? ["http_request_consumed", "http2_stream_frames_sent"]
+				: row.upgraded === true
+					? ["upgrade_frames_received", "upgrade_frames_sent"]
+					: ["http_request_received", "http_transport_accepted"];
 		const comparable = previous?.host === row.host && previous.client === client && supported && previous.supported;
-		if (comparable) record.clientRate = this.measure(previous, record, previous.clientRate, false);
+		if (comparable && previous.semantics.join() === record.semantics.join())
+			record.clientRate = this.measure(previous, record, previous.clientRate, false);
 		for (const attempt of row.attempts) {
 			if (!attempt || typeof attempt !== "object") return;
 			const peer = upstreamPeers(attempt.peer)[0];
@@ -69,6 +91,7 @@ export class LiveFlowBuffer {
 				time: record.time,
 				monotonic: record.monotonic,
 				final: attempt.final === true,
+				semantics: ["upstream_transport_sent", "upstream_transport_received"],
 				rate: null,
 			};
 			const old = previous?.attempts.get(attempt.id);
@@ -94,6 +117,8 @@ export class LiveFlowBuffer {
 			download_bytes_per_second: download,
 			bytes_per_second: exact,
 			smoothed_bytes_per_second: oldRate ? oldRate.smoothed_bytes_per_second * 0.65 + exact * 0.35 : exact,
+			upload_semantics: current.semantics[0],
+			download_semantics: current.semantics[1],
 			start: previous.time,
 			end: current.time,
 		};
@@ -152,6 +177,7 @@ export class LiveFlowBuffer {
 			);
 			host.client_rate = total.rate || null;
 			host.client_rate_incomplete = total.rate_incomplete;
+			host.client_mixed_semantics = total.mixed_semantics;
 			host.clients = [...clients.values()].sort((a, b) => a.id.localeCompare(b.id)).slice(0, 32);
 			host.targets = [
 				...host.targets.filter((entry) => entry.kind !== "observed"),
@@ -178,10 +204,35 @@ export class LiveFlowBuffer {
 		const rates = records.map((record) => record.rate);
 		entry.active_requests = records.filter((record) => !record.final).length;
 		entry.last_seen = new Date(Math.max(...records.map((record) => record.time))).toISOString();
+		entry.unknown_reason = records.find((record) => record.unknownReason)?.unknownReason || null;
 		entry.rate_incomplete = rates.some((rate) => rate === null);
 		if (entry.rate_incomplete) return;
+		const upload = [...new Set(rates.map((rate) => rate.upload_semantics))].sort();
+		const download = [...new Set(rates.map((rate) => rate.download_semantics))].sort();
+		entry.mixed_semantics = upload.length > 1 || download.length > 1;
+		entry.upload_semantics = upload;
+		entry.download_semantics = download;
+		if (entry.mixed_semantics) {
+			entry.rate_incomplete = true;
+			const components = new Map();
+			for (const record of records) {
+				const id = `${record.rate.upload_semantics}:${record.rate.download_semantics}`;
+				if (!components.has(id)) components.set(id, []);
+				components.get(id).push(record);
+			}
+			entry.rate_components = [...components.entries()]
+				.sort(([a], [b]) => a.localeCompare(b))
+				.map(([id, samples]) => {
+					const component = {};
+					this.aggregate(component, samples);
+					return { id, ...component.rate };
+				});
+			return;
+		}
 		const sum = (name) => rates.reduce((total, rate) => total + rate[name], 0);
 		entry.rate = {
+			upload_semantics: upload,
+			download_semantics: download,
 			upload_bytes_per_second: sum("upload_bytes_per_second"),
 			download_bytes_per_second: sum("download_bytes_per_second"),
 			bytes_per_second: sum("bytes_per_second"),

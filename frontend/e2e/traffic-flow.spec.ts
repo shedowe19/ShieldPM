@@ -9,6 +9,8 @@ test("traffic flow preserves honest semantics, expansion, pause, errors and narr
 	let stale = false;
 	let live = false;
 	const rate = () => ({
+		upload_semantics: ["quic_stream_consumed"],
+		download_semantics: ["quic_stream_unique_acked"],
 		upload_bytes_per_second: 16384,
 		download_bytes_per_second: 49152,
 		bytes_per_second: 65536,
@@ -111,6 +113,10 @@ test("traffic flow preserves honest semantics, expansion, pause, errors and narr
 	await page.getByRole("button", { name: "Resume", exact: true }).click();
 	await expect(page.getByText("Live measured HTTP/1, HTTP/2 stream", { exact: false })).toBeVisible();
 	await expect(graph.getByRole("button", { name: /Upload: 16384/ })).toHaveAttribute("aria-label", /Download: 49152/);
+	await expect(graph.getByRole("button", { name: /Upload: 16384/ })).toHaveAttribute(
+		"aria-label",
+		/acknowledged by the peer/,
+	);
 	await expect
 		.poll(async () =>
 			graph

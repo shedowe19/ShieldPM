@@ -88,16 +88,31 @@ Headern; TLS zählt akzeptierten Klartext, keine Wire-Bytes oder Zustellbestäti
 HTTP/1-Proxyverkehr, HTTP/2-Streams und WebSockets sind abgenommen. HTTP/2-Sendebytes
 enthalten Streamframeheader; Empfang nutzt Requestabrechnung ohne Verteilung
 verbindungsweiter Frames. WebSockets enthalten Handshake und tatsächlich gelesene/
-geschriebene Framebytes. HTTP/3 und andere Upstream-Protokolle bleiben unbekannt.
+geschriebene Framebytes. HTTP/3 benötigt die nachfolgende eigene Streamqualität; andere Upstream-Protokolle bleiben unbekannt.
 Die feste logarithmische Skala nutzt EMA 0,35; exakte Tooltips bleiben ungeglättet.
 Unbekannte Gruppenanteile, Resets, fehlende Baselines und Stale-Samples werden
 nicht durch erfundene Summen oder Nullen ersetzt.
 
+## HTTP/3: bestätigte Streambytes statt Queue- oder Wire-Bytes
+
+HTTP/3 exportiert eindeutige bestätigte QUIC-Streambytes für Downloads und
+konsumierte entschlüsselte Streambytes für Uploads einschließlich HTTP/3-Framing.
+Beide Qualitätsmarker sind Pflicht; queued Bytes werden ausgeschlossen.
+`final_complete: false` nach Reset/Disconnect ergibt unbekannte finale Raten.
+Der lebenszyklussichere Streambeobachter behält kopierte Metadaten über das Ende
+des Requestpools hinaus bis zur Streamschließung. ACKs nach Poolcleanup sind geprüft.
+
+Die native Suite bestand mit drei parallelen Cross-Host-Streams, gehaltenem Upload,
+88 verworfenen und 519 verzögerten Datagrammen, Reset/Disconnect und 283 Churnstreams.
+Die unabhängige App-Prüfung realer UDP-Daten bestand: 295 Requests, 63 exakte
+Intervalle, 45 aktive Download- und 13 aktive Uploadintervalle; maskierte Präfixe.
+Inkompatible ACK-/Accepted-Bytegruppen werden nicht addiert; expandierbare
+qualitätsgleiche Komponenten behalten exakte Raten, Fenster und gemeinsame Skala.
+
 ## Folgen
 
 Native HTTP/1-/HTTP/2-/WebSocket-Live-Raten sind technisch implementiert und mit echten laufenden
-Transfers belegt. Die gesamte ursprünglich gewünschte Protokollabdeckung ist
-weiterhin nicht erfüllt. Das Modul muss separat gebaut/veröffentlicht werden;
+Transfers belegt. HTTP/3 ist mit eigener ACK-/Streamsemantik ebenfalls validiert; andere Upstream-Protokolle bleiben explizit unbekannt. Das Modul muss separat gebaut/veröffentlicht werden;
 beide Draft-PRs sind abhängig und werden hier weder gemergt noch deployed.
 
 ## Verwandte Seiten

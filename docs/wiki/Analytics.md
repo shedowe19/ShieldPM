@@ -53,7 +53,7 @@ groups, search hosts, switch to the accessible list, or pause updates. The
 Internet node is a visual connector, not a discovered network hop. The two
 segments around it must not be summed as separate traffic.
 
-For current HTTP/1, HTTP/2 stream and WebSocket rates, also set `TRAFFIC_FLOW_LIVE_ENABLED=true` and use the
+For current HTTP/1, HTTP/2 stream, WebSocket and HTTP/3 rates, also set `TRAFFIC_FLOW_LIVE_ENABLED=true` and use the
 matching native-module build from **shieldpm-nginx**. Restart and save hosts to
 regenerate configuration. The static `shieldpm_traffic_flow` directive must be
 available; Nginx validation rejects configurations on older binaries. Without
@@ -62,18 +62,30 @@ requests and unknown rates, with five-second refreshes.
 
 The native module samples cumulative counters during active transfers, initially,
 approximately every second, and at completion. Rates use actual monotonic elapsed
-time between samples. They measure **HTTP bytes accepted by Nginx transport**,
+time between samples. For HTTP/1 they measure **HTTP bytes accepted by Nginx transport**,
 including headers; HTTPS counters describe plaintext accepted by TLS. They do not
 measure wire packets, TCP acknowledgements, or confirmed delivery. Both client
 upload/download and individual upstream-attempt upload/download are measured for
 HTTP/1 proxy traffic, HTTP/2 streams and WebSocket upgrades. HTTP/2 sent bytes
 include per-stream frame headers; received bytes use request accounting and do
 not distribute connection-wide frames. WebSocket counters include the handshake
-and actual frame transport bytes. HTTP/3 and other upstream protocols remain unknown. No system totals or completion logs are substituted.
+and actual frame transport bytes. HTTP/3 download rates measure unique QUIC
+stream bytes acknowledged by the peer; upload rates measure consumed decrypted
+stream bytes, including HTTP/3 framing. Queued output and retransmitted copies
+are not additional acknowledged bytes. This is neither wire throughput nor the
+same accounting as HTTP/1 accepted writes. The stream observer survives request
+cleanup until stream closure; final samples without complete acknowledgement
+coverage remain unknown. Other upstream protocols remain unknown. No system
+totals or completion logs are substituted.
 
 Supported fresh sources refresh approximately every second. A missing baseline,
 counter reset, unsupported protocol, or gap exceeding 3.5 seconds gives unknown,
-not zero. Group totals are unknown when any included observation is unknown.
+not zero. Group totals are unknown when any included observation is unknown or when byte
+accounting methods differ. Tooltips identify each direction’s measurement method;
+accepted transport bytes are not summed with acknowledged stream bytes. Expand
+**Measured groups by byte accounting** within a mixed client prefix to inspect
+compatible components with their own exact rates, windows and shared scale.
+Component identities describe accounting methods, never people or devices.
 Exact tooltips show directional rates, sample windows and the number of samples;
 group window bounds enclose the individual request intervals. Displayed line
 widths use a 0.35 exponential moving average and one fixed logarithmic scale:
@@ -138,7 +150,17 @@ This test verifies active client and upstream download/upload rates before
 completion, exact cumulative-counter differences and masked prefixes. The native
 repository additionally validates keepalive resets, retries, abort cleanup,
 HTTPS, reload generations, and HTTP/2 multiplexed cross-host isolation and open WebSocket bidirectional frames.
-HTTP/3 remains an open requirement.
+HTTP/3 is additionally validated with simultaneous cross-host streams, a held
+upload, packet loss and delayed acknowledgements, reset/disconnect cleanup, and
+stream churn. To verify a real native capture through the application collector:
+
+```bash
+node scripts/benchmarks/traffic-flow-native-capture.mjs /path/to/native-samples.json
+```
+
+The validated capture contained 295 requests; the app independently verified 63
+exact counter intervals, including 45 active download and 13 active upload
+intervals. These counts describe the test run, not production traffic totals.
 
 ## Privacy
 

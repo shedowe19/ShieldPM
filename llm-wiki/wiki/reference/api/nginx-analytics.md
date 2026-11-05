@@ -25,8 +25,10 @@ zur Analytics-Berechtigung die aktuelle Host-Sichtbarkeit und setzt
 deaktiviert. Mit zusätzlichem `TRAFFIC_FLOW_LIVE_ENABLED=true`, passender nativer
 Nginx-Basis und frischen unterstützten Samples gilt `capabilities.current_rates:
 true`; exakte Richtungsraten und Messintervalle kommen aus kumulativen Zählern.
-HTTP/1, HTTP/2-Streams und WebSockets sind unterstützt; HTTP/3 und fehlende
-Messung bleiben `null`. `sample_complete: false` bleibt wegen UDP und Limits.
+HTTP/1, HTTP/2-Streams, WebSockets und qualifiziertes HTTP/3 sind unterstützt.
+HTTP/3 zählt bestätigte Download-/konsumierte Upload-Streambytes; fehlende Qualität
+oder unvollständige finale ACK-Abdeckung bleibt `null`. Inkompatible Gruppen
+bleiben ohne Summe und liefern getrennte `rate_components`. `sample_complete: false` bleibt wegen UDP und Limits.
 Ohne native Quelle bleibt ein Fünfsekunden-Abschlussfallback. Details und Grenzen:
 [Analytics](../module/analytics.md#experimenteller-traffic-flow).
 

@@ -112,7 +112,8 @@ const service = {
 			capabilities: {
 				current_rates: native,
 				source: native ? "native_http_transport" : "completed_requests",
-				byte_semantics: "HTTP bytes accepted by Nginx transport; not wire bytes or TCP acknowledgements",
+				byte_semantics:
+					"Per-edge byte accounting is explicit; no wire packet totals or TCP acknowledgement inference",
 			},
 			configuration_revision: createHash("sha256")
 				.update(
