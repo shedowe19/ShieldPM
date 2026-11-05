@@ -3,6 +3,11 @@
 Ergebnisse für Menschen, neueste zuerst. Die Arbeit selbst steht im [Log](./log.md).
 Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
+## 2026-11-05 — HTTP/2 und WebSocket-Raten
+
+- Validierte native Stream-/Upgrade-Zähler werden akzeptiert; HTTP/3 bleibt unbekannt.
+- Opt-in-Direktive in Standardhost-Server verschoben und echtes Templaterendering geprüft.
+
 ## 2026-11-05 — Native HTTP/1-Live-Raten
 
 - Native kumulative Zähler werden während laufender Transfers ausgewertet;

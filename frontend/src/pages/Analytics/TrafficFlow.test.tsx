@@ -104,7 +104,7 @@ describe("TrafficFlow", () => {
 		});
 		const { container } = render(<TrafficFlow />);
 		open();
-		expect(screen.getByText(/Live measured HTTP\/1 transport rates/)).toBeInTheDocument();
+		expect(screen.getByText(/Live measured HTTP\/1, HTTP\/2 stream/)).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Upload: 1024 B\/s. Download: 65536 B\/s/ })).toBeInTheDocument();
 		expect(screen.getByText(/Fixed logarithmic scale/)).toBeInTheDocument();
 		const rates = [...container.querySelectorAll("section line")].map((line) =>

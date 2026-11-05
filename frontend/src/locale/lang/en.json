@@ -1238,5 +1238,5 @@
 	"analytics.flow.rate-incomplete": "Rate unknown: incomplete or unsupported sample",
 	"analytics.flow.rate-label": "↑ {upload} B/s · ↓ {download} B/s",
 	"analytics.flow.rate-scale": "Fixed logarithmic scale; widths use EMA smoothing (35% new sample), capped at 16 MiB/s. Exact measured rates are in details.",
-	"analytics.flow.live-semantics": "Live measured HTTP/1 transport rates from active request counters. Upload and download include HTTP data accepted by Nginx transport; TLS and network framing, TCP acknowledgements, HTTP/2, HTTP/3 and unsupported paths are not measured. Missing or stale samples remain unknown. UDP collection is best effort."
+	"analytics.flow.live-semantics": "Live measured HTTP/1, HTTP/2 stream and WebSocket transport rates from active request counters. HTTP/2 sent bytes include stream frame headers; received bytes follow request accounting. Upgrades include handshake and frame bytes. TLS and connection-wide framing, TCP acknowledgements, HTTP/3 and unsupported paths are not measured. Missing or stale samples remain unknown. UDP collection is best effort."
 }

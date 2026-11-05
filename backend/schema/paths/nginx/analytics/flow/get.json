@@ -1,7 +1,7 @@
 {
 	"operationId": "getTrafficFlow",
 	"summary": "Bounded proxy topology with measured native HTTP transport rates and separate completed-request observations",
-	"description": "Requires current analytics:list and proxy_hosts:list permissions; owner visibility is applied before aggregation. TRAFFIC_FLOW_ENABLED enables best-effort completion observations. TRAFFIC_FLOW_LIVE_ENABLED additionally requires the native Nginx traffic-flow module. Live HTTP/1 rates use monotonic per-request/attempt counter deltas; unsupported, stale, reset and incomplete rates remain null. Not packet/wire bytes or TCP acknowledgements. UDP sampling is best effort; sample_complete is always false. poll_interval_ms is 1000 while fresh authorized native samples exist, otherwise 5000.",
+	"description": "Requires current analytics:list and proxy_hosts:list permissions; owner visibility is applied before aggregation. TRAFFIC_FLOW_ENABLED enables best-effort completion observations. TRAFFIC_FLOW_LIVE_ENABLED additionally requires the native Nginx traffic-flow module. Live HTTP/1, HTTP/2 stream and WebSocket rates use monotonic per-request/attempt counter deltas; unsupported, stale, reset and incomplete rates remain null. Not packet/wire bytes or TCP acknowledgements. UDP sampling is best effort; sample_complete is always false. poll_interval_ms is 1000 while fresh authorized native samples exist, otherwise 5000.",
 	"tags": [
 		"analytics"
 	],
@@ -12,7 +12,7 @@
 	],
 	"responses": {
 		"200": {
-			"description": "Snapshot with configuration revision, source capabilities, bounded authorized hosts and masked groups, upload/download rates with measurement window and smoothing, collector state and poll_interval_ms. Native protocol coverage is HTTP/1; completion observations remain separate."
+			"description": "Snapshot with configuration revision, source capabilities, bounded authorized hosts and masked groups, upload/download rates with measurement window and smoothing, collector state and poll_interval_ms. Native protocol coverage is HTTP/1, HTTP/2 streams and WebSocket upgrades; HTTP/3 remains unknown; completion observations remain separate."
 		},
 		"401": {
 			"description": "Authentication required"

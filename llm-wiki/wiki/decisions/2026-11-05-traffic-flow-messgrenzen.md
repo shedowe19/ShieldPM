@@ -81,19 +81,21 @@ bestand mit laufendem 1-MiB-Download (106.368 Bodybytes bereits empfangen,
 versendet, Client-/Upstreamrate 65.536 B/s). Zählerintervallformel und /24-Maskierung
 wurden unabhängig geprüft. Die Mengen sind timingabhängig. Native Laufzeittests
 belegen außerdem HTTPS-Klartextzählung, Keepalive-Reset, Retries, Abbruchcleanup,
-Reload-Generationen und unbekannte HTTP/2-Raten.
+Reload-Generationen, HTTP/2-Multiplexing über zwei Hosts und bidirektionale offene WebSockets.
 
 Gemessen werden HTTP-Bytes an Nginx-Transportabrechnungspunkten einschließlich
 Headern; TLS zählt akzeptierten Klartext, keine Wire-Bytes oder Zustellbestätigung.
-Nur HTTP/1-Proxyverkehr ist abgenommen. HTTP/2, HTTP/3, WebSockets/Upgrades und
-andere Upstream-Protokolle bleiben unbekannt und als Produktumfang offen.
+HTTP/1-Proxyverkehr, HTTP/2-Streams und WebSockets sind abgenommen. HTTP/2-Sendebytes
+enthalten Streamframeheader; Empfang nutzt Requestabrechnung ohne Verteilung
+verbindungsweiter Frames. WebSockets enthalten Handshake und tatsächlich gelesene/
+geschriebene Framebytes. HTTP/3 und andere Upstream-Protokolle bleiben unbekannt.
 Die feste logarithmische Skala nutzt EMA 0,35; exakte Tooltips bleiben ungeglättet.
 Unbekannte Gruppenanteile, Resets, fehlende Baselines und Stale-Samples werden
 nicht durch erfundene Summen oder Nullen ersetzt.
 
 ## Folgen
 
-Native HTTP/1-Live-Raten sind technisch implementiert und mit echten laufenden
+Native HTTP/1-/HTTP/2-/WebSocket-Live-Raten sind technisch implementiert und mit echten laufenden
 Transfers belegt. Die gesamte ursprünglich gewünschte Protokollabdeckung ist
 weiterhin nicht erfüllt. Das Modul muss separat gebaut/veröffentlicht werden;
 beide Draft-PRs sind abhängig und werden hier weder gemergt noch deployed.

@@ -53,7 +53,7 @@ groups, search hosts, switch to the accessible list, or pause updates. The
 Internet node is a visual connector, not a discovered network hop. The two
 segments around it must not be summed as separate traffic.
 
-For current HTTP/1 rates, also set `TRAFFIC_FLOW_LIVE_ENABLED=true` and use the
+For current HTTP/1, HTTP/2 stream and WebSocket rates, also set `TRAFFIC_FLOW_LIVE_ENABLED=true` and use the
 matching native-module build from **shieldpm-nginx**. Restart and save hosts to
 regenerate configuration. The static `shieldpm_traffic_flow` directive must be
 available; Nginx validation rejects configurations on older binaries. Without
@@ -66,8 +66,10 @@ time between samples. They measure **HTTP bytes accepted by Nginx transport**,
 including headers; HTTPS counters describe plaintext accepted by TLS. They do not
 measure wire packets, TCP acknowledgements, or confirmed delivery. Both client
 upload/download and individual upstream-attempt upload/download are measured for
-HTTP/1 proxy traffic. HTTP/2, HTTP/3, upgrades/WebSockets and other upstream
-protocols remain unknown. No system totals or completion logs are substituted.
+HTTP/1 proxy traffic, HTTP/2 streams and WebSocket upgrades. HTTP/2 sent bytes
+include per-stream frame headers; received bytes use request accounting and do
+not distribute connection-wide frames. WebSocket counters include the handshake
+and actual frame transport bytes. HTTP/3 and other upstream protocols remain unknown. No system totals or completion logs are substituted.
 
 Supported fresh sources refresh approximately every second. A missing baseline,
 counter reset, unsupported protocol, or gap exceeding 3.5 seconds gives unknown,
@@ -135,8 +137,8 @@ node scripts/benchmarks/traffic-flow-native-measurement.mjs
 This test verifies active client and upstream download/upload rates before
 completion, exact cumulative-counter differences and masked prefixes. The native
 repository additionally validates keepalive resets, retries, abort cleanup,
-HTTPS, reload generations, and unsupported HTTP/2. Full protocol coverage,
-especially HTTP/2, HTTP/3 and WebSockets, remains an open requirement.
+HTTPS, reload generations, and HTTP/2 multiplexed cross-host isolation and open WebSocket bidirectional frames.
+HTTP/3 remains an open requirement.
 
 ## Privacy
 

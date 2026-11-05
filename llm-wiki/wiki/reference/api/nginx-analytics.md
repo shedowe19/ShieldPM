@@ -22,10 +22,14 @@ Der experimentelle Endpunkt `GET /api/nginx/analytics/flow` liefert eine
 begrenzte Topologie und ein 60-Sekunden-Abschlusssample. Er verlangt zusätzlich
 zur Analytics-Berechtigung die aktuelle Host-Sichtbarkeit und setzt
 `Cache-Control: no-store`. Ohne `TRAFFIC_FLOW_ENABLED=true` ist die Antwort
-deaktiviert. Raten bleiben `null`; `sample_complete: false` und
-`capabilities.current_rates: false` verhindern eine Interpretation als exakte
-Live-Messung. Native HTTP/1-Intervallraten sind bei passender Nginx-Basis und zusätzlichem
-Opt-in verfügbar; andere Protokolle bleiben unbekannt. Details und Grenzen: [Analytics](../module/analytics.md#experimenteller-traffic-flow).
+deaktiviert. Mit zusätzlichem `TRAFFIC_FLOW_LIVE_ENABLED=true`, passender nativer
+Nginx-Basis und frischen unterstützten Samples gilt `capabilities.current_rates:
+true`; exakte Richtungsraten und Messintervalle kommen aus kumulativen Zählern.
+HTTP/1, HTTP/2-Streams und WebSockets sind unterstützt; HTTP/3 und fehlende
+Messung bleiben `null`. `sample_complete: false` bleibt wegen UDP und Limits.
+Ohne native Quelle bleibt ein Fünfsekunden-Abschlussfallback. Details und Grenzen:
+[Analytics](../module/analytics.md#experimenteller-traffic-flow).
+
 
 ## Abhängigkeiten
 

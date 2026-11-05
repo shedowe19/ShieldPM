@@ -2,6 +2,21 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-05] feature | HTTP/2-Streams und WebSockets angebunden
+
+- Command: Verbleibende Protokolle nativ messen und integrieren.
+- Type: feature
+- Areas affected: Flow-Collector, Hosttemplate, UI-Semantik und Tests
+- Files changed: Protokollvalidierung, Templateplatzierung, Tests und Dokumentation
+- Wiki pages updated: Messentscheidung, Analytics, Aufgaben, Projektstand, Log und Changelog
+- New wiki pages: keine
+- New TODOs: keine; HTTP/3 bleibt offen
+- New bugs: Directive war im Anubis-Zweig statt Standardserver; durch echten Rendertest gefunden und korrigiert.
+- New decisions: HTTP/2 zählt pro Stream; WebSockets zählen Handshake und Frame-Transportbytes.
+- Open questions: HTTP/3-QUIC-Abrechnung
+- Next steps: Abhängige Draft-PRs prüfen, kein Merge oder Deployment.
+- Verification: Native Suite belegt zwei Hosts auf derselben HTTP/2-Verbindung und 196.608 WebSocket-Payloadbytes je Richtung während offener Verbindung. App-Tests prüfen Isolation, unbekanntes HTTP/3 und beide Opt-in-Flags.
+
 ## [2026-11-05] feature | Native HTTP/1-Live-Raten integriert
 
 - Command: Tatsächliche Live-Kantenraten einschließlich laufender Transfers implementieren.

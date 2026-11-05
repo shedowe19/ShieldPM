@@ -75,6 +75,20 @@ describe("structured traffic policy", () => {
 		expect(anubis).not.toContain("spm_flow_");
 	});
 
+	it("renders native instrumentation only when both telemetry flags are explicitly enabled", async () => {
+		vi.stubEnv("TRAFFIC_FLOW_ENABLED", "false");
+		vi.stubEnv("TRAFFIC_FLOW_LIVE_ENABLED", "true");
+		expect(await nginx.renderConfig("proxy_host", host())).not.toContain("shieldpm_traffic_flow");
+		vi.stubEnv("TRAFFIC_FLOW_ENABLED", "true");
+		vi.stubEnv("TRAFFIC_FLOW_LIVE_ENABLED", "false");
+		expect(await nginx.renderConfig("proxy_host", host())).not.toContain("shieldpm_traffic_flow");
+		vi.stubEnv("TRAFFIC_FLOW_LIVE_ENABLED", "true");
+		expect(await nginx.renderConfig("proxy_host", host())).toContain("shieldpm_traffic_flow 12 127.0.0.1:15149;");
+		expect(await nginx.renderConfig("proxy_host", host({ anubis_enabled: true }))).not.toContain(
+			"shieldpm_traffic_flow",
+		);
+	});
+
 	it("renders a legacy protected host without a listener or any retired runtime hooks", async () => {
 		const legacy = host({
 			meta: { wasm_filters: [{ enabled: true, kind: "api_key", config: { sealed_value: "unavailable" } }] },

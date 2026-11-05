@@ -133,6 +133,65 @@ describe("native live flow measured rates", () => {
 		expect(result.clients[0].rate_incomplete).toBe(true);
 		expect(result.clients[0].current_bytes_per_second).toBeNull();
 	});
+	it("isolates multiplexed HTTP/2 stream counters by native request and host", () => {
+		const buffer = new LiveFlowBuffer();
+		for (const [request, hostId, bytes] of [
+			["stream-1", 1, 65536],
+			["stream-3", 2, 64],
+		]) {
+			buffer.ingest(
+				{ ...sample({ request, host: hostId, protocol: "HTTP/2.0" }), connection: "shared", stream_id: hostId },
+				now,
+			);
+			buffer.ingest(
+				{
+					...sample({
+						request,
+						host: hostId,
+						protocol: "HTTP/2.0",
+						time: now / 1000 + 1,
+						client_sent: bytes,
+						upstream_received: bytes,
+					}),
+					connection: "shared",
+					stream_id: hostId,
+				},
+				now + 1000,
+			);
+		}
+		const hosts = [host(), { ...host(), id: 2 }];
+		buffer.apply(hosts, now + 1000);
+		expect(hosts.map((entry) => entry.client_rate.download_bytes_per_second)).toEqual([65536, 64]);
+		expect(hosts.map((entry) => entry.targets[0].rate.download_bytes_per_second)).toEqual([65536, 64]);
+	});
+	it("measures supported upgraded frame counters while keeping HTTP/3 unknown", () => {
+		const buffer = new LiveFlowBuffer();
+		buffer.ingest({ ...sample(), upgraded: true }, now);
+		buffer.ingest(
+			{
+				...sample({
+					time: now / 1000 + 1,
+					client_sent: 32768,
+					client_received: 65536,
+					upstream_sent: 65536,
+					upstream_received: 32768,
+				}),
+				upgraded: true,
+			},
+			now + 1000,
+		);
+		expect(snapshot(buffer).client_rate).toMatchObject({
+			upload_bytes_per_second: 65536,
+			download_bytes_per_second: 32768,
+		});
+		const unknown = new LiveFlowBuffer();
+		unknown.ingest(sample({ protocol: "HTTP/3.0", supported: true }), now);
+		unknown.ingest(
+			sample({ protocol: "HTTP/3.0", supported: true, time: now / 1000 + 1, client_sent: 65536 }),
+			now + 1000,
+		);
+		expect(snapshot(unknown).clients[0].current_bytes_per_second).toBeNull();
+	});
 	it("never leaks foreign host source freshness or includes foreign rates in authorized totals", () => {
 		const buffer = new LiveFlowBuffer();
 		buffer.ingest(sample({ host: 2, request: "foreign" }), now);

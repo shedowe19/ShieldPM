@@ -37,8 +37,8 @@
 - [ ] **T-028 Echte Traffic-Flow-Kantenraten.** Abnahme: laufende Downloads,
       Uploads und WebSockets mit bekannter Datenmenge belegen aktuelle Raten pro
       Verbindung; gemeinsame Skala und Glättung sind gegen diese Messung geprüft.
-      HTTP/1-Live-Raten sind mit nativem Modul und realen Transfers belegt.
-      Offen bleiben HTTP/2, HTTP/3 und WebSockets sowie Veröffentlichung der
+      HTTP/1-/HTTP/2-/WebSocket-Live-Raten sind mit nativem Modul und realen Transfers belegt.
+      Offen bleiben HTTP/3 sowie Veröffentlichung der
       abhängigen Nginx-Basis. Siehe
       [Messentscheidung](./decisions/2026-11-05-traffic-flow-messgrenzen.md).
 

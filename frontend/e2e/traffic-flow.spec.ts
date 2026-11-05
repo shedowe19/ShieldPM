@@ -109,7 +109,7 @@ test("traffic flow preserves honest semantics, expansion, pause, errors and narr
 	live = true;
 	await page.getByRole("button", { name: "Pause", exact: true }).click();
 	await page.getByRole("button", { name: "Resume", exact: true }).click();
-	await expect(page.getByText("Live measured HTTP/1 transport rates", { exact: false })).toBeVisible();
+	await expect(page.getByText("Live measured HTTP/1, HTTP/2 stream", { exact: false })).toBeVisible();
 	await expect(graph.getByRole("button", { name: /Upload: 16384/ })).toHaveAttribute("aria-label", /Download: 49152/);
 	await expect
 		.poll(async () =>

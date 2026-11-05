@@ -96,8 +96,7 @@ Ohne Modul schlägt Nginx-Validierung fehl; ohne frische unterstützte Samples b
 `current_rates: false`. `lib/traffic-flow-live.js` berechnet vier Richtungsraten
 anhand monotoner Zähler und tatsächlicher Zeitdifferenzen. Die Semantik sind
 HTTP-Transportbytes einschließlich Headern, bei TLS akzeptierte Klartextbytes;
-keine Wire-Bytes, TCP-Bestätigungen oder Zustellgarantien. Unterstützt ist nur
-HTTP/1-Proxyverkehr; HTTP/2, HTTP/3, Upgrades und andere Upstream-Protokolle bleiben
+keine Wire-Bytes, TCP-Bestätigungen oder Zustellgarantien. Unterstützt sind HTTP/1-Proxyverkehr, HTTP/2-Streams und WebSocket-Upgrades; HTTP/3 und andere Upstream-Protokolle bleiben
 unbekannt. Resets, fehlende Baselines und Lücken über 3,5 Sekunden ebenfalls.
 
 Die Oberfläche pollt bei belegter nativer Quelle sekündlich, sonst alle fünf

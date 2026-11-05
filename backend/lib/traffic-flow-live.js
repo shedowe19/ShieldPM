@@ -38,7 +38,7 @@ export class LiveFlowBuffer {
 		if (![row.generation, row.request_id].every((id) => typeof id === "string" && /^[\w:.-]{1,100}$/.test(id)))
 			return;
 		if (typeof row.supported !== "boolean" || !Array.isArray(row.attempts) || row.attempts.length > 16) return;
-		const supported = row.supported && ["HTTP/1.0", "HTTP/1.1"].includes(row.protocol);
+		const supported = row.supported && ["HTTP/1.0", "HTTP/1.1", "HTTP/2.0"].includes(row.protocol);
 		if (supported && ![row.client_sent, row.client_received].every(counter)) return;
 		const id = `${row.generation}/${row.request_id}`;
 		const previous = this.requests.get(id);
