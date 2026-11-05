@@ -194,7 +194,13 @@ export class AnalyticsService {
 
 	drainLineQueue() {
 		this.lineDrainScheduled = false;
-		for (const line of this.lineQueue.splice(0, PROCESS_LINE_BATCH_SIZE)) this.processLine(line);
+		for (const line of this.lineQueue.splice(0, PROCESS_LINE_BATCH_SIZE)) {
+			try {
+				this.processLine(line);
+			} catch (error) {
+				logger.error(`Analytics line processing failed: ${error.message}`);
+			}
+		}
 		if (this.lineQueue.length > 0) {
 			this.lineDrainScheduled = true;
 			setImmediate(() => this.drainLineQueue());

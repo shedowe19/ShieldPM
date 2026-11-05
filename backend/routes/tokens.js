@@ -87,7 +87,10 @@ const ensureLoginAttemptStorage = async () => {
 					table.index(["blocked_until"]);
 				});
 			}
-		})();
+		})().catch((error) => {
+			loginAttemptTableInitPromise = null;
+			throw error;
+		});
 	}
 
 	return loginAttemptTableInitPromise;

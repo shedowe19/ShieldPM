@@ -67,7 +67,7 @@ const createCertLimiter = rateLimit({
  *
  * Download Root CA
  */
-router.get("/root-ca", async (_req, res) => {
+router.get("/root-ca", jwtdecode(), async (_req, res) => {
 	const certContent = await internalPki.getRootCa();
 	res.status(200)
 		.header("Content-Type", "application/x-pem-file")

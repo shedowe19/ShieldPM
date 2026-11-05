@@ -27,6 +27,7 @@ zuletzt fertig wurde, was bewusst fehlt und welche Risiken gerade aktiv sind.
 | Datum      | Ergebnis                                                                                                           | Quelle                                                        |
 | ---------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
 | 2026-11-04 | Dependabot-Alarme für `qs`, `seroval` und `minimatch` geschlossen                                                  | [Log](./log.md)                                               |
+| 2026-11-05 | Warnungs-Triage: 350 Warnungen sortiert, 16 Sofortfixes, Folgeaufgaben T-020–T-027                                 | [Triage](./analyses/2026-11-05-warnungs-triage.md)            |
 | 2026-11-05 | Datei-Audit mit 173 Agents: 2.066 Dateien, 22 Fehler, 350 Warnungen; 21 Fehler behoben                             | [Analyse](./analyses/2026-11-05-datei-audit.md)               |
 | 2026-11-04 | Backlog abgearbeitet: Authentik-Beispiel, Fastly-Ranges, Advanced-Modell, Token-Kompatibilität, Tabellen-Kommentar | [Log](./log.md)                                               |
 | 2026-11-04 | Wiki-Prüfung in der CI verankert; OpenAppSec-Regressionstest CRLF-robust                                           | [Log](./log.md)                                               |
@@ -67,8 +68,9 @@ Testlauf dieser Sitzung:
 ## Bekannte Defekte und offene Aufgaben
 
 - Keine bestätigten Produktdefekte in dieser Sitzung.
-- Offene Arbeiten: `T-007` und `T-017` (blockiert, brauchen einen laufenden
-  OpenAppSec-Agent) ([Aufgaben](./tasks.md)).
+- Offene Arbeiten: T-020 bis T-027 (aus der Warnungs-Triage) sowie `T-007` und
+  `T-017` (blockiert, brauchen einen laufenden OpenAppSec-Agent)
+  ([Aufgaben](./tasks.md)).
 - Pull Request #160 („chore(deps): update npm dependencies“) wurde am 2026-11-04
   als `f60a14f1` gemergt; der Branch ist gelöscht, alle 21 Prüfungen waren grün.
 

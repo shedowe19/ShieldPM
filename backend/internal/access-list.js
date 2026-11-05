@@ -106,7 +106,7 @@ const validateListInput = (data) => {
 		}
 		if (family === 6) {
 			const address = ipaddr.parse(parts[0]);
-			if (address instanceof ipaddr.IPv6 && address.isIPv4MappedAddress()) normalizeAddress(client.address);
+			if (address instanceof ipaddr.IPv6 && address.isIPv4MappedAddress()) client.address = normalizeAddress(client.address);
 		}
 	}
 };

@@ -46,7 +46,7 @@ router.get("/config", jwtdecode(), accessCheck, async (_req, res) => {
  * Update GitOps configuration
  */
 router.put("/config", jwtdecode(), demoCheck, async (req, res) => {
-	const config = await internalGitOps.updateConfig(res.locals.access, req.body);
+	const config = await internalGitOps.updateConfig(res.locals.access, req.body ?? {});
 	res.status(200).json(config);
 });
 
@@ -76,7 +76,7 @@ router.post("/export", jwtdecode(), demoCheck, accessCheck, async (_req, res) =>
  * Commit and push changes to remote
  */
 router.post("/push", jwtdecode(), demoCheck, accessCheck, async (req, res) => {
-	const { message } = req.body;
+	const { message } = req.body ?? {};
 	// First export, then push
 	await internalGitOps.exportConfig();
 	const result = await internalGitOps.commitAndPush(message);
@@ -107,7 +107,7 @@ router.get("/history", jwtdecode(), accessCheck, async (req, res) => {
  * Revert to a specific commit
  */
 router.post("/revert", jwtdecode(), demoCheck, accessCheck, async (req, res) => {
-	const { sha } = req.body;
+	const { sha } = req.body ?? {};
 	if (!sha) {
 		return res.status(400).json({
 			error: { message: "SHA is required", code: 400 },
@@ -122,7 +122,7 @@ router.post("/revert", jwtdecode(), demoCheck, accessCheck, async (req, res) => 
  * Import configuration from Git
  */
 router.post("/import", jwtdecode(), demoCheck, async (req, res) => {
-	const { overwrite } = req.body;
+	const { overwrite } = req.body ?? {};
 	const result = await internalGitOps.importConfig(res.locals.access, { overwrite });
 	res.status(200).json(result);
 });

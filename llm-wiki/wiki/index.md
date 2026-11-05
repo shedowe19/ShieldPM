@@ -91,6 +91,7 @@ zuerst in `wiki/reference/` geändert und hier nur zusammengefasst.
 
 - [Analysen](./analyses/README.md) - Ablage für wiederverwendbare Antworten.
 - [Datei-Audit 2026-11-05](./analyses/2026-11-05-datei-audit.md) - alle 2.066 Dateien mit 173 Agents geprüft; 22 Fehler behoben.
+- [Warnungs-Triage 2026-11-05](./analyses/2026-11-05-warnungs-triage.md) - 350 Warnungen sortiert, Folgeaufgaben T-020 bis T-027.
 
 ## Widersprüche
 

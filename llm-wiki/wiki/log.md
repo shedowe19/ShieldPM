@@ -2,6 +2,25 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-05] chore | T-019 Triage und 16 Sofortfixes
+
+- Command: „T-019 mach das“.
+- Type: chore
+- Areas affected: Backend-Code, Wiki, Aufgabenboard
+- Files changed: `token.js`, `ai/providers.js`, `auth-cookies.js`, `demo.js`,
+  `access-list.js`, `analytics.js`, `2fa.js`, `tokens.js`, `certificates.js`,
+  `gitops.js`, `prompt.js`; Triage-Seite und Aufgaben
+- Wiki pages updated: analyses/2026-11-05-warnungs-triage (neu), analyses/README,
+  index, tasks, changelog, current-project-state, log
+- New wiki pages: `analyses/2026-11-05-warnungs-triage.md`
+- New TODOs: T-020 bis T-027
+- New bugs: keine
+- New decisions: Triage nach Bereich und Schwere statt Einzelfix aller 350
+- Open questions: unverändert (T-007, T-017)
+- Next steps: T-020 (Sicherheit) und T-021 (CI) zuerst
+- Verification: 355 Einträge klassifiziert; 16 Sofortfixes; `tsc --noEmit` grün;
+  48 Tests in fünf Dateien grün; Wiki-Werkzeug PASS.
+
 ## [2026-11-05] audit | Vollständiger Datei-Audit und Behebung der 22 Fehler
 
 - Command: „jede einzeln prüfen bitte mit mehreren Agents“.

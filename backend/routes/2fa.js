@@ -88,16 +88,9 @@ router.get("/", async (req, res) => {
  */
 router.post("/totp/setup", twoFaRateLimiter, async (req, res) => {
 	const userId = await requireSelfOrAdmin(req, res);
-	const access = res.locals.access;
-	const userEmail = access?.token?.get("email") || req.body.email;
-
-	// Fetch email from DB if not in token
-	let email = userEmail;
-	if (!email) {
-		const { default: userModel } = await import("../models/user.js");
-		const user = await userModel.query().findById(userId);
-		email = user?.email;
-	}
+	const { default: userModel } = await import("../models/user.js");
+	const user = await userModel.query().findById(userId);
+	const email = user?.email;
 
 	if (!email) {
 		throw new errs.ValidationError("Cannot determine user email for TOTP setup");

@@ -35,6 +35,7 @@ const validateHost = (value, forbiddenHosts, res, context = "") => {
 				"reserved",
 				"broadcast",
 				"multicast",
+				"unspecified",
 			];
 
 			if (blockedRanges.includes(range)) {

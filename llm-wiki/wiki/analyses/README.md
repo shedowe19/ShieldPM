@@ -27,6 +27,7 @@ eine konkrete Frage und veraltet, wenn sich die Grundlagen ändern.
 ## Analysen
 
 - [Datei-Audit 2026-11-05](./2026-11-05-datei-audit.md) - vollständiger Audit aller 2.066 Dateien mit 173 Agents; 22 Fehler behoben, 350 Warnungen triagiert.
+- [Warnungs-Triage 2026-11-05](./2026-11-05-warnungs-triage.md) - 355 Warnungen nach Bereich und Schwere sortiert; Folgeaufgaben T-020 bis T-027.
 
 ## Regeln
 

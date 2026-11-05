@@ -8,12 +8,29 @@
 
 ## Now
 
-- [ ] **T-019 Warnungen aus dem Datei-Audit triagieren.** Abnahme: Die 350
-      bestätigten Warnungen sind nach Schwere und Bereich sortiert, in Aufgaben
-      überführt oder begründet geschlossen. Schwerpunkte: Sicherheits-Härtung,
-      CI-Reproduzierbarkeit, Schema-Verträge, Migrations-Rollbacks,
-      Übersetzungsvollständigkeit. Kontext:
-      [Datei-Audit 2026-11-05](./analyses/2026-11-05-datei-audit.md).
+- Keine offenen Aufgaben.
+
+## Next
+
+- [ ] **T-020 Sicherheits-Härtung.** Abnahme: CSP ohne Inline-Skripte, SRI für
+      Terminal-CDN, Docker-Socket im Demo-Compose, Entwickler-Adminpasswort,
+      Chat-Token-Exposition, Cloudflared-Decrypt und Login-Drosselung sind
+      behoben oder begründet geschlossen.
+- [ ] **T-021 CI und Release.** Abnahme: Version-Stamping wirkt, Hadolint und
+      Nginx-Basis sind gepinnt, Tags bereinigt, `caddy-fmt` rebased, Shell-EOL
+      festgelegt.
+- [ ] **T-022 Schema-Verträge.** Abnahme: die 87 Schema-Warnungen sind geprüft;
+      Vertragstests grün, Restabweichungen dokumentiert.
+- [ ] **T-023 Migrationen.** Abnahme: jede Migration vorwärts und rückwärts auf
+      SQLite, MariaDB und PostgreSQL geprüft.
+- [ ] **T-024 Dokumentation.** Abnahme: die 55 verbleibenden Doku-Warnungen sind
+      korrigiert oder als historisch markiert.
+- [ ] **T-025 Lokalisierung.** Abnahme: keine englischen Reststrings in `bg`,
+      `es`, `it` und `de`; Locale-Check grün.
+- [ ] **T-026 Portabilität.** Abnahme: `.tscanner`-Tests plattformneutral,
+      Backend-Typecheck umfasst `routes/` und `migrations/`.
+- [ ] **T-027 Konfigurations-Hygiene.** Abnahme: Biome, `.yarnrc.yml`,
+      Notices-Header und CodeQL-Begründung sind konsistent.
 
 ## Blocked
 
@@ -44,6 +61,11 @@
 
 ## Done
 
+- [x] **T-019 Warnungen aus dem Datei-Audit triagiert.** Done 2026-11-05.
+      Beleg: 355 Einträge nach Bereich und Schwere sortiert; 16 sicherheits- und
+      fehlerrelevante Punkte sofort behoben; der Rest ist als T-020 bis T-027
+      gruppiert. Details:
+      [Warnungs-Triage 2026-11-05](./analyses/2026-11-05-warnungs-triage.md).
 - [x] **T-018 Vollständiger Datei-Audit mit mehreren Agents.** Done 2026-11-05.
       Beleg: 2.066/2.066 Dateien in 152 Batches, 173 Agents, 0 unvollständige
       Batches; 1.687 sauber, 350 Warnungen, 22 Fehler. 21 Fehler behoben, ein

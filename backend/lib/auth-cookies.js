@@ -64,7 +64,7 @@ export const setDuoCookie = (res, req, browserToken, expiresAt) => {
 	const encrypted = encrypt(JSON.stringify({ purpose: DUO_COOKIE_PURPOSE, browserToken, expiresAt }));
 	res.cookie(DUO_COOKIE, encrypted, {
 		httpOnly: true,
-		secure: req.secure,
+		secure: isSecure(req),
 		sameSite: "lax",
 		path: DUO_COOKIE_PATH,
 		maxAge: Math.max(0, expiresAt - Date.now()),

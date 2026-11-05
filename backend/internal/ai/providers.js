@@ -24,19 +24,27 @@ export const getLocalEndpoint = (baseUrl, endpoint) => {
 	return new URL(route, base);
 };
 
+const parseToolArguments = (value) => {
+	if (typeof value !== "string") return value || {};
+	try {
+		return JSON.parse(value);
+	} catch {
+		return {};
+	}
+};
+
+const normalizeToolCalls = (message, messages) =>
+	message?.tool_calls?.map((call, index) => ({
+		id: call.id || `call_${messages.length}_${index}`,
+		name: call.function?.name,
+		args: parseToolArguments(call.function?.arguments),
+	})) || [];
+
 const parseLocalResponse = (json, isOllamaNative, messages) => {
 	const message = isOllamaNative ? json.message : json.choices?.[0]?.message;
 	return {
 		content: message?.content || "",
-		toolCalls:
-			message?.tool_calls?.map((call, index) => ({
-				id: call.id || `call_${messages.length}_${index}`,
-				name: call.function?.name,
-				args:
-					typeof call.function?.arguments === "string"
-						? JSON.parse(call.function.arguments)
-						: call.function?.arguments || {},
-			})) || [],
+		toolCalls: normalizeToolCalls(message, messages),
 		messages,
 	};
 };

@@ -126,7 +126,7 @@ CERTIFICATES:
 - "validate certificate files" → validate_certificate with certificate, certificate_key
 - "get certificate details for ex.com" → get_certificates, find ID, get_certificate_details
 - "test HTTP challenge for ex.com" → test_http_challenge with domains
-- "list DNS providers" → get_dns_providers
+- "list DNS providers" → get_dns_plugins
 - "delete certificate" → get_certificates, find ID, delete_certificate
 - "create client cert for admin" → create_client_certificate with common_name, password
 
