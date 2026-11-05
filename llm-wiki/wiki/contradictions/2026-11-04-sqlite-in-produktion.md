@@ -32,8 +32,9 @@ Behauptungen bleiben mit Quelle erhalten.
 ## Bewertung
 
 Behauptung B entspricht dem Code und der ausgelieferten Standardkonfiguration.
-Behauptung A ist veraltet. Sie steht weiterhin in `AGENTS.md` und kann Agenten zu
-falschen Annahmen führen (z. B. „SQLite-Fälle ignorieren“).
+Behauptung A ist veraltet. Sie wurde am 2026-11-04 aus `AGENTS.md` und
+`.cursorrules` entfernt; der Code und die Standardkonfiguration stützen
+Behauptung B.
 
 ## Offen
 

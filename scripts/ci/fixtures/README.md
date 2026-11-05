@@ -10,7 +10,7 @@ MIT or Apache 2.0. This copy uses MIT; the copyright and permission notice are i
 
 The notice includes the upstream README's copyright statement followed by the
 unchanged pinned `LICENSE-MIT` text. Its SHA-256 is
-`1df87b7d02b61565af885de9c6368651d0ffd1893b2d289ecaae725e9ac2f914`.
+`d3e941bbf7103b3a6bc89c53b1b568cebcc37d3e6d31d0db8474dc3c26b11a82`.
 
 - Size: 19,492 bytes
 - SHA-256: `b37601903448683d241af52893c8cbf0fed461e0cdebe0bfaca01891fdeb6db9`

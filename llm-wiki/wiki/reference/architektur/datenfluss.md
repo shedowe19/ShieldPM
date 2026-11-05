@@ -52,7 +52,7 @@ Route (Express) → Schema-Validierung (AJV)
 ## Zertifikats-Erneuerung
 
 ```
-1. Ein vom Backend gestarteter Timer (`CRT` Stunden, im Startskript standardmäßig 23) prüft auslaufende Zertifikate
+1. Ein vom Backend gestarteter Timer (`CRT` Stunden, Standard 72) prüft auslaufende Zertifikate
 2. internal/certificate.js führt bei Bedarf die Erneuerung über Certbot aus
 3. Nach erfolgreicher Erneuerung wird die Nginx-Konfiguration validiert und ein Reload signalisiert
 ```

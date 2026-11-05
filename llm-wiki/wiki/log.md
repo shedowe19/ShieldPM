@@ -2,6 +2,30 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-05] audit | Vollständiger Datei-Audit und Behebung der 22 Fehler
+
+- Command: „jede einzeln prüfen bitte mit mehreren Agents“.
+- Type: audit
+- Areas affected: gesamtes Repository, Wiki, CI-Konfiguration, OpenAPI-Schemas
+- Files changed: `wiki-check.mjs`, `executor.js`, fünf Schema-Dateien,
+  `docs/wiki/*` (3), `locale/README.md`, `.cursorrules`, `AGENTS.md`,
+  `GEMINI.md`, `spellcheck.yml`, `renovate.json`, `frontend/package.json`,
+  `.gitignore`, Fixtures-README, mehrere Wiki-Seiten
+- Wiki pages updated: analyses (neu), index, analyses/README, tasks, changelog,
+  log, contradictions, current-project-state, reference/api/schemas,
+  reference/architektur/datenfluss, reference/entwicklung/feature-…,
+  reference/module/2fa-service, certbot, ip-firewall, reference/ui/i18n
+- New wiki pages: `analyses/2026-11-05-datei-audit.md`
+- New TODOs: T-019 (350 Warnungen triagieren)
+- New bugs: keine offenen aus den 22 Fehlern; ein Fehlalarm bestätigt
+- New decisions: keine
+- Open questions: unverändert (T-007, T-017)
+- Next steps: T-019 priorisieren; T-007/T-017 auf laufender Instanz
+- Verification: 173 Agents, 2.066/2.066 Dateien, 0 unvollständige Batches;
+  Wiki-Werkzeug PASS; Markdown-Links 1.321/1.321; OpenAPI 120 Pfade,
+  169 Operationen, 168 IDs, keine fehlenden Refs; `tsc --noEmit` Backend grün;
+  61 Schema-/IP-Ranges-/Token-Tests grün.
+
 ## [2026-11-04] feature | Backlog abgearbeitet: Authentik, Fastly, Advanced Model, Tokens, Tabelle
 
 - Command: „Alles bearbeiten außer das du nicht kannst“.

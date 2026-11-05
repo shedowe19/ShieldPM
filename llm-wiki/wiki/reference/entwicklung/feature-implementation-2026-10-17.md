@@ -67,7 +67,7 @@ Nginx-/Wasm-/WASI-Lauf umfasst 174 bestandene Fälle in 13 Dateien ohne Skips.
 
 ### Reproduzierbarer Analytics-Vergleich
 
-`node backend/scripts/benchmarks/analytics-upsert.mjs` vergleicht 500 einzelne Upserts mit der tatsächlichen neuen Produktionshilfe. Ein Sample umfasst zwei Flushes mit Zählerprüfung, nach einem Warmup folgen sieben Samples. Im lokalen SQLite-Speicherlauf mit Node 26.12.0 sinkt die Anzahl der INSERTs von 1.000 auf 4; der Median beträgt 83,48 statt 8,00 ms. Das sind synthetische lokale Werte während weiterer Prüfungen, kein Versprechen für Produktionslatenz.
+`node backend/scripts/benchmarks/analytics-upsert.mjs` vergleicht 500 einzelne Upserts mit der tatsächlichen neuen Produktionshilfe. Ein Sample umfasst zwei Flushes mit Zählerprüfung, nach einem Warmup folgen sieben Samples. Im lokalen SQLite-Speicherlauf mit Node 26.12.0 sinkt die Anzahl der INSERTs von 1.000 auf 4; der Median beträgt 8,00 statt 83,48 ms. Das sind synthetische lokale Werte während weiterer Prüfungen, kein Versprechen für Produktionslatenz.
 
 Die [JSON-Rohwerte](./feature-implementation-2026-10-17.json) enthalten alle Samples und den abschließenden Prüfstand. Weitere Optimierungen haben funktionale und instrumentierte Nachweise; ein ungemessener Produktivgewinn wird nicht behauptet.
 

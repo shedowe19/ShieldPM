@@ -124,7 +124,7 @@ export { up, down };
 ### Gotchas
 
 - Boolean fields in SQLite are stored as `0`/`1` integers — the Objection.js model handles conversion. Don't pass `true`/`false` to raw queries.
-- The `domain_names` field on proxy hosts is derived from the `host_domains` relation in `$afterGet()`. Don't write to `domain_names` directly in the DB.
+- The `domain_names` field on proxy hosts is derived from the `host_domains` relation in `$afterFind()`. Don't write to `domain_names` directly in the DB.
 - Nginx host configuration writes are serialized. Bulk updates use `skip_reload` and perform a final validated reload.
 - `install.sh` must handle both Debian and Ubuntu variants — test parser/collection downloads with raw GitHub URLs.
 

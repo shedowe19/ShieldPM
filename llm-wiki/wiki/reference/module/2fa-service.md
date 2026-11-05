@@ -90,7 +90,7 @@ Neben den klassischen `/api/users/:user_id/2fa/...`-Routen gibt es seit v4.3.2 e
 
 | Endpunkt                                | Funktion                                                                                  |
 | --------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `POST /api/tokens`                      | Login mit Credentials → gibt `pending_token` + `2fa_token_required` zurück wenn 2FA nötig |
+| `POST /api/tokens`                      | Login mit Credentials → gibt `pending_token` + `requires_2fa: true` zurück, wenn 2FA nötig |
 | `POST /api/tokens/2fa/verify`           | TOTP/YubiKey/Backup-Code Verifizierung nach Login                                         |
 | `POST /api/tokens/2fa/passkey/begin`    | Passkey-Authentifizierung starten                                                         |
 | `POST /api/tokens/2fa/passkey/complete` | Passkey-Authentifizierung abschließen                                                     |

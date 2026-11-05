@@ -28,23 +28,16 @@
 			"in": "query",
 			"name": "start",
 			"schema": {
-				"type": "integer",
-				"minimum": 0
+				"type": "string",
+				"format": "date-time"
 			}
 		},
 		{
 			"in": "query",
 			"name": "end",
 			"schema": {
-				"type": "integer",
-				"minimum": 0
-			}
-		},
-		{
-			"in": "query",
-			"name": "interval",
-			"schema": {
-				"type": "string"
+				"type": "string",
+				"format": "date-time"
 			}
 		}
 	]

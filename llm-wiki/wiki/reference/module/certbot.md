@@ -10,14 +10,14 @@ ShieldPM abstrahiert Let's Encrypt via Certbot. Dieses Modul kümmert sich um di
 
 ## Wichtige Dateien
 
-- `backend/internal/certbot.js` (10 KB) — Certbot-Ausführung und Management
+- `backend/internal/certbot.js` (13,7 KB) - Certbot-Ausführung und Management
 - `backend/lib/certbot.js` — Installation registrierter DNS-Plugins in den beschreibbaren Datenpfad
 - `backend/internal/certificate.js` — Nutzt `certbot.js` für Zertifikate
 - `backend/certbot/` — Certbot-Hilfsdateien (z. B. DNS-Plugins)
 
 ## Verhalten
 
-- Nutzt die beim Start registrierten ACME-Accounts; die Registrierung erfolgt im Startskript `rootfs/usr/local/bin/launch.sh`.
+- ACME-Accounts werden vom Backend lazy unter dem Certbot-Lock registriert (`backend/internal/certbot.js`); `launch.sh` startet nur den OCSP-Fetcher und bereitet die DNS-Plugin-Pfade vor.
 - Beantragt Zertifikate via HTTP-01 oder DNS-01 Challenge.
 - Erneuert ablaufende Zertifikate asynchron.
 - Beantragung, manuelle Erneuerung, Timer-Erneuerung und Widerruf teilen sich `runCertbot()` und dieselbe Prozesssperre. Gleichzeitige Aufrufe erhalten einen nachvollziehbaren Validierungsfehler; die Sperre wird bei Erfolg und Fehler freigegeben.

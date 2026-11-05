@@ -1,10 +1,10 @@
 # Aktueller Projektzustand
 
 Status: active
-Last verified: 2026-11-04
+Last verified: 2026-11-05
 Confidence: high
 
-Last updated: 2026-11-04
+Last updated: 2026-11-05
 
 Dies ist eine rollierende Momentaufnahme, keine Historie. Ältere Details gehören
 in den [Log](./log.md) oder in die passende Bereichsseite.
@@ -27,6 +27,7 @@ zuletzt fertig wurde, was bewusst fehlt und welche Risiken gerade aktiv sind.
 | Datum      | Ergebnis                                                                                                           | Quelle                                                        |
 | ---------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
 | 2026-11-04 | Dependabot-Alarme für `qs`, `seroval` und `minimatch` geschlossen                                                  | [Log](./log.md)                                               |
+| 2026-11-05 | Datei-Audit mit 173 Agents: 2.066 Dateien, 22 Fehler, 350 Warnungen; 21 Fehler behoben                             | [Analyse](./analyses/2026-11-05-datei-audit.md)               |
 | 2026-11-04 | Backlog abgearbeitet: Authentik-Beispiel, Fastly-Ranges, Advanced-Modell, Token-Kompatibilität, Tabellen-Kommentar | [Log](./log.md)                                               |
 | 2026-11-04 | Wiki-Prüfung in der CI verankert; OpenAppSec-Regressionstest CRLF-robust                                           | [Log](./log.md)                                               |
 | 2026-11-04 | Internes Wiki auf `llm-wiki/` konsolidiert; `docs/wiki-intern/` nach `llm-wiki/wiki/reference/` übernommen         | [ADR](./decisions/2026-11-04-wiki-struktur.md)                |
@@ -68,9 +69,8 @@ Testlauf dieser Sitzung:
 - Keine bestätigten Produktdefekte in dieser Sitzung.
 - Offene Arbeiten: `T-007` und `T-017` (blockiert, brauchen einen laufenden
   OpenAppSec-Agent) ([Aufgaben](./tasks.md)).
-- Offener Pull Request #160 („chore(deps): update npm dependencies“): ersetzt den
-  geschlossenen #159 und aktualisiert alle direkten Abhängigkeiten. Alle 21
-  Prüfungen sind grün.
+- Pull Request #160 („chore(deps): update npm dependencies“) wurde am 2026-11-04
+  als `f60a14f1` gemergt; der Branch ist gelöscht, alle 21 Prüfungen waren grün.
 
 ## Aktive Risiken
 

@@ -93,7 +93,7 @@ Enter AGENT_TOKEN (leave empty for local-only mode):
 ```
 
 - **With Token:** Agent connects to the Cloud Portal for centralized management.
-- **Without Token:** The installer writes a `local_policy.yaml` with **detect-learn** selected. Its current inline practice/trigger structure does not match OpenAppSec's documented v1beta1 or v1beta2 schema. Replace or correct the file using the [official local policy schema](https://docs.openappsec.io/getting-started/start-with-linux/local-policy-file-advanced), then apply it and verify the agent's active policy before relying on WAF enforcement.
+- **Without Token:** The installer writes a `local_policy.yaml` with **detect-learn** selected, using the documented v1beta1 schema (named `shieldpm-default-practice` and `shieldpm-log-trigger`), then calls `open-appsec-ctl --apply-policy`. Verify the agent's active policy before relying on WAF enforcement.
 
 Both options automatically enable the Nginx attachment module.
 
@@ -154,11 +154,13 @@ individual `.tgz` file to that path, provided the host file already exists;
 otherwise Docker may create a directory in its place and the container will
 fail to start.
 
-**Native / LXC:** ShieldPM's installer copies a selected archive to `/etc/cp/conf/open-appsec-advanced-model.tgz`. For an existing agent, verify the agent's model-loading procedure for your installed OpenAppSec version and confirm activation in its status/logs; copying the archive alone does not establish that the advanced model was loaded.
+**Native / LXC:** ShieldPM's installer stores the selected archive at `/advanced-model/open-appsec-advanced-model.tgz`, extracts it to `/etc/cp/conf/waap` and restarts the agent (`open-appsec-ctl --stop-agent` / `--start-agent`). Confirm activation with `open-appsec-ctl --status`.
 
 ```bash
-# This mirrors the file-copy step in scripts/install.sh; check agent status afterward.
-cp open-appsec-advanced-model.tgz /etc/cp/conf/open-appsec-advanced-model.tgz
+# This mirrors the deploy step in scripts/install.sh; check agent status afterward.
+mkdir -p /advanced-model
+cp open-appsec-advanced-model.tgz /advanced-model/open-appsec-advanced-model.tgz
+tar -xzf /advanced-model/open-appsec-advanced-model.tgz -C /etc/cp/conf/waap
 ```
 
 ---

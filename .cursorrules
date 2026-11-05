@@ -23,7 +23,7 @@ modern protocols (HTTP/3, QUIC), and native performance.
 | **State Management**   | React Query `v5.105`                                   |
 | **i18n**               | i18next / react-i18next                                |
 | **Linter/Formatter**   | Biome `v2.6` (both frontend & backend)                 |
-| **Tests**              | Vitest `v5.0` (both frontend & backend)                |
+| **Tests**              | Vitest `v5.1` (both frontend & backend)                |
 | **Web Server**         | OpenResty-based custom Nginx                           |
 | **Package Manager**    | Yarn                                                   |
 

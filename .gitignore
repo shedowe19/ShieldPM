@@ -7,6 +7,7 @@
 !.vscode/tasks.json
 certbot-help.txt
 */node_modules
+**/.yarn/install-state.gz
 package-lock.json
 .tmp_pr_body.md
 backend/analyze.js

@@ -47,8 +47,8 @@ The Agent must be aware of these specific versions and libraries:
 * **Framework**: Express.js `v5.3`
 * **ORM**: Objection.js `v4.4` / Knex.js `v3.3`
 * **Database**:
-  - **Development**: SQLite (`better-sqlite3` v13)
-  - **Production**: MySQL (`mysql2`) or PostgreSQL (`pg`)
+  - **Default (all environments)**: SQLite (`better-sqlite3` v13)
+  - **Alternative for production**: MySQL (`mysql2`) or PostgreSQL (`pg`)
 * **AI Integration**: `@google/generative-ai` (Gemini), native `fetch` (Ollama/OpenAI Compatible)
 * **Management**: `dockerode` (Docker API), `isomorphic-git` (GitOps), `telegraf` (ChatOps/Telegram), `ssh2` (Remote), `ws` (WebSockets)
 * **Path**: `/backend`

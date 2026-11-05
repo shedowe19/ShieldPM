@@ -8,7 +8,12 @@
 
 ## Now
 
-- Keine offenen Aufgaben.
+- [ ] **T-019 Warnungen aus dem Datei-Audit triagieren.** Abnahme: Die 350
+      bestätigten Warnungen sind nach Schwere und Bereich sortiert, in Aufgaben
+      überführt oder begründet geschlossen. Schwerpunkte: Sicherheits-Härtung,
+      CI-Reproduzierbarkeit, Schema-Verträge, Migrations-Rollbacks,
+      Übersetzungsvollständigkeit. Kontext:
+      [Datei-Audit 2026-11-05](./analyses/2026-11-05-datei-audit.md).
 
 ## Blocked
 
@@ -39,6 +44,11 @@
 
 ## Done
 
+- [x] **T-018 Vollständiger Datei-Audit mit mehreren Agents.** Done 2026-11-05.
+      Beleg: 2.066/2.066 Dateien in 152 Batches, 173 Agents, 0 unvollständige
+      Batches; 1.687 sauber, 350 Warnungen, 22 Fehler. 21 Fehler behoben, ein
+      Fehlalarm bestätigt. Details:
+      [Datei-Audit 2026-11-05](./analyses/2026-11-05-datei-audit.md).
 - [x] **T-016 Users-Tabellen-Kommentar aufgeräumt.** Done 2026-11-04. Beleg:
       `pages/Users/Table.tsx` nutzt den generischen Formatter ohne Hack-Kommentar.
 - [x] **T-015 Legacy-Token-Scope gekapselt.** Done 2026-11-04. Beleg:

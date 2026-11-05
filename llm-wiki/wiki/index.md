@@ -89,7 +89,8 @@ zuerst in `wiki/reference/` geändert und hier nur zusammengefasst.
 
 ## Analysen
 
-- [Analysen](./analyses/README.md) — Ablage für wiederverwendbare Antworten; noch keine Analyse vorhanden.
+- [Analysen](./analyses/README.md) - Ablage für wiederverwendbare Antworten.
+- [Datei-Audit 2026-11-05](./analyses/2026-11-05-datei-audit.md) - alle 2.066 Dateien mit 173 Agents geprüft; 22 Fehler behoben.
 
 ## Widersprüche
 

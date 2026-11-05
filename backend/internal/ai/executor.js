@@ -891,7 +891,8 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "update_user_permissions": {
-					await internalUser.setPermissions(access, { id: call.args.id, ...call.args });
+					const { id, permissions, ...rest } = call.args;
+					await internalUser.setPermissions(access, { id, ...rest, ...(permissions ?? {}) });
 					result = `Updated Permissions for User ID: ${call.args.id}`;
 					break;
 				}

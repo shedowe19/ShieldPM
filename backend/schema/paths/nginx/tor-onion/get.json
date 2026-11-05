@@ -15,9 +15,19 @@
 			"content": {
 				"application/json": {
 					"schema": {
-						"type": "array",
-						"items": {
-							"$ref": "../../../components/tor-onion-object.json"
+						"type": "object",
+						"required": ["services", "tor"],
+						"properties": {
+							"services": {
+								"type": "array",
+								"items": {
+									"$ref": "../../../components/tor-onion-object.json"
+								}
+							},
+							"tor": {
+								"type": "object",
+								"additionalProperties": true
+							}
 						}
 					}
 				}

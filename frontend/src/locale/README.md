@@ -17,7 +17,7 @@ not be complete by the time you're reading this:
 - frontend/src/locale/lang/[yourlang].json
 - frontend/src/locale/lang/lang-list.json
 - frontend/src/locale/HelpDoc/[yourlang]/*
-- frontend/src/locale/HelpDoc/index.tsx
+- frontend/src/locale/HelpDoc/index.ts
 - frontend/src/locale/IntlProvider.tsx
 - frontend/check-locales.cjs
 

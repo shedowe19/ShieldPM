@@ -173,19 +173,24 @@ const anchorsOf = (file) => {
 const inlineLinkRe = /\[[^\]]*\]\(\s*(<[^>]*>|[^)\s]+)(?:\s+["'][^"']*["'])?\s*\)/g;
 const refDefRe = /^\s*\[([^\]]+)\]:\s*(\S+)/gm;
 const htmlHrefRe = /<a\s+[^>]*href=["']([^"']+)["'][^>]*>/gi;
+const imgSrcRe = /<img\s+[^>]*src=["']([^"']+)["']/gi;
 
 const collectLinks = (file) => {
 	const text = stripCode(read(file));
 	const links = [];
 	const definitions = new Set();
 	let match;
+	refDefRe.lastIndex = 0;
 	while ((match = refDefRe.exec(text))) {
 		definitions.add(match[1].trim().toLowerCase());
 		links.push(match[2]);
 	}
+	inlineLinkRe.lastIndex = 0;
 	while ((match = inlineLinkRe.exec(text))) links.push(match[1].replace(/^<|>$/g, ""));
+	htmlHrefRe.lastIndex = 0;
 	while ((match = htmlHrefRe.exec(text))) links.push(match[1]);
-	while ((match = /<img\s+[^>]*src=["']([^"']+)["']/gi.exec(text))) links.push(match[1]);
+	imgSrcRe.lastIndex = 0;
+	while ((match = imgSrcRe.exec(text))) links.push(match[1]);
 	for (const usage of text.matchAll(/\[[^\]]*\]\[([^\]]*)\]/g)) {
 		let id = usage[1].trim().toLowerCase();
 		if (!id) {

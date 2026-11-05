@@ -3,6 +3,12 @@
 Ergebnisse für Menschen, neueste zuerst. Die Arbeit selbst steht im [Log](./log.md).
 Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
+## 2026-11-05
+
+- Vollständiger Datei-Audit mit 173 Agents: 2.066/2.066 Dateien, 22 Fehler und
+  350 Warnungen. 21 Fehler behoben, ein Fehlalarm bestätigt; die Warnungen sind
+  als T-019 zur Triage erfasst. ([Analyse](./analyses/2026-11-05-datei-audit.md))
+
 ## 2026-11-04
 
 - Backlog abgearbeitet: Authentik-Beispiel dokumentiert, Fastly-IP-Ranges

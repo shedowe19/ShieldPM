@@ -1,7 +1,7 @@
 # Analysen
 
 Status: active
-Last verified: 2026-11-04
+Last verified: 2026-11-05
 Confidence: high
 
 ## Zweck
@@ -23,6 +23,10 @@ eine konkrete Frage und veraltet, wenn sich die Grundlagen ändern.
    [Changelog](../changelog.md) vermerken.
 5. Wird die Analyse durch eine neuere Quelle überholt, `Status: superseded`
    setzen und die neue Seite verlinken — nicht löschen.
+
+## Analysen
+
+- [Datei-Audit 2026-11-05](./2026-11-05-datei-audit.md) - vollständiger Audit aller 2.066 Dateien mit 173 Agents; 22 Fehler behoben, 350 Warnungen triagiert.
 
 ## Regeln
 

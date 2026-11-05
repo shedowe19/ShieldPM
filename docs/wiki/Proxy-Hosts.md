@@ -163,7 +163,7 @@ Protect individual hosts from abuse:
 | Field     | Description                      | Example                    |
 | :-------- | :------------------------------- | :------------------------- |
 | **Rate**  | Requests per unit                | `10`                       |
-| **Unit**  | Time unit                        | `second`, `minute`, `hour` |
+| **Unit**  | Time unit                        | `second`, `minute`         |
 | **Burst** | Queue size for exceeding clients | `20`                       |
 
 > [!TIP]
@@ -210,7 +210,6 @@ Selecting **terminal** as the scheme enables a web-based SSH terminal:
 | **Auth Type**     | `Password` or `Private Key`                       |
 
 - Navigate to the configured domain (e.g., `https://term.example.com`) to open the terminal
-- A **Connect** shortcut is also available in the dashboard via the **⋮** (three dots) menu
 - Credentials are **encrypted at rest** using AES-256-GCM
 
 ---

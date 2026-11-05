@@ -127,7 +127,7 @@ Schedule the stop/archive/start procedure above, or use SQLite's `.backup` comma
 
    ```bash
    # Check logs for errors
-   docker compose logs -f shieldpm   # Docker (use app for the Quick Start example)
+   docker compose logs -f shieldpm   # Docker
    journalctl -u shieldpm -f         # Native / LXC
    ```
 

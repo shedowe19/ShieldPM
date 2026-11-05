@@ -189,13 +189,13 @@ Die Quelle [X4BNet/lists_vpn](https://github.com/X4BNet/lists_vpn) beschreibt Li
 
 ## GitOps und Wiederherstellung
 
-`backend/internal/gitops.js` exportiert Firewall-Listen unter `config/firewall-lists/` mit Quellmetadaten, normalisiertem Cache und Aktualisierungsstatus. Die Host-Regeln bleiben in den exportierten Proxy-Host-Metadaten enthalten.
+`backend/internal/gitops.js` exportiert Firewall-Listen unter `/data/gitops/shieldpm-config/firewall-lists/` mit Quellmetadaten, normalisiertem Cache und Aktualisierungsstatus. Die Host-Regeln bleiben in den exportierten Proxy-Host-Metadaten enthalten.
 
 Beim Import werden Listen vor Proxy-Hosts verarbeitet. Der gemeinsame Validierungshelfer prüft Metadaten und gecachte IP-/CIDR-Einträge ohne einen Netzwerkabruf; eine Wiederherstellung benötigt deshalb keinen erfolgreichen Feed-Download. Ungültige Einträge verhindern den betreffenden Schreibvorgang. Ein URL-Abonnement muss mindestens einen gültigen gecachten Eintrag enthalten, auch wenn es deaktiviert ist; fehlender, leerer oder nur aus Kommentaren bestehender Cache wird vor dem Listenschreibvorgang zurückgewiesen. Referenzen werden vor dem Host-Schreibvorgang geprüft.
 
 Das Pruning bisheriger Firewall-Listen wird bis nach sämtlichen erfolgreichen Importen sowie der validierten Nginx-Neugenerierung und dem Reload verschoben. Schlägt ein Import oder die Nginx-Aktivierung fehl, wird keine bisherige Liste durch dieses Pruning entfernt. Erst nach erfolgreicher Übernahme des gesamten Imports werden nicht mehr vorhandene Listen gelöscht; noch verwendete Listen bleiben auch dann geschützt. So stehen bisherige Zuordnungen bis zum Abschluss des Host-Restores weiter zur Verfügung.
 
-GitOps aktiviert dafür `bulkGenerateConfigGroups(groups, {throwOnError: true})`. Ein Render- oder Syntaxfehler wird nach dem Zurückrollen der gestagten Dateien weitergegeben und erreicht weder den abschließenden Reload noch die Listenbereinigung. Andere Aufrufer behalten den bisherigen Rückgabestatus des Sammellaufs. Der Gesamtimport ist weiterhin keine Datenbanktransaktion: vor einem späteren Fehler erfolgreich importierte Objekte werden nicht gemeinsam zurückgerollt.
+GitOps aktiviert dafür `bulkGenerateConfigGroupsUnlocked(groups, {throwOnError: true, reload: true})`. Ein Render- oder Syntaxfehler wird nach dem Zurückrollen der gestagten Dateien weitergegeben und erreicht weder den abschließenden Reload noch die Listenbereinigung. Andere Aufrufer behalten den bisherigen Rückgabestatus des Sammellaufs. Der Gesamtimport ist weiterhin keine Datenbanktransaktion: vor einem späteren Fehler erfolgreich importierte Objekte werden nicht gemeinsam zurückgerollt.
 
 Fehlt das Verzeichnis `firewall-lists` in einer älteren Sicherung, gilt das nicht als Löschauftrag: bestehende Listen bleiben erhalten. Der reguläre Abonnement-Timer kann aktivierte URL-Quellen nach der Wiederherstellung wieder aktualisieren.
 
