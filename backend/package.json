@@ -18,7 +18,7 @@
     "@simplewebauthn/server": "^14.0.3",
     "ajv": "^8.20.0",
     "archiver": "^8.0.0",
-    "basic-ftp": "6.2.5",
+    "basic-ftp": "6.2.6",
     "batchflow": "0.4.0",
     "bcryptjs": "3.0.3",
     "better-sqlite3": "^13.0.3",
