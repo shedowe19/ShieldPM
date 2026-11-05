@@ -236,6 +236,15 @@ from production network performance.
 - **Scope**: HTTP/HTTPS Proxy Hosts only; TCP/UDP Streams and TLS passthrough are not covered. Feed membership expresses the configured network policy, not proof of an attack. Details: [IP firewall internals](./llm-wiki/wiki/reference/module/ip-firewall.md) and [user guide](./docs/wiki/IP-Firewall.md).
 - **Related ownership and update contracts**: Docker rediscovery merges discovery keys into the current locked host metadata so manual firewall settings survive. Public certificate/access-list host expansions enforce each relation's host permission and owner; trusted rebuilds still process all affected hosts. Editing dialogs revalidate their opening snapshot and preserve the open draft. See the [October code review](./llm-wiki/wiki/reference/entwicklung/code-audit-2026-10.md) for regression evidence and remaining dependency limits.
 
+### 6.1c Traffic Flow Preview
+
+- Optional `TRAFFIC_FLOW_ENABLED=true` adds bounded, ephemeral completed-request
+  observations via loopback UDP and an authorized flow endpoint within Analytics.
+- Current per-edge rates are deliberately unknown: request-end logs do not measure
+  active transfers. Configuration, observations, and unknown paths stay distinct.
+- See [Analytics internals](./llm-wiki/wiki/reference/module/analytics.md#experimenteller-traffic-flow)
+  and [activation/rollback](./docs/wiki/Analytics.md#live-traffic-flow-experimental).
+
 ### 6.2 AI Core (`backend/internal/ai/`)
 
 - **Orchestrator**: `ai.js` manages the chat loop; `executor.js` dispatches structured tool calls.

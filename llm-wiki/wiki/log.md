@@ -2,6 +2,21 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-05] feature | Experimentelle Traffic-Flow-Vorschau
+
+- Command: Live Traffic Flow implementieren, Branch pushen und englischen Draft-PR gegen develop erstellen.
+- Type: feature
+- Areas affected: Analytics, Nginx-Konfiguration, API, Frontend, Tests und Dokumentation
+- Files changed: Traffic-Flow-Collector, Snapshot-API, Nginx-Logformat, Analytics-Panel, Tests und Messskript
+- Wiki pages updated: reference/module/analytics, reference/api/nginx-analytics, current-project-state, tasks, index, changelog, decisions/README, log
+- New wiki pages: decisions/2026-11-05-traffic-flow-messgrenzen.md
+- New TODOs: T-028 echte Kantenraten für laufende Transfers
+- New bugs: keine bestätigten offenen aus dieser Änderung
+- New decisions: Abschlussbeobachtungen und konfigurierte Topologie bleiben ausdrücklich von unbekannten aktuellen Raten getrennt.
+- Open questions: echte sekündliche Kantenraten, Glättung und Ratenskala bleiben unerfüllt; Instrumentation der separaten Nginx-Basis erforderlich.
+- Next steps: Draft-PR prüfen; T-028 getrennt mit laufenden Transfers validieren. Kein Merge oder Deployment.
+- Verification: Backend 274 Dateien bestanden, 9 übersprungen; 2657 Tests bestanden, 56 übersprungen. Frontend 223 Dateien und 990 Tests bestanden. Backend-Typecheck und Frontend-Build bestanden. Chromium-Smoke: 1 Test bestanden, einschließlich Pause/Fortsetzen, Fehler, veraltete Daten und schmale Ansicht. Echte Nginx-Messprüfung: 131072 Body-Bytes erst nach Abschluss, keine Beobachtung während des Transfers. Locale-Check bestanden mit fehlenden Übersetzungswarnungen außerhalb Englisch. Lokaler synthetischer Benchmark: 100000 Eingaben in 970,74 ms, maximal 1000 Einträge; Snapshot mit 100 Hosts in 13,83 ms und 216047 Bytes. Kein Nachweis für Produktions-Overhead oder echte Live-Raten.
+
 ## [2026-11-05] chore | T-019 Triage und 16 Sofortfixes
 
 - Command: „T-019 mach das“.

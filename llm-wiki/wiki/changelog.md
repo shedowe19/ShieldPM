@@ -3,6 +3,16 @@
 Ergebnisse für Menschen, neueste zuerst. Die Arbeit selbst steht im [Log](./log.md).
 Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
+## 2026-11-05 — Experimentelle Traffic-Flow-Vorschau
+
+- Vorhandene Analytics-Seite um eine opt-in Flow-Ansicht ergänzt: maskierte
+  Clientgruppen, schematisches Internet, einzelne Hosts und getrennte
+  konfigurierte/beobachtete Upstreams; Pause, Suche, Liste und Fehlerzustände.
+- Kurzlebiges UDP-Abschlusssample mit aktuellen Hostberechtigungen; keine neuen
+  Datenbankwrites und keine erfundenen Kantenraten. Echte Live-Raten bleiben T-028.
+- [Messgrenzen](./decisions/2026-11-05-traffic-flow-messgrenzen.md) und Rückweg
+  dokumentiert. Feature-Branch, kein Deployment.
+
 ## 2026-11-05
 
 - T-019: 350 Warnungen triagiert, 16 sicherheits- und fehlerrelevante Punkte

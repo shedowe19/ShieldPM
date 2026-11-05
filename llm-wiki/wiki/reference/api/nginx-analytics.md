@@ -18,6 +18,14 @@ API-Routen für detaillierte Nginx-Analytics-Daten.
 
 `range` unterstützt `1h`, `24h`, `7d` und `30d`; fehlende oder ungültige Werte fallen auf `24h` zurück. Die Antwort nutzt stabile JSON-Feldnamen in `camelCase`: Zeitreihen enthalten `timestamp`, `count`, `bytes`, `s2xx` bis `s5xx`; Summaries enthalten `count`, `status2xx` bis `status5xx`, `topCountries`, `topIps`, `topReferers`, `topUserAgents`, `topPaths` und `recentRequests`. Zeitreihen werden bei `7d` serverseitig auf Stunden- und bei `30d` auf Tagespunkte verdichtet. Beide Routen prüfen `analytics:list` oder die aktuell berechtigte Sicht auf den eigenen Host; der globale Analytics-Router unter `/api/analytics` verlangt `analytics:list`.
 
+Der experimentelle Endpunkt `GET /api/nginx/analytics/flow` liefert eine
+begrenzte Topologie und ein 60-Sekunden-Abschlusssample. Er verlangt zusätzlich
+zur Analytics-Berechtigung die aktuelle Host-Sichtbarkeit und setzt
+`Cache-Control: no-store`. Ohne `TRAFFIC_FLOW_ENABLED=true` ist die Antwort
+deaktiviert. Raten bleiben `null`; `sample_complete: false` und
+`capabilities.current_rates: false` verhindern eine Interpretation als exakte
+Live-Messung. Details und Grenzen: [Analytics](../module/analytics.md#experimenteller-traffic-flow).
+
 ## Abhängigkeiten
 
 - `internal/analytics.js` — Zugriffsprüfung und Summary aus `AnalyticCount` und `AnalyticsLogs`

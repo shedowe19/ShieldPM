@@ -34,6 +34,13 @@
 
 ## Blocked
 
+- [ ] **T-028 Echte Traffic-Flow-Kantenraten.** Abnahme: laufende Downloads,
+      Uploads und WebSockets mit bekannter Datenmenge belegen aktuelle Raten pro
+      Verbindung; gemeinsame Skala und Glättung sind gegen diese Messung geprüft.
+      Blockiert: die bestehende Nginx-Telemetrie liefert nur Anfrageabschlüsse;
+      die Vorschau gibt Raten bewusst als unbekannt aus. Siehe
+      [Messentscheidung](./decisions/2026-11-05-traffic-flow-messgrenzen.md).
+
 - [ ] **T-007 OpenAppSec-Policy auf einer laufenden Instanz anwenden.** Abnahme:
       `open-appsec-ctl --apply-policy` meldet keinen Schemafehler und die aktive
       Policy entspricht `local_policy.yaml`. Blockiert: braucht einen laufenden

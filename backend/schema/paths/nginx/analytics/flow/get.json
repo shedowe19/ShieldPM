@@ -1,0 +1,24 @@
+{
+	"operationId": "getTrafficFlow",
+	"summary": "Bounded proxy topology and recent completed-request observations",
+	"description": "Requires current analytics:list and proxy_hosts:list permissions; owner visibility is applied before aggregation. Opt-in TRAFFIC_FLOW_ENABLED. Rates are null: completion logs do not measure ongoing transfers. UDP sampling is best effort; sample_complete is always false. Poll no faster than five seconds.",
+	"tags": [
+		"analytics"
+	],
+	"security": [
+		{
+			"bearerAuth": []
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Snapshot containing enabled, generated_at, configuration_revision, 60-second window, capabilities.current_rates=false, bounded hosts with masked client prefixes and configured/observed/unknown targets, collector state, sample_complete=false and poll_interval_ms=5000."
+		},
+		"401": {
+			"description": "Authentication required"
+		},
+		"403": {
+			"description": "Permission denied"
+		}
+	}
+}

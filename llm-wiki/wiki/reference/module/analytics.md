@@ -75,6 +75,38 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 
 Hostbezogene Abfragen prüfen zuerst die aktuelle serverseitige `analytics:list`-Berechtigung. Ohne globale Analytics-Berechtigung muss `proxy_hosts:get` erfolgreich sein und der Host dem aktuellen Benutzer gehören, sofern dieser kein aktuell berechtigter Administrator ist. Eine alte Admin-Rolle aus dem JWT ersetzt keine aktuelle Berechtigungsprüfung. Unerwartete Datenbank- oder Berechtigungsfehler lösen keinen schwächeren Fallback aus.
 
+## Experimenteller Traffic-Flow
+
+`TRAFFIC_FLOW_ENABLED=true` aktiviert einen separaten flüchtigen Collector
+(`internal/traffic-flow.js`, `lib/traffic-flow.js`). Nginx sendet mit dem
+hostbezogenen `spm_flow_<id>`-Format abgeschlossene HTTP-Anfragen an Loopback-UDP
+15149. Die gemeinsame Zeile enthält Host-ID, Abschlusszeit, Clientadresse,
+Upstream-Versuche, Cachezustand und Antwortbody-Bytes. Der Collector speichert
+nur /24- beziehungsweise /48-Präfixe; keine URLs, Header oder Inhalte. Es gibt
+keine zusätzliche Datenbankablage. Anubis und Streams sind nicht abgedeckt.
+
+Die API `/api/nginx/analytics/flow` prüft `analytics:list` und aktuelle
+`proxy_hosts:list`-Sichtbarkeit vor jeder Aggregation. Konfigurierte Ziele bleiben
+von konkret beobachteten TCP-Upstream-Versuchen getrennt. Cache-Hits erzeugen
+keine erfundenen Upstream-Kanten. Eine Anfrage zählt pro Client einmal, auch bei
+Retries. Der API-Vertrag gibt `current_rates: false`, nullable Raten und
+`sample_complete: false` zurück. UDP und begrenzte Puffer liefern keine exakten
+Gesamtsummen. Die Oberfläche zeigt eine Vorschau abgeschlossener Anfragen mit
+konstanter Linienstärke, keine Echtzeit-Bandbreitenmessung.
+
+Grenzen: 60 Sekunden Fenster, 1.000 Ereignisse, 100 Hosts pro Snapshot,
+32 Clientgruppen und 32 beobachtete Peers pro Host, 8 KiB pro Datagramm und
+2.000 Datagramme pro Sekunde. Polling erfolgt ungefähr alle fünf Sekunden;
+Pause, ausgeblendeter Tab und Offline-Zustand stoppen die Abfrage. Stale- und
+Fehlerzustände sind sichtbar. Hostpositionen folgen IDs statt Traffic-Ranglisten.
+
+Aktivierung und Rückweg sowie die isolierte Nginx-Messprüfung stehen in der
+[öffentlichen Analytics-Dokumentation](../../../../docs/wiki/Analytics.md#live-traffic-flow-experimental).
+Die Prüfung belegt für 131.072 Antwortbody-Bytes, dass bereits empfangene Daten
+während eines offenen Transfers nicht in Access-Log/UDP erscheinen. Deshalb
+bleiben echte Kantenraten bewusst unbekannt. Die notwendige weitergehende
+Instrumentation gehört zur Nginx-Basis, nicht zu einer Umdeutung der Endlogs.
+
 ## Abhängigkeiten
 
 - `recharts` — Chart-Bibliothek im Frontend

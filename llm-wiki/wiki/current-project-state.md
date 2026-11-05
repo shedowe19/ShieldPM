@@ -50,6 +50,14 @@ Testlauf dieser Sitzung:
 - Die Wiki-Prüfung läuft in der CI (`lint-and-format.yml`, Schritt
   „Check internal LLM wiki“); Lauf `41894222573` war grün.
 
+## Traffic-Flow-Vorschau im Feature-Branch
+
+Opt-in-Topologie und ein begrenztes Abschlusssample werden in der vorhandenen
+Analytics-Seite ergänzt. Echte aktuelle Kantenraten bleiben unbekannt; keine
+sekündliche Echtzeitmessung wird behauptet. Details und Betriebsgrenzen stehen
+im [Analytics-Modul](./reference/module/analytics.md#experimenteller-traffic-flow).
+Die Änderung ist ein Draft-PR, nicht gemergt oder ausgerollt.
+
 ## Was bewusst fehlt
 
 - Wasm/WASI-Ausführung, Kataloge und zugehörige UI/API wurden entfernt; die

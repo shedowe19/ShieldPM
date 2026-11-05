@@ -61,6 +61,20 @@ afterEach(async () => {
 	await fs.rm(directory, { recursive: true, force: true });
 });
 describe("structured traffic policy", () => {
+	it("renders opt-in completion syslog while preserving analytics and excludes ambiguous Anubis hops", async () => {
+		const disabled = await nginx.renderConfig("proxy_host", host());
+		expect(disabled).not.toContain("spm_flow_");
+		vi.stubEnv("TRAFFIC_FLOW_ENABLED", "true");
+		const enabled = await nginx.renderConfig("proxy_host", host());
+		expect(enabled).toContain("log_format spm_flow_12 escape=json");
+		expect(enabled).toContain('"host":12');
+		expect(enabled).toContain('"upstream":"$upstream_addr"');
+		expect(enabled).toContain("access_log syslog:server=127.0.0.1:15149,tag=shieldpm_flow,nohostname spm_flow_12;");
+		expect(enabled).toContain("access_log /data/nginx/json_access.log json_analytics;");
+		const anubis = await nginx.renderConfig("proxy_host", host({ anubis_enabled: true }));
+		expect(anubis).not.toContain("spm_flow_");
+	});
+
 	it("renders a legacy protected host without a listener or any retired runtime hooks", async () => {
 		const legacy = host({
 			meta: { wasm_filters: [{ enabled: true, kind: "api_key", config: { sealed_value: "unavailable" } }] },

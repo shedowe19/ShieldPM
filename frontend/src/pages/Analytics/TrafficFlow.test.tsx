@@ -1,0 +1,116 @@
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { TrafficFlowSnapshot } from "src/api/backend/getTrafficFlow";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { TrafficFlow } from "./TrafficFlow";
+
+const mocks = vi.hoisted(() => ({ useTrafficFlow: vi.fn() }));
+vi.mock("./useTrafficFlow", () => ({ useTrafficFlow: mocks.useTrafficFlow }));
+
+const snapshot: TrafficFlowSnapshot = {
+	enabled: true,
+	generatedAt: new Date().toISOString(),
+	configurationRevision: "test",
+	sampleComplete: false,
+	window: { start: "2026-11-05T16:00:00Z", end: "2026-11-05T16:01:00Z" },
+	capabilities: { currentRates: false, source: "completed_requests" },
+	hosts: [
+		{
+			id: 3,
+			domains: ["example.test", "alias.test"],
+			enabled: true,
+			truncated: false,
+			clients: [
+				{
+					id: "prefix:3",
+					label: "192.0.2.0/24",
+					requests: 2,
+					completedBytes: 9000,
+					lastSeen: "2026-11-05T16:00:10Z",
+					currentBytesPerSecond: null,
+				},
+			],
+			targets: [
+				{
+					id: "configured:3",
+					label: "upstream.test:80",
+					kind: "configured",
+					requests: null,
+					lastSeen: null,
+					currentBytesPerSecond: null,
+				},
+			],
+		},
+	],
+	truncated: false,
+	collector: { state: "receiving", lastObservedAt: "2026-11-05T16:00:10Z" },
+	pollIntervalMs: 5000,
+};
+
+beforeEach(() =>
+	mocks.useTrafficFlow.mockReturnValue({ data: snapshot, error: null, isLoading: false, available: true }),
+);
+afterEach(() => {
+	cleanup();
+	vi.clearAllMocks();
+});
+const open = () => fireEvent.click(screen.getByRole("button", { name: "Open traffic flow" }));
+
+describe("TrafficFlow", () => {
+	it("does not mount its query until explicitly opened", () => {
+		render(<TrafficFlow />);
+		expect(mocks.useTrafficFlow).not.toHaveBeenCalled();
+		open();
+		expect(mocks.useTrafficFlow).toHaveBeenCalledWith(false);
+	});
+	it("labels unknown rates and completed bytes honestly with focusable details", () => {
+		const { container } = render(<TrafficFlow />);
+		open();
+		expect(screen.getByText(/Current per-connection throughput is unavailable/)).toBeInTheDocument();
+		expect(screen.getByText(/masked network prefixes, not people or devices/)).toBeInTheDocument();
+		expect(
+			screen.getByRole("button", { name: /Completed requests: 2. Completed response-body bytes: 9000/ }),
+		).toBeInTheDocument();
+		expect(container.querySelectorAll('line[stroke-width="2"]')).toHaveLength(3);
+		expect(container.querySelector('line[stroke-dasharray="6 4"]')).not.toBeNull();
+		expect(screen.getAllByText("example.test, alias.test")).toHaveLength(1);
+	});
+	it("pauses, resumes and provides a searchable accessible list", () => {
+		render(<TrafficFlow />);
+		open();
+		fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+		expect(mocks.useTrafficFlow).toHaveBeenLastCalledWith(true);
+		fireEvent.click(screen.getByRole("button", { name: "Resume" }));
+		expect(mocks.useTrafficFlow).toHaveBeenLastCalledWith(false);
+		fireEvent.click(screen.getByRole("button", { name: "List view" }));
+		expect(screen.getByText(/9000 completed response-body bytes/)).toBeInTheDocument();
+		fireEvent.change(screen.getByRole("textbox", { name: "Filter proxy hosts" }), { target: { value: "absent" } });
+		expect(screen.getByText("No authorized proxy hosts match this filter.")).toBeInTheDocument();
+	});
+	it("hides old topology when access or the connection fails", () => {
+		mocks.useTrafficFlow.mockReturnValue({
+			data: snapshot,
+			error: new Error("Forbidden"),
+			isLoading: false,
+			available: true,
+		});
+		render(<TrafficFlow />);
+		open();
+		expect(screen.getByRole("alert")).toHaveTextContent("Previous topology is hidden");
+		expect(screen.queryByText("example.test, alias.test")).not.toBeInTheDocument();
+	});
+	it("separately exposes disabled, stale and incomplete snapshots", () => {
+		mocks.useTrafficFlow.mockReturnValue({
+			data: { ...snapshot, generatedAt: "2000-01-01T00:00:00Z", truncated: true },
+			error: null,
+			available: true,
+		});
+		const view = render(<TrafficFlow />);
+		open();
+		expect(screen.getByRole("status")).toHaveTextContent("Stale snapshot");
+		expect(screen.getByRole("alert")).toHaveTextContent("snapshot is incomplete");
+		mocks.useTrafficFlow.mockReturnValue({ data: { ...snapshot, enabled: false }, error: null, available: true });
+		view.rerender(<TrafficFlow />);
+		expect(screen.getByText(/Traffic flow is disabled/)).toBeInTheDocument();
+		expect(screen.queryByText("example.test, alias.test")).not.toBeInTheDocument();
+	});
+});

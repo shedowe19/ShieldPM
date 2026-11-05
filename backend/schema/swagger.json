@@ -891,6 +891,11 @@
 			"post": {
 				"$ref": "./paths/nginx/proxy-hosts/hostID/upload-relay/uploadID/finalize/post.json"
 			}
+		},
+		"/nginx/analytics/flow": {
+			"get": {
+				"$ref": "./paths/nginx/analytics/flow/get.json"
+			}
 		}
 	}
 }

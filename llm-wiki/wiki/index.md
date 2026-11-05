@@ -82,6 +82,8 @@ zuerst in `wiki/reference/` geändert und hier nur zusammengefasst.
 - [2026-11-04 Wiki-Struktur](./decisions/2026-11-04-wiki-struktur.md) — warum es drei Doku-Ebenen gibt
 - [2026-10-27 Entfernung der Wasm-Laufzeit](./decisions/2026-10-27-entfernung-der-wasm-laufzeit.md) — Ausbau und Migration
 
+- [2026-11-05 Traffic-Flow-Messgrenzen](./decisions/2026-11-05-traffic-flow-messgrenzen.md) — Abschlussbeobachtungen bleiben von aktuellen Raten getrennt
+
 ### Tiefendoku (migriert)
 
 - [Tiefendoku-Index](./reference/index.md) — die frühere `docs/wiki-intern`, jetzt unter `llm-wiki/wiki/reference/`; alle Modul-, Architektur-, API-, Daten- und Entwicklungsseiten

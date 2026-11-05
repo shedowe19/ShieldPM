@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import express from "express";
 import internalAnalytics from "../../internal/analytics.js";
+import trafficFlow from "../../internal/traffic-flow.js";
 import { resolveAnalyticsRange } from "../../lib/analytics-range.js";
 import { serializeAnalyticsSeries, serializeAnalyticsSummary } from "../../lib/analytics-response.js";
 import errs from "../../lib/error.js";
@@ -9,6 +10,16 @@ import AnalyticCount from "../../models/analytic_count.js";
 
 const router = express.Router({
 	mergeParams: true,
+});
+
+/** Bounded, authorized topology and completed-request observations. */
+router.get("/flow", jwtdecode(), async (_req, res, next) => {
+	try {
+		res.set("Cache-Control", "no-store");
+		res.json(await trafficFlow.get(res.locals.access));
+	} catch (error) {
+		next(error);
+	}
 });
 
 /**

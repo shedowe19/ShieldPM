@@ -7,6 +7,7 @@ import { pipeline } from "node:stream/promises";
 import punycode from "punycode.js";
 import errs from "../lib/error.js";
 import { normalizeCachePolicy, normalizeUpstreamPool } from "../lib/host-traffic-policy.js";
+import { flowEnabled } from "../lib/traffic-flow.js";
 import { getPoolObservations } from "../lib/upstream-pool-observations.js";
 import { nginx as logger } from "../logger.js";
 
@@ -114,6 +115,7 @@ export function prepareTrafficRender(host, options = { preview: false }) {
 	const pool = normalizeUpstreamPool(host.meta?.upstream_pool, host);
 	const cache = normalizeCachePolicy(host.meta?.cache_policy, host);
 	const namespace = cache?.enabled ? cacheNamespaceFor(host) : null;
+	host.traffic_flow_enabled = flowEnabled() && !host.anubis_enabled;
 	host.waf_ruleset = host.meta?.waf_ruleset ?? (host.caching_enabled ? "crs" : "base");
 	host.traffic_log_path = preview ? path.join(dataPath(), "logs", "traffic_preview.log") : trafficLog(host.id);
 	host.pool = pool?.enabled ? { ...pool, name: `spm_pool_${host.id}` } : null;
