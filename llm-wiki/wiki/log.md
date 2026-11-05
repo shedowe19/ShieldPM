@@ -2,6 +2,21 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-05] research | Laufende Transfermessung mit Lua geprüft
+
+- Command: Echte Live-Kantenraten weiter untersuchen und nachweisen.
+- Type: research
+- Areas affected: Nginx-Messquelle und Traffic-Flow-Abnahme
+- Files changed: scripts/benchmarks/traffic-flow-live-measurement.mjs und Messdokumentation
+- Wiki pages updated: decisions/2026-11-05-traffic-flow-messgrenzen, reference/module/analytics, log, changelog
+- New wiki pages: keine
+- New TODOs: keine; T-028 bleibt offen
+- New bugs: keine Produktänderung
+- New decisions: Lua-Bodyfilter-Bytes sind keine tatsächlichen Downstream-Raten; native Instrumentation benötigt den dokumentierten Lebenszyklusvertrag.
+- Open questions: Native Messquelle sowie HTTP/2-/HTTP/3-Zuordnung noch nicht implementiert.
+- Next steps: Instrumentation in der getrennten Nginx-Basis implementieren und protokollweise messen; keine erfundenen Raten in der Vorschau.
+- Verification: Reproduzierbarer Lua-Test mit ShieldPM Nginx 1.31.6 bestanden: laufender 1-MiB-Transfer, 65.411 empfangene Body-Bytes gegenüber 106.368 bereits vom Bodyfilter verarbeiteten Bytes; Timer-Zugriff auf Requestvariablen abgelehnt. Mengen sind timingabhängig. Wiki-Prüfung bestanden. Kein Merge oder Deployment.
+
 ## [2026-11-05] feature | Experimentelle Traffic-Flow-Vorschau
 
 - Command: Live Traffic Flow implementieren, Branch pushen und englischen Draft-PR gegen develop erstellen.

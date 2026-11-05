@@ -106,6 +106,13 @@ Die Prüfung belegt für 131.072 Antwortbody-Bytes, dass bereits empfangene Date
 während eines offenen Transfers nicht in Access-Log/UDP erscheinen. Deshalb
 bleiben echte Kantenraten bewusst unbekannt. Die notwendige weitergehende
 Instrumentation gehört zur Nginx-Basis, nicht zu einer Umdeutung der Endlogs.
+Die zusätzliche Lua-Prüfung `scripts/benchmarks/traffic-flow-live-measurement.mjs`
+belegt, dass Bodyfilter-Bytes dem gedrosselten Downstream vorauslaufen und
+Requestvariablen im Timer-Callback nicht verfügbar sind. Der konkrete
+[Instrumentationsvertrag](../../decisions/2026-11-05-traffic-flow-messgrenzen.md#kleinster-belastbarer-instrumentationsvertrag)
+legt Zähler, Identitäten, Zeitstempel, Resetmarker und Protokollabnahme für eine
+spätere native Messquelle fest. Die Produktanforderung echter Live-Raten bleibt offen.
+
 
 ## Abhängigkeiten
 

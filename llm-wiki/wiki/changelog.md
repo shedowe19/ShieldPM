@@ -3,6 +3,13 @@
 Ergebnisse für Menschen, neueste zuerst. Die Arbeit selbst steht im [Log](./log.md).
 Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
+## 2026-11-05 — Live-Messquelle weiter eingegrenzt
+
+- Reproduzierbarer Test zeigt den Vorsprung von Lua-Bodyfilter-Bytes vor dem
+  gedrosselten Client und die fehlende Requestvariablen-Sicht in Lua-Timern.
+- Nativen Instrumentationsvertrag für echte Kantenraten präzisiert; T-028
+  bleibt offen, die bestehende Vorschau meldet weiterhin unbekannte Raten.
+
 ## 2026-11-05 — Experimentelle Traffic-Flow-Vorschau
 
 - Vorhandene Analytics-Seite um eine opt-in Flow-Ansicht ergänzt: maskierte
