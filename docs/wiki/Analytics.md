@@ -158,9 +158,11 @@ stream churn. To verify a real native capture through the application collector:
 node scripts/benchmarks/traffic-flow-native-capture.mjs /path/to/native-samples.json
 ```
 
-The validated capture contained 295 requests; the app independently verified 63
-exact counter intervals, including 45 active download and 13 active upload
-intervals. These counts describe the test run, not production traffic totals.
+The final production-image capture contained 555 requests; the app independently
+verified 869 exact counter intervals, including 52 active download and 14 active
+upload intervals. The production binary passed the module gate, 694 runtime
+samples, 28 HTTP/2/WebSocket protocol samples and seven HTTP/3 cases covering
+packet loss, delayed acknowledgements, resets, disconnects, capacity and reloads. These counts describe the test run, not production traffic totals.
 
 ## Privacy
 

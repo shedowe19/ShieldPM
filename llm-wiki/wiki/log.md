@@ -2,6 +2,21 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-05] validation | Finales Produktionsimage und vollständige App-Prüfung
+
+- Command: Finale Produktionsmessung und vollständige Prüfungen dokumentieren.
+- Type: validation
+- Areas affected: Traffic-Flow-Abnahme und Messdokumentation
+- Files changed: Analytics-Dokumentation und Wiki-Messbelege
+- Wiki pages updated: Analytics-Referenz, Messentscheidung und Log
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: keine bestätigten
+- New decisions: keine Produktänderung; finale Produktionsbelege ersetzen frühere Zwischenstände.
+- Open questions: Veröffentlichung der abhängigen Draft-PRs
+- Next steps: Draft-PRs prüfen; kein Merge oder Deployment.
+- Verification: Produktionsimage `328e794ef29f9166c27677c26f05ba630516ba923b6ef622eb8d88d11800b0d7` bestand Modul-Gate, 694 Runtime-Samples, 28 Protokoll-Samples und sieben HTTP/3-Fälle (2.417 UDP-Zeilen; 90 verworfene/549 verzögerte Datagramme, Kapazität/Reload). Echter Produktionscapture→App-Test bestanden: 555 Requests, 869 exakte Intervalle, 52 aktive Download-/14 Uploadintervalle, Maskierung. Backend vollständig: 2.674 bestanden/56 übersprungen. Frontend vollständig im unveränderten Wiederholungslauf: 998 bestanden; TypeScript und Produktionsbuild bestanden. Ein anfänglicher Router-Testtimeout unter paralleler Last bestand isoliert und im vollständigen Wiederholungslauf ohne Code- oder Timeoutänderung.
+
 ## [2026-11-05] feature | HTTP/3-ACK-/Streamraten angebunden
 
 - Command: Verbleibendes HTTP/3 nativ messen und unabhängig in der App validieren.

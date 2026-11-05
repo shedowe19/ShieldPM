@@ -104,8 +104,10 @@ des Requestpools hinaus bis zur Streamschließung. ACKs nach Poolcleanup sind ge
 
 Die native Suite bestand mit drei parallelen Cross-Host-Streams, gehaltenem Upload,
 88 verworfenen und 519 verzögerten Datagrammen, Reset/Disconnect und 283 Churnstreams.
-Die unabhängige App-Prüfung realer UDP-Daten bestand: 295 Requests, 63 exakte
-Intervalle, 45 aktive Download- und 13 aktive Uploadintervalle; maskierte Präfixe.
+Die unabhängige App-Prüfung realer UDP-Daten aus dem finalen Produktionsimage
+bestand: 555 Requests, 869 exakte Intervalle, 52 aktive Download- und 14 aktive
+Uploadintervalle; maskierte Präfixe. Das Image bestand Modul-Gate, 694 Runtime-
+Samples, 28 HTTP/2-/WebSocket-Samples und sieben HTTP/3-Fälle mit Kapazität/Reload.
 Inkompatible ACK-/Accepted-Bytegruppen werden nicht addiert; expandierbare
 qualitätsgleiche Komponenten behalten exakte Raten, Fenster und gemeinsame Skala.
 

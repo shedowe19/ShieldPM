@@ -160,6 +160,8 @@ expandierbare Komponenten zeigen kompatible Teilgruppen mit stabilen Qualitäts-
 exakten Zeitfenstern und derselben Skala. Es gibt keine Personen-/Geräteidentität.
 
 Die reale QUIC-Suite bestand mit Verlust, ACK-Verzögerung, drei parallelen Streams,
-Reset/Disconnect und 283 Churn-Streams. App-Captureprüfung: 295 Requests, 63 exakte
-Intervalle, davon 45 aktive Download- und 13 aktive Uploadintervalle, Maskierung
+Reset/Disconnect und Churn. Finales Produktionsimage: Modul-Gate, 694 Runtime-
+Samples, 28 HTTP/2-/WebSocket-Samples und sieben HTTP/3-Fälle einschließlich
+Kapazitätsgrenze und Reload bestanden. App-Captureprüfung: 555 Requests, 869 exakte
+Intervalle, davon 52 aktive Download- und 14 aktive Uploadintervalle, Maskierung
 bestätigt. Reproduzierbar mit `scripts/benchmarks/traffic-flow-native-capture.mjs`.
