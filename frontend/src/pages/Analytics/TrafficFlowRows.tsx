@@ -2,25 +2,10 @@ import type { ReactNode } from "react";
 import type { FlowHost, TrafficFlowSnapshot } from "src/api/backend/getTrafficFlow";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "src/components/ui/tooltip";
 import { intl } from "src/locale";
+import { FlowConnection, FlowRateLabel, rateDescription } from "./TrafficFlowRate";
 
 export const flowText = (name: string, values?: Record<string, string | number>) =>
 	intl.formatMessage({ id: `analytics.flow.${name}` }, values);
-
-function Connection({ kind }: { kind: "configured" | "observed" | "unknown" }) {
-	return (
-		<svg width="32" height="24" viewBox="0 0 32 24" aria-hidden="true" className="shrink-0 text-muted-foreground">
-			<line
-				x1="0"
-				x2="32"
-				y1="12"
-				y2="12"
-				stroke="currentColor"
-				strokeWidth="2"
-				strokeDasharray={kind === "configured" ? "6 4" : kind === "unknown" ? "2 3" : undefined}
-			/>
-		</svg>
-	);
-}
 
 function Detail({ description, children }: { description: string; children: ReactNode }) {
 	return (
@@ -69,15 +54,28 @@ export function TrafficFlowRows({ hosts, snapshot }: { hosts: FlowHost[]; snapsh
 											.map((client) => (
 												<li key={client.id}>
 													<Detail
-														description={flowText("client-detail", {
-															requests: client.requests,
-															bytes: client.completedBytes,
-															lastSeen: client.lastSeen,
-															start: snapshot.window.start,
-															end: snapshot.window.end,
-														})}
+														description={`${rateDescription(client.rate, client.rateIncomplete)} ${flowText(
+															"client-detail",
+															{
+																requests: client.requests,
+																bytes: client.completedBytes,
+																lastSeen: client.lastSeen,
+																start: snapshot.window.start,
+																end: snapshot.window.end,
+															},
+														)}`}
 													>
-														<div className="break-all">{client.label}</div>
+														<div className="flex items-center">
+															<FlowConnection
+																kind={client.rate ? "observed" : "unknown"}
+																rate={client.rate}
+															/>
+															<span className="break-all">{client.label}</span>
+														</div>
+														<FlowRateLabel
+															rate={client.rate}
+															incomplete={client.rateIncomplete}
+														/>
 														<div className="text-muted-foreground">
 															{flowText("requests", { count: client.requests })}
 														</div>
@@ -90,12 +88,18 @@ export function TrafficFlowRows({ hosts, snapshot }: { hosts: FlowHost[]; snapsh
 									<p className="text-muted-foreground">{flowText("no-observations")}</p>
 								)}
 							</div>
-							<Connection kind={host.clients.length ? "observed" : "unknown"} />
+							<FlowConnection
+								kind={host.clients.length ? "observed" : "unknown"}
+								rate={host.clientRate}
+							/>
 							<div className="rounded-md border bg-muted/40 p-3 text-center">
 								{flowText("internet")}
 								<p className="text-xs text-muted-foreground">{flowText("schematic")}</p>
 							</div>
-							<Connection kind={host.clients.length ? "observed" : "unknown"} />
+							<FlowConnection
+								kind={host.clients.length ? "observed" : "unknown"}
+								rate={host.clientRate}
+							/>
 							<div className="max-h-48 min-w-0 overflow-y-auto rounded-md border p-3">
 								<div className="break-all font-medium">{host.domains.join(", ") || `#${host.id}`}</div>
 								<div className="text-xs text-muted-foreground">
@@ -107,19 +111,26 @@ export function TrafficFlowRows({ hosts, snapshot }: { hosts: FlowHost[]; snapsh
 									.sort((a, b) => a.id.localeCompare(b.id))
 									.map((target) => (
 										<li key={target.id} className="flex items-center">
-											<Connection kind={target.kind} />
+											<FlowConnection kind={target.kind} rate={target.rate} />
 											<Detail
-												description={flowText("target-detail", {
-													kind: flowText(target.kind),
-													lastSeen: target.lastSeen || flowText("unknown"),
-													requests: target.requests ?? flowText("unknown"),
-													start: snapshot.window.start,
-													end: snapshot.window.end,
-												})}
+												description={`${rateDescription(target.rate, target.rateIncomplete)} ${flowText(
+													"target-detail",
+													{
+														kind: flowText(target.kind),
+														lastSeen: target.lastSeen || flowText("unknown"),
+														requests: target.requests ?? flowText("unknown"),
+														start: snapshot.window.start,
+														end: snapshot.window.end,
+													},
+												)}`}
 											>
 												<div className="break-all">{target.label}</div>
 												<div className="text-xs text-muted-foreground">
-													{flowText(target.kind)} · {flowText("unknown-rate")}
+													{flowText(target.kind)} ·{" "}
+													<FlowRateLabel
+														rate={target.rate}
+														incomplete={target.rateIncomplete}
+													/>
 												</div>
 											</Detail>
 										</li>
@@ -139,14 +150,17 @@ export function TrafficFlowList({ hosts }: { hosts: FlowHost[] }) {
 			{hosts.map((host) => (
 				<li key={host.id} className="rounded border p-3">
 					<h4 className="font-semibold">{host.domains.join(", ") || `#${host.id}`}</h4>
-					<p>{flowText("unknown-rate")}</p>
+					<p>
+						<FlowRateLabel rate={host.clientRate} incomplete={host.clientRateIncomplete} />
+					</p>
 					<ul className="mt-2 space-y-1">
 						{host.clients.map((client) => (
 							<li key={client.id}>
 								{client.label} → {flowText("internet")} → #{host.id}:{" "}
 								{flowText("requests", { count: client.requests })}
 								{", "}
-								{flowText("completed-bytes", { count: client.completedBytes })} · {client.lastSeen}
+								{flowText("completed-bytes", { count: client.completedBytes })} · {client.lastSeen} ·{" "}
+								<FlowRateLabel rate={client.rate} incomplete={client.rateIncomplete} />
 							</li>
 						))}
 					</ul>
@@ -154,7 +168,8 @@ export function TrafficFlowList({ hosts }: { hosts: FlowHost[] }) {
 						{host.targets.map((target) => (
 							<li key={target.id}>
 								#{host.id} → {target.label}: {flowText(target.kind)} ·{" "}
-								{target.lastSeen || flowText("unknown")}
+								{target.lastSeen || flowText("unknown")} ·{" "}
+								<FlowRateLabel rate={target.rate} incomplete={target.rateIncomplete} />
 							</li>
 						))}
 					</ul>

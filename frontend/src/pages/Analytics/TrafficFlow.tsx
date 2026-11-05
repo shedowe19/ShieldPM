@@ -3,6 +3,7 @@ import { Alert, AlertDescription } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";
 import { Input } from "src/components/ui/input";
+import { FlowRateLegend } from "./TrafficFlowRate";
 import { flowText, TrafficFlowList, TrafficFlowRows } from "./TrafficFlowRows";
 import { useTrafficFlow } from "./useTrafficFlow";
 
@@ -17,13 +18,15 @@ function TrafficFlowContent() {
 		return () => clearInterval(timer);
 	}, []);
 	const age = data ? Math.max(0, Math.floor((now - Date.parse(data.generatedAt)) / 1000)) : 0;
-	const stale = age > 15;
+	const stale = age > (data?.capabilities.currentRates ? 5 : 15);
 	const hosts = [...(data?.hosts || [])]
 		.filter((host) => `${host.id} ${host.domains.join(" ")}`.toLowerCase().includes(search.toLowerCase()))
 		.sort((a, b) => a.id - b.id);
 	return (
 		<div className="space-y-4">
-			<p className="text-sm text-muted-foreground">{flowText("limitation")}</p>
+			<p className="text-sm text-muted-foreground">
+				{flowText(data?.capabilities.currentRates ? "live-semantics" : "limitation")}
+			</p>
 			<p className="text-sm text-muted-foreground">{flowText("privacy")}</p>
 			<div className="flex flex-wrap items-center gap-2">
 				<Button variant="outline" size="sm" onClick={() => setPaused(!paused)}>
@@ -63,6 +66,7 @@ function TrafficFlowContent() {
 						</Alert>
 					)}
 					<p className="text-sm">{flowText("legend")}</p>
+					{data.capabilities.currentRates && <FlowRateLegend />}
 					{hosts.length === 0 ? (
 						<p>{flowText("empty")}</p>
 					) : list ? (

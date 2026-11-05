@@ -1190,8 +1190,8 @@
 	"traffic.waf.base": "Base exploit protection",
 	"traffic.waf.crs": "OWASP Core Rule Set",
 	"backups.trusted-archive-notice": "Only import backups from your own trusted ShieldPM instance. Archives contain executable configuration and database SQL. Password and integrity checks do not prove that their contents are safe.",
-	"analytics.flow.title": "Live Traffic Flow — completed-request preview",
-	"analytics.flow.description": "Proxy topology and recent completed-request observations.",
+	"analytics.flow.title": "Live Traffic Flow",
+	"analytics.flow.description": "Proxy topology with measured native HTTP transport rates when available, plus separate recent completed-request observations.",
 	"analytics.flow.limitation": "Current per-connection throughput is unavailable. Long downloads, uploads and WebSockets are not visible while running. Completed-request bytes are not live bytes per second. This view refreshes every 5 seconds. Observations are bounded and best-effort; missing observations do not prove zero traffic.",
 	"analytics.flow.privacy": "Client groups are masked network prefixes, not people or devices. The Internet node is schematic; the two client-side segments describe the same requests and must not be added together.",
 	"analytics.flow.open": "Open traffic flow",
@@ -1232,6 +1232,11 @@
 	"analytics.flow.observed": "Observed",
 	"analytics.flow.unknown": "Unknown",
 	"analytics.flow.unknown-rate": "Current rate: unknown",
-	"analytics.flow.client-detail": "Completed requests: {requests}. Completed response-body bytes: {bytes}. Last completion: {lastSeen}. Window: {start} to {end}. Current bytes/s: unknown.",
-	"analytics.flow.target-detail": "{kind}. Completed requests using peer: {requests}. Last completion: {lastSeen}. Window: {start} to {end}. Current bytes/s: unknown."
+	"analytics.flow.client-detail": "Completed requests: {requests}. Completed response-body bytes: {bytes}. Last observation: {lastSeen}. Window: {start} to {end}.",
+	"analytics.flow.target-detail": "{kind}. Completed requests using peer: {requests}. Last observation: {lastSeen}. Window: {start} to {end}.",
+	"analytics.flow.rate-detail": "Upload: {upload} B/s. Download: {download} B/s. Total: {total} B/s. Smoothed display: {smooth} B/s. Measurement bounds: {start} to {end}; {samples} request samples. HTTP transport bytes, not packets or acknowledged TCP bytes.",
+	"analytics.flow.rate-incomplete": "Rate unknown: incomplete or unsupported sample",
+	"analytics.flow.rate-label": "↑ {upload} B/s · ↓ {download} B/s",
+	"analytics.flow.rate-scale": "Fixed logarithmic scale; widths use EMA smoothing (35% new sample), capped at 16 MiB/s. Exact measured rates are in details.",
+	"analytics.flow.live-semantics": "Live measured HTTP/1 transport rates from active request counters. Upload and download include HTTP data accepted by Nginx transport; TLS and network framing, TCP acknowledgements, HTTP/2, HTTP/3 and unsupported paths are not measured. Missing or stale samples remain unknown. UDP collection is best effort."
 }

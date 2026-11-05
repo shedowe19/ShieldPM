@@ -86,32 +86,38 @@ nur /24- beziehungsweise /48-Präfixe; keine URLs, Header oder Inhalte. Es gibt
 keine zusätzliche Datenbankablage. Anubis und Streams sind nicht abgedeckt.
 
 Die API `/api/nginx/analytics/flow` prüft `analytics:list` und aktuelle
-`proxy_hosts:list`-Sichtbarkeit vor jeder Aggregation. Konfigurierte Ziele bleiben
-von konkret beobachteten TCP-Upstream-Versuchen getrennt. Cache-Hits erzeugen
-keine erfundenen Upstream-Kanten. Eine Anfrage zählt pro Client einmal, auch bei
-Retries. Der API-Vertrag gibt `current_rates: false`, nullable Raten und
-`sample_complete: false` zurück. UDP und begrenzte Puffer liefern keine exakten
-Gesamtsummen. Die Oberfläche zeigt eine Vorschau abgeschlossener Anfragen mit
-konstanter Linienstärke, keine Echtzeit-Bandbreitenmessung.
+`proxy_hosts:list`-Sichtbarkeit vor Aggregation und Quellenstatus. Konfigurierte
+Ziele, Abschlusszahlen und aktuelle Raten bleiben getrennt. Keine Systemtotalen
+werden auf Kanten verteilt. `sample_complete: false` bleibt wegen UDP und Limits.
 
-Grenzen: 60 Sekunden Fenster, 1.000 Ereignisse, 100 Hosts pro Snapshot,
-32 Clientgruppen und 32 beobachtete Peers pro Host, 8 KiB pro Datagramm und
-2.000 Datagramme pro Sekunde. Polling erfolgt ungefähr alle fünf Sekunden;
-Pause, ausgeblendeter Tab und Offline-Zustand stoppen die Abfrage. Stale- und
-Fehlerzustände sind sichtbar. Hostpositionen folgen IDs statt Traffic-Ranglisten.
+Mit zusätzlichem `TRAFFIC_FLOW_LIVE_ENABLED=true` und dem passenden statischen
+Modul aus `shieldpm-nginx` erzeugt das Hosttemplate `shieldpm_traffic_flow`.
+Ohne Modul schlägt Nginx-Validierung fehl; ohne frische unterstützte Samples bleibt
+`current_rates: false`. `lib/traffic-flow-live.js` berechnet vier Richtungsraten
+anhand monotoner Zähler und tatsächlicher Zeitdifferenzen. Die Semantik sind
+HTTP-Transportbytes einschließlich Headern, bei TLS akzeptierte Klartextbytes;
+keine Wire-Bytes, TCP-Bestätigungen oder Zustellgarantien. Unterstützt ist nur
+HTTP/1-Proxyverkehr; HTTP/2, HTTP/3, Upgrades und andere Upstream-Protokolle bleiben
+unbekannt. Resets, fehlende Baselines und Lücken über 3,5 Sekunden ebenfalls.
 
-Aktivierung und Rückweg sowie die isolierte Nginx-Messprüfung stehen in der
-[öffentlichen Analytics-Dokumentation](../../../../docs/wiki/Analytics.md#live-traffic-flow-experimental).
-Die Prüfung belegt für 131.072 Antwortbody-Bytes, dass bereits empfangene Daten
-während eines offenen Transfers nicht in Access-Log/UDP erscheinen. Deshalb
-bleiben echte Kantenraten bewusst unbekannt. Die notwendige weitergehende
-Instrumentation gehört zur Nginx-Basis, nicht zu einer Umdeutung der Endlogs.
-Die zusätzliche Lua-Prüfung `scripts/benchmarks/traffic-flow-live-measurement.mjs`
-belegt, dass Bodyfilter-Bytes dem gedrosselten Downstream vorauslaufen und
-Requestvariablen im Timer-Callback nicht verfügbar sind. Der konkrete
-[Instrumentationsvertrag](../../decisions/2026-11-05-traffic-flow-messgrenzen.md#kleinster-belastbarer-instrumentationsvertrag)
-legt Zähler, Identitäten, Zeitstempel, Resetmarker und Protokollabnahme für eine
-spätere native Messquelle fest. Die Produktanforderung echter Live-Raten bleibt offen.
+Die Oberfläche pollt bei belegter nativer Quelle sekündlich, sonst alle fünf
+Sekunden. Pause/unsichtbarer Tab/Offline stoppen Polling. Die feste logarithmische
+Linienstärkenskala verwendet EMA 0,35; Tooltips behalten exakte ungerundete
+Richtungsraten und Zeitfenster. Gemischte Gruppen mit unbekannten Raten werden
+nicht als vollständige Summe dargestellt. Hostpositionen bleiben ID-stabil.
+
+Grenzen: 60 Sekunden Retention, je 1.000 Abschluss-/Live-Ereignisse, 100 Hosts,
+32 Clientgruppen/32 beobachtete Peers je Host, 8 KiB Datagramme, 2.000 Datagramme/s;
+nativ 256 Requests/Worker und 16 Upstream-Versuche. Nur maskierte Präfixe werden
+im App-Puffer gehalten. Aktivierung und Rückweg siehe
+[Analytics-Dokumentation](../../../../docs/wiki/Analytics.md#live-traffic-flow-experimental).
+
+Die ursprünglichen Access-Log-/Lua-Prüfungen bleiben Belege ungeeigneter Quellen.
+`scripts/benchmarks/traffic-flow-native-measurement.mjs` prüft dagegen mit echtem
+Nginx-Modul und App-Collector Raten vor Download-/Upload-Abschluss, exakte
+Zählerdifferenzen und Präfixmaskierung. Die native Suite prüft zusätzlich HTTPS,
+Retries, Keepalive, Abbrüche und Reloads. Vollständige Protokollabdeckung bleibt
+T-028; siehe [Messentscheidung](../../decisions/2026-11-05-traffic-flow-messgrenzen.md).
 
 
 ## Abhängigkeiten

@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto";
 import dgram from "node:dgram";
 import { FLOW_PORT, FLOW_WINDOW_MS, FlowBuffer, flowEnabled } from "../lib/traffic-flow.js";
+import { LiveFlowBuffer, liveFlowEnabled } from "../lib/traffic-flow-live.js";
 import ProxyHost from "../models/proxy_host.js";
 
 const buffer = new FlowBuffer();
+const liveBuffer = new LiveFlowBuffer();
 let socket;
 let state = "disabled";
 let sweepTimer;
@@ -15,12 +17,16 @@ const service = {
 	start() {
 		if (!flowEnabled() || socket) return;
 		state = "waiting";
-		sweepTimer = setInterval(() => buffer.prune(Date.now()), 5000);
+		sweepTimer = setInterval(() => {
+			buffer.prune(Date.now());
+			liveBuffer.prune(Date.now());
+		}, 5000);
 		sweepTimer.unref();
 		socket = dgram.createSocket("udp4");
 		socket.on("error", () => {
 			state = "error";
 			buffer.clear();
+			liveBuffer.clear();
 		});
 		socket.on("message", (message, remote) => {
 			if (remote.address !== "127.0.0.1" || message.length > 8192 || state === "error") return;
@@ -33,6 +39,10 @@ const service = {
 			if (++acceptedThisSecond > 2000) return;
 			try {
 				const payload = message.toString("utf8");
+				if (payload.startsWith("{") && liveFlowEnabled()) {
+					liveBuffer.ingest(JSON.parse(payload), now);
+					return;
+				}
 				const marker = payload.indexOf("shieldpm_flow: ");
 				if (marker < 0) return;
 				buffer.ingest(JSON.parse(payload.slice(marker + "shieldpm_flow: ".length)), now);
@@ -52,6 +62,7 @@ const service = {
 		socket = null;
 		state = "disabled";
 		buffer.clear();
+		liveBuffer.clear();
 		try {
 			previous?.close();
 		} catch {
@@ -88,6 +99,7 @@ const service = {
 		const rows = enabled ? await query : [];
 		const now = Date.now();
 		const hosts = buffer.snapshot(rows.slice(0, 100), now);
+		const native = liveFlowEnabled() && liveBuffer.apply(hosts, now);
 		const lastSeen =
 			hosts
 				.flatMap((host) => host.clients.map((client) => client.last_seen))
@@ -97,7 +109,11 @@ const service = {
 			enabled,
 			generated_at: new Date(now).toISOString(),
 			window: { start: new Date(now - FLOW_WINDOW_MS).toISOString(), end: new Date(now).toISOString() },
-			capabilities: { current_rates: false, source: "completed_requests" },
+			capabilities: {
+				current_rates: native,
+				source: native ? "native_http_transport" : "completed_requests",
+				byte_semantics: "HTTP bytes accepted by Nginx transport; not wire bytes or TCP acknowledgements",
+			},
 			configuration_revision: createHash("sha256")
 				.update(
 					JSON.stringify(
@@ -119,7 +135,7 @@ const service = {
 				state: enabled ? (state === "error" ? "error" : lastSeen ? "receiving" : "waiting") : "disabled",
 				last_observed_at: lastSeen,
 			},
-			poll_interval_ms: 5000,
+			poll_interval_ms: native ? 1000 : 5000,
 		};
 	},
 };

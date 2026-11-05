@@ -24,7 +24,8 @@ zur Analytics-Berechtigung die aktuelle Host-Sichtbarkeit und setzt
 `Cache-Control: no-store`. Ohne `TRAFFIC_FLOW_ENABLED=true` ist die Antwort
 deaktiviert. Raten bleiben `null`; `sample_complete: false` und
 `capabilities.current_rates: false` verhindern eine Interpretation als exakte
-Live-Messung. Details und Grenzen: [Analytics](../module/analytics.md#experimenteller-traffic-flow).
+Live-Messung. Native HTTP/1-Intervallraten sind bei passender Nginx-Basis und zusätzlichem
+Opt-in verfügbar; andere Protokolle bleiben unbekannt. Details und Grenzen: [Analytics](../module/analytics.md#experimenteller-traffic-flow).
 
 ## Abhängigkeiten
 

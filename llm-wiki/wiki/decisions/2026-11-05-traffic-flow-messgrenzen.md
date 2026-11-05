@@ -10,10 +10,10 @@ Die Grenze zwischen belegten Abschlussbeobachtungen und aktuellen Kantenraten fe
 
 ## Entscheidung
 
-Die experimentelle Flow-Ansicht zeigt konfigurierte Topologie und kurzlebige
-Beobachtungen abgeschlossener HTTP-Anfragen. Sie behauptet keine aktuelle
-Kantenrate. `current_rates: false`, `null`-Werte und konstante Linienstärken
-halten diese Grenze auch im API-Vertrag fest. Der API-Takt beträgt fünf Sekunden.
+Die Flow-Ansicht verwendet bei frischen nativen HTTP/1-Samples echte
+Intervallraten. HTTP-Transportbytes, Abschlussbodybytes und konfigurierte Ziele
+bleiben getrennt. Fehlende oder nicht unterstützte Messung bleibt `null`.
+Native Quellen erlauben sekündliches Polling; Abschlussfallback bleibt fünfsekündlich.
 
 ## Begründung
 
@@ -67,25 +67,36 @@ braucht die Nginx-Basis einen nativen, lebenszyklussicheren Collector:
   HTTP/2-/HTTP/3-Multiplexing. Bei geteilten Transportverbindungen sind
   Wire-Bytes ohne zusätzliche Zuordnung keine exakten HTTP-Stream-Bytes.
 
-Erst diese Quelle erlaubt eine ehrliche sekündliche Ratenskala und Glättung.
-Die Compile-/Moduländerung liegt laut Repository-Vertrag in `shieldpm-nginx`;
-Anwendungsdateien, Lua-Bodyfilter und Betriebssystem-Sockettabellen allein
-reichen für den geforderten vollständigen Client–Host–Upstream-Pfad nicht aus.
-Das ist ein noch nicht implementierter, technisch grundsätzlich machbarer
-Build- und Instrumentationsschritt, kein Nachweis der Unmöglichkeit. Die
-untersuchte Nginx-Basis pinnt Version 1.31.6 auf Quellrevision
-`0a5db852e18d1c22c62a5ede1412ac3f416111a0` und zusätzliche Patches. Ein neues
-Modul muss gegen genau diesen gepatchten Quellstand gebaut werden; ein Compiler
-allein ersetzt die fehlenden passenden Quellen und generierten Header nicht.
+## Native Umsetzung und Abnahme
+
+Das neue statische Modul im getrennten `shieldpm-nginx` exportiert initial,
+sekündlich und final monotone Request-/Upstreamversuchszähler über Loopback-UDP.
+Worker-Generation und Request-ID verhindern Wiederverwendung nach Reload.
+Die Basis ist Nginx 1.31.6 mit gepinnten Repository-Patches. Opt-in benötigt beide
+Umgebungsflags und ein Modul-fähiges Binary. Kein automatisches Deployment.
+
+Der reale App-Test `scripts/benchmarks/traffic-flow-native-measurement.mjs`
+bestand mit laufendem 1-MiB-Download (106.368 Bodybytes bereits empfangen,
+65.470,52947052947 B/s gemessen) und laufendem 256-KiB-Upload (131.072 Bodybytes
+versendet, Client-/Upstreamrate 65.536 B/s). Zählerintervallformel und /24-Maskierung
+wurden unabhängig geprüft. Die Mengen sind timingabhängig. Native Laufzeittests
+belegen außerdem HTTPS-Klartextzählung, Keepalive-Reset, Retries, Abbruchcleanup,
+Reload-Generationen und unbekannte HTTP/2-Raten.
+
+Gemessen werden HTTP-Bytes an Nginx-Transportabrechnungspunkten einschließlich
+Headern; TLS zählt akzeptierten Klartext, keine Wire-Bytes oder Zustellbestätigung.
+Nur HTTP/1-Proxyverkehr ist abgenommen. HTTP/2, HTTP/3, WebSockets/Upgrades und
+andere Upstream-Protokolle bleiben unbekannt und als Produktumfang offen.
+Die feste logarithmische Skala nutzt EMA 0,35; exakte Tooltips bleiben ungeglättet.
+Unbekannte Gruppenanteile, Resets, fehlende Baselines und Stale-Samples werden
+nicht durch erfundene Summen oder Nullen ersetzt.
 
 ## Folgen
 
-Der Vorschau fehlen echte Raten, Glättung und eine Rate-zu-Linienstärke-Skala.
-Das ist eine offene Produktanforderung, kein erfolgreich erfülltes Live-Messziel.
-Eine spätere Implementierung braucht getrennt validierte Nginx-Instrumentation
-und Tests für laufende Transfers, Multiplexing und Retries. Die bestehende
-Nginx-Binärbasis liegt im separaten Repository. Es werden keine Systemzähler
-oder Endlog-Bytes als Ersatzraten verwendet.
+Native HTTP/1-Live-Raten sind technisch implementiert und mit echten laufenden
+Transfers belegt. Die gesamte ursprünglich gewünschte Protokollabdeckung ist
+weiterhin nicht erfüllt. Das Modul muss separat gebaut/veröffentlicht werden;
+beide Draft-PRs sind abhängig und werden hier weder gemergt noch deployed.
 
 ## Verwandte Seiten
 

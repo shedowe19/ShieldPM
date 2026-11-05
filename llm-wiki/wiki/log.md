@@ -2,6 +2,21 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-05] feature | Native HTTP/1-Live-Raten integriert
+
+- Command: Tatsächliche Live-Kantenraten einschließlich laufender Transfers implementieren.
+- Type: feature
+- Areas affected: Analytics-Collector, Nginx-Template, API, UI und Dokumentation
+- Files changed: traffic-flow-live, TrafficFlowRate, Konfiguration, Tests und nativer Messprobe
+- Wiki pages updated: Analytics-Referenz/API, Messentscheidung, Aufgaben, Projektstand, Changelog, Log
+- New wiki pages: keine
+- New TODOs: keine; T-028 bleibt für weitere Protokolle offen
+- New bugs: keine bestätigten
+- New decisions: HTTP/1-Transportbytes werden als Intervallraten gezeigt; fehlende Protokollabdeckung bleibt unbekannt.
+- Open questions: HTTP/2, HTTP/3 und Upgrades sowie Veröffentlichung der abhängigen Nginx-Basis
+- Next steps: Draft-PRs prüfen; kein Merge oder Deployment.
+- Verification: Echte Modul→UDP→App-Probe bestanden: aktive Download-/Uploadraten, exakte Zählerdifferenzen und Maskierung. Native Suite prüft HTTPS, Retries, Keepalive, Abbrüche und Reloads. Automatisierte App-Tests und Build separat im PR dokumentiert.
+
 ## [2026-11-05] research | Laufende Transfermessung mit Lua geprüft
 
 - Command: Echte Live-Kantenraten weiter untersuchen und nachweisen.

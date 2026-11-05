@@ -23,7 +23,11 @@ export function useTrafficFlow(paused: boolean) {
 		refetchOnWindowFocus: false,
 		refetchInterval: (current) =>
 			active && current.state.data?.enabled !== false
-				? Math.min(40_000, 5_000 * 2 ** current.state.fetchFailureCount)
+				? Math.min(
+						40_000,
+						(current.state.data?.pollIntervalMs === 1000 ? 1000 : 5000) *
+							2 ** current.state.fetchFailureCount,
+					)
 				: false,
 	});
 	return { ...query, available };

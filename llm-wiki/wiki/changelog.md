@@ -3,6 +3,14 @@
 Ergebnisse für Menschen, neueste zuerst. Die Arbeit selbst steht im [Log](./log.md).
 Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
+## 2026-11-05 — Native HTTP/1-Live-Raten
+
+- Native kumulative Zähler werden während laufender Transfers ausgewertet;
+  Berechtigungen, Präfixmaskierung, Stale-/Reset- und unbekannte Gruppen bleiben explizit.
+- Gemeinsame logarithmische Skala, EMA und exakte Richtungs-/Zeitfenster-Tooltips.
+- Echter Nginx→Collector-Test belegt aktive Upload-/Downloadraten; HTTPS, Retries,
+  Keepalive und Reloads zusätzlich nativ geprüft. Andere Protokolle bleiben T-028.
+
 ## 2026-11-05 — Live-Messquelle weiter eingegrenzt
 
 - Reproduzierbarer Test zeigt den Vorsprung von Lua-Bodyfilter-Bytes vor dem

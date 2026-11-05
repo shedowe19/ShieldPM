@@ -22,6 +22,7 @@ const host = {
 };
 beforeEach(() => {
 	vi.stubEnv("TRAFFIC_FLOW_ENABLED", "true");
+	vi.stubEnv("TRAFFIC_FLOW_LIVE_ENABLED", "false");
 	socket = Object.assign(new EventEmitter(), { bind: vi.fn(), close: vi.fn(), unref: vi.fn() });
 	mocks.createSocket.mockReturnValue(socket);
 	builder = {
@@ -55,6 +56,57 @@ const send = (overrides = {}) =>
 		{ address: "127.0.0.1" },
 	);
 describe("flow service access and receiver", () => {
+	it("measures native active transfers only after two authorized samples and falls back when stale", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-11-05T12:00:00Z"));
+		vi.stubEnv("TRAFFIC_FLOW_LIVE_ENABLED", "true");
+		service.start();
+		const native = (hostId, bytes) =>
+			socket.emit(
+				"message",
+				Buffer.from(
+					JSON.stringify({
+						schema: 1,
+						type: "live_sample",
+						generation: "worker-1",
+						request_id: `req-${hostId}`,
+						host: hostId,
+						client: "192.0.2.88",
+						protocol: "HTTP/1.1",
+						supported: true,
+						time_ms: Date.now(),
+						monotonic_ms: Date.now(),
+						client_received: 0,
+						client_sent: bytes,
+						final: false,
+						attempts: [],
+						truncated: false,
+					}),
+				),
+				{ address: "127.0.0.1" },
+			);
+		native(2, 0);
+		expect((await service.get(access)).capabilities.current_rates).toBe(false);
+		native(1, 0);
+		expect((await service.get(access)).hosts[0].clients[0].current_bytes_per_second).toBeNull();
+		vi.advanceTimersByTime(1000);
+		native(1, 65536);
+		const result = await service.get(access);
+		expect(result).toMatchObject({
+			capabilities: { current_rates: true, source: "native_http_transport" },
+			poll_interval_ms: 1000,
+		});
+		expect(result.hosts[0].clients[0].rate).toMatchObject({
+			download_bytes_per_second: 65536,
+			upload_bytes_per_second: 0,
+		});
+		vi.advanceTimersByTime(4000);
+		expect(await service.get(access)).toMatchObject({
+			capabilities: { current_rates: false },
+			poll_interval_ms: 5000,
+		});
+	});
+
 	it("sweeps expired prefixes even when no packets or viewers arrive and stops the timer", () => {
 		vi.useFakeTimers();
 		const prune = vi.spyOn(FlowBuffer.prototype, "prune");

@@ -53,8 +53,8 @@ Testlauf dieser Sitzung:
 ## Traffic-Flow-Vorschau im Feature-Branch
 
 Opt-in-Topologie und ein begrenztes Abschlusssample werden in der vorhandenen
-Analytics-Seite ergänzt. Echte aktuelle Kantenraten bleiben unbekannt; keine
-sekündliche Echtzeitmessung wird behauptet. Details und Betriebsgrenzen stehen
+Analytics-Seite ergänzt. Native HTTP/1-Transportzähler liefern bei explizitem Opt-in echte sekündliche
+Intervallraten; nicht unterstützte Protokolle bleiben unbekannt. Details und Betriebsgrenzen stehen
 im [Analytics-Modul](./reference/module/analytics.md#experimenteller-traffic-flow).
 Die Änderung ist ein Draft-PR, nicht gemergt oder ausgerollt.
 

@@ -70,10 +70,50 @@ describe("TrafficFlow", () => {
 		expect(
 			screen.getByRole("button", { name: /Completed requests: 2. Completed response-body bytes: 9000/ }),
 		).toBeInTheDocument();
-		expect(container.querySelectorAll('line[stroke-width="2"]')).toHaveLength(3);
+		expect(container.querySelectorAll('line[stroke-width="2"]')).toHaveLength(4);
 		expect(container.querySelector('line[stroke-dasharray="6 4"]')).not.toBeNull();
 		expect(screen.getAllByText("example.test, alias.test")).toHaveLength(1);
 	});
+	it("shows measured directional rates and one shared width scale while keeping configured rates unknown", () => {
+		const rate = {
+			uploadBytesPerSecond: 1024,
+			downloadBytesPerSecond: 65536,
+			bytesPerSecond: 66560,
+			smoothedBytesPerSecond: 66560,
+			windowStart: "2026-11-05T12:00:00Z",
+			windowEnd: "2026-11-05T12:00:01Z",
+			samples: 1,
+		};
+		mocks.useTrafficFlow.mockReturnValue({
+			data: {
+				...snapshot,
+				capabilities: { currentRates: true, source: "native_http_transport" },
+				hosts: [
+					{
+						...snapshot.hosts[0],
+						clientRate: rate,
+						clients: [
+							{ ...snapshot.hosts[0].clients[0], rate, currentBytesPerSecond: rate.bytesPerSecond },
+						],
+					},
+				],
+			},
+			error: null,
+			isLoading: false,
+			available: true,
+		});
+		const { container } = render(<TrafficFlow />);
+		open();
+		expect(screen.getByText(/Live measured HTTP\/1 transport rates/)).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Upload: 1024 B\/s. Download: 65536 B\/s/ })).toBeInTheDocument();
+		expect(screen.getByText(/Fixed logarithmic scale/)).toBeInTheDocument();
+		const rates = [...container.querySelectorAll("section line")].map((line) =>
+			Number(line.getAttribute("stroke-width")),
+		);
+		expect(rates.filter((width) => width > 2)).toHaveLength(3);
+		expect(container.querySelector('line[stroke-dasharray="6 4"]')).toHaveAttribute("stroke-width", "2");
+	});
+
 	it("pauses, resumes and provides a searchable accessible list", () => {
 		render(<TrafficFlow />);
 		open();

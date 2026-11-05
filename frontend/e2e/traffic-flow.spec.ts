@@ -7,22 +7,33 @@ test("traffic flow preserves honest semantics, expansion, pause, errors and narr
 	let polls = 0;
 	let fail = false;
 	let stale = false;
+	let live = false;
+	const rate = () => ({
+		upload_bytes_per_second: 16384,
+		download_bytes_per_second: 49152,
+		bytes_per_second: 65536,
+		smoothed_bytes_per_second: 65536,
+		window_start: new Date(Date.now() - 1000).toISOString(),
+		window_end: new Date().toISOString(),
+		samples: 1,
+	});
 	const responses = () => {
 		const end = new Date(Date.now() - (stale ? 30_000 : 0)).toISOString();
 		return {
 			enabled: true,
 			generated_at: end,
 			window: { start: new Date(Date.now() - 60_000).toISOString(), end },
-			capabilities: { current_rates: false, source: "completed_requests" },
+			capabilities: { current_rates: live, source: live ? "native_http_transport" : "completed_requests" },
 			truncated: false,
 			collector: { state: "receiving", last_observed_at: end },
-			poll_interval_ms: 5000,
+			poll_interval_ms: live ? 1000 : 5000,
 			hosts: [
 				{
 					id: 7,
 					domains: ["flow.e2e.test"],
 					enabled: true,
 					truncated: false,
+					client_rate: live ? rate() : null,
 					clients: [
 						{
 							id: "prefix-1",
@@ -30,7 +41,8 @@ test("traffic flow preserves honest semantics, expansion, pause, errors and narr
 							requests: 3,
 							completed_bytes: 131072,
 							last_seen: end,
-							current_bytes_per_second: null,
+							current_bytes_per_second: live ? 65536 : null,
+							rate: live ? rate() : null,
 						},
 					],
 					targets: [
@@ -89,14 +101,25 @@ test("traffic flow preserves honest semantics, expansion, pause, errors and narr
 	await expect(page.getByText("Current per-connection throughput is unavailable.", { exact: false })).toBeVisible();
 	await graph.locator("summary").click();
 	await expect(graph.getByText("192.0.2.0/24", { exact: true })).toBeVisible();
-	await expect(graph.getByRole("button", { name: /Completed requests: 3/ })).toHaveAttribute(
-		"aria-label",
-		/131072.*Current bytes\/s: unknown/,
-	);
+	await expect(graph.getByRole("button", { name: /Completed requests: 3/ })).toHaveAttribute("aria-label", /131072/);
 	const widths = await graph
 		.locator("svg line")
 		.evaluateAll((lines) => lines.map((line) => line.getAttribute("stroke-width")));
 	expect(new Set(widths)).toEqual(new Set(["2"]));
+	live = true;
+	await page.getByRole("button", { name: "Pause", exact: true }).click();
+	await page.getByRole("button", { name: "Resume", exact: true }).click();
+	await expect(page.getByText("Live measured HTTP/1 transport rates", { exact: false })).toBeVisible();
+	await expect(graph.getByRole("button", { name: /Upload: 16384/ })).toHaveAttribute("aria-label", /Download: 49152/);
+	await expect
+		.poll(async () =>
+			graph
+				.locator("svg line")
+				.evaluateAll((lines) => lines.filter((line) => Number(line.getAttribute("stroke-width")) > 2).length),
+		)
+		.toBe(3);
+	const livePolls = polls;
+	await expect.poll(() => polls, { timeout: 2500 }).toBeGreaterThan(livePolls);
 	await page.getByRole("button", { name: "Pause", exact: true }).click();
 	const pausedPolls = polls;
 	await page.waitForTimeout(5500);

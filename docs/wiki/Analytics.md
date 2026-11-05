@@ -53,14 +53,32 @@ groups, search hosts, switch to the accessible list, or pause updates. The
 Internet node is a visual connector, not a discovered network hop. The two
 segments around it must not be summed as separate traffic.
 
-**This version does not measure current per-connection throughput.** Its source
-is completed HTTP requests. Rates remain unknown (`null`), every line has the
-same width, and no smoothing or byte-per-second scale is applied. A long download,
-upload, or WebSocket has no observation until its request finishes. Server-wide
-network totals are never distributed across these connections. The view refreshes
-approximately every five seconds while visible and active, not once per second.
+For current HTTP/1 rates, also set `TRAFFIC_FLOW_LIVE_ENABLED=true` and use the
+matching native-module build from **shieldpm-nginx**. Restart and save hosts to
+regenerate configuration. The static `shieldpm_traffic_flow` directive must be
+available; Nginx validation rejects configurations on older binaries. Without
+fresh supported native samples, the view explicitly falls back to completed
+requests and unknown rates, with five-second refreshes.
 
-- Solid lines identify recently observed completed-request paths. Upstream
+The native module samples cumulative counters during active transfers, initially,
+approximately every second, and at completion. Rates use actual monotonic elapsed
+time between samples. They measure **HTTP bytes accepted by Nginx transport**,
+including headers; HTTPS counters describe plaintext accepted by TLS. They do not
+measure wire packets, TCP acknowledgements, or confirmed delivery. Both client
+upload/download and individual upstream-attempt upload/download are measured for
+HTTP/1 proxy traffic. HTTP/2, HTTP/3, upgrades/WebSockets and other upstream
+protocols remain unknown. No system totals or completion logs are substituted.
+
+Supported fresh sources refresh approximately every second. A missing baseline,
+counter reset, unsupported protocol, or gap exceeding 3.5 seconds gives unknown,
+not zero. Group totals are unknown when any included observation is unknown.
+Exact tooltips show directional rates, sample windows and the number of samples;
+group window bounds enclose the individual request intervals. Displayed line
+widths use a 0.35 exponential moving average and one fixed logarithmic scale:
+`min(16, 2 + log2(1 + bytes_per_second / 1024))` pixels. Exact values are unsmoothed.
+The two schematic Internet segments repeat the same client aggregate.
+
+- Solid lines identify recently observed paths. Upstream
   addresses are concrete recorded TCP peers/attempts, not proof of a successful
   response. Retries do not create extra client requests. Client groups and
   upstream observations are summarized separately per host; they do not claim
@@ -73,10 +91,11 @@ approximately every five seconds while visible and active, not once per second.
   are completed-request samples, not wire bytes, upload bytes, or current rates.
 
 Collection uses best-effort loopback UDP on port 15149 with an 8 KiB datagram cap
-and a 2,000 datagram/second processing budget. At most 1,000 completion records
+and a 2,000 datagram/second processing budget. At most 1,000 completion records and 1,000 native request records
 are retained for a 60-second visible window. Snapshots contain at most 100 hosts,
 32 client groups and 32 observed peers per host. The sample is always marked
-incomplete: UDP loss and bounded retention make exact totals impossible. Collector
+incomplete: native tracking is capped at 256 requests per worker and 16 upstream
+attempts per request; UDP loss and bounded retention make exact totals impossible. Collector
 errors and stale snapshots are shown explicitly; an idle collector cannot prove
 that there was no traffic. Other local processes can send to the UDP port, so this
 view is operational telemetry, not security evidence.
@@ -89,7 +108,8 @@ correct attribution behind another proxy depends on the existing trusted Real-IP
 configuration.
 
 To roll back, unset `TRAFFIC_FLOW_ENABLED` (or set it to `false`), restart, and
-save the previously enabled Proxy Hosts to remove the extra log directive.
+save the previously enabled Proxy Hosts to remove telemetry directives. Disable
+`TRAFFIC_FLOW_LIVE_ENABLED` before returning to a binary without the native module.
 The backend stops collecting immediately after restart; until configuration is
 regenerated, Nginx may still send completion datagrams to the unused local port.
 No migration or data rollback is required.
@@ -105,9 +125,18 @@ node scripts/benchmarks/traffic-flow-measurement.mjs
 The isolated loopback test holds a 128 KiB response open, checks that no log or UDP
 observation exists while data is already arriving, then verifies the exact final
 body-byte count, concrete upstream, masked prefix, and unknown rate through the
-actual template and collector parser. Full live-rate support needs separately
-validated Nginx instrumentation, including multiplexing, buffering, long uploads,
-and WebSockets; it is not implemented by this preview.
+actual template and collector parser. The actual native source and application collector can be checked together:
+
+```bash
+TRAFFIC_SMOKE_NGINX_BIN=/path/to/native-module/nginx \
+node scripts/benchmarks/traffic-flow-native-measurement.mjs
+```
+
+This test verifies active client and upstream download/upload rates before
+completion, exact cumulative-counter differences and masked prefixes. The native
+repository additionally validates keepalive resets, retries, abort cleanup,
+HTTPS, reload generations, and unsupported HTTP/2. Full protocol coverage,
+especially HTTP/2, HTTP/3 and WebSockets, remains an open requirement.
 
 ## Privacy
 
