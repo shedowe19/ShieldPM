@@ -2,6 +2,21 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-06] fix | Schreibprüfung des DB-Smoke-Tests
+
+- Command: Neue CI-Läufe nach dem DB-Feature-Push prüfen und Fehler beheben.
+- Type: fix
+- Areas affected: Name einer lokalen Testvariablen
+- Files changed: `scripts/ci/database-setup-smoke.mjs`
+- Wiki pages updated: Log
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: Codespell wertete den Variablennamen `crossSite` als Schreibfehler.
+- New decisions: verständlicher Name `foreignRequest`, keine Wörterbuch-Ausnahme und keine Verhaltensänderung.
+- Open questions: restliche CI des Feature-Commits läuft noch.
+- Next steps: Korrektur pushen und abschließende CI prüfen.
+- Verification: Node-Syntax und Diff-Prüfung bestanden; ausschließlich lokale Variablenbezeichnung geändert. Vorheriger tatsächlicher Docker-Test bestätigte die unveränderte Cross-Site-Abweisung als UID 0 und 1000.
+
 ## [2026-11-06] feature | DB-Ersteinrichtung und verifizierter Providerwechsel
 
 - Command: Auf ausdrücklichen Nutzerwunsch Datenbank-Erstwahl und spätere echte Migration im selben Draft-PR wie Traffic Flow umsetzen, isoliert testen und pushen; nicht mergen oder bereitstellen.

@@ -69,14 +69,14 @@ assert.equal(
 	403,
 	"setup requires authenticated CSRF pairing",
 );
-const crossSite = await request(
+const foreignRequest = await request(
 	"POST",
 	"/database/setup",
 	{ engine: "sqlite" },
 	health.body.csrfToken,
 	{ "Sec-Fetch-Site": "cross-site" },
 );
-assert.equal(crossSite.status, 403, "cross-site setup must be rejected");
+assert.equal(foreignRequest.status, 403, "cross-site setup must be rejected");
 const setup = await request(
 	"POST",
 	"/database/setup",
