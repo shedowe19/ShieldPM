@@ -17,7 +17,12 @@ export async function up(knex) {
 		table.dateTime("last_updated_on").nullable();
 		table.string("last_error").nullable();
 		table.integer("enabled").notNullable().defaultTo(1);
-		table.json("meta").notNullable().defaultTo("{}");
+		// MySQL requires non-NULL JSON defaults to be expressions, including literals.
+		const mysql = ["mysql", "mysql2"].includes(knex.client.config.client);
+		table
+			.json("meta")
+			.notNullable()
+			.defaultTo(mysql ? {} : "{}");
 	});
 }
 

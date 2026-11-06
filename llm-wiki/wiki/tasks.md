@@ -34,14 +34,6 @@
 
 ## Blocked
 
-- [ ] **T-028 Echte Traffic-Flow-Kantenraten.** Abnahme: laufende Downloads,
-      Uploads und WebSockets mit bekannter Datenmenge belegen aktuelle Raten pro
-      Verbindung; gemeinsame Skala und Glättung sind gegen diese Messung geprüft.
-      HTTP/1-/HTTP/2-/WebSocket-/HTTP/3-Live-Raten sind mit nativem Modul und realen Transfers belegt.
-      Offen bleibt Veröffentlichung der
-      abhängigen Nginx-Basis. Siehe
-      [Messentscheidung](./decisions/2026-11-05-traffic-flow-messgrenzen.md).
-
 - [ ] **T-007 OpenAppSec-Policy auf einer laufenden Instanz anwenden.** Abnahme:
       `open-appsec-ctl --apply-policy` meldet keinen Schemafehler und die aktive
       Policy entspricht `local_policy.yaml`. Blockiert: braucht einen laufenden
@@ -68,6 +60,25 @@
 | **M-003 Fragen-Triage**         | 2026-11-04   | gleicher Auslöser                | Jede Zeile in [Offene Fragen](./questions/open-questions.md) hat eine Prüfstelle und ist beantwortet, als Aufgabe verlinkt oder begründet geschlossen                                      |
 
 ## Done
+
+- [x] **T-030 Datenbank-Ersteinrichtung und verifizierter Wechsel.** Done 2026-11-06.
+      DB-unabhängige Erstwahl, Settings, private Auswahl und Journal, kalte Migration
+      mit Export und Inhaltsprüfung, sichere Recovery und aktueller Rückweg nach
+      SQLite umgesetzt. Beleg: permanente Provider-/Neustarttests mit vollständigem
+      92-Migrationen-Schema auf MariaDB 11.8.3, MySQL 8.4.13 und PostgreSQL 17.6;
+      Backend 2.790/26, Frontend 1.034, sieben Chromium-Fälle, Docker UID 0/1000.
+      [Entscheidung und Grenzen](./decisions/2026-11-06-datenbank-bootstrap-und-providerwechsel.md).
+
+- [x] **T-028 Echte Traffic-Flow-Kantenraten.** Done 2026-11-06.
+      Native HTTP/1-/HTTP/2-/WebSocket-/HTTP/3-Raten sind durch laufende Transfers
+      belegt. Die abhängige Nginx-Änderung wurde extern als PR #12 gemergt;
+      veröffentlichte amd64/arm64-Binärarchive wurden verifiziert. Die App bleibt
+      Draft-PR #162. Beleg: [Messentscheidung](./decisions/2026-11-05-traffic-flow-messgrenzen.md)
+      und [Analytics-Referenz](./reference/module/analytics.md).
+- [x] **T-029 Traffic-Einstellungen und Client-Datenschutz.** Done 2026-11-06.
+      Flow/Live standardmäßig an, drei Darstellungsmodi mit anonymem Standard,
+      ENV-Erstimport und validierte Nginx-Aktivierung. Beleg: Commit `f9bb6d0f`,
+      Backend 2.705/Frontend 1.010 bestandene Tests und drei Chromium-Fälle.
 
 - [x] **T-019 Warnungen aus dem Datei-Audit triagiert.** Done 2026-11-05.
       Beleg: 355 Einträge nach Bereich und Schwere sortiert; 16 sicherheits- und

@@ -63,4 +63,48 @@ describe("password recovery through the installed CLI symlink", () => {
 		expect(result.stderr).toContain("Cannot connect to the SQLite database");
 		expect(fs.existsSync(filename)).toBe(false);
 	});
+	it("resets the managed SQLite database and leaves the archival default untouched", () => {
+		const managed = "database-11111111-1111-4111-8111-111111111111.sqlite";
+		fs.writeFileSync(
+			path.join(directory, "shieldpm/database.json"),
+			JSON.stringify({ version: 1, database: { engine: "sqlite", filename: managed } }),
+		);
+		for (const file of [filename, path.join(directory, "shieldpm", managed)]) {
+			const database = new Database(file);
+			database.exec(
+				"CREATE TABLE user (id INTEGER PRIMARY KEY, email TEXT, is_deleted INTEGER); CREATE TABLE auth (id INTEGER PRIMARY KEY, user_id INTEGER, type TEXT, secret TEXT, is_deleted INTEGER, modified_on TEXT); INSERT INTO user VALUES (1, 'owner@example.test', 0); INSERT INTO auth VALUES (1, 1, 'password', 'old-password', 0, NULL);",
+			);
+			database.close();
+		}
+		const result = run("owner@example.test", "replacement-test-password");
+		expect(result.status).toBe(0);
+		for (const [file, changed] of [
+			[filename, false],
+			[path.join(directory, "shieldpm", managed), true],
+		]) {
+			const database = new Database(file);
+			try {
+				const secret = database.prepare("SELECT secret FROM auth").get().secret;
+				expect(
+					changed ? bcrypt.compareSync("replacement-test-password", secret) : secret === "old-password",
+				).toBe(true);
+			} finally {
+				database.close();
+			}
+		}
+		expect(fs.existsSync(path.join(directory, "shieldpm/keys.json"))).toBe(false);
+	});
+	it("refuses a selected server database instead of resetting an archival SQLite file", () => {
+		fs.writeFileSync(
+			path.join(directory, "shieldpm/database.json"),
+			JSON.stringify({
+				version: 1,
+				database: { engine: "pg", host: "unused.invalid", user: "unused", name: "unused" },
+			}),
+		);
+		const result = run("owner@example.test", "replacement-test-password");
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain("server database is selected");
+		expect(fs.existsSync(filename)).toBe(false);
+	});
 });

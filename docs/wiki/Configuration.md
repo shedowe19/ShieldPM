@@ -54,11 +54,26 @@ Use these to restrict which IP addresses ShieldPM listens on:
 
 ## 💾 Database Configuration
 
-ShieldPM supports **three database backends**. SQLite is the default and works out of the box.
+ShieldPM supports **SQLite**, **MySQL/MariaDB**, and **PostgreSQL**. A fresh
+installation without existing data or explicit database configuration offers a
+database chooser before account setup. SQLite is the default choice and needs no
+separate server. Existing installations retain their selected database; a broken
+or unreachable explicit configuration never opens a fresh-installation wizard.
 
-### SQLite (Default — No Configuration Required)
+Administrators can test and change the database under **Settings → Database**.
+Credentials are saved privately in `/data/shieldpm/database.json` with mode `0600`,
+separately from ordinary application settings and their audit log. Once you
+explicitly select a database in the UI, that managed selection takes precedence
+over legacy `/data/shieldpm/default.json` and `DB_MYSQL_*`/`DB_POSTGRES_*` variables.
+Without a managed selection, existing configuration precedence is preserved.
 
-Data is stored in `/data/shieldpm/database.sqlite`. Best for small to medium installations. A legacy `/data/database.sqlite` is migrated on startup.
+### SQLite (Default Choice)
+
+Fresh SQLite setup uses `/data/shieldpm/database.sqlite`. A later migration back
+to SQLite creates a new `database-<operation-id>.sqlite` file and saves its selection;
+it never reopens an old archival SQLite file. A legacy `/data/database.sqlite` is
+moved during startup. The password-reset and vacuum commands resolve the active
+selection and refuse to modify SQLite when a server database is selected.
 
 ### MySQL / MariaDB
 
@@ -85,7 +100,57 @@ Data is stored in `/data/shieldpm/database.sqlite`. Best for small to medium ins
 
 ### 🔄 Database Migrations
 
-ShieldPM runs schema migrations for the **selected** database on startup. When you switch from SQLite to an empty MySQL/MariaDB or PostgreSQL database, it can import the existing `/data/shieldpm/database.sqlite` data automatically. The source SQLite file is **preserved** for recovery; it is not renamed to `.migrated`. Bring an older SQLite installation up to the current ShieldPM schema first, then configure the external database. An external database that already contains users is left unchanged. Back up both stores before switching; migration between MySQL and PostgreSQL is not automatic. A legacy SQLite file at `/data/database.sqlite` is moved into `/data/shieldpm/` during startup.
+The supported UI migration matrix is explicit:
+
+| Source                      | Target                      |
+| --------------------------- | --------------------------- |
+| SQLite                      | MySQL/MariaDB or PostgreSQL |
+| MySQL/MariaDB or PostgreSQL | Fresh SQLite                |
+
+Direct MySQL/MariaDB ↔ PostgreSQL migration is not offered; use two separately
+verified migrations through SQLite. The target must be an empty, dedicated
+database. All other ShieldPM instances and external writers using either database
+must be stopped and kept stopped: this is a single-instance maintenance operation.
+A volume lock prevents another process sharing the same data volume from starting,
+but cannot coordinate independent installations that share a server database.
+
+After confirmation the backend restarts into a database-independent maintenance
+service. This stops its background writers. The migration holds source write locks,
+creates a private, flushed canonical export under
+`/data/shieldpm/database-backups/`, copies bounded batches, and verifies every table
+before atomically activating the target. Composite keys, session references,
+login throttles and identity sequence high-water marks are preserved. Big integers,
+JSON versus SQL NULL, booleans and timestamps are converted and checked without
+silently accepting range or precision loss. Incompatible values abort activation.
+MySQL/MariaDB requires transactional InnoDB tables and source lock permissions.
+
+Failed copies preserve the source and may leave a partially initialized target;
+retry with a new empty target. The operation screen lets you acknowledge a failure
+before activation and return to the original database or setup chooser. Activation
+uncertainty keeps the application in maintenance for verification. Once the target
+is authoritative, returning to an older source would lose subsequent writes and
+is never automatic: switching back is a new migration from the current database.
+
+The standard Docker/native launcher restarts the backend for this transition;
+unexpected exits retain their existing critical-service behavior. When running
+`node index-dev.js` directly, restart the command after requesting a database
+switch. Keep `/data` and its private journal/configuration across restarts. Do not
+edit the journal to bypass an uncertain activation.
+
+Existing unmanaged ENV-based SQLite-to-server imports remain compatible, including
+composite domain-owner keys, the seeded claim lock and lazy login-throttle storage.
+Upgrade the source schema with the current ShieldPM version before importing.
+The old SQLite file is an archive after a successful switch, not a current backup.
+The canonical migration export is not an encrypted instance-backup archive;
+existing instance restore remains a separate, same-provider workflow. Continue
+keeping independent backups of `/data` and external databases.
+
+The isolated validation matrix covers SQLite 3.53.4, MariaDB 11.8.3, Oracle
+MySQL 8.4.13 and PostgreSQL 17.6. Permanent tests exercise real provider copies and
+cold-process round trips through the complete current migration chain, including
+new writes before returning to SQLite. Other server versions and externally
+extended schemas are not established by this matrix. Compatibility failures stop
+activation rather than silently changing data.
 
 ---
 

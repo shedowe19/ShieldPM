@@ -149,6 +149,98 @@ jobs:
           ((${#runtime_tests[@]}))
           npx --yes --package yarn@1.22.22 yarn test --run "${migration_tests[@]}" "${runtime_tests[@]}"
 
+  database-provider-matrix:
+    name: Database provider migration and restart matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      mariadb:
+        image: mariadb:11.8.3
+        env:
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: "yes"
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+        ports:
+          - 3306/tcp
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+        ports:
+          - 5432/tcp
+      mysql:
+        image: mysql:8.4@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_ROOT_HOST: "%"
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+        ports:
+          - 3306/tcp
+    env:
+      SHIELDPM_TEST_MARIADB: "1"
+      SHIELDPM_TEST_MARIADB_HOST: 127.0.0.1
+      SHIELDPM_TEST_MARIADB_USER: root
+      SHIELDPM_TEST_POSTGRES: "1"
+      SHIELDPM_TEST_POSTGRES_HOST: 127.0.0.1
+      SHIELDPM_TEST_POSTGRES_USER: postgres
+      SHIELDPM_TEST_DATABASE_CONNECTIONS: /tmp/shieldpm-ci-database-connections.json
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+
+      - name: Install backend dependencies
+        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/backend" install --frozen-lockfile
+
+      - name: Test real provider conversion and cold-process switching
+        working-directory: backend
+        env:
+          SHIELDPM_TEST_MARIADB_PORT: ${{ job.services.mariadb.ports['3306'] }}
+          SHIELDPM_TEST_POSTGRES_PORT: ${{ job.services.postgres.ports['5432'] }}
+        run: |
+          node --input-type=module <<'JS'
+          import fs from "node:fs";
+          fs.writeFileSync(process.env.SHIELDPM_TEST_DATABASE_CONNECTIONS, JSON.stringify({
+            mariadb: { host: "127.0.0.1", port: Number(process.env.SHIELDPM_TEST_MARIADB_PORT), user: "root", password: "" },
+            postgres: { host: "127.0.0.1", port: Number(process.env.SHIELDPM_TEST_POSTGRES_PORT), user: "postgres", password: "" },
+          }), { mode: 0o600 });
+          JS
+          npx --yes --package yarn@1.22.22 yarn test --run test/lib/database-copy.spec.js test/lib/database-switch-providers.spec.js
+
+      - name: Test Oracle MySQL conversion and cold-process switching
+        working-directory: backend
+        env:
+          SHIELDPM_TEST_MARIADB_PORT: ${{ job.services.mysql.ports['3306'] }}
+          SHIELDPM_TEST_POSTGRES_PORT: ${{ job.services.postgres.ports['5432'] }}
+          SHIELDPM_TEST_POSTGRES: "0"
+        run: |
+          node --input-type=module <<'JS'
+          import fs from "node:fs";
+          const filename = process.env.SHIELDPM_TEST_DATABASE_CONNECTIONS;
+          const connections = JSON.parse(fs.readFileSync(filename, "utf8"));
+          connections.mariadb.port = Number(process.env.SHIELDPM_TEST_MARIADB_PORT);
+          fs.writeFileSync(filename, JSON.stringify(connections), { mode: 0o600 });
+          JS
+          npx --yes --package yarn@1.22.22 yarn test --run test/lib/database-copy.spec.js test/lib/database-switch-providers.spec.js
+
   frontend-e2e:
     name: Frontend browser smoke
     runs-on: ubuntu-latest

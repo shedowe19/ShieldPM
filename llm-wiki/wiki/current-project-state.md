@@ -1,10 +1,10 @@
 # Aktueller Projektzustand
 
 Status: active
-Last verified: 2026-11-05
+Last verified: 2026-11-06
 Confidence: high
 
-Last updated: 2026-11-05
+Last updated: 2026-11-06
 
 Dies ist eine rollierende Momentaufnahme, keine Historie. Ältere Details gehören
 in den [Log](./log.md) oder in die passende Bereichsseite.
@@ -16,11 +16,10 @@ zuletzt fertig wurde, was bewusst fehlt und welche Risiken gerade aktiv sind.
 
 ## Stand
 
-- Branch `develop`, Arbeitsbaum sauber und synchron mit `origin/develop`.
+- Feature-Branch `feat/live-traffic-flow` auf Basis von `develop`; Draft-PR #162, nicht gemergt oder bereitgestellt.
 - Letzte Version `4.4.1` in `.version`, `backend/package.json` und
   `frontend/package.json`.
-- Wiki versioniert seit `443d764f`; die Nacharbeiten dieser Sitzung betreffen
-  OpenAPI, OpenAppSec, die Wiki-Prüfung in CI und zwei Dependabot-Alarme.
+- Aktuelle Änderungen betreffen Traffic-Einstellungen, Client-Datenschutz sowie DB-unabhängige Einrichtung und verifizierte Providerwechsel. Der separate ältere Audit bleibt pausiert.
 
 ## Was zuletzt fertig wurde
 
@@ -61,8 +60,18 @@ und qualifizierte HTTP/3-ACK-/Streamzähler liefern echte Intervallraten, sofern
 installierte Nginx-Version dies unterstützt. Fehlende Unterstützung und fehlende
 Messungen bleiben ausdrücklich sichtbar. Details stehen im
 [Analytics-Modul](./reference/module/analytics.md#experimenteller-traffic-flow).
-Die Änderung ist ein Draft-PR, nicht gemergt oder ausgerollt. Datenbank-Ersteinrichtung
-und geprüfte Providerwechsel werden anschließend im selben Branch umgesetzt.
+Die Änderung ist ein Draft-PR, nicht gemergt oder ausgerollt.
+
+## Datenbankwahl im Feature-Branch
+
+DB-unabhängiger Bootstrap ermöglicht Ersteinrichtung vor Modellimporten; spätere
+Auswahl liegt im Einstellungsmenü. Die private verwaltete Konfiguration und ein
+dauerhaftes Journal steuern Prozessneustart, Backup, gesperrte Übertragung,
+Verifikation und Aktivierung. Alle vier Richtungen SQLite ↔ MariaDB beziehungsweise
+PostgreSQL sowie Oracle MySQL 8.4.13 wurden mit dem aktuellen 92-Migrationen-Schema und neuen Schreibvorgängen
+im Rückweg geprüft. Direkte Server-zu-Server-Wechsel sind nicht unterstützt.
+Andere Instanzen und externe Schreiber müssen während des Wechsels gestoppt sein.
+[Details und Grenzen](./data/migrations.md).
 
 ## Was bewusst fehlt
 

@@ -1,6 +1,8 @@
 import { createServer } from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("../../bootstrap-app.js", () => ({ prepareDatabaseStartup: vi.fn(async () => {}) }));
+
 const state = vi.hoisted(() => ({
 	analyticsStop: vi.fn(async () => {}),
 	analyticsInit: vi.fn(async () => {}),

@@ -5,6 +5,9 @@ process.env.INITIAL_ADMIN_EMAIL ||= "admin@example.com";
 process.env.INITIAL_ADMIN_PASSWORD ||= "changeme";
 process.env.INITIAL_DEFAULT_PAGE ||= "congratulations";
 
+const { prepareDatabaseStartup } = await import("./bootstrap-app.js");
+await prepareDatabaseStartup({ development: true });
+
 // Imports initialize configuration and database connections, so the development
 // environment must be established before evaluating any application module.
 const [

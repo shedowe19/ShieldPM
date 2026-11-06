@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { T } from "src/locale";
 import { SETTINGS_TAB, type SettingsTab } from "src/types/enums";
 import AiConfigPage from "./Ai";
+import DatabaseSettings from "./Database";
 import DefaultSite from "./DefaultSite";
 import GitOps from "./GitOps";
 import TrafficFlowSettings from "./TrafficFlow";
@@ -80,6 +81,14 @@ export default function Layout() {
 							<IconSettings className="mr-2 h-4 w-4" />
 							<T id="settings.traffic-flow.title" />
 						</button>
+						<button
+							type="button"
+							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === SETTINGS_TAB.DATABASE ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
+							onClick={() => setActiveTab(SETTINGS_TAB.DATABASE)}
+						>
+							<IconSettings className="mr-2 h-4 w-4" />
+							<T id="database.settings-title" />
+						</button>
 					</nav>
 				</aside>
 				<div className="flex-1 lg:max-w-4xl">
@@ -87,6 +96,7 @@ export default function Layout() {
 					{activeTab === SETTINGS_TAB.AI && <AiConfigPage />}
 					{activeTab === SETTINGS_TAB.GITOPS && <GitOps />}
 					{activeTab === SETTINGS_TAB.TRAFFIC_FLOW && <TrafficFlowSettings />}
+					{activeTab === SETTINGS_TAB.DATABASE && <DatabaseSettings />}
 				</div>
 			</div>
 		</div>

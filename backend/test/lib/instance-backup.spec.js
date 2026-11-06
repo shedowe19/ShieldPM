@@ -85,6 +85,51 @@ describe("complete encrypted instance backup", () => {
 		expect(await engine.pending()).toBeNull();
 	});
 
+	it("restores the selected managed SQLite snapshot and excludes database operation state", async () => {
+		const filename = "database-11111111-1111-4111-8111-111111111111.sqlite";
+		await fs.rename(path.join(directory, "shieldpm/database.sqlite"), path.join(directory, "shieldpm", filename));
+		engine.config.knex.connection.filename = path.join(directory, "shieldpm", filename);
+		const oldSelector = { version: 1, database: { engine: "sqlite", filename }, operationId: "old-operation" };
+		await fs.writeFile(path.join(directory, "shieldpm/database.json"), JSON.stringify(oldSelector));
+		const controls = [
+			"database-operation.json",
+			"database-runtime-lock.sqlite",
+			"database-runtime-lock.sqlite-wal",
+			"database-runtime-lock.sqlite-shm",
+			`${filename}-wal`,
+			`${filename}-shm`,
+		];
+		// Do not fabricate sidecars of the live SQLite source; use a stale archived filename instead.
+		for (const name of controls.slice(0, 4))
+			await fs.writeFile(path.join(directory, "shieldpm", name), "private-control-state");
+		const row = await engine.create(password);
+		await engine.verify(row.id, password, { schedule: true });
+		const pending = await engine.pending();
+		const verified = JSON.parse(await fs.readFile(path.join(engine.pendingWork(pending), "verified.json"), "utf8"));
+		expect(
+			verified.manifest.entries.some((entry) => controls.some((name) => entry.name === `shieldpm/${name}`)),
+		).toBe(false);
+		expect(verified.manifest.entries.some((entry) => entry.name === `shieldpm/${filename}`)).toBe(false);
+		await engine.apply();
+		expect(JSON.parse(await fs.readFile(path.join(directory, "shieldpm/database.json"), "utf8"))).toEqual({
+			version: 1,
+			database: { engine: "sqlite" },
+		});
+		const restored = new Database(path.join(directory, "shieldpm/database.sqlite"));
+		expect(restored.prepare("SELECT name FROM user").get()).toEqual({ name: "Original" });
+		restored.close();
+		for (const name of controls.slice(0, 4))
+			await expect(fs.access(path.join(directory, "shieldpm", name))).rejects.toMatchObject({ code: "ENOENT" });
+		// Uncommitted startup still uses the original restore journal to restore the complete old tree.
+		await engine.apply();
+		expect(JSON.parse(await fs.readFile(path.join(directory, "shieldpm/database.json"), "utf8"))).toEqual(
+			oldSelector,
+		);
+		expect(await fs.readFile(path.join(directory, "shieldpm/database-operation.json"), "utf8")).toBe(
+			"private-control-state",
+		);
+	});
+
 	it("rejects wrong passwords, truncated and modified archives without changing the instance", async () => {
 		const row = await engine.create(password);
 		await expect(engine.verify(row.id, "wrong long password")).rejects.toThrow("password is incorrect");

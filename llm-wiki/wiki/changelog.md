@@ -3,6 +3,19 @@
 Ergebnisse für Menschen, neueste zuerst. Die Arbeit selbst steht im [Log](./log.md).
 Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
+## 2026-11-06 — Datenbankwahl und kontrollierte Migration
+
+- Erstwahl der Datenbank vor der Benutzeranlage; spätere Auswahl und Verbindungstest
+  im bestehenden Einstellungsmenü, private Verbindungsdaten außerhalb generischer Settings.
+- SQLite ↔ MySQL/MariaDB sowie SQLite ↔ PostgreSQL mit kontrolliertem Prozessneustart,
+  Quellsperre, privatem Export und unabhängiger Inhaltsprüfung vor Aktivierung.
+- Neue SQLite-Zieldatei beim Rückwechsel; aktuelle Schreibvorgänge werden übertragen,
+  alte Quellen bleiben Archiv. Explizite Fehlerbestätigung vor Aktivierung und
+  gesperrte Verifikation bei unklarem Aktivierungsstand.
+- Zusammengesetzte Schlüssel, Claim-Lock-Seeds, Login-Throttles und Sequenzen
+  geprüft; Wartungsbefehle und Instanz-Restore folgen der aktiven Auswahl.
+- Reale Provider- und Neustartmatrix dauerhaft als isolierter CI-Job ergänzt.
+
 ## 2026-11-06 — Traffic-Flow im Einstellungsmenü
 
 - Normaler Flow und Live-Wunsch sind ohne ENV standardmäßig aktiv; bestehende

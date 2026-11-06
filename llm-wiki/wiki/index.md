@@ -77,6 +77,8 @@ zuerst in `wiki/reference/` geändert und hier nur zusammengefasst.
 
 ### Entscheidungen
 
+- [2026-11-06 Datenbank-Bootstrap und Providerwechsel](./decisions/2026-11-06-datenbank-bootstrap-und-providerwechsel.md) — kontrollierter Neustart, private Auswahl und verlustfreie Prüfung
+
 - [Entscheidungen](./decisions/README.md) — ADR-Index
 - [ADR-Vorlage](./decisions/adr-template.md) — Gerüst für neue Entscheidungen
 - [2026-11-04 Wiki-Struktur](./decisions/2026-11-04-wiki-struktur.md) — warum es drei Doku-Ebenen gibt

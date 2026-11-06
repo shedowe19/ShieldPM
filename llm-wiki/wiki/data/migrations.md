@@ -1,7 +1,7 @@
 # Datenbank und Migrationen
 
 Status: active
-Last verified: 2026-11-04
+Last verified: 2026-11-06
 Confidence: high
 
 ## Zweck
@@ -17,19 +17,35 @@ konfiguriert wird und wie Migrationen geschrieben und geprüft werden.
 | MySQL/MariaDB | `mysql2` | `mysql2`         |
 | PostgreSQL    | `pg`     | `pg`             |
 
-Die Engine wird in `backend/lib/config.js` gewählt: zuerst
-`/data/shieldpm/default.json`, dann Umgebungsvariablen (`DB_MYSQL_*`,
-`DB_POSTGRES_*`), sonst SQLite (`backend/lib/config.js:16-113`). Die Knex-Instanz
-entsteht in `backend/db.js`.
+Neue Installationen wählen die Datenbank vor der Benutzeranlage. Später ist ein
+verifizierter Wechsel unter Einstellungen möglich. Eine ausdrücklich gespeicherte
+Auswahl in `/data/shieldpm/database.json` hat Vorrang vor der alten Datei
+`default.json` und den Umgebungsvariablen. Ohne verwaltete Auswahl bleiben die
+bestehenden Konfigurationswege maßgeblich. Secrets liegen außerhalb der Datenbank-
+Settings. Details in der [Datenbank-Referenz](../reference/daten/datenbank.md).
+
+## Providerwechsel
+
+Unterstützt sind SQLite ↔ MySQL/MariaDB und SQLite ↔ PostgreSQL; direkte Wechsel
+zwischen Serverprovidern werden abgewiesen. Ein DB-unabhängiger Bootstrap läuft
+vor Modell-/Knex-Importen. Der kontrollierte Prozessneustart stoppt alle eigenen
+Schreiber; andere Instanzen und externe Schreiber müssen gestoppt werden.
+Snapshot, privater Export, Übertragung und kanonische Integritätsprüfung passieren
+unter Quellschreibsperren. Erst dann wird die Zielauswahl atomar aktiviert.
+
+Ein Rückwechsel verwendet aktuelle Daten und eine neue Zieldatenbank. Eine alte
+SQLite-Quelldatei nach Serverwechsel wieder zu öffnen wäre Datenverlust und ist
+kein Wiederherstellungsverfahren. Unklare Aktivierung bleibt in Wartung.
+[Entscheidung und Betriebsgrenzen](../decisions/2026-11-06-datenbank-bootstrap-und-providerwechsel.md).
 
 ## Migrationen
 
-- 91 Dateien unter `backend/migrations/`, benannt
+- 92 Dateien unter `backend/migrations/`, benannt
   `YYYYMMDDHHMMSS_beschreibung.js`; der Zeitstempel wird als UTC angenommen.
 - ESM mit benannten Exporten `up` und `down`; Vorlage:
   `backend/lib/migrate_template.js`.
 - Tabelle `migrations` verwaltet den Stand.
-- Beim Start laufen sie automatisch (`backend/index.js:45-46` über
+- Beim Start laufen sie automatisch (`backend/runtime.js` über
   `backend/migrate.js`).
 - Zusätzlich existiert ein Pfad zur Migration von SQLite in eine andere Datenbank
   (`backend/lib/db-migrate.js`).

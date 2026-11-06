@@ -2,6 +2,21 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-06] feature | DB-Ersteinrichtung und verifizierter Providerwechsel
+
+- Command: Auf ausdrücklichen Nutzerwunsch Datenbank-Erstwahl und spätere echte Migration im selben Draft-PR wie Traffic Flow umsetzen, isoliert testen und pushen; nicht mergen oder bereitstellen.
+- Type: feature
+- Areas affected: Bootstrap, Datenbank-Konfiguration und Kopie, Prozessaufsicht, Setup-/Settings-Oberfläche, Recovery, Instanz-Restore, SQLite-Wartung und CI
+- Files changed: `bootstrap-app.js`, `runtime.js`, `lib/database-{config,switch,copy}.js`, DB-API/Schemas, historische Default-Migrationen, Backup-/CLI-Pfade, Frontend-DB-Komponenten und Tests, Launcher, Docker-Smoke und Provider-CI
+- Wiki pages updated: Datenbank-Referenz, Migrationen, Konfiguration, aktueller Projektzustand, Aufgaben, ADR-Index, Index, Changelog und Log
+- New wiki pages: [DB-Bootstrap und Providerwechsel](./decisions/2026-11-06-datenbank-bootstrap-und-providerwechsel.md)
+- New TODOs: keine für die initiale Matrix; direkter Server-zu-Server-Wechsel und koordinierte Mehrinstanz-Migration sind ausdrücklich nicht unterstützt.
+- New bugs: Reale Prüfungen fanden vorzeitige Modellimporte aus zwei historischen Migrationen, unterschiedliche Registry-Kollation, Unix-Socket-Ratelimit ohne IP, drei ungültige Oracle-MySQL-Defaults sowie Metadaten-Großschreibung. Alle genannten Fehler korrigiert und erneut geprüft. Alte Restore-/CLI-Pfade hätten die archivierte SQLite-Auswahl verwendet und berücksichtigen jetzt die aktive Auswahl.
+- New decisions: DB-unabhängiger Bootstrap vor Modellimporten; private atomare Auswahl und dauerhaftes Journal; Prozessneustart stoppt eigene Schreiber, Quellsperre bleibt bis Aktivierung; vollständiger privater Export und Inhaltsprüfung vor Auswahlwechsel. Alte Quellen sind nach Aktivierung Archiv, Rückwechsel ist eine neue Migration. Andere Instanzen und externe Schreiber müssen gestoppt sein.
+- Open questions: Tatsächliche CI des neuen Commits nach Push abwarten; keine produktive Installation oder Datenbank verändert.
+- Next steps: Zusammenhängende DB-Phase in PR #162 pushen und alle neuen CI-Läufe prüfen. Separater früherer Audit bleibt pausiert.
+- Verification: Abschließender Backend-Gesamtlauf mit echten Serverselektoren 2.790 bestanden/26 übersprungen (292 Dateien); abschließendes Frontend 1.034 bestanden (230 Dateien). Sieben Chromium-Fälle bestanden, darunter Erstwahl, Neustart, Fehlerbestätigung, veraltete Operations-Capability und Flow-Einstellungen. TypeScript/Produktionsbuild bestanden; CSS 16.539/16.600 Byte, JavaScript 1.197.144/1.290.000 Byte. Docker-Runtime-Smoke einschließlich Ersteinrichtung, CSRF, Routing und 256 Firewall-Prüfungen jeweils als UID 0 und 1000 bestanden. Zehn CLI-Tests und 23 Python-Infrastruktur-/Supervisor-Tests bestanden. Vollständige 92-Migrationen-Kette und kalte Rückwechsel auf SQLite 3.53.4, MariaDB 11.8.3, Oracle MySQL 8.4.13 und PostgreSQL 17.6 geprüft: jeweils 42 Anwendungstabellen, neue Server-Schreibvorgänge im Rückweg, unveränderte Quellarchive, private Dateien und aktivierte Recovery. Kopierengine zusätzlich mit 14 Fällen pro realer Serverauswahl geprüft. Wiki, eindeutige OpenAPI-Operationen, Locale-Check, Typen und Biome bestanden; Staged-Scanner ohne Fehler, ein Hinweis zur terminierenden Batch-Schleife.
+
 ## [2026-11-06] fix | Traffic-Settings CI und echte MariaDB-Prüfung
 
 - Command: CI nach Veröffentlichung der Traffic-Einstellungen prüfen und Fehler beheben.

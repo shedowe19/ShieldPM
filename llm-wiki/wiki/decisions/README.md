@@ -19,6 +19,8 @@ stehen auf der jeweiligen Bereichsseite und werden hier verlinkt.
 
 - [Traffic-Flow-Messgrenzen](./2026-11-05-traffic-flow-messgrenzen.md), 2026-11-05: Vorschau mit unbekannten Raten.
 
+- [Datenbank-Bootstrap und Providerwechsel](./2026-11-06-datenbank-bootstrap-und-providerwechsel.md), 2026-11-06: accepted im Feature-Branch.
+
 ## Wie eine Entscheidung entsteht
 
 Eine Entscheidung wird nur dokumentiert, wenn es echte Belege gibt: einen

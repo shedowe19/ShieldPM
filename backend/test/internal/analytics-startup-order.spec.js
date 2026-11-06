@@ -4,7 +4,7 @@ import { backendSourcePath } from "../helpers/source-path.js";
 
 const readBackendSource = (...segments) => fs.readFileSync(backendSourcePath(...segments), "utf8");
 
-const startupFiles = ["index.js", "index-dev.js"];
+const startupFiles = ["runtime.js", "index-dev.js"];
 
 describe("analytics startup order", () => {
 	it("does not start analytics while constructing the Express application", () => {
@@ -25,7 +25,7 @@ describe("analytics startup order", () => {
 	}
 
 	it("flushes queued analytics before the production process exits on SIGTERM", () => {
-		const startupSource = readBackendSource("index.js");
+		const startupSource = readBackendSource("runtime.js");
 		expect(startupSource).toMatch(/server\.close\(async \(\) => \{[\s\S]*?await analyticsService\.stop\(\)/);
 	});
 });

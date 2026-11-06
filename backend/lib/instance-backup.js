@@ -19,6 +19,20 @@ export const MAX_BACKUP_BYTES = 8 * 1024 ** 3;
 const MAX_FILES = 30_000;
 const MAX_MANIFEST = 16 * 1024 ** 2;
 const STORE = "instance-backups";
+// The native snapshot is authoritative; never archive live SQLite files or process-control state.
+const databaseArtifact = (name) =>
+	/^shieldpm\/database(?:-[0-9a-f-]{36})?\.sqlite(?:-wal|-shm|-journal)?$/.test(name) ||
+	/^shieldpm\/database-runtime-lock\.sqlite(?:-wal|-shm|-journal)?$/.test(name) ||
+	/^shieldpm\/database-operation\.json(?:\.[0-9a-f-]{36}\.tmp)?$/.test(name) ||
+	/^shieldpm\/database\.json\.[0-9a-f-]{36}\.tmp$/.test(name);
+async function clearRestoredDatabaseArtifacts(data, keepSqlite = false) {
+	const directory = path.join(data, "shieldpm");
+	for (const name of await fs.readdir(directory)) {
+		if (databaseArtifact(`shieldpm/${name}`) && !(keepSqlite && name === "database.sqlite"))
+			await fs.rm(path.join(directory, name), { force: true });
+	}
+}
+
 const validId = (id) =>
 	typeof id === "string" &&
 	id.length === 36 &&
@@ -391,11 +405,7 @@ export class InstanceBackup {
 		const visit = async (relative = "") => {
 			for (const item of await fs.readdir(path.join(this.directory, relative), { withFileTypes: true })) {
 				const name = relative ? `${relative}/${item.name}` : item.name;
-				if (
-					(!relative && [STORE, ".database"].includes(item.name)) ||
-					/^shieldpm\/database\.sqlite(?:-wal|-shm)?$/.test(name)
-				)
-					continue;
+				if ((!relative && [STORE, ".database"].includes(item.name)) || databaseArtifact(name)) continue;
 				safePath(name);
 				if (entries.length >= MAX_FILES) throw new Error("Instance contains too many files");
 				const source = path.join(this.directory, name);
@@ -738,6 +748,13 @@ export class InstanceBackup {
 					},
 				},
 			});
+			// A restored managed selector must point to the snapshot we just installed,
+			// never to a database UUID or operation belonging to the previous instance.
+			await privateJson(path.join(data, "shieldpm/database.json"), {
+				version: 1,
+				database: { engine: "sqlite" },
+			});
+			await clearRestoredDatabaseArtifacts(data, true);
 			return null;
 		}
 		if (descriptor.engine === "postgres")
@@ -783,6 +800,10 @@ export class InstanceBackup {
 					...configuration,
 					database: { ...this.config, name: clone },
 				});
+				// default.json retains the full provider TLS configuration. Remove a higher
+				// precedence selector instead of weakening object-valued TLS into a boolean.
+				await fs.rm(path.join(data, "shieldpm/database.json"), { force: true });
+				await clearRestoredDatabaseArtifacts(data);
 				succeeded = true;
 				return clone;
 			}

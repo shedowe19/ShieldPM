@@ -1,0 +1,65 @@
+{
+	"operationId": "acknowledgeFailedDatabaseOperation",
+	"summary": "Acknowledge a failed preactivation operation",
+	"description": "Requires the operation capability and current CSRF pairing. Permitted only after failure before activation. Returns to the original application or first-setup chooser. Cannot revert activating, activated or completed operations; target writes are never discarded by reopening the old source.",
+	"tags": [
+		"database"
+	],
+	"security": [
+		{
+			"databaseOperationToken": []
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Successful response",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"required": [
+							"state"
+						],
+						"properties": {
+							"state": {
+								"const": "cancelled"
+							}
+						}
+					}
+				}
+			}
+		},
+		"400": {
+			"description": "Invalid request, incompatible data, or unusable target; no credentials are returned"
+		},
+		"403": {
+			"description": "Required permission, operation capability, or CSRF validation failed"
+		},
+		"409": {
+			"description": "An operation is already active or cannot be acknowledged in this phase"
+		},
+		"503": {
+			"description": "Database setup or maintenance prevents this action"
+		}
+	},
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"type": "object",
+					"required": [
+						"id"
+					],
+					"additionalProperties": false,
+					"properties": {
+						"id": {
+							"type": "string",
+							"format": "uuid"
+						}
+					}
+				}
+			}
+		}
+	}
+}

@@ -119,6 +119,10 @@
 		{
 			"name": "wireguard",
 			"description": "WireGuard VPN management"
+		},
+		{
+			"name": "database",
+			"description": "Database first setup and verified provider migration"
 		}
 	],
 	"paths": {
@@ -895,6 +899,36 @@
 		"/nginx/analytics/flow": {
 			"get": {
 				"$ref": "./paths/nginx/analytics/flow/get.json"
+			}
+		},
+		"/database": {
+			"get": {
+				"$ref": "./paths/database/get.json"
+			}
+		},
+		"/database/test": {
+			"post": {
+				"$ref": "./paths/database/test/post.json"
+			}
+		},
+		"/database/setup": {
+			"post": {
+				"$ref": "./paths/database/setup/post.json"
+			}
+		},
+		"/database/switch": {
+			"post": {
+				"$ref": "./paths/database/switch/post.json"
+			}
+		},
+		"/database/operation": {
+			"get": {
+				"$ref": "./paths/database/operation/get.json"
+			}
+		},
+		"/database/operation/cancel": {
+			"post": {
+				"$ref": "./paths/database/operation/cancel/post.json"
 			}
 		}
 	}

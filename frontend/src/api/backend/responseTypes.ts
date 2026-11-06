@@ -1,6 +1,8 @@
 import type { User } from "./models";
 
 export interface HealthResponse {
+	databaseSetupRequired?: boolean;
+	databaseMaintenance?: boolean;
 	status: string;
 	version: string;
 	setup: boolean;

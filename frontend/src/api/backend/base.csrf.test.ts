@@ -46,6 +46,25 @@ describe("recovery from an explicit CSRF rejection before route execution", () =
 		expect(new Headers(retried.headers).get("X-XSRF-TOKEN")).toBe("fresh-csrf");
 	});
 
+	it("preserves a scoped operation header across CSRF recovery without allowing a caller to override CSRF", async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValueOnce(csrfFailure())
+			.mockResolvedValueOnce(Response.json({ csrfToken: "fresh-csrf" }))
+			.mockResolvedValueOnce(Response.json({ state: "cancelled" }));
+		vi.stubGlobal("fetch", fetchMock);
+		await post({
+			url: "/database/operation/cancel",
+			data: { id: "fixture" },
+			headers: { "X-Database-Operation-Token": "synthetic-capability", "X-XSRF-TOKEN": "incorrect-caller-token" },
+		});
+		expect(new Headers(fetchMock.mock.calls[0][1].headers).get("X-XSRF-TOKEN")).toBe("old-csrf");
+		expect(new Headers(fetchMock.mock.calls[2][1].headers).get("X-XSRF-TOKEN")).toBe("fresh-csrf");
+		expect(new Headers(fetchMock.mock.calls[2][1].headers).get("X-Database-Operation-Token")).toBe(
+			"synthetic-capability",
+		);
+	});
+
 	it("does not repeat an ordinary permission-denied response", async () => {
 		const fetchMock = vi
 			.fn()

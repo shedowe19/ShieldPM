@@ -1,0 +1,40 @@
+{
+	"operationId": "getDatabaseConfiguration",
+	"summary": "Inspect the selected database",
+	"description": "Administrator only during normal operation. During first setup returns only an unconfigured selection; never returns passwords.",
+	"tags": [
+		"database"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		},
+		{}
+	],
+	"responses": {
+		"200": {
+			"description": "Successful response",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../components/database-state.json"
+					}
+				}
+			}
+		},
+		"400": {
+			"description": "Invalid request, incompatible data, or unusable target; no credentials are returned"
+		},
+		"403": {
+			"description": "Required permission, operation capability, or CSRF validation failed"
+		},
+		"409": {
+			"description": "An operation is already active or cannot be acknowledged in this phase"
+		},
+		"503": {
+			"description": "Database setup or maintenance prevents this action"
+		}
+	}
+}

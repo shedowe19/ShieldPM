@@ -121,7 +121,7 @@ nginx -e stderr &
 nginx_pid=$!
 
 cd /app || exit 1
-node index.js &
+shieldpm-backend.sh &
 backend_pid=$!
 
 stop_critical_children() {

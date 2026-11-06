@@ -139,7 +139,7 @@ const seed = async () => {
 const stored = async () => JSON.parse((await state.db("setting").where({ id: "traffic-flow" }).first()).meta);
 
 describe("persisted Traffic Flow settings", () => {
-	it.each(["index.js", "index-dev.js"])("initializes persistent policy before collection in %s", (entry) => {
+	it.each(["runtime.js", "index-dev.js"])("initializes persistent policy before collection in %s", (entry) => {
 		const source = fs.readFileSync(new URL(`../../${entry}`, import.meta.url), "utf8");
 		const operations = [
 			"await migrateUp();",

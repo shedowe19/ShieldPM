@@ -1,0 +1,48 @@
+{
+	"operationId": "getDatabaseOperation",
+	"summary": "Inspect a database operation",
+	"description": "Requires the opaque operation capability in X-Database-Operation-Token. Available through maintenance and restart without the application database or JWT. Never put the capability in the URL.",
+	"tags": [
+		"database"
+	],
+	"security": [
+		{
+			"databaseOperationToken": []
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Successful response",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/database-operation.json"
+					}
+				}
+			}
+		},
+		"400": {
+			"description": "Invalid request, incompatible data, or unusable target; no credentials are returned"
+		},
+		"403": {
+			"description": "Required permission, operation capability, or CSRF validation failed"
+		},
+		"409": {
+			"description": "An operation is already active or cannot be acknowledged in this phase"
+		},
+		"503": {
+			"description": "Database setup or maintenance prevents this action"
+		}
+	},
+	"parameters": [
+		{
+			"name": "id",
+			"in": "query",
+			"required": true,
+			"schema": {
+				"type": "string",
+				"format": "uuid"
+			}
+		}
+	]
+}

@@ -78,6 +78,21 @@ const createSchema = async (knex) => {
 			table.bigInteger("counter");
 		});
 	}
+	await knex.schema.createTable("host_domain_claim_lock", (table) => {
+		table.integer("id").primary();
+		table.bigInteger("sequence").notNullable();
+	});
+	await knex("host_domain_claim_lock").insert({ id: 1, sequence: 0 });
+	await knex.schema.createTable("host_domain_claim", (table) => {
+		table.string("domain_key").primary();
+	});
+	await knex.schema.createTable("host_domain_claim_owner", (table) => {
+		table.string("domain_key").notNullable().references("domain_key").inTable("host_domain_claim");
+		table.string("host_type").notNullable();
+		table.integer("host_id").notNullable();
+		table.primary(["domain_key", "host_type", "host_id"]);
+	});
+
 	await knex.schema.createTable("auth_sessions", (table) => {
 		table.increments("id");
 		table.integer("user_id").references("id").inTable("user");
@@ -87,6 +102,20 @@ const createSchema = async (knex) => {
 		table.json("scope");
 	});
 };
+
+const createLoginAttempts = async (knex) =>
+	knex.schema.createTable("login_attempts", (table) => {
+		table.increments("id").primary();
+		table.string("scope", 32).notNullable();
+		table.string("identifier", 255).notNullable();
+		table.integer("attempt_count").notNullable().defaultTo(0);
+		table.bigInteger("first_attempt_at").notNullable();
+		table.bigInteger("last_attempt_at").notNullable();
+		table.bigInteger("blocked_until").notNullable().defaultTo(0);
+		table.unique(["scope", "identifier"]);
+		table.index(["last_attempt_at"]);
+		table.index(["blocked_until"]);
+	});
 
 const populateSource = async () => {
 	await source("user").insert({ id: 7, name: "Migration user", created_on: createdAt });
@@ -156,6 +185,61 @@ describe("SQLite database import", () => {
 		expect(await destination.raw("PRAGMA foreign_keys")).toEqual([{ foreign_keys: 1 }]);
 	});
 
+	it("paginates composite keys across repeated prefix values and preserves the seeded claim lock", async () => {
+		await populateSource();
+		await source("host_domain_claim_lock").update({ sequence: "9007199254740993" });
+		await source("host_domain_claim").insert([{ domain_key: "a" }, { domain_key: "b" }]);
+		const owners = Array.from({ length: 460 }, (_, index) => ({
+			domain_key: index < 300 ? "a" : "b",
+			host_type: index % 2 ? "proxy_host" : "dead_host",
+			host_id: index,
+		}));
+		for (let start = 0; start < owners.length; start += 100)
+			await source("host_domain_claim_owner").insert(owners.slice(start, start + 100));
+		await importSqliteDatabase(source, destination);
+		expect(await destination("host_domain_claim_owner").orderBy(["domain_key", "host_type", "host_id"])).toEqual(
+			await source("host_domain_claim_owner").orderBy(["domain_key", "host_type", "host_id"]),
+		);
+		expect(await destination.raw("SELECT CAST(sequence AS TEXT) AS value FROM host_domain_claim_lock")).toEqual([
+			{ value: "9007199254740993" },
+		]);
+	});
+	it("rejects a used destination claim lock instead of treating it as a migration seed", async () => {
+		await source("user").insert({ id: 7 });
+		await destination("host_domain_claim_lock").update({ sequence: 1 });
+		await expect(importSqliteDatabase(source, destination)).rejects.toThrow(/host_domain_claim_lock is not empty/);
+		expect(await destination("user")).toEqual([]);
+	});
+	it("copies lazily initialized login throttles without discarding active blocks", async () => {
+		await createLoginAttempts(source);
+		const attempt = {
+			id: 4,
+			scope: "ip",
+			identifier: "192.0.2.1",
+			attempt_count: 7,
+			first_attempt_at: createdAt,
+			last_attempt_at: createdAt,
+			blocked_until: createdAt + 600000,
+		};
+		await source("login_attempts").insert(attempt);
+		await importSqliteDatabase(source, destination);
+		expect(await destination("login_attempts").first()).toEqual(attempt);
+	});
+	it("allows an empty destination-only lazy throttle table but never overwrites existing throttles", async () => {
+		await createLoginAttempts(destination);
+		await importSqliteDatabase(source, destination);
+		await destination("login_attempts").insert({
+			id: 1,
+			scope: "ip",
+			identifier: "192.0.2.2",
+			attempt_count: 1,
+			first_attempt_at: createdAt,
+			last_attempt_at: createdAt,
+		});
+		await expect(importSqliteDatabase(source, destination)).rejects.toThrow(/schema differs/);
+		expect(await destination("login_attempts").count({ count: "*" }).first()).toEqual({ count: 1 });
+	});
+
 	it("restores cyclic session links across multiple batches with foreign keys enforced", async () => {
 		await source("user").insert({ id: 7 });
 		const sessions = Array.from({ length: 230 }, (_, index) => ({
@@ -176,9 +260,11 @@ describe("SQLite database import", () => {
 		await populateSource();
 		await source.raw("PRAGMA foreign_keys = OFF");
 		await source("user_2fa").update({ user_id: 999 });
+		await source("host_domain_claim_lock").update({ sequence: 19 });
 
 		await expect(importSqliteDatabase(source, destination)).rejects.toThrow(/FOREIGN KEY constraint/);
 		expect(await destination("user")).toEqual([]);
+		expect(await destination("host_domain_claim_lock").first()).toEqual({ id: 1, sequence: 0 });
 		expect(await destination("host_domain")).toEqual([]);
 		expect(await destination("setting").where("id", "wireguard").first()).toMatchObject({ value: "seeded" });
 		expect(await source("user_2fa").first()).toMatchObject({ user_id: 999, value: "preserve-me" });
@@ -192,6 +278,14 @@ describe("SQLite database import", () => {
 			/Start this ShieldPM version with SQLite/,
 		);
 		expect(await destination("user")).toEqual([]);
+	});
+
+	it("compares migration registries independently of database collation and insertion order", async () => {
+		await source("migrations").insert([{ name: "analytics_logs.js" }, { name: "analytics.js" }]);
+		await destination("migrations").insert([{ name: "analytics.js" }, { name: "analytics_logs.js" }]);
+		await populateSource();
+		await importSqliteDatabase(source, destination);
+		expect(await destination("user").first()).toMatchObject({ id: 7 });
 	});
 
 	it("rejects pending data migrations even when table names and columns match", async () => {

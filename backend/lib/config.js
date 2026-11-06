@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import { dirname } from "node:path";
 import { global as logger } from "../logger.js";
+import { readManagedDatabase, toLegacyDatabase } from "./database-config.js";
 
 const dataPath = process.env.DATA_PATH || "/data";
 const keysFile = `${dataPath}/shieldpm/keys.json`;
@@ -14,6 +15,11 @@ let instance = null;
 // 1. Load from config file first (not recommended anymore)
 // 2. Use config env variables next
 const configure = () => {
+	const managed = readManagedDatabase();
+	if (managed) {
+		instance = { database: toLegacyDatabase(managed.database), keys: getKeys() };
+		return;
+	}
 	const filename = `${dataPath}/shieldpm/default.json`;
 	if (fs.existsSync(filename)) {
 		let configData;

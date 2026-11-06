@@ -1,7 +1,7 @@
 # Konfiguration
 
 Status: active
-Last verified: 2026-11-04
+Last verified: 2026-11-06
 Confidence: high
 
 ## Zweck
@@ -13,15 +13,21 @@ es gibt und wo Werte liegen. **Keine Werte dokumentieren** — nur Namen und Zwe
 
 | Weg                      | Pfad / Datei                            | Bedeutung                                       |
 | ------------------------ | --------------------------------------- | ----------------------------------------------- |
-| Umgebung (Container)     | `compose.yaml`, `rootfs/.env.example`   | empfohlener Weg                                 |
+| Umgebung (Container)     | `compose.yaml`, `rootfs/.env.example`   | System- und Infrastrukturwerte                  |
 | Umgebung (nativ)         | `/data/.env`, vom Installer geschrieben | gleiche Variablen                               |
 | Datenbankdatei           | `/data/shieldpm/default.json`           | ältere, weiterhin gelesene Konfiguration        |
+| Verwaltete DB-Auswahl    | `/data/shieldpm/database.json`          | private UI-Auswahl vor DB-Verbindung (0600)     |
 | Schlüssel                | `/data/shieldpm/keys.json`              | Instanzschlüssel, nicht versionieren            |
 | Anwendungs-Einstellungen | Tabelle `setting`                       | Laufzeiteinstellungen aus der UI                |
 | Nginx                    | `/data/nginx/`                          | generierte Konfiguration, nicht von Hand ändern |
 
-Die Reihenfolge in `backend/lib/config.js`: Datei zuerst, dann Umgebungsvariablen,
-dann Standard (SQLite).
+Nach ausdrücklicher UI-Datenbankauswahl gilt zuerst die private verwaltete Datei
+`/data/shieldpm/database.json` (0600). Ohne sie bleiben `default.json`,
+Umgebungsvariablen und SQLite-Standard maßgeblich. Ein DB-unabhängiger Bootstrap
+ermöglicht Erstwahl und kontrollierte Migration vor Modellimporten. Traffic Flow,
+Live-Wunsch und Client-Darstellung liegen dagegen in der Tabelle `setting` und
+werden über das vorhandene Einstellungsmenü geändert. Alte `TRAFFIC_FLOW_*`-Werte
+werden einmal übernommen. Sie enthalten keine Datenbank-Secrets.
 
 ## Variablengruppen
 
