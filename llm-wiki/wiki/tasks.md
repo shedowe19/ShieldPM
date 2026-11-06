@@ -31,6 +31,10 @@
       Backend-Typecheck umfasst `routes/` und `migrations/`.
 - [ ] **T-027 Konfigurations-Hygiene.** Abnahme: Biome, `.yarnrc.yml`,
       Notices-Header und CodeQL-Begründung sind konsistent.
+- [ ] **T-028 Anubis-Hosts im Live-Datenfluss kennzeichnen.** Abnahme: Hosts mit
+      `anubis_enabled` erscheinen nicht mehr als messbare Hosts mit „0 Client-IPs“,
+      sondern mit einem sichtbaren Grund (z. B. „Anubis: keine Live-Messung“); die
+      Flow-API liefert dafür ein maschinenlesbares Feld.
 
 ## Blocked
 

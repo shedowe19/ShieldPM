@@ -10,7 +10,7 @@ Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Felder
 - Files changed: `frontend/src/pages/Analytics/TrafficFlowRate.tsx`, `frontend/src/pages/Analytics/TrafficFlowRate.test.tsx`, `frontend/src/locale/lang/de.json`, `frontend/src/locale/lang/en.json`, `docs/wiki/Analytics.md`
 - Wiki pages updated: Entscheidung „Traffic-Flow: Messgrenzen explizit halten“, Log und Changelog
 - New wiki pages: keine
-- New TODOs: keine
+- New TODOs: T-028 (Anubis-Hosts im Live-Datenfluss kennzeichnen)
 - New bugs: Der Aufklapper wurde bei jedem Poll neu bewertet und verschwand, sobald die aktuelle Rate vollständig war; eine geöffnete Aufteilung und die zuletzt gemessenen Komponenten gingen verloren.
 - New decisions: Aufklapper bleibt an die Client-Gruppe gebunden. Fehlt eine aktuelle Aufteilung, werden die zuletzt gemessenen Komponenten bis zu 60 Sekunden als „zuletzt gemessen“ gehalten; danach zeigt der Aufklapper „Keine aktuelle Aufteilung“. Keine fortgeschriebenen Summen.
 - Open questions: keine
