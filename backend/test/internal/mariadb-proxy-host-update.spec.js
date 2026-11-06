@@ -78,7 +78,14 @@ const allTables = [
 suite("MariaDB manual proxy-host service updates", () => {
 	let admin;
 	beforeAll(async () => {
-		admin = knex({ client: "mysql2", connection: { ...state.db.client.config.connection, database: undefined } });
+		admin = knex({
+			client: "mysql2",
+			connection: {
+				...state.db.client.config.connection,
+				password: process.env.SHIELDPM_TEST_MARIADB_PASSWORD || "",
+				database: undefined,
+			},
+		});
 		await admin.raw("CREATE DATABASE ??", [state.databaseName]);
 		await state.db.schema.createTable("proxy_host", (table) => {
 			table.increments("id");
@@ -390,7 +397,12 @@ suite("MariaDB manual proxy-host service updates", () => {
 			const initialDatabase = state.db;
 			const database = knex({
 				client: "mysql2",
-				connection: { ...initialDatabase.client.config.connection, timezone, dateStrings },
+				connection: {
+					...initialDatabase.client.config.connection,
+					password: process.env.SHIELDPM_TEST_MARIADB_PASSWORD || "",
+					timezone,
+					dateStrings,
+				},
 				pool: { min: 0, max: 4 },
 			});
 			state.db = database;

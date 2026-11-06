@@ -2,6 +2,21 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-06] fix | Traffic-Settings CI und echte MariaDB-Prüfung
+
+- Command: CI nach Veröffentlichung der Traffic-Einstellungen prüfen und Fehler beheben.
+- Type: fix
+- Areas affected: Fehler-Typisierung und isolierte MariaDB-Testfixtures
+- Files changed: Flow-Einstellungsdienst, drei MariaDB-Fixtures und Konfigurationsdokumentation
+- Wiki pages updated: Log
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: TypeScript kannte den Rollback-Marker nicht; ein vollständiges Schema-Fixture kopierte den neuen Migrationshelfer nicht. Zwei lokale Fixtures verloren das nicht aufzählbare Treiberpasswort beim Kopieren der Konfiguration.
+- New decisions: keine Produktänderung; dieselben Prüfungen laufen gegen den isolierten echten MariaDB-Server.
+- Open questions: neue CI-Läufe nach Push prüfen.
+- Next steps: Datenbank-Ersteinrichtung und Providerwechsel fortsetzen.
+- Verification: Alle sieben MariaDB-Dateien mit 31 Tests bestanden; Backend-TypeScript-Prüfung bestanden. Keine Produktionsdatenbank verwendet.
+
 ## [2026-11-06] feature | Traffic-Einstellungen in der Oberfläche
 
 - Command: Traffic Flow und Live-Modus standardmäßig aktivieren; Anzeige und Client-Privatsphäre im Einstellungsmenü steuern.

@@ -78,10 +78,12 @@ async function activate(policy, available, persist) {
 		}
 		await nginx.test();
 		if (activated) await nginx.reload(); // reload validates restored bytes before any signal
-		const restoredError = new errs.ValidationError(
-			`Could not apply Traffic Flow settings. Previous settings and configuration restored: ${error.message}`,
+		const restoredError = Object.assign(
+			new errs.ValidationError(
+				`Could not apply Traffic Flow settings. Previous settings and configuration restored: ${error.message}`,
+			),
+			{ flowRollbackComplete: true },
 		);
-		restoredError.flowRollbackComplete = true;
 		throw restoredError;
 	}
 	// Commit in-memory policy only after durable commit. Privacy changes discard every old sample.

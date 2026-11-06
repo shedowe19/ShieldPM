@@ -113,6 +113,14 @@ ShieldPM runs schema migrations for the **selected** database on startup. When y
 
 ## 📊 Analytics & Logging
 
+**Traffic Flow** is configured under **Settings → Traffic Flow**. Flow and desired
+live measurement default to on; native Nginx support is required for actual live
+rates. Client display offers anonymized networks (default), individual IP addresses
+(explicit choice), or hidden identity. Existing `TRAFFIC_FLOW_*` environment
+preferences are imported once, then saved settings take precedence. These controls
+apply to Traffic Flow only; historical Analytics, access logs and GoAccess remain
+separate. See [Analytics](./Analytics.md#live-traffic-flow-experimental).
+
 | Variable              | Description                                                                     | Default            |
 | :-------------------- | :------------------------------------------------------------------------------ | :----------------- |
 | `GOA`                 | Enable GoAccess Analytics dashboard (port `GOA_PORT`); also enables `LOGROTATE` | `false`            |

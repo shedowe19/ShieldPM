@@ -62,6 +62,10 @@ suite("MariaDB host revisions with every production migration", () => {
 		await fs.mkdir(migrationDirectory);
 		await fs.mkdir(path.join(state.directory, "internal"));
 		await fs.mkdir(path.join(state.directory, "lib"));
+		await fs.copyFile(
+			backendSourcePath("lib", "traffic-flow-settings.js"),
+			path.join(state.directory, "lib", "traffic-flow-settings.js"),
+		);
 		await fs.symlink(backendSourcePath("node_modules"), path.join(state.directory, "node_modules"), "dir");
 		await fs.copyFile(
 			backendSourcePath("lib", "host-domain-claim-key.js"),

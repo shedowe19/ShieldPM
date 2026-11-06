@@ -50,7 +50,11 @@ suite("MariaDB current Nginx render graphs and accepted status", () => {
 	beforeAll(async () => {
 		admin = knex({
 			client: "mysql2",
-			connection: { ...state.db.client.config.connection, database: undefined },
+			connection: {
+				...state.db.client.config.connection,
+				password: process.env.SHIELDPM_TEST_MARIADB_PASSWORD || "",
+				database: undefined,
+			},
 		});
 		await admin.raw("CREATE DATABASE ??", [state.databaseName]);
 		await state.db.schema.createTable("proxy_host", (table) => {
