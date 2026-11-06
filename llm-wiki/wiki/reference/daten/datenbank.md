@@ -18,7 +18,7 @@ Dateien: `backend/lib/config.js` und `backend/db.js`. `backend/knexfile.js` stel
 
 Eine neue Installation ohne explizite Konfiguration oder Anwendungsdaten bietet
 vor der Benutzeranlage die Auswahl SQLite, MySQL/MariaDB oder PostgreSQL an.
-Bestehende oder fehlerhafte explizite Konfigurationen öffnen keinen neuen Wizard.
+Bestehende oder fehlerhafte explizite Konfigurationen öffnen keinen neuen Wizard. Fehlende oder beschädigte ausgewählte SQLite-Dateien werden lesend geprüft und niemals als leere Ersatzdatei erzeugt. Verwaltete Datenbanken müssen ihr Benutzer- und Migrationsschema behalten; sonst bleibt der Start im nicht initialisierenden Fehlerzustand.
 Die verwaltete Auswahl unter `${DATA_PATH:-/data}/shieldpm/database.json` (0600)
 hat nach ausdrücklicher UI-Auswahl Vorrang. Ohne diese Datei bleiben
 `default.json`, danach `DB_MYSQL_*`/`DB_POSTGRES_*`, danach SQLite maßgeblich.

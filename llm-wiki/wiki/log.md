@@ -2,6 +2,21 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-06] fix | Verwaltete Auswahl vor leerer Neuerstellung schützen
+
+- Command: Abschließende CI beheben und bestehende Datenbankauswahl bei fehlenden Daten sicher behandeln.
+- Type: fix
+- Areas affected: DB-Startschutz, Aktivierungs-Recovery und Docker-Smoke-Orchestrierung
+- Files changed: `lib/database-switch.js`, Bootstrap-Regressionstests, Docker-Smoke-Script und dessen Python-Testgerüst
+- Wiki pages updated: Log und Datenbank-Referenz
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: Fehlende explizite SQLite-Dateien hätten beim normalen Start oder ausstehender Migration unbemerkt neu angelegt werden können; verwaltete Ziele ohne Anwendungsschema dürfen ebenfalls nicht neu initialisiert werden. Das Smoke-Testgerüst erwartete einen einzigen Lauf pro UID, während die DB-Ersteinrichtung zunächst separat lief.
+- New decisions: Bestehende SQLite-Auswahl nur lesend mit `fileMustExist` prüfen; verwaltete Datenbanken benötigen Benutzer- und Migrationstabellen vor Anwendungsimporten. Quellenprüfung vor Zielanlage, Zielprüfung auch bei Erstsetup-Recovery ohne Inhaltsmanifest. DB-Smoke im selben kritischen UID-Lauf vor den Nginx-Prüfungen ausführen.
+- Open questions: abschließende CI nach dem Push abwarten.
+- Next steps: letzten Korrekturcommit pushen; CI bis zum Endstand prüfen, nichts mergen oder bereitstellen.
+- Verification: 29 fokussierte Startschutztests, TypeScript und Biome bestanden. Permanente kalte Rückwechsel erneut mit aktuellen Guards auf MariaDB/PostgreSQL (zwei Tests, 6,31 s) und Oracle MySQL (ein Test, 4,87 s) bestanden: sechs konkrete Richtungen, neue Schreibvorgänge und unveränderte Archive. Gesamte lokale Python-Suite 184 Tests/19 übersprungen ohne Fehler; tatsächlicher kombinierter Docker-Smoke mit Erstwahl/CSRF und vollständigen Routing-/Firewall-Prüfungen als UID 0 und UID 1000 bestanden. Vorherige CI bestätigte Browser, allgemeine Qualität, MariaDB und Drei-Server-Matrix; nur das nun korrigierte Infrastruktur-Testgerüst war rot.
+
 ## [2026-11-06] fix | Schreibprüfung des DB-Smoke-Tests
 
 - Command: Neue CI-Läufe nach dem DB-Feature-Push prüfen und Fehler beheben.

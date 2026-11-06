@@ -5,6 +5,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createBootstrapApp } from "../../bootstrap-app.js";
+import * as databaseConfig from "../../lib/database-config.js";
 import {
 	createDatabase,
 	inspectDatabaseSelection,
@@ -93,6 +94,117 @@ describe("database-independent bootstrap and durable activation", () => {
 	it("recognizes a new install without creating an application database or key file", async () => {
 		expect(await needsDatabaseSetup()).toBe(true);
 		expect(fs.existsSync(sqlitePath())).toBe(false);
+		expect(fs.existsSync(path.join(directory, "shieldpm/keys.json"))).toBe(false);
+	});
+	it.each(["managed", "legacy"])(
+		"fails closed when the %s explicit SQLite database is missing",
+		async (selection) => {
+			const filename = path.join(directory, "shieldpm", "database-11111111-1111-4111-8111-111111111111.sqlite");
+			if (selection === "managed")
+				writePrivateJson(managedConfigPath(), {
+					version: 1,
+					database: { engine: "sqlite", filename: path.basename(filename) },
+				});
+			else
+				writePrivateJson(path.join(directory, "shieldpm/default.json"), {
+					database: { engine: "knex-native", knex: { client: "better-sqlite3", connection: { filename } } },
+				});
+			await expect(needsDatabaseSetup()).rejects.toThrow();
+			expect(fs.existsSync(filename)).toBe(false);
+			expect(fs.existsSync(path.join(directory, "shieldpm/keys.json"))).toBe(false);
+			expect(fs.existsSync(sqlitePath())).toBe(false);
+		},
+	);
+	it("fails closed when selected managed SQLite is corrupt without replacing it", async () => {
+		const filename = "database-11111111-1111-4111-8111-111111111111.sqlite";
+		writePrivateJson(managedConfigPath(), { version: 1, database: { engine: "sqlite", filename } });
+		const selected = path.join(directory, "shieldpm", filename);
+		fs.writeFileSync(selected, "corrupt database payload");
+		await expect(needsDatabaseSetup()).rejects.toThrow();
+		expect(fs.readFileSync(selected, "utf8")).toBe("corrupt database payload");
+		expect(fs.existsSync(path.join(directory, "shieldpm/keys.json"))).toBe(false);
+	});
+	it.each([[[]], [[{ name: "user" }]]])(
+		"refuses managed remote databases missing application schema: %j",
+		async (tables) => {
+			writePrivateJson(managedConfigPath(), { version: 1, database: remote });
+			const connection = { destroy: vi.fn(async () => {}) };
+			vi.spyOn(databaseConfig, "createDatabase").mockReturnValue(connection);
+			vi.spyOn(databaseConfig, "listDatabaseTables").mockResolvedValue(tables);
+			await expect(needsDatabaseSetup()).rejects.toThrow("Managed database schema is missing");
+			expect(connection.destroy).toHaveBeenCalledOnce();
+			expect(fs.existsSync(path.join(directory, "shieldpm/keys.json"))).toBe(false);
+			expect(fs.existsSync(sqlitePath())).toBe(false);
+		},
+	);
+	it("accepts complete managed remote schema and always releases the metadata connection", async () => {
+		writePrivateJson(managedConfigPath(), { version: 1, database: remote });
+		const connection = { destroy: vi.fn(async () => {}) };
+		vi.spyOn(databaseConfig, "createDatabase").mockReturnValue(connection);
+		const metadata = vi
+			.spyOn(databaseConfig, "listDatabaseTables")
+			.mockResolvedValue([{ name: "user" }, { name: "migrations" }]);
+		expect(await needsDatabaseSetup()).toBe(false);
+		metadata.mockRejectedValue(new Error("unreachable"));
+		await expect(needsDatabaseSetup()).rejects.toThrow("unreachable");
+		expect(connection.destroy).toHaveBeenCalledTimes(2);
+	});
+	it("does not create a missing explicit SQLite source even for a pending requested migration", async () => {
+		const filename = "database-11111111-1111-4111-8111-111111111111.sqlite";
+		writePrivateJson(managedConfigPath(), { version: 1, database: { engine: "sqlite", filename } });
+		requestDatabaseOperation(remote);
+		await expect(executeDatabaseOperation()).rejects.toThrow("migration failed");
+		expect(fs.existsSync(path.join(directory, "shieldpm", filename))).toBe(false);
+		expect(engine.migrateDatabase).not.toHaveBeenCalled();
+	});
+	it("keeps null-manifest managed remote activation in maintenance when its schema vanished", async () => {
+		const requested = requestDatabaseOperation(remote, true);
+		writePrivateJson(journalPath(), {
+			...readOperation(),
+			phase: "activating",
+			state: "running",
+			verification: null,
+		});
+		writePrivateJson(managedConfigPath(), { version: 1, database: remote, operationId: requested.id });
+		const connection = { destroy: vi.fn(async () => {}) };
+		vi.spyOn(databaseConfig, "createDatabase").mockReturnValue(connection);
+		vi.spyOn(databaseConfig, "listDatabaseTables").mockResolvedValue([]);
+		await expect(executeDatabaseOperation()).rejects.toThrow("activation requires verification");
+		expect(readOperation().state).toBe("running");
+		expect(readOperation().phase).toBe("activating");
+		expect(connection.destroy).toHaveBeenCalledOnce();
+	});
+	it("refuses an emptied managed database while permitting an explicitly configured fresh legacy SQLite file", async () => {
+		writePrivateJson(managedConfigPath(), { version: 1, database: { engine: "sqlite" } });
+		new Database(sqlitePath()).close();
+		await expect(needsDatabaseSetup()).rejects.toThrow("Managed SQLite schema is missing");
+		fs.unlinkSync(managedConfigPath());
+		writePrivateJson(path.join(directory, "shieldpm/default.json"), {
+			database: {
+				engine: "knex-native",
+				knex: { client: "better-sqlite3", connection: { filename: sqlitePath() } },
+			},
+		});
+		expect(await needsDatabaseSetup()).toBe(false);
+		expect(fs.existsSync(path.join(directory, "shieldpm/keys.json"))).toBe(false);
+	});
+	it("keeps null-manifest activation recovery in maintenance if its managed SQLite schema was emptied", async () => {
+		const requested = requestDatabaseOperation({ engine: "sqlite" }, true);
+		writePrivateJson(journalPath(), {
+			...readOperation(),
+			phase: "activating",
+			state: "running",
+			verification: null,
+		});
+		writePrivateJson(managedConfigPath(), {
+			version: 1,
+			database: { engine: "sqlite" },
+			operationId: requested.id,
+		});
+		new Database(sqlitePath()).close();
+		await expect(executeDatabaseOperation()).rejects.toThrow("activation requires verification");
+		expect(readOperation().phase).toBe("activating");
+		expect(readOperation().state).toBe("running");
 		expect(fs.existsSync(path.join(directory, "shieldpm/keys.json"))).toBe(false);
 	});
 	it("does not take over existing SQLite users or custom settings", async () => {
@@ -221,6 +333,10 @@ describe("database-independent bootstrap and durable activation", () => {
 		expect(readManagedDatabase().operationId).toBe(requested.id);
 	});
 	it("verifies recovered activation before allowing startup and does not reverify completed databases after new writes", async () => {
+		initialDatabase();
+		const database = new Database(sqlitePath());
+		database.exec("CREATE TABLE migrations(id INTEGER PRIMARY KEY)");
+		database.close();
 		const requested = requestDatabaseOperation({ engine: "sqlite" }, true);
 		const verification = { verified: true, tables: [] };
 		writePrivateJson(journalPath(), { ...readOperation(), phase: "activating", state: "running", verification });

@@ -13,6 +13,7 @@ import {
 	readManagedDatabase,
 	readPrivateJson,
 	sqlitePath,
+	toLegacyDatabase,
 	writePrivateJson,
 } from "./database-config.js";
 
@@ -86,10 +87,41 @@ export const needsDatabaseSetup = async () => {
 	const selection = inspectDatabaseSelection();
 	if (selection.explicit) {
 		if (!selection.database) throw new Error("Existing database configuration is incomplete");
+		await validateSelectedDatabase(selection.database, selection.source === "managed");
 		return false;
 	}
 	if (!fs.existsSync(sqlitePath())) return true;
 	return !sqliteContainsApplicationData();
+};
+
+/** An explicit SQLite selection must never silently create a replacement database. */
+const validateSelectedSqlite = (database, requireSchema = false) => {
+	if (engineOf(database) !== "sqlite") return;
+	const filename = database.knex?.connection?.filename;
+	if (typeof filename !== "string" || !filename || filename === ":memory:")
+		throw new Error("Invalid explicit SQLite filename");
+	const source = new Database(filename, { readonly: true, fileMustExist: true });
+	try {
+		const tables = source.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all();
+		if (requireSchema && !["user", "migrations"].every((name) => tables.some((table) => table.name === name)))
+			throw new Error("Managed SQLite schema is missing");
+	} finally {
+		source.close();
+	}
+};
+
+/** Managed selectors are published only after the complete application schema exists. */
+const validateSelectedDatabase = async (database, requireSchema = false) => {
+	if (engineOf(database) === "sqlite") return validateSelectedSqlite(database, requireSchema);
+	if (!requireSchema) return;
+	const connection = createDatabase(database);
+	try {
+		const tables = await listDatabaseTables(connection);
+		if (!["user", "migrations"].every((name) => tables.some((table) => table.name === name)))
+			throw new Error("Managed database schema is missing");
+	} finally {
+		await connection.destroy();
+	}
 };
 
 const sqliteContainsApplicationData = () => {
@@ -168,6 +200,7 @@ export const executeDatabaseOperation = async () => {
 		if (["activating", "activated"].includes(operation.phase)) {
 			const managed = readManagedDatabase();
 			if (managed?.operationId !== operation.id) throw new Error("Activation requires recovery");
+			await validateSelectedDatabase(toLegacyDatabase(operation.target), true);
 			target = createDatabase(operation.target);
 			if (operation.verification) await verifyDatabase({ database: target, expected: operation.verification });
 			saveOperation(operation, { phase: "activated" });
@@ -175,6 +208,7 @@ export const executeDatabaseOperation = async () => {
 		}
 		if (operation.phase !== "requested")
 			throw new Error("Interrupted copy requires recovery with a new empty target");
+		if (operation.source) await validateSelectedDatabase(operation.source, !!readManagedDatabase());
 		saveOperation(operation, { state: "running", phase: "preparing" });
 		fs.mkdirSync(databaseDirectory(), { recursive: true, mode: 0o700 });
 		const adoptSqlite = operation.kind === "setup" && operation.target.engine === "sqlite" && operation.source;

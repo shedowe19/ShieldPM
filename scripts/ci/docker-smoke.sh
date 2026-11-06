@@ -439,13 +439,12 @@ for service_uid in 0 1000; do
         exit 1
     fi
 
-    docker_cmd exec --user "$service_uid:$service_uid" "$container" node /data/database-setup-smoke.mjs
-
     # Use the actual service UID for writes, Nginx validation/reload and HTTP health.
     # These expansions belong to the container's shell.
     # shellcheck disable=SC2016
     docker_cmd exec --user "$service_uid:$service_uid" "$container" sh -ceu '
         test "$(id -u)" = "$1"
+        node /data/database-setup-smoke.mjs
         test -S /run/shieldpm/shieldpm.sock
         test "$(stat -c %u /run/shieldpm/shieldpm.sock)" = "$1"
         test -s /data/nginx/default.conf
