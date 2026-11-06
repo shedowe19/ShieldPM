@@ -278,8 +278,8 @@ test("German flow explains private networks and missing rates with compact reada
 	await expect(graph.locator('[data-flow-motion="verified"]')).toHaveCount(4);
 	await card.screenshot({ path: "/tmp/flow-ui-german-desktop-live.png" });
 	await page.emulateMedia({ reducedMotion: "reduce" });
-	const animation = graph.locator('[data-flow-motion="verified"]').first();
-	await expect(animation).toHaveCSS("display", "none");
+	await expect(graph.locator('[data-flow-motion="verified"]')).toHaveCount(0);
+	await expect(graph.locator("animateTransform")).toHaveCount(0);
 	await page.getByRole("button", { name: "Pausieren", exact: true }).click();
 	await expect(graph.locator("[data-flow-motion]")).toHaveCount(0);
 	await page.setViewportSize({ width: 390, height: 844 });

@@ -5,6 +5,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "src/co
 import { intl } from "src/locale";
 import { FlowConnection, FlowRateComponents, FlowRateLabel, rateDescription } from "./TrafficFlowRate";
 
+const flowColumns = "minmax(180px,1fr) 32px 64px 32px minmax(180px,1fr) minmax(220px,1fr)";
+
 export const flowText = (name: string, values?: Record<string, string | number>) =>
 	intl.formatMessage({ id: `analytics.flow.${name}` }, values);
 
@@ -40,8 +42,8 @@ export function TrafficFlowRows({
 	return (
 		<TooltipProvider>
 			<div className="overflow-x-auto">
-				<div className="min-w-[780px] space-y-3">
-					<div className="grid grid-cols-[minmax(180px,1fr)_32px_64px_32px_minmax(180px,1fr)_minmax(220px,1fr)] px-3 text-sm font-semibold">
+				<div className="space-y-3" style={{ minWidth: 780 }}>
+					<div className="grid px-3 text-sm font-semibold" style={{ gridTemplateColumns: flowColumns }}>
 						<div>{flowText(snapshot.clientMode === "address" ? "client-addresses" : "clients")}</div>
 						<div />
 						<div>
@@ -55,7 +57,8 @@ export function TrafficFlowRows({
 						<section
 							key={host.id}
 							aria-label={host.domains.join(", ") || String(host.id)}
-							className="grid h-48 grid-cols-[minmax(180px,1fr)_32px_64px_32px_minmax(180px,1fr)_minmax(220px,1fr)] items-center rounded-md border p-3 text-sm"
+							className="grid h-48 items-center rounded-md border p-3 text-sm"
+							style={{ gridTemplateColumns: flowColumns }}
 						>
 							<div className="max-h-40 min-w-0 overflow-y-auto">
 								<details open>

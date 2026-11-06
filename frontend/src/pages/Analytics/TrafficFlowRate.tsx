@@ -1,6 +1,13 @@
+import { useSyncExternalStore } from "react";
 import type { FlowRate } from "src/api/backend/getTrafficFlow";
 import { intl } from "src/locale";
-import styles from "./TrafficFlow.module.css";
+
+const reducedMotionQuery = typeof window === "undefined" ? null : window.matchMedia("(prefers-reduced-motion: reduce)");
+const subscribeReducedMotion = (update: () => void) => {
+	reducedMotionQuery?.addEventListener("change", update);
+	return () => reducedMotionQuery?.removeEventListener("change", update);
+};
+const reducedMotionSnapshot = () => reducedMotionQuery?.matches ?? true;
 
 const text = (key: string, values?: Record<string, string | number>) =>
 	intl.formatMessage({ id: `analytics.flow.${key}` }, values);
@@ -111,8 +118,9 @@ export function FlowConnection({
 	rate?: FlowRate | null;
 	live?: boolean;
 }) {
+	const reducedMotion = useSyncExternalStore(subscribeReducedMotion, reducedMotionSnapshot, () => true);
 	const age = rate ? Date.now() - Date.parse(rate.windowEnd) : Number.POSITIVE_INFINITY;
-	const flowing = live && rate && rate.bytesPerSecond > 0 && age >= -1000 && age < 3500;
+	const flowing = !reducedMotion && live && rate && rate.bytesPerSecond > 0 && age >= -1000 && age < 3500;
 	return (
 		<svg width="32" height="24" viewBox="0 0 32 24" aria-hidden="true" className="shrink-0 text-muted-foreground">
 			<line
@@ -127,14 +135,22 @@ export function FlowConnection({
 			{flowing && (
 				<circle
 					data-flow-motion="verified"
-					className={styles.particle}
 					cx="0"
 					cy="12"
 					r="3"
 					fill="hsl(var(--primary))"
 					stroke="hsl(var(--background))"
 					strokeWidth="1.5"
-				/>
+				>
+					<animateTransform
+						attributeName="transform"
+						type="translate"
+						from="-4 0"
+						to="36 0"
+						dur="1.6s"
+						repeatCount="indefinite"
+					/>
+				</circle>
 			)}
 		</svg>
 	);

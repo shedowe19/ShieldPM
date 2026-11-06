@@ -2,6 +2,21 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-06] fix | CSS-Budget des Traffic-Flows einhalten
+
+- Command: PR abschließen und tatsächliche CI-Ergebnisse prüfen.
+- Type: fix
+- Areas affected: Flow-Animation, Layout-Styles, CI-Bundle-Budget
+- Files changed: TrafficFlowRate, TrafficFlowRows, UI- und Chromium-Tests; separates Flow-CSS entfernt
+- Wiki pages updated: Log
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: CI meldete 16.755 komprimierte CSS-Bytes bei Budget 16.600.
+- New decisions: Native SVG-Bewegung statt separatem Stylesheet; Reduced-Motion-Wechsel über React-Mediensubscription, unveränderte Budgetgrenzen.
+- Open questions: keine Produktfrage; neue CI-Läufe nach Push abwarten.
+- Next steps: CI bis zum tatsächlichen Endstand prüfen.
+- Verification: CSS-Budget 16.531/16.600 Byte, JavaScript gesamt 1.185.356/1.290.000 Byte; 18 UI-Tests und zwei Chromium-Fälle einschließlich dynamischem Reduced-Motion bestanden; TypeScript und Produktionsbuild bestanden. Layout und Messwahrheit unverändert.
+
 ## [2026-11-05] fix | Traffic-Flow Bootstrap, Identität und Messdiagnostik
 
 - Command: Bare-Metal-Rückmeldung zu unbekannten Raten und doppelten Zielen bearbeiten.

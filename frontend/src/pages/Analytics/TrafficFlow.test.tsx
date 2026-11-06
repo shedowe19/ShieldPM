@@ -174,6 +174,7 @@ describe("TrafficFlow", () => {
 		const { container } = render(<TrafficFlow />);
 		open();
 		expect(container.querySelectorAll('[data-flow-motion="verified"]')).toHaveLength(3);
+		expect(container.querySelector("animateTransform")).toHaveAttribute("dur", "1.6s");
 		expect(container.querySelector('[data-flow-motion="verified"]')).toHaveAttribute("fill", "hsl(var(--primary))");
 		expect(container.querySelector('[data-flow-motion="verified"]')).toHaveAttribute(
 			"stroke",
