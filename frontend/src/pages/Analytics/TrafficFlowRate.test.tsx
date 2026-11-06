@@ -103,10 +103,12 @@ describe("traffic flow common rate scale", () => {
 		expect(screen.getByText(/Measured groups by byte accounting/)).toBeVisible();
 		expect(screen.getByText(/last measured/)).toBeVisible();
 		expect(screen.getByTitle(/HTTP bytes accepted by Nginx transport/)).toBeVisible();
+		expect(screen.getByText(/Measured groups by byte accounting/).closest("details")?.open).toBe(true);
 
 		act(() => vi.advanceTimersByTime(60_000));
 		expect(screen.getByText("Measured groups by byte accounting")).toBeVisible();
 		expect(screen.getByText("No current breakdown")).toBeVisible();
+		expect(screen.getByText("Measured groups by byte accounting").closest("details")?.open).toBe(true);
 
 		rerender(<FlowRateComponents components={components} />);
 		expect(screen.queryByText(/last measured/)).toBeNull();
