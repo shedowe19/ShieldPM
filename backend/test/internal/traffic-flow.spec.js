@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { FLOW_DEFAULTS, flowSettings, setFlowSettings } from "../../lib/traffic-flow-settings.js";
 
 const mocks = vi.hoisted(() => ({ query: vi.fn(), createSocket: vi.fn() }));
 vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.query } }));
@@ -21,8 +22,8 @@ const host = {
 	forward_port: 80,
 };
 beforeEach(() => {
-	vi.stubEnv("TRAFFIC_FLOW_ENABLED", "true");
-	vi.stubEnv("TRAFFIC_FLOW_LIVE_ENABLED", "false");
+	setFlowSettings({ ...flowSettings(), enabled: true }, true);
+	setFlowSettings({ ...flowSettings(), live_enabled: false }, true);
 	socket = Object.assign(new EventEmitter(), { bind: vi.fn(), close: vi.fn(), unref: vi.fn() });
 	mocks.createSocket.mockReturnValue(socket);
 	builder = {
@@ -43,6 +44,7 @@ beforeEach(() => {
 afterEach(() => {
 	service.stop();
 	vi.unstubAllEnvs();
+	setFlowSettings(FLOW_DEFAULTS, false);
 	vi.useRealTimers();
 	vi.restoreAllMocks();
 	vi.clearAllMocks();
@@ -59,7 +61,7 @@ describe("flow service access and receiver", () => {
 	it("measures native active transfers only after two authorized samples and falls back when stale", async () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date("2026-11-05T12:00:00Z"));
-		vi.stubEnv("TRAFFIC_FLOW_LIVE_ENABLED", "true");
+		setFlowSettings({ ...flowSettings(), live_enabled: true }, true);
 		service.start();
 		const native = (hostId, bytes) =>
 			socket.emit(
@@ -118,7 +120,7 @@ describe("flow service access and receiver", () => {
 		expect(prune).toHaveBeenCalledTimes(1);
 	});
 	it("does not start a listener or expose hosts when disabled", async () => {
-		vi.stubEnv("TRAFFIC_FLOW_ENABLED", "false");
+		setFlowSettings({ ...flowSettings(), enabled: false }, true);
 		service.start();
 		expect(mocks.createSocket).not.toHaveBeenCalled();
 		expect(await service.get(access)).toMatchObject({
@@ -129,7 +131,7 @@ describe("flow service access and receiver", () => {
 	});
 
 	it("requires both current permissions before querying even when disabled", async () => {
-		vi.stubEnv("TRAFFIC_FLOW_ENABLED", "false");
+		setFlowSettings({ ...flowSettings(), enabled: false }, true);
 		access.can.mockRejectedValue(new errs.PermissionError());
 		await expect(service.get(access)).rejects.toBeInstanceOf(errs.PermissionError);
 		expect(mocks.query).not.toHaveBeenCalled();
@@ -175,7 +177,7 @@ describe("flow service access and receiver", () => {
 });
 
 it("polls native bootstrap every second without leaking hidden-host arrival timestamps", async () => {
-	vi.stubEnv("TRAFFIC_FLOW_LIVE_ENABLED", "true");
+	setFlowSettings({ ...flowSettings(), live_enabled: true }, true);
 	service.start();
 	const result = await service.get(access);
 	expect(result.poll_interval_ms).toBe(1000);
@@ -195,7 +197,7 @@ it("distinguishes completion collection from disabled native instrumentation", a
 });
 
 it("reports fresh unsupported native observations without calling them stale", async () => {
-	vi.stubEnv("TRAFFIC_FLOW_LIVE_ENABLED", "true");
+	setFlowSettings({ ...flowSettings(), live_enabled: true }, true);
 	service.start();
 	socket.emit(
 		"message",

@@ -3,6 +3,14 @@
 Ergebnisse für Menschen, neueste zuerst. Die Arbeit selbst steht im [Log](./log.md).
 Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
+## 2026-11-06 — Traffic-Flow im Einstellungsmenü
+
+- Normaler Flow und Live-Wunsch sind ohne ENV standardmäßig aktiv; bestehende
+  explizite ENV-Präferenzen werden einmal übernommen, danach gelten gespeicherte Werte.
+- Admin-Auswahl für anonymisierte Netze, einzelne IPs oder ausgeblendete Adressen;
+  Präfix bleibt Datenschutzstandard. Historische Analytics werden dadurch nicht verändert.
+- Sichere native Fähigkeitserkennung und validierte Host-Neukonfiguration mit Rückweg.
+
 ## 2026-11-05 — Verständlicher Traffic-Flow und Bare-Metal-Diagnose
 
 - Kompakter Internet-Knoten, lesbare Hosts und eindeutige Zielknoten statt

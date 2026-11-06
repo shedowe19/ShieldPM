@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
 import { clientPrefix, upstreamPeers } from "./traffic-flow.js";
+import { flowNativeAvailable, flowRuntime, flowSettings } from "./traffic-flow-settings.js";
 
 export const LIVE_FLOW_LIMIT = 1000;
 export const LIVE_FLOW_STALE_MS = 3500;
-export const liveFlowEnabled = () => process.env.TRAFFIC_FLOW_LIVE_ENABLED === "true";
+export const liveFlowEnabled = () => flowRuntime(flowSettings(), flowNativeAvailable()).live_effective;
 const RETENTION_MS = 60_000;
 const hash = (value) => createHash("sha256").update(value).digest("hex").slice(0, 20);
 const counter = (value) => Number.isSafeInteger(value) && value >= 0;

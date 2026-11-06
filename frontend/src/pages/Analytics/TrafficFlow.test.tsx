@@ -1,10 +1,12 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import type { TrafficFlowSnapshot } from "src/api/backend/getTrafficFlow";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TrafficFlow } from "./TrafficFlow";
 import { displayClientLabel } from "./TrafficFlowRows";
 
 const mocks = vi.hoisted(() => ({ useTrafficFlow: vi.fn() }));
+vi.mock("src/components/HasPermission", () => ({ HasPermission: ({ children }: { children: ReactNode }) => children }));
 vi.mock("./useTrafficFlow", () => ({ useTrafficFlow: mocks.useTrafficFlow }));
 
 const snapshot: TrafficFlowSnapshot = {
@@ -140,10 +142,32 @@ describe("TrafficFlow", () => {
 		});
 		render(<TrafficFlow />);
 		open();
-		expect(screen.getByText(/Native live measurement is disabled/)).toBeInTheDocument();
+		expect(screen.getByText(/Live measurement is disabled in Settings/)).toBeInTheDocument();
 		expect(screen.getByText(/An IP address is not a person or a unique device/)).toBeInTheDocument();
 		expect(screen.getByText("Client IP · not a person or device")).toBeInTheDocument();
 	});
+	it("hides client addresses in hidden mode and links administrators to the existing Settings section", () => {
+		mocks.useTrafficFlow.mockReturnValue({
+			data: {
+				...snapshot,
+				clientMode: "hidden",
+				hosts: [{ ...snapshot.hosts[0], clients: [{ ...snapshot.hosts[0].clients[0], label: "hidden" }] }],
+			},
+			error: null,
+			isLoading: false,
+			available: true,
+		});
+		const { container } = render(<TrafficFlow />);
+		open();
+		expect(screen.getByText(/retains one group per host without client IP/)).toBeInTheDocument();
+		expect(screen.getByText("No client addresses retained")).toBeInTheDocument();
+		expect(container.textContent).not.toContain("192.0.2.");
+		expect(screen.getByRole("link", { name: "Traffic Flow settings" })).toHaveAttribute(
+			"href",
+			"/settings?tab=traffic-flow",
+		);
+	});
+
 	it("moves only fresh verified active rates and stops immediately when paused", () => {
 		const rate = {
 			uploadBytesPerSecond: 1,
@@ -252,7 +276,7 @@ describe("TrafficFlow", () => {
 		expect(screen.getByRole("alert")).toHaveTextContent("snapshot is incomplete");
 		mocks.useTrafficFlow.mockReturnValue({ data: { ...snapshot, enabled: false }, error: null, available: true });
 		view.rerender(<TrafficFlow />);
-		expect(screen.getByText(/Traffic flow is disabled/)).toBeInTheDocument();
+		expect(screen.getByText(/Traffic Flow is disabled/)).toBeInTheDocument();
 		expect(screen.queryByText("example.test, alias.test")).not.toBeInTheDocument();
 	});
 });

@@ -18,6 +18,8 @@ export const flowLineWidth = (rate: number | null | undefined) =>
 
 const knownReasons = new Set([
 	"disabled",
+	"native_module_unavailable",
+	"configuration_failed",
 	"native_disabled",
 	"native_not_received",
 	"collector_error",

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { HasPermission } from "src/components/HasPermission";
 import { Alert, AlertDescription } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";
 import { Input } from "src/components/ui/input";
+import { ADMIN, VIEW } from "src/modules/Permissions";
 import { FlowRateLegend } from "./TrafficFlowRate";
 import { flowText, TrafficFlowList, TrafficFlowRows } from "./TrafficFlowRows";
 import { useTrafficFlow } from "./useTrafficFlow";
@@ -35,8 +37,19 @@ function TrafficFlowContent() {
 				{data?.collector.state === "receiving" && <p className="mt-2">{flowText("collector-receiving")}</p>}
 			</details>
 			<p className="text-xs text-muted-foreground">
-				{flowText(data?.clientMode === "address" ? "privacy-address" : "privacy")}
+				{flowText(
+					data?.clientMode === "hidden"
+						? "privacy-hidden"
+						: data?.clientMode === "address"
+							? "privacy-address"
+							: "privacy",
+				)}
 			</p>
+			<HasPermission section={ADMIN} permission={VIEW} hideError>
+				<a href="/settings?tab=traffic-flow" className="text-sm text-primary underline">
+					{flowText("settings-link")}
+				</a>
+			</HasPermission>
 			{data?.diagnostics?.reason && (
 				<Alert>
 					<AlertDescription>

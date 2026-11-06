@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import knexFactory from "knex";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { FLOW_DEFAULTS, flowSettings, setFlowSettings } from "../../lib/traffic-flow-settings.js";
 
 const state = vi.hoisted(() => ({ host: null, can: vi.fn(), get: vi.fn(), audit: vi.fn() }));
 vi.mock("../../internal/proxy-host.js", () => ({ default: { get: state.get } }));
@@ -47,6 +48,7 @@ const pool = () => ({
 });
 let directory;
 beforeEach(async () => {
+	setFlowSettings({ ...FLOW_DEFAULTS, enabled: false, live_enabled: false }, false);
 	directory = await fs.mkdtemp(path.join(os.tmpdir(), "shieldpm-traffic-policy-"));
 	vi.stubEnv("DATA_PATH", directory);
 	state.host = host();
@@ -58,13 +60,14 @@ afterEach(async () => {
 	await service.stop();
 	vi.restoreAllMocks();
 	vi.unstubAllEnvs();
+	setFlowSettings(FLOW_DEFAULTS, false);
 	await fs.rm(directory, { recursive: true, force: true });
 });
 describe("structured traffic policy", () => {
 	it("renders opt-in completion syslog while preserving analytics and excludes ambiguous Anubis hops", async () => {
 		const disabled = await nginx.renderConfig("proxy_host", host());
 		expect(disabled).not.toContain("spm_flow_");
-		vi.stubEnv("TRAFFIC_FLOW_ENABLED", "true");
+		setFlowSettings({ ...flowSettings(), enabled: true }, true);
 		const enabled = await nginx.renderConfig("proxy_host", host());
 		expect(enabled).toContain("log_format spm_flow_12 escape=json");
 		expect(enabled).toContain('"host":12');
@@ -76,13 +79,13 @@ describe("structured traffic policy", () => {
 	});
 
 	it("renders native instrumentation only when both telemetry flags are explicitly enabled", async () => {
-		vi.stubEnv("TRAFFIC_FLOW_ENABLED", "false");
-		vi.stubEnv("TRAFFIC_FLOW_LIVE_ENABLED", "true");
+		setFlowSettings({ ...flowSettings(), enabled: false }, true);
+		setFlowSettings({ ...flowSettings(), live_enabled: true }, true);
 		expect(await nginx.renderConfig("proxy_host", host())).not.toContain("shieldpm_traffic_flow");
-		vi.stubEnv("TRAFFIC_FLOW_ENABLED", "true");
-		vi.stubEnv("TRAFFIC_FLOW_LIVE_ENABLED", "false");
+		setFlowSettings({ ...flowSettings(), enabled: true }, true);
+		setFlowSettings({ ...flowSettings(), live_enabled: false }, true);
 		expect(await nginx.renderConfig("proxy_host", host())).not.toContain("shieldpm_traffic_flow");
-		vi.stubEnv("TRAFFIC_FLOW_LIVE_ENABLED", "true");
+		setFlowSettings({ ...flowSettings(), live_enabled: true }, true);
 		expect(await nginx.renderConfig("proxy_host", host())).toContain("shieldpm_traffic_flow 12 127.0.0.1:15149;");
 		expect(await nginx.renderConfig("proxy_host", host({ anubis_enabled: true }))).not.toContain(
 			"shieldpm_traffic_flow",

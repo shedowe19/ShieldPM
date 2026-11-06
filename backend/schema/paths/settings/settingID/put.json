@@ -20,7 +20,8 @@
 				"minLength": 1,
 				"enum": [
 					"default-site",
-					"oidc-config"
+					"oidc-config",
+					"traffic-flow"
 				]
 			},
 			"required": true,
@@ -95,6 +96,46 @@
 										},
 										"redirectURL": {
 											"type": "string"
+										}
+									}
+								}
+							}
+						},
+						{
+							"type": "object",
+							"additionalProperties": false,
+							"required": [
+								"meta"
+							],
+							"properties": {
+								"value": {
+									"type": "string",
+									"enum": [
+										"configured"
+									]
+								},
+								"meta": {
+									"type": "object",
+									"additionalProperties": false,
+									"required": [
+										"enabled",
+										"live_enabled",
+										"client_mode"
+									],
+									"properties": {
+										"enabled": {
+											"type": "boolean"
+										},
+										"live_enabled": {
+											"type": "boolean"
+										},
+										"client_mode": {
+											"type": "string",
+											"enum": [
+												"prefix",
+												"address",
+												"hidden"
+											]
 										}
 									}
 								}

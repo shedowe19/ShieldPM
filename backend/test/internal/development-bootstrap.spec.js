@@ -5,6 +5,9 @@ vi.mock("../../app.js", () => {
 	state.importedPath = process.env.DATA_PATH;
 	return { default: { listen: state.listen } };
 });
+vi.mock("../../internal/traffic-flow-settings.js", () => ({
+	default: { initialize: vi.fn(), reconcileStartup: vi.fn() },
+}));
 vi.mock("../../internal/analytics.js", () => ({ default: { init: vi.fn() } }));
 vi.mock("../../internal/certificate.js", () => ({ default: {} }));
 vi.mock("../../internal/ip_ranges.js", () => ({ default: {} }));

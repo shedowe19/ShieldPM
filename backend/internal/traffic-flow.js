@@ -10,6 +10,7 @@ import {
 	mergeTargets,
 } from "../lib/traffic-flow.js";
 import { LiveFlowBuffer, liveFlowEnabled } from "../lib/traffic-flow-live.js";
+import { flowRuntime, flowSettings, flowSettingsReady } from "../lib/traffic-flow-settings.js";
 import ProxyHost from "../models/proxy_host.js";
 
 const buffer = new FlowBuffer();
@@ -23,7 +24,7 @@ let acceptedThisSecond = 0;
 const service = {
 	/** Start one best-effort loopback receiver. Failure never prevents proxy startup. */
 	start() {
-		if (!flowEnabled() || socket) return;
+		if (!flowSettingsReady() || !flowEnabled() || socket) return;
 		state = "waiting";
 		sweepTimer = setInterval(() => {
 			buffer.prune(Date.now());
@@ -31,12 +32,15 @@ const service = {
 		}, 5000);
 		sweepTimer.unref();
 		socket = dgram.createSocket("udp4");
+		const receiver = socket;
 		socket.on("error", () => {
+			if (socket !== receiver) return;
 			state = "error";
 			buffer.clear();
 			liveBuffer.clear();
 		});
 		socket.on("message", (message, remote) => {
+			if (socket !== receiver) return;
 			if (remote.address !== "127.0.0.1" || message.length > 8192 || state === "error") return;
 			const now = Date.now();
 			const second = Math.floor(now / 1000);
@@ -59,6 +63,7 @@ const service = {
 			}
 		});
 		socket.on("listening", () => {
+			if (socket !== receiver) return;
 			state = "listening";
 		});
 		socket.bind(FLOW_PORT, "127.0.0.1");
@@ -123,7 +128,7 @@ const service = {
 			: state === "error"
 				? "collector_error"
 				: !liveEnabled
-					? "native_disabled"
+					? flowRuntime().reason || "native_disabled"
 					: !nativeLast
 						? "native_not_received"
 						: native
@@ -148,7 +153,9 @@ const service = {
 			enabled,
 			client_mode: clientMode(),
 			diagnostics: {
-				live_enabled: liveEnabled,
+				live_enabled: flowSettings().live_enabled,
+				live_effective: liveEnabled,
+				native_available: flowRuntime().native_available,
 				receiver_state: enabled ? state : "disabled",
 				native_last_observed_at: nativeLast,
 				reason,

@@ -41,25 +41,32 @@ flowchart TD
 
 ## Live Traffic Flow (experimental)
 
-Enable `TRAFFIC_FLOW_ENABLED=true` in the backend environment, restart ShieldPM,
-and save the relevant Proxy Hosts to regenerate their Nginx configuration. Open
-**Analytics → Live Traffic Flow**. The preview preserves the existing Analytics
-page and requires both Analytics access and Proxy Host visibility. The server
-rechecks permissions on every snapshot.
+Traffic Flow and live measurement are enabled by default. Administrators can change
+both under **Settings → Traffic Flow** and choose client-address visibility in the
+same panel. Open **Analytics → Live Traffic Flow** to inspect authorized hosts;
+server-side Analytics and Proxy Host permissions are rechecked for every snapshot.
 
-The four columns show client network prefixes → schematic Internet → individual
-Proxy Hosts → upstream targets. Multiple domains remain one host. Expand client
-groups, search hosts, switch to the accessible list, or pause updates. The
-Internet node is a visual connector, not a discovered network hop. The two
-segments around it must not be summed as separate traffic.
+The columns show clients → schematic Internet → individual Proxy Hosts → upstream
+targets. Multiple domains remain one host. Expand groups, search hosts, switch to
+the accessible list, or pause updates. Internet is a visual connector, not a
+discovered network hop; its two segments must not be summed as separate traffic.
 
-For current HTTP/1, HTTP/2 stream, WebSocket and HTTP/3 rates, also set `TRAFFIC_FLOW_LIVE_ENABLED=true` and use the
-matching native-module build from **shieldpm-nginx**. Restart and save hosts to
-regenerate configuration. The static `shieldpm_traffic_flow` directive must be
-available; Nginx validation rejects configurations on older binaries. Without
-fresh supported native samples, the view explicitly falls back to completed
-requests and reasoned unknown rates. Native opt-in keeps one-second polling even
-while waiting for the first sample; completion-only mode refreshes every five seconds.
+Live rates require the native traffic module from the matching **shieldpm-nginx**
+build. ShieldPM probes its capability in an isolated configuration before adding
+the directive. On an older binary, the saved live preference remains enabled but
+measurement falls back safely to completed requests; Settings explains the missing
+module. Installing the matching binary and saving again (or restarting) reprobes
+support. Merely selecting live mode never fabricates a rate.
+
+Saving applies settings through validated, serialized Nginx reconfiguration of
+existing active hosts, without a service restart or a manual host-by-host save.
+If validation, reload or persistence fails, previous settings and configurations
+are restored and the UI retains the unsaved draft. Startup reconciliation also
+preserves previously isolated erroneous hosts; a safely rolled-back activation
+failure leaves the application available with a configuration diagnostic.
+
+Native measurement polls every second even while waiting for its first sample;
+completion-only mode refreshes every five seconds.
 
 The native module samples cumulative counters during active transfers, initially,
 approximately every second, and at completion. Rates use actual monotonic elapsed
@@ -115,22 +122,41 @@ errors and stale snapshots are shown explicitly; an idle collector cannot prove
 that there was no traffic. Other local processes can send to the UDP port, so this
 view is operational telemetry, not security evidence.
 
-By default, only IPv4 /24 and IPv6 /48 prefixes are retained in the flow buffer;
-the explicit address mode described below retains validated IPs instead. A prefix is
-not a person or device. The dedicated telemetry contains no URL, cookie, header,
-or body content and creates no new disk log or database writes. Existing Analytics
-logging and retention remain separate. Client addresses use Nginx `$remote_addr`;
-correct attribution behind another proxy depends on the existing trusted Real-IP
-configuration.
+### Client visibility and privacy
 
-### Client privacy and missing-rate diagnostics
+**Settings → Traffic Flow → Client display** offers three explicit choices:
 
-By default, client labels are anonymized networks (`/24` for IPv4, `/48` for
-IPv6), not individual devices or people. To distinguish actual validated IP
-addresses, explicitly set `TRAFFIC_FLOW_CLIENT_MODE=address` in the backend
-service environment and restart. Addresses remain ephemeral and subject to the
-same host permissions and retention limits. Remove the setting to restore prefix
-masking; restart clears existing observations.
+- **Anonymized networks** (default): retain IPv4 /24 and IPv6 /48 prefixes in the
+  short-lived flow buffer; an IPv4 label such as `192.0.2.*` is not one device.
+- **Individual IP addresses**: retain validated addresses in that same ephemeral,
+  permission-scoped buffer. This requires an explicit selection and save.
+- **Do not show addresses**: discard the address after validating the incoming
+  observation and retain only a fixed hidden client group for the host. No IP or
+  network prefix is returned in flow snapshots.
+
+Saving a visibility change clears all earlier flow samples. An address, prefix or
+hidden group never identifies a person or device. The dedicated telemetry contains
+no URLs, headers, cookies or body content and creates no additional disk log or
+historical database writes. Numeric client addresses still reach the loopback
+receiver from Nginx; the selected transformation happens before flow-buffer retention.
+
+**These controls apply to Traffic Flow, not existing access logs, GoAccess or the
+separate historical Analytics database.** Historical Analytics may continue to
+retain raw IPs and request details under its existing retention policy. Hiding a
+flow address does not erase those records. Attribution behind another proxy still
+depends on the existing trusted Real-IP configuration.
+
+### Existing installations and environment compatibility
+
+A migration creates one persistent `traffic-flow` setting. With no legacy variables,
+normal flow and live measurement default to enabled and client visibility to
+anonymized networks. Explicit previous environment preferences are imported once;
+after that, the saved database setting is authoritative. Editing an old
+`TRAFFIC_FLOW_ENABLED`, `TRAFFIC_FLOW_LIVE_ENABLED` or `TRAFFIC_FLOW_CLIENT_MODE`
+variable cannot silently override a later choice made in Settings. No environment
+changes are needed for ordinary use in Docker or native installations.
+
+### Missing-rate diagnostics
 
 Configured and observed targets with the same canonical numeric IP and port are
 shown once with both origins. DNS names are never guessed to match observed IPs.
@@ -138,7 +164,7 @@ A configured-only target has no measured rate; its existence is not traffic.
 
 Completed request counts prove only the completion-log path. They do not prove
 that native live instrumentation is installed or receiving samples. The API's
-`diagnostics` reports the backend live flag, receiver state, last native sample
+`diagnostics` reports the saved live preference, receiver state, last native sample
 for authorized hosts only, and a reason such as native disabled, no native
 sample, unsupported, stale or collector error. A short completed native transfer
 can show its actual measured interval briefly, but is not an active connection.
@@ -147,27 +173,26 @@ as complete.
 
 For a native/bare-metal installation, check the following in order:
 
-1. Configure both feature flags in the backend service environment. The installer
-   supports `/etc/default/shieldpm`; startup also reads `/data/.env`. Restart the
-   backend after changes. A shell variable alone does not change a running service.
-2. Confirm the installed Nginx binary was built with the traffic module using
-   `nginx -V 2>&1 | grep ngx_http_shieldpm_flow_module`. Install the matching build
-   if absent; completed access-log observations do not supply live counters.
-3. Save each relevant proxy host after activation to regenerate its config.
-   Check `nginx -t` succeeds. To inspect only telemetry directives, use
-   `nginx -T 2>/dev/null | grep 'shieldpm_traffic_flow '`. Avoid sharing full
-   configuration or environment dumps, which can contain credentials.
-4. Check the loopback UDP listener with `ss -lun 'sport = :15149'` and the API's
-   receiver state. Run a sustained transfer through an authorized host and watch
-   its scoped native timestamp advance. No timestamp means the native-to-collector
-   path is unconfirmed; a receiver error indicates a bind/socket problem.
+1. Check **Settings → Traffic Flow** for saved flow/live preferences, client mode
+   and the effective native capability. Saving again reprobes capability.
+2. Confirm the installed Nginx binary contains the module with
+   `nginx -V 2>&1 | grep ngx_http_shieldpm_flow_module`; use the matching native
+   build if absent. Docker installations need the matching base image instead.
+3. A successful settings save regenerates existing active host configurations.
+   Check `nginx -t`. Inspect only telemetry directives with
+   `nginx -T 2>/dev/null | grep 'shieldpm_traffic_flow '`, avoiding full configuration
+   or environment dumps, which can contain credentials.
+4. Check `ss -lun 'sport = :15149'` and the scoped receiver diagnostics. Run a
+   sustained authorized transfer and watch the native timestamp advance. No native
+   timestamp means that measurement path remains unconfirmed; completion counts
+   alone do not prove live telemetry.
 
-To roll back, unset `TRAFFIC_FLOW_ENABLED` (or set it to `false`), restart, and
-save the previously enabled Proxy Hosts to remove telemetry directives. Disable
-`TRAFFIC_FLOW_LIVE_ENABLED` before returning to a binary without the native module.
-The backend stops collecting immediately after restart; until configuration is
-regenerated, Nginx may still send completion datagrams to the unused local port.
-No migration or data rollback is required.
+To disable collection, turn off **Traffic Flow** and save. To retain completion
+observations without native rates, disable only **Live measurement**. A successful
+save removes the corresponding directives and clears short-lived buffers; a failed
+save keeps the previous active state. Disable live measurement successfully before
+replacing Nginx with a binary that lacks the native module. No historical-data
+rollback or deletion is implied by these controls.
 
 Measurement evidence can be reproduced with an installed ShieldPM Nginx binary:
 

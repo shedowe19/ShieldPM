@@ -45,6 +45,10 @@ const createMigrationDirectory = () => {
 	fs.mkdirSync(join(root, "lib"));
 	fs.symlinkSync(backendSourcePath("node_modules"), join(root, "node_modules"), "dir");
 	fs.copyFileSync(
+		backendSourcePath("lib", "traffic-flow-settings.js"),
+		join(root, "lib", "traffic-flow-settings.js"),
+	);
+	fs.copyFileSync(
 		backendSourcePath("lib", "host-domain-claim-key.js"),
 		join(root, "lib", "host-domain-claim-key.js"),
 	);

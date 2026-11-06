@@ -10,8 +10,12 @@ const flowColumns = "minmax(180px,1fr) 32px 64px 32px minmax(180px,1fr) minmax(2
 export const flowText = (name: string, values?: Record<string, string | number>) =>
 	intl.formatMessage({ id: `analytics.flow.${name}` }, values);
 
-export const displayClientLabel = (label: string, mode?: "prefix" | "address") =>
-	mode !== "address" && /^\d+\.\d+\.\d+\.0\/24$/.test(label) ? label.replace(/0\/24$/, "*") : label;
+export const displayClientLabel = (label: string, mode?: "prefix" | "address" | "hidden") =>
+	mode === "hidden"
+		? flowText("clients-hidden")
+		: mode !== "address" && /^\d+\.\d+\.\d+\.0\/24$/.test(label)
+			? label.replace(/0\/24$/, "*")
+			: label;
 
 function Detail({ description, children }: { description: string; children: ReactNode }) {
 	return (
@@ -44,7 +48,15 @@ export function TrafficFlowRows({
 			<div className="overflow-x-auto">
 				<div className="space-y-3" style={{ minWidth: 780 }}>
 					<div className="grid px-3 text-sm font-semibold" style={{ gridTemplateColumns: flowColumns }}>
-						<div>{flowText(snapshot.clientMode === "address" ? "client-addresses" : "clients")}</div>
+						<div>
+							{flowText(
+								snapshot.clientMode === "hidden"
+									? "clients-hidden"
+									: snapshot.clientMode === "address"
+										? "client-addresses"
+										: "clients",
+							)}
+						</div>
 						<div />
 						<div>
 							<span className="sr-only">{flowText("internet")}</span>
@@ -63,9 +75,16 @@ export function TrafficFlowRows({
 							<div className="max-h-40 min-w-0 overflow-y-auto">
 								<details open>
 									<summary className="cursor-pointer rounded focus-visible:outline focus-visible:outline-ring">
-										{flowText(snapshot.clientMode === "address" ? "addresses" : "groups", {
-											count: host.clients.length,
-										})}
+										{flowText(
+											snapshot.clientMode === "hidden"
+												? "clients-hidden"
+												: snapshot.clientMode === "address"
+													? "addresses"
+													: "groups",
+											{
+												count: host.clients.length,
+											},
+										)}
 									</summary>
 									<ul className="mt-2 space-y-2">
 										{[...host.clients]
@@ -92,16 +111,22 @@ export function TrafficFlowRows({
 															/>
 															<span
 																className="truncate font-mono text-xs"
-																title={client.label}
+																title={
+																	snapshot.clientMode === "hidden"
+																		? flowText("client-hidden")
+																		: client.label
+																}
 															>
 																{displayClientLabel(client.label, snapshot.clientMode)}
 															</span>
 														</div>
 														<div className="text-xs text-muted-foreground">
 															{flowText(
-																snapshot.clientMode === "address"
-																	? "client-address"
-																	: "client-prefix",
+																snapshot.clientMode === "hidden"
+																	? "client-hidden"
+																	: snapshot.clientMode === "address"
+																		? "client-address"
+																		: "client-prefix",
 															)}
 														</div>
 														<FlowRateLabel
@@ -210,7 +235,13 @@ export function TrafficFlowRows({
 	);
 }
 
-export function TrafficFlowList({ hosts, clientMode }: { hosts: FlowHost[]; clientMode?: "prefix" | "address" }) {
+export function TrafficFlowList({
+	hosts,
+	clientMode,
+}: {
+	hosts: FlowHost[];
+	clientMode?: "prefix" | "address" | "hidden";
+}) {
 	return (
 		<ul className="space-y-4 text-sm">
 			{hosts.map((host) => (

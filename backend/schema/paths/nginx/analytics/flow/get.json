@@ -1,7 +1,7 @@
 {
 	"operationId": "getTrafficFlow",
 	"summary": "Bounded proxy topology with measured native HTTP transport rates and separate completed-request observations",
-	"description": "Requires current analytics:list and proxy_hosts:list permissions; owner visibility is applied before aggregation. TRAFFIC_FLOW_ENABLED enables best-effort completion observations. TRAFFIC_FLOW_LIVE_ENABLED additionally requires the native Nginx traffic-flow module. Live HTTP/1, HTTP/2 stream, WebSocket and qualified HTTP/3 rates use monotonic per-request/attempt counter deltas; unsupported, stale, reset and incomplete rates remain null. Not packet/wire bytes or TCP acknowledgements. UDP sampling is best effort; sample_complete is always false. poll_interval_ms is 1000 while fresh authorized native samples exist, otherwise 5000.",
+	"description": "Requires current analytics:list and proxy_hosts:list permissions; owner visibility is applied before aggregation. Persisted Traffic Flow settings enable completion observations and desired live measurement by default. Effective live measurement requires a successful native Nginx module capability check. Client display defaults to masked prefixes, with explicit address or hidden choices; settings are admin-only. Live HTTP/1, HTTP/2 stream, WebSocket and qualified HTTP/3 rates use monotonic per-request/attempt counter deltas; unsupported, stale, reset and incomplete rates remain null. Not packet/wire bytes or TCP acknowledgements. UDP sampling is best effort; sample_complete is always false. poll_interval_ms is 1000 while fresh authorized native samples exist, otherwise 5000.",
 	"tags": [
 		"analytics"
 	],

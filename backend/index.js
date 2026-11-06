@@ -30,6 +30,7 @@ import internalOAuth2Proxy from "./internal/oauth2-proxy.js";
 import internalProxyHostMonitor from "./internal/proxy-host-monitor.js";
 import internalTerminal from "./internal/terminal.js";
 import internalTor from "./internal/tor.js";
+import flowSettings from "./internal/traffic-flow-settings.js";
 import internalUploadRelay from "./internal/upload-relay.js";
 import internalWireguard from "./internal/wireguard.js";
 import migrateFromSqliteToNewDb from "./lib/db-migrate.js";
@@ -44,9 +45,11 @@ async function appStart() {
 	try {
 		await migrateFromSqliteToNewDb();
 		await migrateUp();
+		await flowSettings.initialize();
 		await analyticsService.init();
 		internalUploadRelay.init();
 		await setup();
+		await flowSettings.reconcileStartup();
 		await getCompiledSchema();
 		await internalSessionCleanup.initTimer();
 

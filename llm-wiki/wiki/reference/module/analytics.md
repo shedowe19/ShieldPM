@@ -126,6 +126,27 @@ Zählerdifferenzen und Präfixmaskierung. Die native Suite prüft zusätzlich HT
 Retries, Keepalive, Abbrüche und Reloads. Andere Upstream-Protokolle sind nicht abgenommen; siehe [Messentscheidung](../../decisions/2026-11-05-traffic-flow-messgrenzen.md).
 
 
+## Persistente Flow-Einstellungen
+
+`setting.id = traffic-flow` enthält `enabled`, `live_enabled` und `client_mode`.
+Standard ist an/an/Präfix; frühere ENV-Präferenzen werden nur bei der ersten
+Migration importiert. Danach sind Datenbankwerte maßgeblich. Das vorhandene
+Admin-Einstellungsmenü und `settings:get/update` verwalten die Werte.
+
+Die Initialisierung lädt Einstellungen vor dem Collector. Ein isolierter
+Nginx-Test prüft die native Direktive ohne aktive Konfiguration oder Reload.
+Alte Binaries erhalten keine unbekannte Direktive; Live bleibt als Wunsch
+aktiviert, ist aber mit sichtbarem Grund effektiv inaktiv. Start und Speichern
+aktualisieren vorhandene aktive Hostkonfigurationen unter der Engine-Sperre.
+Backups überleben Test, Reload und Datenbank-Commit; Fehler stellen den alten
+Zustand wieder her. Fehlerisolierte `.err`-Hosts werden nicht reaktiviert.
+
+Das Auswahlfeld bietet `prefix`, `address` und `hidden`. Präfix bleibt Standard;
+Adresse ist explizit. Hidden verwirft IP/Präfix vor der Flow-Pufferung und gibt
+nur eine adresslose Clientgruppe zurück. Jeder Moduswechsel leert vorhandene
+Flow-Daten. Historische Analytics und Nginx-Logs behalten ihre unabhängige
+Erfassung und Aufbewahrung. Details: [öffentliche Anleitung](../../../../docs/wiki/Analytics.md#client-visibility-and-privacy).
+
 ## Abhängigkeiten
 
 - `recharts` — Chart-Bibliothek im Frontend

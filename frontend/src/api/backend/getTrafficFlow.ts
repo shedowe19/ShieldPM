@@ -55,7 +55,7 @@ export interface FlowHost {
 }
 
 export interface TrafficFlowSnapshot {
-	clientMode?: "prefix" | "address";
+	clientMode?: "prefix" | "address" | "hidden";
 	diagnostics?: {
 		liveEnabled: boolean;
 		receiverState: string;

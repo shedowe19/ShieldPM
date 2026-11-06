@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { clientPrefix, configuredTargets, FLOW_LIMIT, FlowBuffer, upstreamPeers } from "../../lib/traffic-flow.js";
+import { FLOW_DEFAULTS, flowSettings, setFlowSettings } from "../../lib/traffic-flow-settings.js";
 
 const now = 1_800_000_000_000;
 const host = {
@@ -99,7 +100,7 @@ describe("traffic flow completion sample", () => {
 
 afterEach(() => vi.unstubAllEnvs());
 it("retains distinct validated addresses only with explicit privacy opt-in", () => {
-	vi.stubEnv("TRAFFIC_FLOW_CLIENT_MODE", "address");
+	setFlowSettings({ ...flowSettings(), client_mode: "address" }, true);
 	const buffer = new FlowBuffer();
 	buffer.ingest(row(), now);
 	buffer.ingest(row({ client: "192.0.2.88" }), now);
@@ -123,4 +124,18 @@ it("merges numeric configured/observed endpoints preserving both origins without
 		label: "[2001:db8::1]:8000",
 		requests: 1,
 	});
+});
+
+it("hidden mode validates input and retains no client address or prefix", () => {
+	setFlowSettings({ ...FLOW_DEFAULTS, client_mode: "hidden" }, true);
+	const buffer = new FlowBuffer();
+	buffer.ingest(row(), now);
+	buffer.ingest(row({ client: "2001:db8::1" }), now);
+	expect(clientPrefix("bad-address")).toBeNull();
+	expect(buffer.events.map((event) => event.client)).toEqual(["hidden", "hidden"]);
+	const clients = buffer.snapshot([host], now)[0].clients;
+	expect(clients).toHaveLength(1);
+	expect(clients[0].label).toBe("hidden");
+	expect(JSON.stringify(buffer)).not.toContain("192.0.2");
+	expect(JSON.stringify(buffer)).not.toContain("2001:db8");
 });

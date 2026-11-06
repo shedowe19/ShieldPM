@@ -10,6 +10,7 @@ process.env.INITIAL_DEFAULT_PAGE ||= "congratulations";
 const [
 	{ default: app },
 	{ default: analyticsService },
+	{ default: flowSettings },
 	{ default: internalCertificate },
 	{ default: internalIpRanges },
 	{ default: internalNginx },
@@ -25,6 +26,7 @@ const [
 ] = await Promise.all([
 	import("./app.js"),
 	import("./internal/analytics.js"),
+	import("./internal/traffic-flow-settings.js"),
 	import("./internal/certificate.js"),
 	import("./internal/ip_ranges.js"),
 	import("./internal/nginx.js"),
@@ -86,9 +88,11 @@ async function start() {
 	try {
 		logger.info("Starting DB Migration...");
 		await migrateUp();
+		await flowSettings.initialize();
 		await analyticsService.init();
 		logger.info("Starting Setup...");
 		await setup();
+		await flowSettings.reconcileStartup();
 		logger.info("Compiling Schema...");
 		await getCompiledSchema();
 		await internalSessionCleanup.initTimer();

@@ -52,14 +52,17 @@ Testlauf dieser Sitzung:
 
 ## Traffic-Flow im Feature-Branch
 
-Opt-in-Topologie und ein begrenztes Abschlusssample werden in der vorhandenen
-Analytics-Seite ergänzt. Native HTTP/1-/HTTP/2-/WebSocket-Zähler und qualifizierte HTTP/3-ACK-/Streamzähler liefern bei explizitem Opt-in echte sekündliche
-Intervallraten; nicht unterstützte Protokolle bleiben unbekannt. Details und Betriebsgrenzen stehen
-im [Analytics-Modul](./reference/module/analytics.md#experimenteller-traffic-flow).
-Die Flussansicht erklärt anonymisierte Netze, bietet einen ausdrücklich
-konfigurierten Adressmodus und führt numerisch identische Ziele zusammen.
-Messdiagnosen unterscheiden deaktivierte, fehlende, veraltete und abgeschlossene
-Beobachtungen. Die Änderung ist ein Draft-PR, nicht gemergt oder ausgerollt.
+Traffic Flow und gewünschter Live-Modus sind standardmäßig aktiviert und über
+Einstellungen steuerbar. Bestehende ENV-Präferenzen werden einmal übernommen.
+Anonymisierte Netze bleiben Standard; einzelne IP-Adressen oder ausgeblendete
+Client-Identität sind ausdrücklich wählbar. Dies ändert nicht die historischen
+Analytics- oder Access-Log-Einstellungen. Native HTTP/1-/HTTP/2-/WebSocket-Zähler
+und qualifizierte HTTP/3-ACK-/Streamzähler liefern echte Intervallraten, sofern die
+installierte Nginx-Version dies unterstützt. Fehlende Unterstützung und fehlende
+Messungen bleiben ausdrücklich sichtbar. Details stehen im
+[Analytics-Modul](./reference/module/analytics.md#experimenteller-traffic-flow).
+Die Änderung ist ein Draft-PR, nicht gemergt oder ausgerollt. Datenbank-Ersteinrichtung
+und geprüfte Providerwechsel werden anschließend im selben Branch umgesetzt.
 
 ## Was bewusst fehlt
 

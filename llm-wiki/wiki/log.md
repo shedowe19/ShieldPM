@@ -2,6 +2,21 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-06] feature | Traffic-Einstellungen in der Oberfläche
+
+- Command: Traffic Flow und Live-Modus standardmäßig aktivieren; Anzeige und Client-Privatsphäre im Einstellungsmenü steuern.
+- Type: feature
+- Areas affected: persistente Einstellungen, Nginx-Aktivierung, Collector, Analytics und Settings-Oberfläche
+- Files changed: Backend-Einstellungsdienst und Migration, Startpfade, Flow-Pipeline, Frontend-Settings, deutsche/englische Texte, Tests und Analytics-Dokumentation
+- Wiki pages updated: Analytics-Referenz, aktueller Projektzustand, Changelog und Log
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: isolierte Start- und Migrationsfixtures benötigten die neue Einstellungsinitialisierung.
+- New decisions: Flow und gewünschter Live-Modus standardmäßig an; anonyme Netze bleiben Datenschutzstandard. Einzeladressen und ausgeblendete Client-Identität sind ausdrücklich wählbar. Bestehende ENV-Präferenzen werden einmal importiert; danach ist die Datenbank maßgeblich.
+- Open questions: Datenbank-Ersteinrichtung und geprüfter Providerwechsel werden auf Nutzerwunsch anschließend im selben PR umgesetzt.
+- Next steps: Traffic-Phase veröffentlichen, danach DB-unabhängigen Bootstrap und verlustfreie Migration implementieren und isoliert prüfen.
+- Verification: Backend 2.705 bestanden/56 übersprungen; Frontend 1.010 bestanden; drei Chromium-Fälle, TypeScript und Produktionsbuild bestanden. CSS 16.531/16.600 Byte; JavaScript 1.188.007/1.290.000 Byte. Native Capability-Prüfung im Produktionsimage als UID 1000 erfolgreich. Aktivierungs-/Rollback-Tests einschließlich mehr als 100 Hosts und fehlendem Modul bestanden.
+
 ## [2026-11-06] fix | CSS-Budget des Traffic-Flows einhalten
 
 - Command: PR abschließen und tatsächliche CI-Ergebnisse prüfen.

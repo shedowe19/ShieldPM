@@ -1,17 +1,19 @@
 import { createHash } from "node:crypto";
 import { isIP } from "node:net";
 import ipaddr from "ipaddr.js";
+import { flowSettings } from "./traffic-flow-settings.js";
 
 export const FLOW_WINDOW_MS = 60_000;
 export const FLOW_LIMIT = 1000;
 export const FLOW_PORT = 15149;
-export const clientMode = () => (process.env.TRAFFIC_FLOW_CLIENT_MODE === "address" ? "address" : "prefix");
-export const flowEnabled = () => process.env.TRAFFIC_FLOW_ENABLED === "true";
+export const clientMode = () => flowSettings().client_mode;
+export const flowEnabled = () => flowSettings().enabled;
 const key = (value) => createHash("sha256").update(value).digest("hex").slice(0, 20);
 
 /** Keep network prefixes only; an address is never treated as a person or device. */
 export function clientPrefix(value) {
 	if (typeof value !== "string" || value.length > 45 || !isIP(value)) return null;
+	if (clientMode() === "hidden") return "hidden";
 	let address = ipaddr.parse(value);
 	if (address instanceof ipaddr.IPv6 && address.isIPv4MappedAddress()) address = address.toIPv4Address();
 	if (clientMode() === "address") return address.toString();
