@@ -1,9 +1,12 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { FlowRateComponents, flowLineWidth, rateDescription } from "./TrafficFlowRate";
 
 describe("traffic flow common rate scale", () => {
-	afterEach(cleanup);
+	afterEach(() => {
+		cleanup();
+		vi.useRealTimers();
+	});
 	it("maps equal rates equally and caps the documented scale", () => {
 		expect(flowLineWidth(0)).toBe(2);
 		expect(flowLineWidth(null)).toBe(2);
@@ -75,5 +78,38 @@ describe("traffic flow common rate scale", () => {
 		fireEvent.click(screen.getByText("Measured groups by byte accounting"));
 		expect(screen.getByTitle(/HTTP bytes accepted by Nginx transport/)).toBeVisible();
 		expect(screen.getByTitle(/acknowledged by the peer/)).toBeVisible();
+	});
+	it("keeps the last measured accounting groups and then shows a placeholder", () => {
+		vi.useFakeTimers();
+		const components = [
+			{
+				id: "http_request_received:http_transport_accepted",
+				uploadBytesPerSecond: 1,
+				downloadBytesPerSecond: 2,
+				bytesPerSecond: 3,
+				smoothedBytesPerSecond: 3,
+				windowStart: "start",
+				windowEnd: "end",
+				samples: 1,
+				uploadSemantics: ["http_request_received"],
+				downloadSemantics: ["http_transport_accepted"],
+			},
+		];
+		const { rerender } = render(<FlowRateComponents components={components} />);
+		fireEvent.click(screen.getByText("Measured groups by byte accounting"));
+		expect(screen.getByTitle(/HTTP bytes accepted by Nginx transport/)).toBeVisible();
+
+		rerender(<FlowRateComponents />);
+		expect(screen.getByText(/Measured groups by byte accounting/)).toBeVisible();
+		expect(screen.getByText(/last measured/)).toBeVisible();
+		expect(screen.getByTitle(/HTTP bytes accepted by Nginx transport/)).toBeVisible();
+
+		act(() => vi.advanceTimersByTime(60_000));
+		expect(screen.getByText("Measured groups by byte accounting")).toBeVisible();
+		expect(screen.getByText("No current breakdown")).toBeVisible();
+
+		rerender(<FlowRateComponents components={components} />);
+		expect(screen.queryByText(/last measured/)).toBeNull();
+		expect(screen.queryByText("No current breakdown")).toBeNull();
 	});
 });

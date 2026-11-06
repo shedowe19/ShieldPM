@@ -1243,6 +1243,8 @@
 	"analytics.flow.target-detail": "{kind}. Abgeschlossene Anfragen über dieses Ziel: {requests}. Letzte Beobachtung: {lastSeen}. Fenster: {start} bis {end}.",
 	"analytics.flow.rate-final-ack-unknown": "Rate unbekannt: Der QUIC-Stream endete vor vollständiger Bestätigung.",
 	"analytics.flow.accounting-groups": "Messgruppen nach Byte-Abrechnung",
+	"analytics.flow.accounting-groups-last": "zuletzt gemessen",
+	"analytics.flow.accounting-groups-none": "Keine aktuelle Aufteilung",
 	"analytics.flow.rate-mixed": "Gruppenrate unbekannt: unterschiedliche Byte-Abrechnungen. Einzelne Messgruppen aufklappen.",
 	"analytics.flow.rate-incomplete": "Rate unbekannt: unvollständige oder nicht unterstützte Messung",
 	"analytics.flow.rate-label": "↑ {upload} B/s · ↓ {download} B/s",

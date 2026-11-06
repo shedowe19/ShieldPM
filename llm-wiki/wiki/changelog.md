@@ -3,6 +3,14 @@
 Ergebnisse für Menschen, neueste zuerst. Die Arbeit selbst steht im [Log](./log.md).
 Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
+## 2026-11-06 - Stabile Messgruppen im Live-Datenfluss
+
+- Der Aufklapper „Messgruppen nach Byte-Abrechnung“ bleibt an die Client-Gruppe
+  gebunden und verschwindet nicht mehr beim nächsten Poll.
+- Fehlt eine aktuelle Aufteilung, bleiben die zuletzt gemessenen Komponenten bis
+  zu 60 Sekunden als „zuletzt gemessen“ sichtbar; danach erscheint ein
+  Platzhalter statt eines leeren Bereichs.
+
 ## 2026-11-06 — Datenbankwahl und kontrollierte Migration
 
 - Erstwahl der Datenbank vor der Benutzeranlage; spätere Auswahl und Verbindungstest

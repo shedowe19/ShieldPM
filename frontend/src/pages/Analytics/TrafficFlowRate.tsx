@@ -1,6 +1,8 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { FlowRate } from "src/api/backend/getTrafficFlow";
 import { intl } from "src/locale";
+
+type FlowRateComponent = FlowRate & { id: string; activeRequests?: number };
 
 const reducedMotionQuery = typeof window === "undefined" ? null : window.matchMedia("(prefers-reduced-motion: reduce)");
 const subscribeReducedMotion = (update: () => void) => {
@@ -88,24 +90,52 @@ export function FlowRateLabel({
 	);
 }
 
-export function FlowRateComponents({
-	components,
-	live = false,
-}: {
-	components?: (FlowRate & { id: string; activeRequests?: number })[];
-	live?: boolean;
-}) {
-	if (!components?.length) return null;
+export function FlowRateComponents({ components, live = false }: { components?: FlowRateComponent[]; live?: boolean }) {
+	const count = components?.length ?? 0;
+	const [seen, setSeen] = useState(count > 0);
+	const [shown, setShown] = useState<FlowRateComponent[] | undefined>(components);
+	const [stale, setStale] = useState(false);
+	const lastMeasured = useRef<FlowRateComponent[] | undefined>(components);
+
+	useEffect(() => {
+		if (!count) return;
+		setSeen(true);
+		lastMeasured.current = components;
+		setShown(components);
+		setStale(false);
+	}, [components, count]);
+
+	// Keep the disclosure mounted while the client group remains, so an open
+	// breakdown does not vanish on the next sample and can be read.
+	useEffect(() => {
+		if (count || !lastMeasured.current?.length) return;
+		setStale(true);
+		const timer = setTimeout(() => {
+			lastMeasured.current = undefined;
+			setShown(undefined);
+			setStale(false);
+		}, 60_000);
+		return () => clearTimeout(timer);
+	}, [count]);
+
+	if (!seen) return null;
 	return (
 		<details className="mt-1 text-xs">
-			<summary className="cursor-pointer">{text("accounting-groups")}</summary>
+			<summary className="cursor-pointer">
+				{text("accounting-groups")}
+				{stale && ` · ${text("accounting-groups-last")}`}
+			</summary>
 			<ul className="space-y-1">
-				{components.map((rate) => (
-					<li key={rate.id} className="flex items-center">
-						<FlowConnection kind="observed" rate={rate} live={live && (rate.activeRequests || 0) > 0} />
-						<FlowRateLabel rate={rate} />
-					</li>
-				))}
+				{shown?.length ? (
+					shown.map((rate) => (
+						<li key={rate.id} className="flex items-center">
+							<FlowConnection kind="observed" rate={rate} live={live && (rate.activeRequests || 0) > 0} />
+							<FlowRateLabel rate={rate} />
+						</li>
+					))
+				) : (
+					<li className="text-muted-foreground">{text("accounting-groups-none")}</li>
+				)}
 			</ul>
 		</details>
 	);

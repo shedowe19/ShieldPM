@@ -94,6 +94,10 @@ accepted transport bytes are not summed with acknowledged stream bytes. Expand
 **Measured groups by byte accounting** within a mixed client prefix to inspect
 compatible components with their own exact rates, windows and shared scale.
 Component identities describe accounting methods, never people or devices.
+The disclosure stays attached to the client group: when no current components
+exist, it keeps the last measured breakdown for up to 60 seconds, marks it as
+last measured, and then shows that no current breakdown exists instead of
+disappearing.
 Exact tooltips show directional rates, sample windows and the number of samples;
 group window bounds enclose the individual request intervals. Displayed line
 widths use a 0.35 exponential moving average and one fixed logarithmic scale:

@@ -1237,6 +1237,8 @@
 	"analytics.flow.target-detail": "{kind}. Completed requests using peer: {requests}. Last observation: {lastSeen}. Window: {start} to {end}.",
 	"analytics.flow.rate-final-ack-unknown": "Rate unknown: the QUIC stream closed before final acknowledgement coverage was complete.",
 	"analytics.flow.accounting-groups": "Measured groups by byte accounting",
+	"analytics.flow.accounting-groups-last": "last measured",
+	"analytics.flow.accounting-groups-none": "No current breakdown",
 	"analytics.flow.rate-mixed": "Rate unknown: this group mixes incompatible byte accounting methods. Inspect separate observed paths.",
 	"analytics.flow.quality.http_request_received": "received HTTP request bytes",
 	"analytics.flow.quality.http_transport_accepted": "HTTP bytes accepted by Nginx transport",

@@ -2,6 +2,21 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-06] fix | Messgruppen im Live-Datenfluss bleiben sichtbar
+
+- Command: Nutzerauftrag: PR 162 auf dem Produktivsystem prüfen; der Aufklapper „Messgruppen nach Byte-Abrechnung“ verschwindet im Live-Datenfluss.
+- Type: fix
+- Areas affected: Live-Datenfluss-Oberfläche, Analytics-Lokalisierung, Analytics-Dokumentation
+- Files changed: `frontend/src/pages/Analytics/TrafficFlowRate.tsx`, `frontend/src/pages/Analytics/TrafficFlowRate.test.tsx`, `frontend/src/locale/lang/de.json`, `frontend/src/locale/lang/en.json`, `docs/wiki/Analytics.md`
+- Wiki pages updated: Entscheidung „Traffic-Flow: Messgrenzen explizit halten“, Log und Changelog
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: Der Aufklapper wurde bei jedem Poll neu bewertet und verschwand, sobald die aktuelle Rate vollständig war; eine geöffnete Aufteilung und die zuletzt gemessenen Komponenten gingen verloren.
+- New decisions: Aufklapper bleibt an die Client-Gruppe gebunden. Fehlt eine aktuelle Aufteilung, werden die zuletzt gemessenen Komponenten bis zu 60 Sekunden als „zuletzt gemessen“ gehalten; danach zeigt der Aufklapper „Keine aktuelle Aufteilung“. Keine fortgeschriebenen Summen.
+- Open questions: keine
+- Next steps: Fix auf PR 162 pushen; nicht mergen und nicht auf Produktion deployen.
+- Verification: `TrafficFlowRate.test.tsx` mit 5 Tests bestanden; TypeScript `tsc --noEmit` bestanden; Biome-Check der beiden TS-Dateien ohne Befund. Produktivdaten aus PR-162-Head `589b0cfd` bestätigten den Auslöser: `rate_components` wechselte während eines Testtransfers nach einem Poll von 1 auf 0.
+
 ## [2026-11-06] fix | Verwaltete Auswahl vor leerer Neuerstellung schützen
 
 - Command: Abschließende CI beheben und bestehende Datenbankauswahl bei fehlenden Daten sicher behandeln.

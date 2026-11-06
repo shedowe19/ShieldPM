@@ -111,6 +111,16 @@ Samples, 28 HTTP/2-/WebSocket-Samples und sieben HTTP/3-Fälle mit Kapazität/Re
 Inkompatible ACK-/Accepted-Bytegruppen werden nicht addiert; expandierbare
 qualitätsgleiche Komponenten behalten exakte Raten, Fenster und gemeinsame Skala.
 
+## Anzeige der Messgruppen
+
+Der Aufklapper „Messgruppen nach Byte-Abrechnung“ bleibt an die Client-Gruppe
+gebunden. Verschwindet die aktuelle unvollständige oder gemischte Rate, zeigt er
+bis zu 60 Sekunden lang die zuletzt gemessenen Komponenten mit dem Zusatz
+„zuletzt gemessen“. Danach bleibt der Aufklapper geöffnet und zeigt „Keine
+aktuelle Aufteilung“, statt beim nächsten Poll zu verschwinden. Die Werte darin
+bleiben exakte, zeitlich begrenzte Beobachtungen und keine fortgeschriebenen
+Summen.
+
 ## Folgen
 
 Native HTTP/1-/HTTP/2-/WebSocket-Live-Raten sind technisch implementiert und mit echten laufenden
