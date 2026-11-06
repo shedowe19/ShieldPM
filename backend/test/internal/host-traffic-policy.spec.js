@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import knexFactory from "knex";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { FLOW_DEFAULTS, flowSettings, setFlowSettings } from "../../lib/traffic-flow-settings.js";
 
 const state = vi.hoisted(() => ({ host: null, can: vi.fn(), get: vi.fn(), audit: vi.fn() }));
 vi.mock("../../internal/proxy-host.js", () => ({ default: { get: state.get } }));
@@ -47,6 +48,7 @@ const pool = () => ({
 });
 let directory;
 beforeEach(async () => {
+	setFlowSettings({ ...FLOW_DEFAULTS, enabled: false, live_enabled: false }, false);
 	directory = await fs.mkdtemp(path.join(os.tmpdir(), "shieldpm-traffic-policy-"));
 	vi.stubEnv("DATA_PATH", directory);
 	state.host = host();
@@ -58,9 +60,38 @@ afterEach(async () => {
 	await service.stop();
 	vi.restoreAllMocks();
 	vi.unstubAllEnvs();
+	setFlowSettings(FLOW_DEFAULTS, false);
 	await fs.rm(directory, { recursive: true, force: true });
 });
 describe("structured traffic policy", () => {
+	it("renders opt-in completion syslog while preserving analytics and excludes ambiguous Anubis hops", async () => {
+		const disabled = await nginx.renderConfig("proxy_host", host());
+		expect(disabled).not.toContain("spm_flow_");
+		setFlowSettings({ ...flowSettings(), enabled: true }, true);
+		const enabled = await nginx.renderConfig("proxy_host", host());
+		expect(enabled).toContain("log_format spm_flow_12 escape=json");
+		expect(enabled).toContain('"host":12');
+		expect(enabled).toContain('"upstream":"$upstream_addr"');
+		expect(enabled).toContain("access_log syslog:server=127.0.0.1:15149,tag=shieldpm_flow,nohostname spm_flow_12;");
+		expect(enabled).toContain("access_log /data/nginx/json_access.log json_analytics;");
+		const anubis = await nginx.renderConfig("proxy_host", host({ anubis_enabled: true }));
+		expect(anubis).not.toContain("spm_flow_");
+	});
+
+	it("renders native instrumentation only when both telemetry flags are explicitly enabled", async () => {
+		setFlowSettings({ ...flowSettings(), enabled: false }, true);
+		setFlowSettings({ ...flowSettings(), live_enabled: true }, true);
+		expect(await nginx.renderConfig("proxy_host", host())).not.toContain("shieldpm_traffic_flow");
+		setFlowSettings({ ...flowSettings(), enabled: true }, true);
+		setFlowSettings({ ...flowSettings(), live_enabled: false }, true);
+		expect(await nginx.renderConfig("proxy_host", host())).not.toContain("shieldpm_traffic_flow");
+		setFlowSettings({ ...flowSettings(), live_enabled: true }, true);
+		expect(await nginx.renderConfig("proxy_host", host())).toContain("shieldpm_traffic_flow 12 127.0.0.1:15149;");
+		expect(await nginx.renderConfig("proxy_host", host({ anubis_enabled: true }))).not.toContain(
+			"shieldpm_traffic_flow",
+		);
+	});
+
 	it("renders a legacy protected host without a listener or any retired runtime hooks", async () => {
 		const legacy = host({
 			meta: { wasm_filters: [{ enabled: true, kind: "api_key", config: { sealed_value: "unavailable" } }] },

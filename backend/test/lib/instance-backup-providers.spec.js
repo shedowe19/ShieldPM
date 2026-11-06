@@ -109,6 +109,49 @@ describe("provider-native backup and isolated external restore commands", () => 
 			expect(command.mock.calls.find((call) => call[1].includes(clone))).toBeTruthy();
 			expect(ddl[1].parameters).toEqual([clone]);
 		});
+		it(`${engine} activates the restored clone instead of a stale managed selector`, async () => {
+			const data = path.join(directory, "data");
+			await fs.mkdir(path.join(data, ".database"), { recursive: true });
+			await fs.mkdir(path.join(data, "shieldpm"), { recursive: true });
+			await fs.writeFile(
+				path.join(data, ".database/database.dump"),
+				"CREATE TABLE `user` (`id` int); INSERT INTO `user` VALUES (1);",
+			);
+			await fs.writeFile(
+				path.join(data, "shieldpm/database.json"),
+				JSON.stringify({ version: 1, database: { engine, name: "stale_database" } }),
+			);
+			await fs.writeFile(path.join(data, "shieldpm/database-operation.json"), "stale journal");
+			await fs.writeFile(path.join(data, "shieldpm/database-runtime-lock.sqlite"), "stale lock");
+			const config = {
+				engine,
+				host: "localhost",
+				user: "user",
+				password: "private",
+				name: "active_database",
+				ssl: { rejectUnauthorized: true },
+			};
+			const instance = new InstanceBackup({ directory, config, command: vi.fn().mockResolvedValue("") });
+			const clone = await instance.restoreDatabase(
+				{
+					database: {
+						engine: engine === "pg" ? "postgres" : "mysql",
+						file: ".database/database.dump",
+						tables: ["migrations", "user"],
+						migrations: ["migration.js"],
+					},
+				},
+				data,
+				directory,
+				true,
+			);
+			const restored = JSON.parse(await fs.readFile(path.join(data, "shieldpm/default.json"), "utf8"));
+			expect(restored.database).toEqual({ ...config, name: clone });
+			for (const name of ["database.json", "database-operation.json", "database-runtime-lock.sqlite"])
+				await expect(fs.access(path.join(data, "shieldpm", name))).rejects.toMatchObject({ code: "ENOENT" });
+			expect(state.queries.filter(({ sql }) => sql.startsWith("DROP DATABASE"))).toHaveLength(0);
+		});
+
 		it(`${engine} removes a failed isolated restore and preserves the original target`, async () => {
 			const data = path.join(directory, "data");
 			await fs.mkdir(path.join(data, ".database"), { recursive: true });

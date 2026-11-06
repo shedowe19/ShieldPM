@@ -168,6 +168,8 @@ interface GetArgs {
 }
 
 interface PostArgs {
+	/** Additional same-origin headers; CSRF headers remain managed by the wrapper. */
+	headers?: Record<string, string>;
 	url: string;
 	params?: queryString.StringifiableRecord;
 	data?: object | FormData;
@@ -272,16 +274,17 @@ export async function downloadPost({ url, params, data, noAuth, silentAuth }: Po
 }
 
 export async function post<T = DynamicResponse>(
-	{ url, params, data, noAuth, silentAuth, rawKeys, rawResponse }: PostArgs,
+	{ url, params, data, noAuth, silentAuth, rawKeys, rawResponse, headers: extraHeaders }: PostArgs,
 	abortController?: AbortController,
 ): Promise<T> {
 	const sessionRevision = AuthStore.sessionRevision;
 	const apiUrl = buildUrl({ url, params });
 	const method = "POST";
 
-	let headers: Record<string, string> = {};
+	let headers: Record<string, string> = { ...extraHeaders };
 	if (!noAuth) {
 		headers = {
+			...headers,
 			...buildAuthHeader(),
 		};
 	}

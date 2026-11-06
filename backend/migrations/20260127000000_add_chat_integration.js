@@ -16,8 +16,22 @@ const up = (knex) => {
 	return knex.schema
 		.createTable("chat_integration", (table) => {
 			table.increments("id").primary();
-			table.string("created_on").notNullable().defaultTo(knex.fn.now());
-			table.string("modified_on").notNullable().defaultTo(knex.fn.now());
+			table
+				.string("created_on")
+				.notNullable()
+				.defaultTo(
+					["mysql", "mysql2"].includes(knex.client.config.client)
+						? knex.raw("(CURRENT_TIMESTAMP)")
+						: knex.fn.now(),
+				);
+			table
+				.string("modified_on")
+				.notNullable()
+				.defaultTo(
+					["mysql", "mysql2"].includes(knex.client.config.client)
+						? knex.raw("(CURRENT_TIMESTAMP)")
+						: knex.fn.now(),
+				);
 			table.integer("user_id").unsigned().notNullable().references("id").inTable("user");
 			table.string("provider").notNullable(); // 'telegram', 'matrix', etc.
 			table.string("token").notNullable(); // Encrypted token

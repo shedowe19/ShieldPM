@@ -75,6 +75,78 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 
 Hostbezogene Abfragen prüfen zuerst die aktuelle serverseitige `analytics:list`-Berechtigung. Ohne globale Analytics-Berechtigung muss `proxy_hosts:get` erfolgreich sein und der Host dem aktuellen Benutzer gehören, sofern dieser kein aktuell berechtigter Administrator ist. Eine alte Admin-Rolle aus dem JWT ersetzt keine aktuelle Berechtigungsprüfung. Unerwartete Datenbank- oder Berechtigungsfehler lösen keinen schwächeren Fallback aus.
 
+## Experimenteller Traffic-Flow
+
+`TRAFFIC_FLOW_ENABLED=true` aktiviert einen separaten flüchtigen Collector
+(`internal/traffic-flow.js`, `lib/traffic-flow.js`). Nginx sendet mit dem
+hostbezogenen `spm_flow_<id>`-Format abgeschlossene HTTP-Anfragen an Loopback-UDP
+15149. Die gemeinsame Zeile enthält Host-ID, Abschlusszeit, Clientadresse,
+Upstream-Versuche, Cachezustand und Antwortbody-Bytes. Der Collector speichert
+standardmäßig /24- beziehungsweise /48-Präfixe; mit explizitem
+`TRAFFIC_FLOW_CLIENT_MODE=address` validierte Einzeladressen. Keine URLs, Header oder Inhalte. Es gibt
+keine zusätzliche Datenbankablage. Anubis und Streams sind nicht abgedeckt.
+
+Die API `/api/nginx/analytics/flow` prüft `analytics:list` und aktuelle
+`proxy_hosts:list`-Sichtbarkeit vor Aggregation und Quellenstatus. Konfigurierte
+Ziele, Abschlusszahlen und aktuelle Raten bleiben getrennt. Keine Systemtotalen
+werden auf Kanten verteilt. `sample_complete: false` bleibt wegen UDP und Limits.
+
+Mit zusätzlichem `TRAFFIC_FLOW_LIVE_ENABLED=true` und dem passenden statischen
+Modul aus `shieldpm-nginx` erzeugt das Hosttemplate `shieldpm_traffic_flow`.
+Ohne Modul schlägt Nginx-Validierung fehl; ohne frische unterstützte Samples bleibt
+`current_rates: false`. `lib/traffic-flow-live.js` berechnet vier Richtungsraten
+anhand monotoner Zähler und tatsächlicher Zeitdifferenzen. Die Semantik sind
+HTTP-Transportbytes einschließlich Headern, bei TLS akzeptierte Klartextbytes;
+keine Wire-Bytes, TCP-Bestätigungen oder Zustellgarantien. Unterstützt sind HTTP/1-Proxyverkehr, HTTP/2-Streams und WebSocket-Upgrades; HTTP/3 wird mit expliziter Richtungsqualität unterstützt; andere Upstream-Protokolle bleiben unbekannt. Resets, fehlende Baselines und Lücken über 3,5 Sekunden ebenfalls.
+
+Die Oberfläche pollt bei aktiviertem nativen Collector bereits während des
+Bootstrap sekündlich, sonst alle fünf Sekunden. Pause/unsichtbarer Tab/Offline stoppen Polling. Die feste logarithmische
+Linienstärkenskala verwendet EMA 0,35; Tooltips behalten exakte ungerundete
+Richtungsraten und Zeitfenster. Gemischte Gruppen mit unbekannten Raten werden
+nicht als vollständige Summe dargestellt. Hostpositionen bleiben ID-stabil.
+
+Grenzen: 60 Sekunden Retention, je 1.000 Abschluss-/Live-Ereignisse, 100 Hosts,
+32 Clientgruppen/32 beobachtete Peers je Host, 8 KiB Datagramme, 2.000 Datagramme/s;
+nativ 256 Requests/Worker und 16 Upstream-Versuche. Standardmäßig werden maskierte Präfixe im App-Puffer gehalten; der explizite
+Adressmodus behält dieselben Berechtigungen und flüchtige Retention. Aktivierung und Rückweg siehe
+[Analytics-Dokumentation](../../../../docs/wiki/Analytics.md#live-traffic-flow-experimental).
+
+Numerisch identische konfigurierte/beobachtete IP-Port-Ziele werden mit stabiler
+Endpoint-ID und beiden `origins` vereinigt; DNS wird nicht geraten.
+`diagnostics` unterscheidet Backend-Flag, Receiverzustand und autorisierte native
+Zeitstempel. Kanten erklären fehlende Baselines, Abschluss, Staleness, nicht
+unterstützte Quellen und unvollständige Gruppen. Positive native Intervalle unter
+250 ms bleiben messbar; Abschlüsse sind keine aktiven Verbindungen. Bekannte
+Teilkomponenten bleiben sichtbar, ohne eine vollständige Summe zu behaupten.
+
+Die ursprünglichen Access-Log-/Lua-Prüfungen bleiben Belege ungeeigneter Quellen.
+`scripts/benchmarks/traffic-flow-native-measurement.mjs` prüft dagegen mit echtem
+Nginx-Modul und App-Collector Raten vor Download-/Upload-Abschluss, exakte
+Zählerdifferenzen und Präfixmaskierung. Die native Suite prüft zusätzlich HTTPS,
+Retries, Keepalive, Abbrüche und Reloads. Andere Upstream-Protokolle sind nicht abgenommen; siehe [Messentscheidung](../../decisions/2026-11-05-traffic-flow-messgrenzen.md).
+
+
+## Persistente Flow-Einstellungen
+
+`setting.id = traffic-flow` enthält `enabled`, `live_enabled` und `client_mode`.
+Standard ist an/an/Präfix; frühere ENV-Präferenzen werden nur bei der ersten
+Migration importiert. Danach sind Datenbankwerte maßgeblich. Das vorhandene
+Admin-Einstellungsmenü und `settings:get/update` verwalten die Werte.
+
+Die Initialisierung lädt Einstellungen vor dem Collector. Ein isolierter
+Nginx-Test prüft die native Direktive ohne aktive Konfiguration oder Reload.
+Alte Binaries erhalten keine unbekannte Direktive; Live bleibt als Wunsch
+aktiviert, ist aber mit sichtbarem Grund effektiv inaktiv. Start und Speichern
+aktualisieren vorhandene aktive Hostkonfigurationen unter der Engine-Sperre.
+Backups überleben Test, Reload und Datenbank-Commit; Fehler stellen den alten
+Zustand wieder her. Fehlerisolierte `.err`-Hosts werden nicht reaktiviert.
+
+Das Auswahlfeld bietet `prefix`, `address` und `hidden`. Präfix bleibt Standard;
+Adresse ist explizit. Hidden verwirft IP/Präfix vor der Flow-Pufferung und gibt
+nur eine adresslose Clientgruppe zurück. Jeder Moduswechsel leert vorhandene
+Flow-Daten. Historische Analytics und Nginx-Logs behalten ihre unabhängige
+Erfassung und Aufbewahrung. Details: [öffentliche Anleitung](../../../../docs/wiki/Analytics.md#client-visibility-and-privacy).
+
 ## Abhängigkeiten
 
 - `recharts` — Chart-Bibliothek im Frontend
@@ -103,3 +175,23 @@ Alle Chunks eines Detail- oder Aggregationsbatches werden jeweils in einer Trans
 - [Proxy-Host](./proxy-host.md)
 - [GitOps](./gitops.md)
 - [Umgebungsvariablen](../konfiguration/umgebungsvariablen.md)
+
+## HTTP/3-Messqualität
+
+Native HTTP/3-Downloads zählen ausschließlich eindeutige bestätigte QUIC-Streambytes;
+Uploads zählen konsumierte entschlüsselte Streambytes einschließlich HTTP/3-Framing.
+`client_sent_semantics=quic_stream_unique_acked` und
+`client_received_semantics=quic_stream_consumed` sind Pflicht. Queued-Bytes fließen
+nie in Raten ein. Ein Finalsample ohne `final_complete: true` bleibt unbekannt.
+Der native Beobachter lebt über das Requestpool-Ende hinaus bis zum Streamende.
+
+Kantenraten führen Richtungssemantik mit. Inkompatible Gruppen liefern keine Summe;
+expandierbare Komponenten zeigen kompatible Teilgruppen mit stabilen Qualitäts-IDs,
+exakten Zeitfenstern und derselben Skala. Es gibt keine Personen-/Geräteidentität.
+
+Die reale QUIC-Suite bestand mit Verlust, ACK-Verzögerung, drei parallelen Streams,
+Reset/Disconnect und Churn. Finales Produktionsimage: Modul-Gate, 694 Runtime-
+Samples, 28 HTTP/2-/WebSocket-Samples und sieben HTTP/3-Fälle einschließlich
+Kapazitätsgrenze und Reload bestanden. App-Captureprüfung: 555 Requests, 869 exakte
+Intervalle, davon 52 aktive Download- und 14 aktive Uploadintervalle, Maskierung
+bestätigt. Reproduzierbar mit `scripts/benchmarks/traffic-flow-native-capture.mjs`.

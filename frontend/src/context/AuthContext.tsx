@@ -4,6 +4,7 @@ import { useIntervalWhen } from "rooks";
 import { getToken, loginAsUser, refreshToken, restoreSession, type TokenResponse } from "src/api/backend";
 import * as api from "src/api/backend/base";
 import AuthStore, { AUTHENTICATION_EXPIRED_EVENT } from "src/modules/AuthStore";
+import { clearDatabaseOperation } from "src/modules/DatabaseOperationStore";
 import { showError } from "src/notifications";
 
 // Context
@@ -133,6 +134,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	};
 
 	const logout = async () => {
+		clearDatabaseOperation();
 		const generation = ++sessionGeneration.current;
 		try {
 			// Check if we have a backup admin session cookie on the backend

@@ -1,13 +1,7 @@
 #!/bin/sh
 set -eu
 
-DATA_PATH="${DATA_PATH:-/data}"
-DATABASE_PATH="$DATA_PATH/shieldpm/database.sqlite"
-
-if [ ! -s "$DATABASE_PATH" ]; then
-    echo "ShieldPM SQLite database not found at $DATABASE_PATH" >&2
-    exit 1
-fi
-
-echo "Running explicit SQLite VACUUM for $DATABASE_PATH..."
+export DATA_PATH="${DATA_PATH:-/data}"
+# The Node command resolves the managed selection, including migrated filenames,
+# and refuses server databases or missing SQLite files without creating one.
 exec sqlite-vaccum.js

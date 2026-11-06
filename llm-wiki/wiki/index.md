@@ -77,10 +77,14 @@ zuerst in `wiki/reference/` geändert und hier nur zusammengefasst.
 
 ### Entscheidungen
 
+- [2026-11-06 Datenbank-Bootstrap und Providerwechsel](./decisions/2026-11-06-datenbank-bootstrap-und-providerwechsel.md) — kontrollierter Neustart, private Auswahl und verlustfreie Prüfung
+
 - [Entscheidungen](./decisions/README.md) — ADR-Index
 - [ADR-Vorlage](./decisions/adr-template.md) — Gerüst für neue Entscheidungen
 - [2026-11-04 Wiki-Struktur](./decisions/2026-11-04-wiki-struktur.md) — warum es drei Doku-Ebenen gibt
 - [2026-10-27 Entfernung der Wasm-Laufzeit](./decisions/2026-10-27-entfernung-der-wasm-laufzeit.md) — Ausbau und Migration
+
+- [2026-11-05 Traffic-Flow-Messgrenzen](./decisions/2026-11-05-traffic-flow-messgrenzen.md) — Abschlussbeobachtungen bleiben von aktuellen Raten getrennt
 
 ### Tiefendoku (migriert)
 

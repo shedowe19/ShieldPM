@@ -41,6 +41,7 @@ elif args[0] == 'cp':
     marker = fixture / 'tls/certbot/accounts/acme-v02.api.letsencrypt.org/directory/ci-offline/marker'
     assert marker.is_file() and (fixture / '.env').is_file()
     assert (fixture / 'grpc-smoke.mjs').is_file()
+    assert (fixture / 'database-setup-smoke.mjs').is_file()
     assert (fixture / 'ip-firewall-smoke.mjs').is_file()
     assert (fixture / 'nginx-smoke-modules.mjs').is_file()
     assert (fixture / 'nginx-smoke-endpoints.mjs').is_file()
@@ -56,6 +57,10 @@ elif args[0] == 'cp':
     assert (fixture / 'nginx/GeoLite2-ASN.mmdb').read_bytes() == asn_database.read_bytes()
     assert (fixture / 'nginx/GeoLite2-Country.mmdb').read_bytes() == country_database.read_bytes()
     assert hashlib.sha256((fixture / 'nginx/GeoLite2-City.mmdb').read_bytes()).hexdigest() == 'ed972738e4e03a3e56e12041a6af4d91592249d110f7e4a647e5f2fa0e639c09'
+elif args[0] == 'exec' and mode == 'setup-failure':
+    assert any('node /data/database-setup-smoke.mjs' in arg for arg in args)
+    print('Database chooser initialization failed', file=sys.stderr)
+    sys.exit(45)
 elif args[0] == 'exec' and mode == 'write-failure':
     print('Permission denied: simulated runtime write', file=sys.stderr)
     sys.exit(42)
@@ -103,6 +108,8 @@ elif args[0] == 'logs':
         executions = [call for call in calls if call[0] == "exec"]
         self.assertEqual([call[call.index("--user") + 1] for call in executions], ["0:0", "1000:1000"])
         for call in executions:
+            program = next(arg for arg in call if 'node /data/database-setup-smoke.mjs' in arg)
+            self.assertLess(program.index('node /data/database-setup-smoke.mjs'), program.index('nginx -e stderr -tq'))
             self.assertTrue(any("nginx -e stderr -tq" in arg and "nginx -e stderr -s reload" in arg for arg in call))
             self.assertTrue(any("NGINX_GEOIP_DATABASE=/data/GeoIP2-Country-Test.mmdb" in arg for arg in call))
             self.assertTrue(any("NGINX_ASN_DATABASE=/data/GeoLite2-ASN-Test.mmdb" in arg and "NGINX_REQUIRE_ASN_STARTUP=true" in arg for arg in call))
@@ -149,6 +156,13 @@ elif args[0] == 'logs':
         result, calls = self.run_smoke("write-failure")
         self.assertEqual(result.returncode, 42)
         self.assertIn("Permission denied", result.stderr)
+        self.assertIn("diagnostic container logs", result.stderr)
+        self.assert_cleaned(calls, 1)
+
+    def test_database_setup_failure_fails_the_gate_and_cleans_up(self):
+        result, calls = self.run_smoke("setup-failure")
+        self.assertEqual(result.returncode, 45)
+        self.assertIn("Database chooser initialization failed", result.stderr)
         self.assertIn("diagnostic container logs", result.stderr)
         self.assert_cleaned(calls, 1)
 

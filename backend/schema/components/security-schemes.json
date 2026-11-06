@@ -4,5 +4,11 @@
 		"scheme": "bearer",
 		"bearerFormat": "JWT",
 		"description": "JWT Bearer Token authentication"
+	},
+	"databaseOperationToken": {
+		"type": "apiKey",
+		"in": "header",
+		"name": "X-Database-Operation-Token",
+		"description": "Opaque capability for one database operation; returned only on operation creation. Never send in URLs or logs."
 	}
 }

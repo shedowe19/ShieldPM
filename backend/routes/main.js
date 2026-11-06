@@ -10,6 +10,7 @@ import auditLogRoutes from "./audit-log.js";
 import backupsRoutes from "./backups.js";
 import chatRoutes from "./chat.js";
 import dashboardRoutes from "./dashboard.js";
+import databaseRoutes from "./database.js";
 import gitopsRoutes from "./gitops.js";
 import incidentsRoutes from "./incidents.js";
 import accessListsRoutes from "./nginx/access_lists.js";
@@ -54,6 +55,8 @@ router.get("/", async (_, res /*, next*/) => {
 		setup,
 		version,
 		demo: isDemoMode(),
+		databaseSetupRequired: false,
+		databaseMaintenance: false,
 		csrfToken: res.locals.csrfToken,
 	});
 });
@@ -67,6 +70,7 @@ router.use("/users/:user_id/2fa", twoFaRoutes);
 router.use("/audit-log", auditLogRoutes);
 router.use("/reports", reportsRoutes);
 router.use("/settings", settingsRoutes);
+router.use("/database", databaseRoutes);
 router.use("/version", versionRoutes);
 router.use("/analytics", analyticsRoutes);
 router.use("/incidents", incidentsRoutes);

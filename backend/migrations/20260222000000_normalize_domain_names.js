@@ -15,8 +15,22 @@ const up = async (knex) => {
 		table.increments("id").primary();
 		table.integer("proxy_host_id").unsigned().notNullable();
 		table.string("domain_name").notNullable();
-		table.string("created_on").notNullable().defaultTo(knex.fn.now());
-		table.string("modified_on").notNullable().defaultTo(knex.fn.now());
+		table
+			.string("created_on")
+			.notNullable()
+			.defaultTo(
+				["mysql", "mysql2"].includes(knex.client.config.client)
+					? knex.raw("(CURRENT_TIMESTAMP)")
+					: knex.fn.now(),
+			);
+		table
+			.string("modified_on")
+			.notNullable()
+			.defaultTo(
+				["mysql", "mysql2"].includes(knex.client.config.client)
+					? knex.raw("(CURRENT_TIMESTAMP)")
+					: knex.fn.now(),
+			);
 
 		// Foreign key to map cascade deletes
 		table.foreign("proxy_host_id").references("id").inTable("proxy_host").onDelete("CASCADE").onUpdate("CASCADE");

@@ -12,6 +12,7 @@ import { AnalyticsKpis } from "./AnalyticsKpis";
 import { AnalyticsRecentRequests } from "./AnalyticsRecentRequests";
 import { AnalyticsTopLists } from "./AnalyticsTopLists";
 import { createAnalyticsCsv } from "./analytics-csv";
+import { TrafficFlow } from "./TrafficFlow";
 import { useAnalyticsData } from "./useAnalyticsData";
 import { useAnalyticsLiveMetrics } from "./useAnalyticsLiveMetrics";
 
@@ -108,6 +109,8 @@ const Analytics = () => {
 			)}
 
 			<AnalyticsKpis dbStats={dbStats} networkSpeed={networkSpeed} summary={summary} />
+
+			<TrafficFlow />
 
 			{/* Charts */}
 			<AnalyticsCharts series={series} />

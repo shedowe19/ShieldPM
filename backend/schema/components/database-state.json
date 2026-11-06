@@ -1,0 +1,60 @@
+{
+	"type": "object",
+	"required": [
+		"engine",
+		"configured",
+		"source",
+		"supportedTransitions"
+	],
+	"properties": {
+		"engine": {
+			"enum": [
+				"sqlite",
+				"mysql2",
+				"pg",
+				null
+			]
+		},
+		"configured": {
+			"type": "boolean"
+		},
+		"source": {
+			"enum": [
+				"managed",
+				"file",
+				"environment",
+				"default"
+			]
+		},
+		"editable": {
+			"type": "boolean"
+		},
+		"supportedTransitions": {
+			"type": "array",
+			"items": {
+				"enum": [
+					"sqlite",
+					"mysql2",
+					"pg"
+				]
+			}
+		},
+		"operation": {
+			"anyOf": [
+				{
+					"$ref": "./database-operation.json"
+				},
+				{
+					"type": "null"
+				}
+			]
+		},
+		"connection": {
+			"type": [
+				"object",
+				"null"
+			],
+			"description": "Administrator-only connection metadata. Password values are never returned."
+		}
+	}
+}

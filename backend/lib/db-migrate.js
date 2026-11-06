@@ -62,16 +62,22 @@ const readSchema = async (source, target) => {
 	) {
 		throw new Error("SQLite import requires transactional InnoDB tables in the destination");
 	}
+	// Login throttling initializes lazily; an empty target-only table is harmless.
+	const emptyTargetLogin =
+		!sourceTables.includes("login_attempts") &&
+		targetTableInfo.some(({ name }) => name === "login_attempts") &&
+		!(await target("login_attempts").first("id"));
 	const targetTables = targetTableInfo
 		.map(({ name }) => name)
-		.filter(isApplicationTable)
+		.filter((name) => isApplicationTable(name) && !(emptyTargetLogin && name === "login_attempts"))
 		.sort();
 	if (JSON.stringify(sourceTables) !== JSON.stringify(targetTables) || !sourceTables.includes("user")) {
 		throw schemaError();
 	}
 	if (!(await source.schema.hasTable("migrations"))) throw schemaError();
-	const sourceMigrations = await source("migrations").select("name").orderBy("name");
-	const targetMigrations = await target("migrations").select("name").orderBy("name");
+	// Registry identity must not depend on each engine's SQL collation.
+	const sourceMigrations = (await source("migrations").select("name")).map(({ name }) => name).sort();
+	const targetMigrations = (await target("migrations").select("name")).map(({ name }) => name).sort();
 	if (JSON.stringify(sourceMigrations) !== JSON.stringify(targetMigrations)) throw schemaError();
 
 	const tables = new Map();
@@ -84,8 +90,8 @@ const readSchema = async (source, target) => {
 		) {
 			throw schemaError();
 		}
-		const primaryKeys = sourceColumns.filter((column) => column.pk);
-		if (primaryKeys.length !== 1) throw new Error(`Cannot safely paginate table ${name}: expected one primary key`);
+		const primaryKeys = sourceColumns.filter((column) => column.pk).sort((a, b) => a.pk - b.pk);
+		if (!primaryKeys.length) throw new Error(`Cannot safely paginate table ${name}: expected a primary key`);
 		const foreignKeys = await source.raw("PRAGMA foreign_key_list(??)", [name]);
 		const selfReferences = [...new Set(foreignKeys.filter((key) => key.table === name).map((key) => key.from))];
 		if (selfReferences.some((column) => !columns[column].nullable)) {
@@ -96,6 +102,7 @@ const readSchema = async (source, target) => {
 			columns,
 			sourceColumns,
 			primaryKey: primaryKeys[0].name,
+			primaryKeys: primaryKeys.map((column) => column.name),
 			selfReferences,
 			dependencies: new Set(foreignKeys.filter((key) => key.table !== name).map((key) => key.table)),
 		});
@@ -119,7 +126,7 @@ const readSchema = async (source, target) => {
 async function* readBatches(source, table) {
 	// Bound memory and bind parameters even for wide proxy hosts and large analytics histories.
 	const batchSize = Math.max(1, Math.min(200, Math.floor(900 / table.sourceColumns.length)));
-	let lastId;
+	let lastKey;
 	let rows;
 	do {
 		const query = source(table.name)
@@ -131,38 +138,82 @@ async function* readBatches(source, table) {
 				),
 			)
 			// Qualify the real column: the SELECT alias casts integer IDs to text for lossless reads.
-			.orderBy(`${table.name}.${table.primaryKey}`)
+			.orderBy(table.primaryKeys.map((key) => `${table.name}.${key}`))
 			.limit(batchSize);
-		if (lastId !== undefined) query.where(`${table.name}.${table.primaryKey}`, ">", lastId);
+		if (lastKey)
+			query.where((after) => {
+				for (let index = 0; index < table.primaryKeys.length; index++) {
+					after.orWhere((branch) => {
+						for (let previous = 0; previous < index; previous++)
+							branch.where(`${table.name}.${table.primaryKeys[previous]}`, lastKey[previous]);
+						branch.where(`${table.name}.${table.primaryKeys[index]}`, ">", lastKey[index]);
+					});
+				}
+			});
 		rows = await query;
 		if (rows.length > 0) {
+			if (rows.some((row) => table.primaryKeys.some((key) => row[key] === null)))
+				throw new Error(`Cannot paginate nullable primary key in ${table.name}`);
 			yield rows;
-			lastId = rows.at(-1)[table.primaryKey];
+			lastKey = table.primaryKeys.map((key) => rows.at(-1)[key]);
 		}
 	} while (rows.length > 0);
 }
 
 const resetSequence = async (target, table) => {
 	if (!["pg", "postgres", "postgresql"].includes(target.client.config.client)) return;
-	const result = await target.raw("SELECT pg_get_serial_sequence(?, ?) AS sequence_name", [
-		target.ref(table.name).toString(),
-		table.primaryKey,
-	]);
-	const sequence = result.rows[0]?.sequence_name;
-	if (sequence) {
-		await target.raw(
-			"SELECT setval(?::regclass, GREATEST(COALESCE(MAX(??), 0), 1), COALESCE(MAX(??), 0) >= 1) FROM ??",
-			[sequence, table.primaryKey, table.primaryKey, table.name],
-		);
+	for (const primaryKey of table.primaryKeys) {
+		const result = await target.raw("SELECT pg_get_serial_sequence(?, ?) AS sequence_name", [
+			target.ref(table.name).toString(),
+			primaryKey,
+		]);
+		const sequence = result.rows[0]?.sequence_name;
+		if (sequence) {
+			await target.raw(
+				"SELECT setval(?::regclass, GREATEST(COALESCE(MAX(??), 0), 1), COALESCE(MAX(??), 0) >= 1) FROM ??",
+				[sequence, primaryKey, primaryKey, table.name],
+			);
+		}
 	}
 };
 
 /** Import a consistent source snapshot atomically; source schema/data are never modified. */
-export const importSqliteDatabase = async (sqlite, destination) =>
-	sqlite.transaction(async (source) =>
+export const importSqliteDatabase = async (sqlite, destination) => {
+	// DDL must precede the row-copy transaction: MySQL would otherwise implicitly commit it.
+	if ((await sqlite.schema.hasTable("login_attempts")) && !(await destination.schema.hasTable("login_attempts"))) {
+		const columns = await sqlite("login_attempts").columnInfo();
+		if (
+			Object.keys(columns).sort().join() !==
+			["id", "scope", "identifier", "attempt_count", "first_attempt_at", "last_attempt_at", "blocked_until"]
+				.sort()
+				.join()
+		)
+			throw schemaError();
+		await destination.schema.createTable("login_attempts", (table) => {
+			table.increments("id").primary();
+			table.string("scope", 32).notNullable();
+			table.string("identifier", 255).notNullable();
+			table.integer("attempt_count").notNullable().defaultTo(0);
+			table.bigInteger("first_attempt_at").notNullable();
+			table.bigInteger("last_attempt_at").notNullable();
+			table.bigInteger("blocked_until").notNullable().defaultTo(0);
+			table.unique(["scope", "identifier"]);
+			table.index(["last_attempt_at"]);
+			table.index(["blocked_until"]);
+		});
+	}
+	return sqlite.transaction(async (source) =>
 		destination.transaction(async (target) => {
 			const tables = await readSchema(source, target);
 			for (const table of tables) {
+				if (table.name === "host_domain_claim_lock") {
+					const locks = await target(table.name).select("id", "sequence");
+					if (
+						locks.length === 0 ||
+						(locks.length === 1 && String(locks[0].id) === "1" && String(locks[0].sequence) === "0")
+					)
+						continue;
+				}
 				if (table.name !== "setting" && (await target(table.name).first(table.primaryKey))) {
 					throw new Error(
 						`Destination table ${table.name} is not empty; refusing to overwrite existing data`,
@@ -179,6 +230,7 @@ export const importSqliteDatabase = async (sqlite, destination) =>
 					});
 					if (
 						["mysql", "mysql2"].includes(target.client.config.client) &&
+						table.primaryKeys.length === 1 &&
 						rows.some((row) => row[table.primaryKey] === "0") &&
 						/int/i.test(table.columns[table.primaryKey].type)
 					) {
@@ -191,7 +243,8 @@ export const importSqliteDatabase = async (sqlite, destination) =>
 					}
 					const insert = target(table.name).insert(rows);
 					// Schema migrations seed settings; source values must win without losing new defaults.
-					if (table.name === "setting") insert.onConflict(table.primaryKey).merge();
+					if (["setting", "host_domain_claim_lock"].includes(table.name))
+						insert.onConflict(table.primaryKeys).merge();
 					await insert;
 					count += rows.length;
 				}
@@ -203,7 +256,7 @@ export const importSqliteDatabase = async (sqlite, destination) =>
 							);
 							if (Object.values(references).some((value) => value !== null)) {
 								await target(table.name)
-									.where(table.primaryKey, row[table.primaryKey])
+									.where(Object.fromEntries(table.primaryKeys.map((key) => [key, row[key]])))
 									.update(references);
 							}
 						}
@@ -218,6 +271,7 @@ export const importSqliteDatabase = async (sqlite, destination) =>
 			}
 		}),
 	);
+};
 
 const migrateFromSqliteToNewDb = async () => {
 	if (isSqlite()) return;

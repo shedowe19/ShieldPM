@@ -1,0 +1,43 @@
+{
+	"operationId": "selectInitialDatabase",
+	"summary": "Choose the initial database",
+	"description": "Available only before application setup. Requires a fresh bootstrap health CSRF token paired with the DB-SETUP-CSRF cookie. Initializes the selected database and then starts the normal application; existing explicit configurations never enter this chooser.",
+	"tags": [
+		"database"
+	],
+	"security": [],
+	"responses": {
+		"202": {
+			"description": "Successful response",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/database-operation.json"
+					}
+				}
+			}
+		},
+		"400": {
+			"description": "Invalid request, incompatible data, or unusable target; no credentials are returned"
+		},
+		"403": {
+			"description": "Required permission, operation capability, or CSRF validation failed"
+		},
+		"409": {
+			"description": "An operation is already active or cannot be acknowledged in this phase"
+		},
+		"503": {
+			"description": "Database setup or maintenance prevents this action"
+		}
+	},
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"$ref": "../../../components/database-input.json"
+				}
+			}
+		}
+	}
+}

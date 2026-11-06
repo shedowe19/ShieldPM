@@ -96,6 +96,8 @@ export const SETTINGS_TAB = {
 	DEFAULT_SITE: "default-site",
 	AI: "ai",
 	GITOPS: "gitops",
+	TRAFFIC_FLOW: "traffic-flow",
+	DATABASE: "database",
 } as const;
 export type SettingsTab = (typeof SETTINGS_TAB)[keyof typeof SETTINGS_TAB];
 

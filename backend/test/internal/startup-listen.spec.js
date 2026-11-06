@@ -1,9 +1,14 @@
 import { createServer } from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("../../bootstrap-app.js", () => ({ prepareDatabaseStartup: vi.fn(async () => {}) }));
+
 const state = vi.hoisted(() => ({
 	analyticsStop: vi.fn(async () => {}),
 	analyticsInit: vi.fn(async () => {}),
+	flowInitialize: vi.fn(async () => {}),
+	flowReconcile: vi.fn(async () => {}),
+	setup: vi.fn(async () => {}),
 	migrate: vi.fn(async () => {}),
 	port: 0,
 	servers: [],
@@ -51,6 +56,9 @@ vi.mock("../../internal/host-traffic-policy.js", () => ({
 vi.mock("../../internal/auth-session-cleanup.js", () => ({
 	default: { initTimer: state.cleanupStart, stop: state.cleanupStop },
 }));
+vi.mock("../../internal/traffic-flow-settings.js", () => ({
+	default: { initialize: state.flowInitialize, reconcileStartup: state.flowReconcile },
+}));
 vi.mock("../../internal/analytics.js", () => ({ default: { init: state.analyticsInit, stop: state.analyticsStop } }));
 vi.mock("../../internal/certificate.js", () => ({ default: { initTimer: async () => {} } }));
 vi.mock("../../internal/chat.js", () => ({ default: { init: async () => {} } }));
@@ -80,7 +88,7 @@ vi.mock("../../lib/utils.js", () => ({ default: { execFile: vi.fn() } }));
 vi.mock("../../logger.js", () => ({ global: { info: state.info, error: state.error } }));
 vi.mock("../../migrate.js", () => ({ migrateUp: state.migrate }));
 vi.mock("../../schema/index.js", () => ({ getCompiledSchema: async () => {} }));
-vi.mock("../../setup.js", () => ({ default: async () => {} }));
+vi.mock("../../setup.js", () => ({ default: state.setup }));
 
 describe("backend listener lifecycle", () => {
 	let listeners;
@@ -90,6 +98,9 @@ describe("backend listener lifecycle", () => {
 		state.firewallStop.mockResolvedValue(undefined);
 		state.analyticsStop.mockResolvedValue(undefined);
 		state.analyticsInit.mockResolvedValue(undefined);
+		state.flowInitialize.mockResolvedValue(undefined);
+		state.flowReconcile.mockResolvedValue(undefined);
+		state.setup.mockResolvedValue(undefined);
 		state.backupCommit.mockResolvedValue(undefined);
 		state.migrate.mockResolvedValue(undefined);
 		state.configurationLock.mockImplementation(async (callback) => callback());
@@ -126,6 +137,10 @@ describe("backend listener lifecycle", () => {
 		async (mode) => {
 			const migration = Promise.withResolvers();
 			const initialization = Promise.withResolvers();
+			const policy = Promise.withResolvers();
+			const reconciliation = Promise.withResolvers();
+			state.flowInitialize.mockReturnValueOnce(policy.promise);
+			state.flowReconcile.mockReturnValueOnce(reconciliation.promise);
 			state.migrate.mockReturnValueOnce(migration.promise);
 			state.analyticsInit.mockReturnValueOnce(initialization.promise);
 			try {
@@ -137,12 +152,24 @@ describe("backend listener lifecycle", () => {
 				migration.resolve();
 				expect(state.analyticsInit).not.toHaveBeenCalled();
 				expect(state.servers).toHaveLength(0);
+				await vi.waitFor(() => expect(state.flowInitialize).toHaveBeenCalledOnce());
+				expect(state.analyticsInit).not.toHaveBeenCalled();
+				policy.resolve();
 				await vi.waitFor(() => expect(state.analyticsInit).toHaveBeenCalledOnce());
 				expect(state.servers).toHaveLength(0);
 				initialization.resolve();
+				await vi.waitFor(() => expect(state.flowReconcile).toHaveBeenCalledOnce());
+				expect(state.setup).toHaveBeenCalledOnce();
+				expect(state.setup.mock.invocationCallOrder[0]).toBeLessThan(
+					state.flowReconcile.mock.invocationCallOrder[0],
+				);
+				expect(state.servers).toHaveLength(0);
+				reconciliation.resolve();
 				await vi.waitFor(() => expect(state.completed).toBe(true));
 				expect(state.servers).toHaveLength(1);
 			} finally {
+				policy.resolve();
+				reconciliation.resolve();
 				migration.resolve();
 				initialization.resolve();
 				await vi.waitFor(() => expect(state.completed).toBe(true));

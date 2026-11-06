@@ -1,17 +1,22 @@
 import { IconGitBranch, IconRobot, IconSettings } from "@tabler/icons-react";
 import { Lock } from "lucide-react";
-import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { T } from "src/locale";
 import { SETTINGS_TAB, type SettingsTab } from "src/types/enums";
 import AiConfigPage from "./Ai";
+import DatabaseSettings from "./Database";
 import DefaultSite from "./DefaultSite";
 import GitOps from "./GitOps";
+import TrafficFlowSettings from "./TrafficFlow";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useHealth } from "@/hooks/useHealth";
 
 export default function Layout() {
 	const health = useHealth();
-	const [activeTab, setActiveTab] = useState<SettingsTab>(SETTINGS_TAB.DEFAULT_SITE);
+	const [params, setParams] = useSearchParams();
+	const requested = params.get("tab") as SettingsTab;
+	const activeTab = Object.values(SETTINGS_TAB).includes(requested) ? requested : SETTINGS_TAB.DEFAULT_SITE;
+	const setActiveTab = (tab: SettingsTab) => setParams({ tab });
 
 	if (health.data?.demo) {
 		return (
@@ -40,7 +45,7 @@ export default function Layout() {
 		<div className="container mx-auto py-6">
 			<div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
 				<aside className="-mx-4 lg:w-1/5">
-					<nav className="flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1 pl-4">
+					<nav className="flex overflow-x-auto space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1 pl-4">
 						<h2 className="text-2xl font-bold tracking-tight mb-4 hidden lg:block">
 							<T id="settings" />
 						</h2>
@@ -68,12 +73,30 @@ export default function Layout() {
 							<IconGitBranch className="mr-2 h-4 w-4" />
 							<T id="settings.gitops" />
 						</button>
+						<button
+							type="button"
+							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === SETTINGS_TAB.TRAFFIC_FLOW ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
+							onClick={() => setActiveTab(SETTINGS_TAB.TRAFFIC_FLOW)}
+						>
+							<IconSettings className="mr-2 h-4 w-4" />
+							<T id="settings.traffic-flow.title" />
+						</button>
+						<button
+							type="button"
+							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === SETTINGS_TAB.DATABASE ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
+							onClick={() => setActiveTab(SETTINGS_TAB.DATABASE)}
+						>
+							<IconSettings className="mr-2 h-4 w-4" />
+							<T id="database.settings-title" />
+						</button>
 					</nav>
 				</aside>
 				<div className="flex-1 lg:max-w-4xl">
 					{activeTab === SETTINGS_TAB.DEFAULT_SITE && <DefaultSite />}
 					{activeTab === SETTINGS_TAB.AI && <AiConfigPage />}
 					{activeTab === SETTINGS_TAB.GITOPS && <GitOps />}
+					{activeTab === SETTINGS_TAB.TRAFFIC_FLOW && <TrafficFlowSettings />}
+					{activeTab === SETTINGS_TAB.DATABASE && <DatabaseSettings />}
 				</div>
 			</div>
 		</div>

@@ -6,7 +6,7 @@ vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: () => "
 
 import nginx from "../../internal/nginx.js";
 
-const backendSource = fs.readFileSync(new URL("../../index.js", import.meta.url), "utf8");
+const backendSource = fs.readFileSync(new URL("../../runtime.js", import.meta.url), "utf8");
 const listener = backendSource.match(/app\.listen\("([^"]+)"/)?.[1];
 const render = async (overrides = {}) => {
 	await nginx.generateConfig("proxy_host", {

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import errs from "../lib/error.js";
+import { FLOW_SETTING_ID, flowRuntime } from "../lib/traffic-flow-settings.js";
 import settingModel from "../models/setting.js";
 import internalAuditLog from "./audit-log.js";
 import internalNginx from "./nginx.js";
@@ -16,6 +17,10 @@ const internalSetting = {
 	update: async (access, data) => {
 		await access.can("settings:update", data.id);
 		const performUpdate = async () => {
+			if (data.id === FLOW_SETTING_ID) {
+				const { default: flowSettings } = await import("./traffic-flow-settings.js");
+				return flowSettings.update(data);
+			}
 			// Read inside the Nginx lock so rollback cannot restore a stale setting.
 			const row = await internalSetting.get(access, { id: data.id });
 			if (row.id !== data.id) {
@@ -98,7 +103,7 @@ const internalSetting = {
 		await access.can("settings:get", data.id);
 		const row = await settingModel.query().where("id", data.id).first();
 		if (row) {
-			return row;
+			return row.id === FLOW_SETTING_ID ? { ...row, runtime: flowRuntime() } : row;
 		}
 		throw new errs.ItemNotFoundError(data.id);
 	},
@@ -123,7 +128,8 @@ const internalSetting = {
 	 */
 	getAll: async (access) => {
 		await access.can("settings:list");
-		return settingModel.query().orderBy("description", "ASC");
+		const rows = await settingModel.query().orderBy("description", "ASC");
+		return rows.map((row) => (row.id === FLOW_SETTING_ID ? { ...row, runtime: flowRuntime() } : row));
 	},
 };
 

@@ -1,0 +1,66 @@
+{
+	"operationId": "migrateDatabaseProvider",
+	"summary": "Migrate to another database provider",
+	"description": "Administrator only. Both confirm and confirmExclusive must be true: all other instances/external writers must be stopped and the target must be empty and dedicated. Restarts the backend in maintenance, backs up and verifies copied data before activation. Supports SQLite to/from MySQL/MariaDB or PostgreSQL; direct server-to-server migration is rejected. Switching back is a new migration, never reopening an archival SQLite file.",
+	"tags": [
+		"database"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		}
+	],
+	"responses": {
+		"202": {
+			"description": "Successful response",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/database-operation.json"
+					}
+				}
+			}
+		},
+		"400": {
+			"description": "Invalid request, incompatible data, or unusable target; no credentials are returned"
+		},
+		"403": {
+			"description": "Required permission, operation capability, or CSRF validation failed"
+		},
+		"409": {
+			"description": "An operation is already active or cannot be acknowledged in this phase"
+		},
+		"503": {
+			"description": "Database setup or maintenance prevents this action"
+		}
+	},
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": [
+						"target",
+						"confirm",
+						"confirmExclusive"
+					],
+					"properties": {
+						"target": {
+							"$ref": "../../../components/database-input.json"
+						},
+						"confirm": {
+							"const": true
+						},
+						"confirmExclusive": {
+							"const": true
+						}
+					}
+				}
+			}
+		}
+	}
+}

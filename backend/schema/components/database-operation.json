@@ -1,0 +1,48 @@
+{
+	"type": "object",
+	"required": [
+		"id",
+		"state",
+		"phase"
+	],
+	"properties": {
+		"id": {
+			"type": "string",
+			"format": "uuid"
+		},
+		"state": {
+			"enum": [
+				"requested",
+				"running",
+				"completed",
+				"failed",
+				"cancelled"
+			]
+		},
+		"phase": {
+			"type": "string"
+		},
+		"progress": {
+			"type": "object"
+		},
+		"error": {
+			"type": [
+				"string",
+				"null"
+			]
+		},
+		"operationToken": {
+			"type": "string",
+			"description": "Returned only when requesting an operation. Treat as a bearer secret; never put in URLs or logs."
+		},
+		"canCancel": {
+			"type": "boolean",
+			"description": "True only when failure can be acknowledged before target activation."
+		},
+		"errorCode": {
+			"type": "string",
+			"pattern": "^DB_[A-Z_]+$",
+			"description": "Controlled compatibility error code; never a raw SQL-driver payload."
+		}
+	}
+}

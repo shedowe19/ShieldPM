@@ -15,8 +15,14 @@ import { Unhealthy } from "src/components/Unhealthy";
 import { useAuthState } from "src/context";
 import { useHealth } from "src/hooks/useHealth";
 import { T } from "src/locale";
+import { useDatabaseOperation } from "src/modules/DatabaseOperationStore";
 import { ADMIN, PROXY_HOSTS, VIEW } from "src/modules/Permissions";
 
+const DatabaseSetup = lazy(() => import("src/pages/Setup/Database"));
+const DatabaseOperationView = lazy(() => import("src/components/Database/DatabaseOperationView"));
+const DatabaseMaintenance = lazy(() =>
+	import("src/components/Database/DatabaseOperationView").then((module) => ({ default: module.DatabaseMaintenance })),
+);
 const Setup = lazy(() => import("src/pages/Setup"));
 const Login = lazy(() => import("src/pages/Login"));
 const Dashboard = lazy(() => import("src/pages/Dashboard"));
@@ -236,6 +242,22 @@ function Content() {
 function Router() {
 	const health = useHealth();
 	const { authenticated, loading } = useAuthState();
+	const databaseOperation = useDatabaseOperation();
+	if (databaseOperation || health.data?.databaseMaintenance || health.data?.databaseSetupRequired) {
+		return (
+			<RouteErrorBoundary>
+				<Suspense fallback={<LoadingPage />}>
+					{databaseOperation ? (
+						<DatabaseOperationView />
+					) : health.data?.databaseMaintenance ? (
+						<DatabaseMaintenance />
+					) : (
+						<DatabaseSetup />
+					)}
+				</Suspense>
+			</RouteErrorBoundary>
+		);
+	}
 
 	if (health.isLoading) {
 		return <LoadingPage />;

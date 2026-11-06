@@ -6,6 +6,8 @@
 		"status"
 	],
 	"properties": {
+		"databaseSetupRequired": { "type": "boolean" },
+		"databaseMaintenance": { "type": "boolean" },
 		"status": {
 			"type": "string",
 			"description": "Healthy",

@@ -9,6 +9,7 @@ import { analytics as logger } from "../logger.js";
 import AnalyticCount from "../models/analytic_count.js";
 import AnalyticsLogs from "../models/analytics_logs.js";
 import ProxyHost from "../models/proxy_host.js";
+import trafficFlow from "./traffic-flow.js";
 
 const LOG_FILE = "/data/nginx/json_access.log";
 const FLUSH_INTERVAL_MS = 10 * 1000; // 10 seconds flush
@@ -57,6 +58,7 @@ export class AnalyticsService {
 	}
 
 	async init() {
+		trafficFlow.start();
 		if (this.isInitialized) {
 			return;
 		}
@@ -208,6 +210,7 @@ export class AnalyticsService {
 	}
 
 	async stop() {
+		trafficFlow.stop();
 		clearInterval(this.domainRefreshTimer);
 		this.domainRefreshTimer = null;
 		this.unsubscribeDomains?.();

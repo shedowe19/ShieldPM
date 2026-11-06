@@ -3,6 +3,82 @@
 Ergebnisse für Menschen, neueste zuerst. Die Arbeit selbst steht im [Log](./log.md).
 Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
+## 2026-11-06 - Stabile Messgruppen im Live-Datenfluss
+
+- Der Aufklapper „Messgruppen nach Byte-Abrechnung“ bleibt an die Client-Gruppe
+  gebunden und verschwindet nicht mehr beim nächsten Poll.
+- Fehlt eine aktuelle Aufteilung, bleiben die zuletzt gemessenen Komponenten bis
+  zu 60 Sekunden als „zuletzt gemessen“ sichtbar; danach erscheint ein
+  Platzhalter statt eines leeren Bereichs.
+
+## 2026-11-06 — Datenbankwahl und kontrollierte Migration
+
+- Erstwahl der Datenbank vor der Benutzeranlage; spätere Auswahl und Verbindungstest
+  im bestehenden Einstellungsmenü, private Verbindungsdaten außerhalb generischer Settings.
+- SQLite ↔ MySQL/MariaDB sowie SQLite ↔ PostgreSQL mit kontrolliertem Prozessneustart,
+  Quellsperre, privatem Export und unabhängiger Inhaltsprüfung vor Aktivierung.
+- Neue SQLite-Zieldatei beim Rückwechsel; aktuelle Schreibvorgänge werden übertragen,
+  alte Quellen bleiben Archiv. Explizite Fehlerbestätigung vor Aktivierung und
+  gesperrte Verifikation bei unklarem Aktivierungsstand.
+- Zusammengesetzte Schlüssel, Claim-Lock-Seeds, Login-Throttles und Sequenzen
+  geprüft; Wartungsbefehle und Instanz-Restore folgen der aktiven Auswahl.
+- Reale Provider- und Neustartmatrix dauerhaft als isolierter CI-Job ergänzt.
+
+## 2026-11-06 — Traffic-Flow im Einstellungsmenü
+
+- Normaler Flow und Live-Wunsch sind ohne ENV standardmäßig aktiv; bestehende
+  explizite ENV-Präferenzen werden einmal übernommen, danach gelten gespeicherte Werte.
+- Admin-Auswahl für anonymisierte Netze, einzelne IPs oder ausgeblendete Adressen;
+  Präfix bleibt Datenschutzstandard. Historische Analytics werden dadurch nicht verändert.
+- Sichere native Fähigkeitserkennung und validierte Host-Neukonfiguration mit Rückweg.
+
+## 2026-11-05 — Verständlicher Traffic-Flow und Bare-Metal-Diagnose
+
+- Kompakter Internet-Knoten, lesbare Hosts und eindeutige Zielknoten statt
+  doppelter konfigurierter und beobachteter numerischer Endpunkte.
+- Anonymisierte Netze werden erklärt; einzelne Client-IP-Adressen lassen sich
+  mit bewusster Datenschutzeinstellung flüchtig anzeigen.
+- Sekündlicher Messstart auch ohne erste native Stichprobe; kurze native
+  Messintervalle bleiben mit exaktem Fenster nutzbar. Abschlusslogs erzeugen
+  weiterhin keine erfundenen Live-Raten.
+- Fehlende Raten erhalten konkrete Ursachen und einen Bare-Metal-Prüfpfad.
+
+## 2026-11-05 — Qualifizierte HTTP/3-Live-Raten
+
+- Echte QUIC-ACK-/Streamzähler mit Richtungsqualität, unbekannter unvollständiger
+  Finalabdeckung und getrennten expandierbaren Komponenten bei gemischter Semantik.
+- Verlust-/ACK-/Reset-/Churn-Suite und unabhängige App-Prüfung realer UDP-Daten bestanden.
+
+## 2026-11-05 — HTTP/2 und WebSocket-Raten
+
+- Validierte native Stream-/Upgrade-Zähler werden akzeptiert; HTTP/3 bleibt unbekannt.
+- Opt-in-Direktive in Standardhost-Server verschoben und echtes Templaterendering geprüft.
+
+## 2026-11-05 — Native HTTP/1-Live-Raten
+
+- Native kumulative Zähler werden während laufender Transfers ausgewertet;
+  Berechtigungen, Präfixmaskierung, Stale-/Reset- und unbekannte Gruppen bleiben explizit.
+- Gemeinsame logarithmische Skala, EMA und exakte Richtungs-/Zeitfenster-Tooltips.
+- Echter Nginx→Collector-Test belegt aktive Upload-/Downloadraten; HTTPS, Retries,
+  Keepalive und Reloads zusätzlich nativ geprüft. Andere Protokolle bleiben T-028.
+
+## 2026-11-05 — Live-Messquelle weiter eingegrenzt
+
+- Reproduzierbarer Test zeigt den Vorsprung von Lua-Bodyfilter-Bytes vor dem
+  gedrosselten Client und die fehlende Requestvariablen-Sicht in Lua-Timern.
+- Nativen Instrumentationsvertrag für echte Kantenraten präzisiert; T-028
+  bleibt offen, die bestehende Vorschau meldet weiterhin unbekannte Raten.
+
+## 2026-11-05 — Experimentelle Traffic-Flow-Vorschau
+
+- Vorhandene Analytics-Seite um eine opt-in Flow-Ansicht ergänzt: maskierte
+  Clientgruppen, schematisches Internet, einzelne Hosts und getrennte
+  konfigurierte/beobachtete Upstreams; Pause, Suche, Liste und Fehlerzustände.
+- Kurzlebiges UDP-Abschlusssample mit aktuellen Hostberechtigungen; keine neuen
+  Datenbankwrites und keine erfundenen Kantenraten. Echte Live-Raten bleiben T-028.
+- [Messgrenzen](./decisions/2026-11-05-traffic-flow-messgrenzen.md) und Rückweg
+  dokumentiert. Feature-Branch, kein Deployment.
+
 ## 2026-11-05
 
 - T-019: 350 Warnungen triagiert, 16 sicherheits- und fehlerrelevante Punkte

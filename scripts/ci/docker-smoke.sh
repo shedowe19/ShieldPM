@@ -257,6 +257,9 @@ error_log ${directory}/error.log notice;
 events { worker_connections 64; }
 http {
     access_log off;
+    # Proxy templates reference this shared format when Traffic Flow is enabled.
+    # This routing fixture does not inspect analytics payloads.
+    log_format json_analytics escape=json '{}';
     ${["client_body", "proxy", "fastcgi", "uwsgi", "scgi"].map((name) => `${name}_temp_path ${directory}/${name};`).join("\n")}
     server {
         listen ${tcpInternal ? `127.0.0.1:${internalPort}` : `unix:${socket}`};
@@ -388,6 +391,7 @@ GRPC_SMOKE
 sed 's|../../backend/|/app/|g' "$(dirname "$0")/ip-firewall-smoke.mjs" > "$fixture/ip-firewall-smoke.mjs"
 cp "$(dirname "$0")/nginx-smoke-modules.mjs" "$fixture/nginx-smoke-modules.mjs"
 cp "$(dirname "$0")/nginx-smoke-endpoints.mjs" "$fixture/nginx-smoke-endpoints.mjs"
+cp "$(dirname "$0")/database-setup-smoke.mjs" "$fixture/database-setup-smoke.mjs"
 cp "$(dirname "$0")/mmdb-oracle.py" "$fixture/mmdb-oracle.py"
 cp "$(dirname "$0")/fixtures/GeoIP2-Country-Test.mmdb" "$fixture/GeoIP2-Country-Test.mmdb"
 cp "$(dirname "$0")/fixtures/GeoLite2-ASN-Test.mmdb" "$fixture/GeoLite2-ASN-Test.mmdb"
@@ -440,6 +444,7 @@ for service_uid in 0 1000; do
     # shellcheck disable=SC2016
     docker_cmd exec --user "$service_uid:$service_uid" "$container" sh -ceu '
         test "$(id -u)" = "$1"
+        node /data/database-setup-smoke.mjs
         test -S /run/shieldpm/shieldpm.sock
         test "$(stat -c %u /run/shieldpm/shieldpm.sock)" = "$1"
         test -s /data/nginx/default.conf

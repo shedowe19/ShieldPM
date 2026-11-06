@@ -3,9 +3,9 @@
 // based on: https://github.com/jlesage/docker-nginx-proxy-manager/blob/796734a3f9a87e0b1561b47fd418f82216359634/rootfs/opt/nginx-proxy-manager/bin/reset-password
 
 import fs from "node:fs";
-import path from "node:path";
 import bcrypt from "bcryptjs";
 import Database from "better-sqlite3";
+import { activeSqliteFilename } from "./lib/sqlite-maintenance.js";
 
 function usage() {
 	process.stdout.write(`usage: node ${process.argv[1]} USER_EMAIL PASSWORD
@@ -56,11 +56,7 @@ if (import.meta.main) {
 	const [email, password] = process.argv.slice(2);
 	if (!email || !password) usage();
 	try {
-		await resetPassword(
-			path.join(process.env.DATA_PATH || "/data", "shieldpm", "database.sqlite"),
-			email,
-			password,
-		);
+		await resetPassword(activeSqliteFilename(), email, password);
 		process.stdout.write(`Password for user ${email} has been reset; refresh sessions revoked.\n`);
 	} catch (error) {
 		console.error(error.code ? `Password reset failed (${error.code}).` : error.message);

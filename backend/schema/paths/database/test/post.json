@@ -1,0 +1,43 @@
+{
+	"operationId": "testDatabaseTarget",
+	"summary": "Test an empty database target",
+	"description": "Administrator permission is required after setup. The first-setup gateway permits this with its CSRF cookie/header pair. Tests connectivity and requires an empty dedicated target; does not activate it.",
+	"tags": [
+		"database"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"admin"
+			]
+		},
+		{}
+	],
+	"responses": {
+		"200": {
+			"description": "Successful response"
+		},
+		"400": {
+			"description": "Invalid request, incompatible data, or unusable target; no credentials are returned"
+		},
+		"403": {
+			"description": "Required permission, operation capability, or CSRF validation failed"
+		},
+		"409": {
+			"description": "An operation is already active or cannot be acknowledged in this phase"
+		},
+		"503": {
+			"description": "Database setup or maintenance prevents this action"
+		}
+	},
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"$ref": "../../../components/database-input.json"
+				}
+			}
+		}
+	}
+}
