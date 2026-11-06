@@ -7,8 +7,8 @@ Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Felder
 - Command: Nutzerauftrag: PR 162 auf dem Produktivsystem prüfen; der Aufklapper „Messgruppen nach Byte-Abrechnung“ verschwindet im Live-Datenfluss.
 - Type: fix
 - Areas affected: Live-Datenfluss-Oberfläche, Analytics-Lokalisierung, Analytics-Dokumentation
-- Files changed: `frontend/src/pages/Analytics/TrafficFlowRate.tsx`, `frontend/src/pages/Analytics/TrafficFlowRate.test.tsx`, `frontend/src/locale/lang/de.json`, `frontend/src/locale/lang/en.json`, `docs/wiki/Analytics.md`
-- Wiki pages updated: Entscheidung „Traffic-Flow: Messgrenzen explizit halten“, Log und Changelog
+- Files changed: `frontend/src/pages/Analytics/TrafficFlowRate.tsx`, `frontend/src/pages/Analytics/TrafficFlowRate.test.tsx`, `frontend/src/locale/lang/de.json`, `frontend/src/locale/lang/en.json`, `docs/wiki/Analytics.md`, `llm-wiki/wiki/tasks.md`
+- Wiki pages updated: Entscheidung „Traffic-Flow: Messgrenzen explizit halten“, Log, Changelog und Aufgaben
 - New wiki pages: keine
 - New TODOs: T-028 (Anubis-Hosts im Live-Datenfluss kennzeichnen)
 - New bugs: Der Aufklapper wurde bei jedem Poll neu bewertet und verschwand, sobald die aktuelle Rate vollständig war; eine geöffnete Aufteilung und die zuletzt gemessenen Komponenten gingen verloren.
