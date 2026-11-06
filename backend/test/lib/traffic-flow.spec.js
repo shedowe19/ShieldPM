@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { clientPrefix, configuredTargets, FLOW_LIMIT, FlowBuffer, upstreamPeers } from "../../lib/traffic-flow.js";
 
 const now = 1_800_000_000_000;
@@ -94,5 +94,33 @@ describe("traffic flow completion sample", () => {
 		});
 		expect(targets.map((target) => target.kind)).toEqual(["configured", "configured", "unknown"]);
 		expect(JSON.stringify(targets)).not.toContain("secret");
+	});
+});
+
+afterEach(() => vi.unstubAllEnvs());
+it("retains distinct validated addresses only with explicit privacy opt-in", () => {
+	vi.stubEnv("TRAFFIC_FLOW_CLIENT_MODE", "address");
+	const buffer = new FlowBuffer();
+	buffer.ingest(row(), now);
+	buffer.ingest(row({ client: "192.0.2.88" }), now);
+	expect(
+		buffer
+			.snapshot([host], now)[0]
+			.clients.map((client) => client.label)
+			.sort(),
+	).toEqual(["192.0.2.88", "192.0.2.9"]);
+	expect(clientPrefix("::ffff:192.0.2.9")).toBe("192.0.2.9");
+	expect(clientPrefix("invalid")).toBeNull();
+});
+it("merges numeric configured/observed endpoints preserving both origins without DNS guesses", () => {
+	const buffer = new FlowBuffer();
+	buffer.ingest(row({ upstream: "[2001:db8::1]:8000" }), now);
+	const result = buffer.snapshot([{ ...host, forward_host: "2001:0db8:0:0:0:0:0:1", forward_port: 8000 }], now)[0];
+	expect(result.targets).toHaveLength(1);
+	expect(result.targets[0]).toMatchObject({
+		kind: "observed",
+		origins: ["configured", "observed"],
+		label: "[2001:db8::1]:8000",
+		requests: 1,
 	});
 });

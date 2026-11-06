@@ -3,6 +3,17 @@
 Ergebnisse für Menschen, neueste zuerst. Die Arbeit selbst steht im [Log](./log.md).
 Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
+## 2026-11-05 — Verständlicher Traffic-Flow und Bare-Metal-Diagnose
+
+- Kompakter Internet-Knoten, lesbare Hosts und eindeutige Zielknoten statt
+  doppelter konfigurierter und beobachteter numerischer Endpunkte.
+- Anonymisierte Netze werden erklärt; einzelne Client-IP-Adressen lassen sich
+  mit bewusster Datenschutzeinstellung flüchtig anzeigen.
+- Sekündlicher Messstart auch ohne erste native Stichprobe; kurze native
+  Messintervalle bleiben mit exaktem Fenster nutzbar. Abschlusslogs erzeugen
+  weiterhin keine erfundenen Live-Raten.
+- Fehlende Raten erhalten konkrete Ursachen und einen Bare-Metal-Prüfpfad.
+
 ## 2026-11-05 — Qualifizierte HTTP/3-Live-Raten
 
 - Echte QUIC-ACK-/Streamzähler mit Richtungsqualität, unbekannter unvollständiger

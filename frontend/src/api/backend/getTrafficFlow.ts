@@ -23,7 +23,7 @@ export interface FlowClient {
 	rateIncomplete?: boolean;
 	mixedSemantics?: boolean;
 	unknownReason?: string;
-	rateComponents?: (FlowRate & { id: string })[];
+	rateComponents?: (FlowRate & { id: string; activeRequests?: number })[];
 	activeRequests?: number;
 }
 
@@ -31,6 +31,7 @@ export interface FlowTarget {
 	id: string;
 	label: string;
 	kind: "configured" | "observed" | "unknown";
+	origins?: ("configured" | "observed")[];
 	requests: number | null;
 	lastSeen: string | null;
 	currentBytesPerSecond: number | null;
@@ -38,7 +39,7 @@ export interface FlowTarget {
 	rateIncomplete?: boolean;
 	mixedSemantics?: boolean;
 	unknownReason?: string;
-	rateComponents?: (FlowRate & { id: string })[];
+	rateComponents?: (FlowRate & { id: string; activeRequests?: number })[];
 	activeRequests?: number;
 }
 
@@ -54,6 +55,13 @@ export interface FlowHost {
 }
 
 export interface TrafficFlowSnapshot {
+	clientMode?: "prefix" | "address";
+	diagnostics?: {
+		liveEnabled: boolean;
+		receiverState: string;
+		nativeLastObservedAt: string | null;
+		reason: string | null;
+	};
 	enabled: boolean;
 	generatedAt: string;
 	configurationRevision: string;

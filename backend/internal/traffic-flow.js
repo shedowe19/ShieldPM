@@ -1,6 +1,14 @@
 import { createHash } from "node:crypto";
 import dgram from "node:dgram";
-import { FLOW_PORT, FLOW_WINDOW_MS, FlowBuffer, flowEnabled } from "../lib/traffic-flow.js";
+import {
+	clientMode,
+	configuredTargets,
+	FLOW_PORT,
+	FLOW_WINDOW_MS,
+	FlowBuffer,
+	flowEnabled,
+	mergeTargets,
+} from "../lib/traffic-flow.js";
 import { LiveFlowBuffer, liveFlowEnabled } from "../lib/traffic-flow-live.js";
 import ProxyHost from "../models/proxy_host.js";
 
@@ -49,6 +57,9 @@ const service = {
 			} catch {
 				// Malformed telemetry is discarded without affecting proxy requests.
 			}
+		});
+		socket.on("listening", () => {
+			state = "listening";
 		});
 		socket.bind(FLOW_PORT, "127.0.0.1");
 		socket.unref();
@@ -99,7 +110,35 @@ const service = {
 		const rows = enabled ? await query : [];
 		const now = Date.now();
 		const hosts = buffer.snapshot(rows.slice(0, 100), now);
-		const native = liveFlowEnabled() && liveBuffer.apply(hosts, now);
+		const liveEnabled = enabled && liveFlowEnabled();
+		const native = Boolean(liveEnabled && liveBuffer.apply(hosts, now));
+		const nativeLast =
+			hosts
+				.map((host) => host.native_last_observed_at)
+				.filter(Boolean)
+				.sort()
+				.at(-1) || null;
+		const reason = !enabled
+			? "disabled"
+			: state === "error"
+				? "collector_error"
+				: !liveEnabled
+					? "native_disabled"
+					: !nativeLast
+						? "native_not_received"
+						: native
+							? null
+							: hosts.find(
+									(host) =>
+										host.native_status &&
+										!["native_not_received", "stale"].includes(host.native_status),
+								)?.native_status || "stale";
+		for (const host of hosts) {
+			host.targets = mergeTargets(host.targets);
+			for (const entry of [...host.clients, ...host.targets.filter((target) => target.kind === "observed")]) {
+				if (!liveEnabled || state === "error") entry.unknown_reason = reason;
+			}
+		}
 		const lastSeen =
 			hosts
 				.flatMap((host) => host.clients.map((client) => client.last_seen))
@@ -107,6 +146,13 @@ const service = {
 				.at(-1) || null;
 		return {
 			enabled,
+			client_mode: clientMode(),
+			diagnostics: {
+				live_enabled: liveEnabled,
+				receiver_state: enabled ? state : "disabled",
+				native_last_observed_at: nativeLast,
+				reason,
+			},
 			generated_at: new Date(now).toISOString(),
 			window: { start: new Date(now - FLOW_WINDOW_MS).toISOString(), end: new Date(now).toISOString() },
 			capabilities: {
@@ -118,11 +164,11 @@ const service = {
 			configuration_revision: createHash("sha256")
 				.update(
 					JSON.stringify(
-						hosts.map(({ id, domains, enabled: active, targets }) => ({
-							id,
-							domains,
-							active,
-							targets: targets.filter((target) => target.kind !== "observed"),
+						rows.slice(0, 100).map((host) => ({
+							id: host.id,
+							domains: host.domain_names,
+							active: Boolean(host.enabled),
+							targets: configuredTargets(host),
 						})),
 					),
 				)
@@ -136,7 +182,7 @@ const service = {
 				state: enabled ? (state === "error" ? "error" : lastSeen ? "receiving" : "waiting") : "disabled",
 				last_observed_at: lastSeen,
 			},
-			poll_interval_ms: native ? 1000 : 5000,
+			poll_interval_ms: liveEnabled && state !== "error" ? 1000 : 5000,
 		};
 	},
 };

@@ -2,6 +2,21 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-05] fix | Traffic-Flow Bootstrap, Identität und Messdiagnostik
+
+- Command: Bare-Metal-Rückmeldung zu unbekannten Raten und doppelten Zielen bearbeiten.
+- Type: fix
+- Areas affected: Analytics-Collector, Live-Raten, Client-Privatsphäre und Flussoberfläche
+- Files changed: Backend-Flow-Pipeline, Frontend-Flow-Darstellung, deutsche/englische Texte, Regressionstests und Analytics-Dokumentation
+- Wiki pages updated: Analytics-Referenz, aktueller Projektzustand, Changelog und Log
+- New wiki pages: keine
+- New TODOs: keine
+- New bugs: Fünf-Sekunden-Bootstrap übersah kurze native Beobachtungen; Mindestintervall verwarf kurze Transfers.
+- New decisions: Einzeladressen nur mit explizitem Opt-in; numerische Ziele ohne DNS-Vermutungen zusammenführen.
+- Open questions: Tatsächliche Betreiberinstallation muss native Modul-/Konfigurationskette bestätigen.
+- Next steps: Draft-PR aktualisieren; tatsächliche Bare-Metal-Konfiguration anhand der Diagnose prüfen.
+- Verification: Abschließende Gesamtläufe: Backend 2.681 bestanden/56 übersprungen, Frontend 1.003 bestanden; TypeScript und Produktionsbuild bestanden. Zunächst zwei PostgreSQL-Timeouts unter paralleler Last, anschließend beide isoliert und im Gesamtlauf ohne Änderung grün. 35 gezielte Backend-Tests, 18 UI-Tests und zwei Chromium-Fälle bestanden; tatsächlicher Nginx→Collector-Transfer mit exakten Intervallraten bestanden. Wiki, Biome, Staged-Scanner und Diff-Prüfung bestanden.
+
 ## [2026-11-05] validation | Finales Produktionsimage und vollständige App-Prüfung
 
 - Command: Finale Produktionsmessung und vollständige Prüfungen dokumentieren.

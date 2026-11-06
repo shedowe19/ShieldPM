@@ -82,7 +82,8 @@ Hostbezogene Abfragen prüfen zuerst die aktuelle serverseitige `analytics:list`
 hostbezogenen `spm_flow_<id>`-Format abgeschlossene HTTP-Anfragen an Loopback-UDP
 15149. Die gemeinsame Zeile enthält Host-ID, Abschlusszeit, Clientadresse,
 Upstream-Versuche, Cachezustand und Antwortbody-Bytes. Der Collector speichert
-nur /24- beziehungsweise /48-Präfixe; keine URLs, Header oder Inhalte. Es gibt
+standardmäßig /24- beziehungsweise /48-Präfixe; mit explizitem
+`TRAFFIC_FLOW_CLIENT_MODE=address` validierte Einzeladressen. Keine URLs, Header oder Inhalte. Es gibt
 keine zusätzliche Datenbankablage. Anubis und Streams sind nicht abgedeckt.
 
 Die API `/api/nginx/analytics/flow` prüft `analytics:list` und aktuelle
@@ -98,17 +99,25 @@ anhand monotoner Zähler und tatsächlicher Zeitdifferenzen. Die Semantik sind
 HTTP-Transportbytes einschließlich Headern, bei TLS akzeptierte Klartextbytes;
 keine Wire-Bytes, TCP-Bestätigungen oder Zustellgarantien. Unterstützt sind HTTP/1-Proxyverkehr, HTTP/2-Streams und WebSocket-Upgrades; HTTP/3 wird mit expliziter Richtungsqualität unterstützt; andere Upstream-Protokolle bleiben unbekannt. Resets, fehlende Baselines und Lücken über 3,5 Sekunden ebenfalls.
 
-Die Oberfläche pollt bei belegter nativer Quelle sekündlich, sonst alle fünf
-Sekunden. Pause/unsichtbarer Tab/Offline stoppen Polling. Die feste logarithmische
+Die Oberfläche pollt bei aktiviertem nativen Collector bereits während des
+Bootstrap sekündlich, sonst alle fünf Sekunden. Pause/unsichtbarer Tab/Offline stoppen Polling. Die feste logarithmische
 Linienstärkenskala verwendet EMA 0,35; Tooltips behalten exakte ungerundete
 Richtungsraten und Zeitfenster. Gemischte Gruppen mit unbekannten Raten werden
 nicht als vollständige Summe dargestellt. Hostpositionen bleiben ID-stabil.
 
 Grenzen: 60 Sekunden Retention, je 1.000 Abschluss-/Live-Ereignisse, 100 Hosts,
 32 Clientgruppen/32 beobachtete Peers je Host, 8 KiB Datagramme, 2.000 Datagramme/s;
-nativ 256 Requests/Worker und 16 Upstream-Versuche. Nur maskierte Präfixe werden
-im App-Puffer gehalten. Aktivierung und Rückweg siehe
+nativ 256 Requests/Worker und 16 Upstream-Versuche. Standardmäßig werden maskierte Präfixe im App-Puffer gehalten; der explizite
+Adressmodus behält dieselben Berechtigungen und flüchtige Retention. Aktivierung und Rückweg siehe
 [Analytics-Dokumentation](../../../../docs/wiki/Analytics.md#live-traffic-flow-experimental).
+
+Numerisch identische konfigurierte/beobachtete IP-Port-Ziele werden mit stabiler
+Endpoint-ID und beiden `origins` vereinigt; DNS wird nicht geraten.
+`diagnostics` unterscheidet Backend-Flag, Receiverzustand und autorisierte native
+Zeitstempel. Kanten erklären fehlende Baselines, Abschluss, Staleness, nicht
+unterstützte Quellen und unvollständige Gruppen. Positive native Intervalle unter
+250 ms bleiben messbar; Abschlüsse sind keine aktiven Verbindungen. Bekannte
+Teilkomponenten bleiben sichtbar, ohne eine vollständige Summe zu behaupten.
 
 Die ursprünglichen Access-Log-/Lua-Prüfungen bleiben Belege ungeeigneter Quellen.
 `scripts/benchmarks/traffic-flow-native-measurement.mjs` prüft dagegen mit echtem

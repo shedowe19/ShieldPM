@@ -58,7 +58,8 @@ matching native-module build from **shieldpm-nginx**. Restart and save hosts to
 regenerate configuration. The static `shieldpm_traffic_flow` directive must be
 available; Nginx validation rejects configurations on older binaries. Without
 fresh supported native samples, the view explicitly falls back to completed
-requests and unknown rates, with five-second refreshes.
+requests and reasoned unknown rates. Native opt-in keeps one-second polling even
+while waiting for the first sample; completion-only mode refreshes every five seconds.
 
 The native module samples cumulative counters during active transfers, initially,
 approximately every second, and at completion. Rates use actual monotonic elapsed
@@ -114,12 +115,52 @@ errors and stale snapshots are shown explicitly; an idle collector cannot prove
 that there was no traffic. Other local processes can send to the UDP port, so this
 view is operational telemetry, not security evidence.
 
-Only IPv4 /24 and IPv6 /48 prefixes are retained in the flow buffer. A prefix is
+By default, only IPv4 /24 and IPv6 /48 prefixes are retained in the flow buffer;
+the explicit address mode described below retains validated IPs instead. A prefix is
 not a person or device. The dedicated telemetry contains no URL, cookie, header,
 or body content and creates no new disk log or database writes. Existing Analytics
 logging and retention remain separate. Client addresses use Nginx `$remote_addr`;
 correct attribution behind another proxy depends on the existing trusted Real-IP
 configuration.
+
+### Client privacy and missing-rate diagnostics
+
+By default, client labels are anonymized networks (`/24` for IPv4, `/48` for
+IPv6), not individual devices or people. To distinguish actual validated IP
+addresses, explicitly set `TRAFFIC_FLOW_CLIENT_MODE=address` in the backend
+service environment and restart. Addresses remain ephemeral and subject to the
+same host permissions and retention limits. Remove the setting to restore prefix
+masking; restart clears existing observations.
+
+Configured and observed targets with the same canonical numeric IP and port are
+shown once with both origins. DNS names are never guessed to match observed IPs.
+A configured-only target has no measured rate; its existence is not traffic.
+
+Completed request counts prove only the completion-log path. They do not prove
+that native live instrumentation is installed or receiving samples. The API's
+`diagnostics` reports the backend live flag, receiver state, last native sample
+for authorized hosts only, and a reason such as native disabled, no native
+sample, unsupported, stale or collector error. A short completed native transfer
+can show its actual measured interval briefly, but is not an active connection.
+Incomplete groups retain measured components without presenting a partial total
+as complete.
+
+For a native/bare-metal installation, check the following in order:
+
+1. Configure both feature flags in the backend service environment. The installer
+   supports `/etc/default/shieldpm`; startup also reads `/data/.env`. Restart the
+   backend after changes. A shell variable alone does not change a running service.
+2. Confirm the installed Nginx binary was built with the traffic module using
+   `nginx -V 2>&1 | grep ngx_http_shieldpm_flow_module`. Install the matching build
+   if absent; completed access-log observations do not supply live counters.
+3. Save each relevant proxy host after activation to regenerate its config.
+   Check `nginx -t` succeeds. To inspect only telemetry directives, use
+   `nginx -T 2>/dev/null | grep 'shieldpm_traffic_flow '`. Avoid sharing full
+   configuration or environment dumps, which can contain credentials.
+4. Check the loopback UDP listener with `ss -lun 'sport = :15149'` and the API's
+   receiver state. Run a sustained transfer through an authorized host and watch
+   its scoped native timestamp advance. No timestamp means the native-to-collector
+   path is unconfirmed; a receiver error indicates a bind/socket problem.
 
 To roll back, unset `TRAFFIC_FLOW_ENABLED` (or set it to `false`), restart, and
 save the previously enabled Proxy Hosts to remove telemetry directives. Disable

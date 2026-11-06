@@ -50,13 +50,16 @@ Testlauf dieser Sitzung:
 - Die Wiki-Prüfung läuft in der CI (`lint-and-format.yml`, Schritt
   „Check internal LLM wiki“); Lauf `41894222573` war grün.
 
-## Traffic-Flow-Vorschau im Feature-Branch
+## Traffic-Flow im Feature-Branch
 
 Opt-in-Topologie und ein begrenztes Abschlusssample werden in der vorhandenen
 Analytics-Seite ergänzt. Native HTTP/1-/HTTP/2-/WebSocket-Zähler und qualifizierte HTTP/3-ACK-/Streamzähler liefern bei explizitem Opt-in echte sekündliche
 Intervallraten; nicht unterstützte Protokolle bleiben unbekannt. Details und Betriebsgrenzen stehen
 im [Analytics-Modul](./reference/module/analytics.md#experimenteller-traffic-flow).
-Die Änderung ist ein Draft-PR, nicht gemergt oder ausgerollt.
+Die Flussansicht erklärt anonymisierte Netze, bietet einen ausdrücklich
+konfigurierten Adressmodus und führt numerisch identische Ziele zusammen.
+Messdiagnosen unterscheiden deaktivierte, fehlende, veraltete und abgeschlossene
+Beobachtungen. Die Änderung ist ein Draft-PR, nicht gemergt oder ausgerollt.
 
 ## Was bewusst fehlt
 

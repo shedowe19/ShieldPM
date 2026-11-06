@@ -103,7 +103,7 @@ describe("flow service access and receiver", () => {
 		vi.advanceTimersByTime(4000);
 		expect(await service.get(access)).toMatchObject({
 			capabilities: { current_rates: false },
-			poll_interval_ms: 5000,
+			poll_interval_ms: 1000,
 		});
 	});
 
@@ -172,4 +172,51 @@ describe("flow service access and receiver", () => {
 		expect(result.collector.state).toBe("error");
 		expect(result.hosts[0].clients).toEqual([]);
 	});
+});
+
+it("polls native bootstrap every second without leaking hidden-host arrival timestamps", async () => {
+	vi.stubEnv("TRAFFIC_FLOW_LIVE_ENABLED", "true");
+	service.start();
+	const result = await service.get(access);
+	expect(result.poll_interval_ms).toBe(1000);
+	expect(result.diagnostics).toMatchObject({
+		live_enabled: true,
+		native_last_observed_at: null,
+		reason: "native_not_received",
+	});
+});
+it("distinguishes completion collection from disabled native instrumentation", async () => {
+	service.start();
+	send();
+	const result = await service.get(access);
+	expect(result.diagnostics.reason).toBe("native_disabled");
+	expect(result.hosts[0].clients[0].unknown_reason).toBe("native_disabled");
+	expect(result.hosts[0].targets[0].unknown_reason).toBe("not_measured");
+});
+
+it("reports fresh unsupported native observations without calling them stale", async () => {
+	vi.stubEnv("TRAFFIC_FLOW_LIVE_ENABLED", "true");
+	service.start();
+	socket.emit(
+		"message",
+		Buffer.from(
+			JSON.stringify({
+				schema: 1,
+				type: "live_sample",
+				host: 1,
+				client: "192.0.2.9",
+				generation: "worker",
+				request_id: "unsupported",
+				protocol: "unsupported",
+				supported: false,
+				time_ms: Date.now(),
+				monotonic_ms: 100,
+				client_sent: null,
+				client_received: null,
+				attempts: [],
+			}),
+		),
+		{ address: "127.0.0.1" },
+	);
+	expect((await service.get(access)).diagnostics.reason).toBe("unsupported");
 });

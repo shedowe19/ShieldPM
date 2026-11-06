@@ -5,6 +5,7 @@ import ipaddr from "ipaddr.js";
 export const FLOW_WINDOW_MS = 60_000;
 export const FLOW_LIMIT = 1000;
 export const FLOW_PORT = 15149;
+export const clientMode = () => (process.env.TRAFFIC_FLOW_CLIENT_MODE === "address" ? "address" : "prefix");
 export const flowEnabled = () => process.env.TRAFFIC_FLOW_ENABLED === "true";
 const key = (value) => createHash("sha256").update(value).digest("hex").slice(0, 20);
 
@@ -13,6 +14,7 @@ export function clientPrefix(value) {
 	if (typeof value !== "string" || value.length > 45 || !isIP(value)) return null;
 	let address = ipaddr.parse(value);
 	if (address instanceof ipaddr.IPv6 && address.isIPv4MappedAddress()) address = address.toIPv4Address();
+	if (clientMode() === "address") return address.toString();
 	const bytes = address.toByteArray();
 	const keep = bytes.length === 4 ? 3 : 6;
 	return `${ipaddr.fromByteArray(bytes.map((byte, index) => (index < keep ? byte : 0))).toString()}/${keep * 8}`;
@@ -27,7 +29,8 @@ export function upstreamPeers(value) {
 		.filter((peer) => {
 			const match = /^(?:\[([^\]]+)\]|([^:]+)):(\d{1,5})$/.exec(peer);
 			return match && isIP(match[1] || match[2]) && Number(match[3]) > 0 && Number(match[3]) <= 65535;
-		});
+		})
+		.map(canonicalEndpoint);
 }
 
 /** A bounded, ephemeral completion sample. No current throughput is inferred from it. */
@@ -78,6 +81,7 @@ export class FlowBuffer {
 					completed_bytes: 0,
 					last_seen: "",
 					current_bytes_per_second: null,
+					unknown_reason: "completed",
 				};
 				client.requests++;
 				client.completed_bytes = Math.min(Number.MAX_SAFE_INTEGER, client.completed_bytes + event.bytes);
@@ -92,6 +96,7 @@ export class FlowBuffer {
 						requests: 0,
 						last_seen: "",
 						current_bytes_per_second: null,
+						unknown_reason: "completed",
 					};
 					target.requests++;
 					target.last_seen = new Date(Math.max(Date.parse(target.last_seen) || 0, event.time)).toISOString();
@@ -102,7 +107,7 @@ export class FlowBuffer {
 				id: host.id,
 				domains: (host.domain_names || []).slice(0, 20).map((domain) => String(domain).slice(0, 253)),
 				enabled: Boolean(host.enabled),
-				targets: [...configuredTargets(host), ...Array.from(peers.values()).slice(0, 32)],
+				targets: mergeTargets([...configuredTargets(host), ...Array.from(peers.values()).slice(0, 32)]),
 				clients: Array.from(clients.values())
 					.sort((a, b) => a.id.localeCompare(b.id))
 					.slice(0, 32),
@@ -121,6 +126,8 @@ export function configuredTargets(host) {
 			id: `configured:${host.id}:${id}`,
 			label: `${address.includes(":") ? `[${address}]` : address}:${port}`,
 			kind: "configured",
+			origins: ["configured"],
+			unknown_reason: "not_measured",
 			requests: null,
 			last_seen: null,
 			current_bytes_per_second: null,
@@ -141,10 +148,44 @@ export function configuredTargets(host) {
 			id: `unknown:${host.id}`,
 			label: "Unknown route",
 			kind: "unknown",
+			origins: [],
+			unknown_reason: "route_unknown",
 			requests: null,
 			last_seen: null,
 			current_bytes_per_second: null,
 		});
 	}
 	return targets;
+}
+
+/** Canonical numeric endpoints only: no DNS guesses or scheme equivalence. */
+export function canonicalEndpoint(value) {
+	const match = /^(?:\[([^\]]+)\]|([^:]+)):(\d{1,5})$/.exec(value);
+	if (!match || !isIP(match[1] || match[2]) || +match[3] < 1 || +match[3] > 65535) return null;
+	let address = ipaddr.parse(match[1] || match[2]);
+	if (address instanceof ipaddr.IPv6 && address.isIPv4MappedAddress()) address = address.toIPv4Address();
+	const label = address.toString();
+	return `${address instanceof ipaddr.IPv6 ? `[${label}]` : label}:${+match[3]}`;
+}
+
+export function mergeTargets(targets) {
+	const result = new Map();
+	for (const target of targets) {
+		const endpoint = canonicalEndpoint(target.label);
+		const id = endpoint || target.id;
+		const previous = result.get(id);
+		const origins = [
+			...new Set([
+				...(previous?.origins || []),
+				...(target.origins || (target.kind === "unknown" ? [] : [target.kind])),
+			]),
+		].sort();
+		const observed = target.kind === "observed" ? target : previous?.kind === "observed" ? previous : target;
+		result.set(id, {
+			...observed,
+			origins,
+			...(endpoint ? { label: endpoint, id: `endpoint:${target.id.split(":")[1]}:${key(endpoint)}` } : {}),
+		});
+	}
+	return [...result.values()];
 }

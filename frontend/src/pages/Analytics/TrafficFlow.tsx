@@ -24,10 +24,26 @@ function TrafficFlowContent() {
 		.sort((a, b) => a.id - b.id);
 	return (
 		<div className="space-y-4">
-			<p className="text-sm text-muted-foreground">
-				{flowText(data?.capabilities.currentRates ? "live-semantics" : "limitation")}
+			<details className="text-xs text-muted-foreground">
+				<summary className="cursor-pointer">{flowText("measurement-details")}</summary>
+				<p className="mt-2">{flowText(data?.capabilities.currentRates ? "live-semantics" : "limitation")}</p>
+				<p className="mt-2">{flowText("legend")}</p>
+				{data?.capabilities.currentRates && <p className="mt-2">{flowText("rate-scale")}</p>}
+				{data && (
+					<p className="mt-2">{flowText("window", { start: data.window.start, end: data.window.end })}</p>
+				)}
+				{data?.collector.state === "receiving" && <p className="mt-2">{flowText("collector-receiving")}</p>}
+			</details>
+			<p className="text-xs text-muted-foreground">
+				{flowText(data?.clientMode === "address" ? "privacy-address" : "privacy")}
 			</p>
-			<p className="text-sm text-muted-foreground">{flowText("privacy")}</p>
+			{data?.diagnostics?.reason && (
+				<Alert>
+					<AlertDescription>
+						<strong>{flowText("diagnostics-title")}</strong> {flowText(`reason.${data.diagnostics.reason}`)}
+					</AlertDescription>
+				</Alert>
+			)}
 			<div className="flex flex-wrap items-center gap-2">
 				<Button variant="outline" size="sm" onClick={() => setPaused(!paused)}>
 					{flowText(paused ? "resume" : "pause")}
@@ -56,23 +72,26 @@ function TrafficFlowContent() {
 			{data && !error && !data.enabled && <p>{flowText("disabled")}</p>}
 			{data?.enabled && !error && (
 				<>
-					<p className="text-sm">{flowText(`collector-${data.collector.state}`)}</p>
-					<p className="text-xs text-muted-foreground">
-						{flowText("window", { start: data.window.start, end: data.window.end })}
-					</p>
+					{data.collector.state !== "receiving" && (
+						<p className="text-sm">{flowText(`collector-${data.collector.state}`)}</p>
+					)}
+
 					{(data.truncated || hosts.some((host) => host.truncated)) && (
 						<Alert>
 							<AlertDescription>{flowText("truncated")}</AlertDescription>
 						</Alert>
 					)}
-					<p className="text-sm">{flowText("legend")}</p>
-					{data.capabilities.currentRates && <FlowRateLegend />}
+					{data.capabilities.currentRates && <FlowRateLegend showDescription={false} />}
 					{hosts.length === 0 ? (
 						<p>{flowText("empty")}</p>
 					) : list ? (
-						<TrafficFlowList hosts={hosts} />
+						<TrafficFlowList hosts={hosts} clientMode={data.clientMode} />
 					) : (
-						<TrafficFlowRows hosts={hosts} snapshot={data} />
+						<TrafficFlowRows
+							hosts={hosts}
+							snapshot={data}
+							live={data.capabilities.currentRates && !paused && available && !stale}
+						/>
 					)}
 				</>
 			)}

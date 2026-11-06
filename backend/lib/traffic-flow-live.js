@@ -105,7 +105,7 @@ export class LiveFlowBuffer {
 
 	measure(previous, current, oldRate, upstream) {
 		const elapsed = current.monotonic - previous.monotonic;
-		if (elapsed < 250 || elapsed > LIVE_FLOW_STALE_MS) return null;
+		if (elapsed <= 0 || elapsed > LIVE_FLOW_STALE_MS) return null;
 		const sent = current.values[0] - previous.values[0];
 		const received = current.values[1] - previous.values[1];
 		if (sent < 0 || received < 0) return null;
@@ -129,14 +129,41 @@ export class LiveFlowBuffer {
 		this.prune(now);
 		let observed = false;
 		for (const host of hosts) {
-			const records = [...this.requests.values()].filter(
+			const retained = [...this.requests.values()].filter((entry) => entry.host === host.id);
+			host.native_status = !retained.length
+				? "native_not_received"
+				: retained.every((entry) => now - entry.receivedAt >= LIVE_FLOW_STALE_MS)
+					? "stale"
+					: retained.every((entry) => !entry.supported)
+						? "unsupported"
+						: retained.every((entry) => entry.final)
+							? "completed"
+							: "waiting_baseline";
+			host.native_last_observed_at = retained.length
+				? new Date(Math.max(...retained.map((entry) => entry.receivedAt))).toISOString()
+				: null;
+			const records = retained.filter(
 				(entry) =>
 					entry.host === host.id &&
 					now - entry.time < LIVE_FLOW_STALE_MS &&
 					now - entry.receivedAt < LIVE_FLOW_STALE_MS &&
 					(!entry.final || now - entry.receivedAt <= 1000),
 			);
-			if (!records.length) continue;
+			if (!records.length) {
+				for (const entry of [...host.clients, ...host.targets.filter((entry) => entry.kind === "observed")]) {
+					const matching = retained.filter(
+						(record) =>
+							record.client === entry.label ||
+							[...record.attempts.values()].some((attempt) => attempt.peer === entry.label),
+					);
+					entry.unknown_reason = matching.length
+						? matching.every((record) => record.final)
+							? "completed"
+							: "stale"
+						: "native_not_received";
+				}
+				continue;
+			}
 			observed ||= records.some((record) => record.supported);
 			const clients = new Map(host.clients.map((entry) => [entry.label, entry]));
 			const targets = new Map(
@@ -161,11 +188,19 @@ export class LiveFlowBuffer {
 				this.aggregate(
 					entry,
 					records.flatMap((record) =>
-						[...record.attempts.values()].filter((attempt) => attempt.peer === entry.label),
+						[...record.attempts.values()]
+							.filter((attempt) => attempt.peer === entry.label)
+							.map((attempt) => ({
+								...attempt,
+								supported: record.supported,
+								unknownReason: record.unknownReason,
+								truncated: record.truncated,
+							})),
 					),
 				);
 				if (records.some((record) => record.truncated)) {
 					entry.rate_incomplete = true;
+					entry.unknown_reason = "truncated";
 					entry.current_bytes_per_second = null;
 					delete entry.rate;
 				}
@@ -204,15 +239,39 @@ export class LiveFlowBuffer {
 		const rates = records.map((record) => record.rate);
 		entry.active_requests = records.filter((record) => !record.final).length;
 		entry.last_seen = new Date(Math.max(...records.map((record) => record.time))).toISOString();
-		entry.unknown_reason = records.find((record) => record.unknownReason)?.unknownReason || null;
-		entry.rate_incomplete = rates.some((rate) => rate === null);
-		if (entry.rate_incomplete) return;
+		entry.unknown_reason =
+			records.find((record) => record.unknownReason)?.unknownReason ||
+			(records.some((record) => record.truncated)
+				? "truncated"
+				: records.some((record) => record.supported === false)
+					? "unsupported"
+					: records.every((record) => record.final)
+						? "completed"
+						: rates.some((rate) => !rate)
+							? "waiting_baseline"
+							: null);
+		entry.rate_incomplete = rates.some((rate) => rate === null) || records.some((record) => record.truncated);
+		if (entry.rate_incomplete) {
+			const measured = records.filter((record) => record.rate && !record.truncated && record.supported !== false);
+			if (measured.length) {
+				const partial = {};
+				this.aggregate(partial, measured);
+				entry.measured_rate = partial.rate || null;
+				entry.rate_components =
+					partial.rate_components ||
+					(partial.rate
+						? [{ id: "measured_subset", active_requests: partial.active_requests, ...partial.rate }]
+						: []);
+			}
+			return;
+		}
 		const upload = [...new Set(rates.map((rate) => rate.upload_semantics))].sort();
 		const download = [...new Set(rates.map((rate) => rate.download_semantics))].sort();
 		entry.mixed_semantics = upload.length > 1 || download.length > 1;
 		entry.upload_semantics = upload;
 		entry.download_semantics = download;
 		if (entry.mixed_semantics) {
+			entry.unknown_reason = "mixed_semantics";
 			entry.rate_incomplete = true;
 			const components = new Map();
 			for (const record of records) {
@@ -225,7 +284,7 @@ export class LiveFlowBuffer {
 				.map(([id, samples]) => {
 					const component = {};
 					this.aggregate(component, samples);
-					return { id, ...component.rate };
+					return { id, active_requests: component.active_requests, ...component.rate };
 				});
 			return;
 		}

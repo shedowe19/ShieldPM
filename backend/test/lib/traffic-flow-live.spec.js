@@ -312,3 +312,24 @@ describe("native live flow measured rates", () => {
 		expect(buffer.requests.size).toBe(0);
 	});
 });
+
+it("measures positive short native intervals without calling completed requests active", () => {
+	const buffer = new LiveFlowBuffer();
+	buffer.ingest(sample(), now);
+	buffer.ingest(sample({ time: now / 1000 + 0.1, client_sent: 10000, final: true }), now + 100);
+	const result = snapshot(buffer, now + 100).clients[0];
+	expect(result.current_bytes_per_second).toBe(100000);
+	expect(result.active_requests).toBe(0);
+	expect(result.unknown_reason).toBe("completed");
+	expect(snapshot(buffer, now + 1200).clients).toEqual([]);
+});
+it("retains a measured component when another active request is awaiting its baseline", () => {
+	const buffer = new LiveFlowBuffer();
+	pair(buffer);
+	buffer.ingest(sample({ request: "new", time: now / 1000 + 1 }), now + 1000);
+	const entry = snapshot(buffer).clients[0];
+	expect(entry.current_bytes_per_second).toBeNull();
+	expect(entry.unknown_reason).toBe("waiting_baseline");
+	expect(entry.rate_components[0].bytes_per_second).toBe(66560);
+	expect(entry.rate_components[0].active_requests).toBe(1);
+});
