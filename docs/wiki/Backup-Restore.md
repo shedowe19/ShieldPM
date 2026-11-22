@@ -23,6 +23,22 @@ Back up the full `/data` directory **and** any external database or external ser
 
 ---
 
+## 🔐 Integrated Instance Backups
+
+Administrators can create, verify and stage encrypted instance archives under **Settings → Backups**. This is the supported way to capture a complete ShieldPM instance; the manual `/data` procedures below remain valid.
+
+- **Contents:** everything below `DATA_PATH` (default `/data`), including certificates and private keys, instance keys, `.env`, generated and custom Nginx configuration, Tor keys and other private instance files. With SQLite the active database is captured as a consistent native snapshot (including WAL/SHM); with PostgreSQL or MySQL/MariaDB the archive contains a native database dump. External services, container images, database server roles and files outside `DATA_PATH` are **not** included.
+- **Storage:** `${DATA_PATH}/instance-backups`. Archives are private files (`0600`, directory `0700`). At most 50 archives are listed; there is no automatic retention, so remove old archives yourself. The archive size limit is 8 GiB, and verification needs additional free space (at least three times the declared file sizes plus 64 MiB).
+- **Encryption:** each archive has its own password (at least 12 characters), encrypted with AES-256-GCM and a scrypt-derived key. ShieldPM never stores the password and cannot recover it. **A lost password makes the archive unusable.**
+- **Verification and restore:** verification checks authenticity, file hashes, the database in an isolated clone and the Nginx configuration. It requires the **same ShieldPM version and the same database provider** as the running instance. A verified restore is only *staged*: it replaces the instance at the next container/service restart, and the current database stays active until then. You can cancel a pending restore in the UI before that restart.
+- **External databases:** verification creates a separate database. The configured database user needs `CREATE`/`DROP` privileges for those clones; the original database is preserved.
+- **Trust boundary:** only restore archives from your own trusted instance. Archives contain executable configuration and SQL, and credentials/private keys. A valid password and correct hashes prove integrity, not that the contents are safe.
+
+> [!WARNING]
+> The archive contains credentials and private certificates. Store it encrypted and access-controlled, and keep the backup password separately from the archive.
+
+---
+
 ## 💾 Backup Procedures
 
 ### Docker
@@ -57,13 +73,13 @@ systemctl start shieldpm
 
 If you use MySQL/MariaDB or PostgreSQL, backup the database separately:
 
-**MySQL / MariaDB:** Replace database names, user names and container names with your deployment's values. Prompt for the password rather than putting it into shell history.
+**MySQL / MariaDB:** Replace database names, user names and container names with your deployment's values. Let the client prompt for the password instead of passing it as an argument (arguments are visible in the process list and shell history).
 
 ```bash
-# From Docker
-docker exec shieldpm-db sh -c 'exec mysqldump -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' > shieldpm-db-$(date +%F).sql
+# From Docker (interactive prompt inside the container)
+docker exec -it shieldpm-db sh -c 'exec mysqldump -u "$MYSQL_USER" -p "$MYSQL_DATABASE"' > shieldpm-db-$(date +%F).sql
 
-# From host
+# From host (prompts for the password)
 mysqldump -h 127.0.0.1 -u npm -p npm > shieldpm-db-$(date +%F).sql
 ```
 
@@ -82,7 +98,7 @@ pg_dump -h 127.0.0.1 -U npm npm > shieldpm-db-$(date +%F).sql
 Schedule the stop/archive/start procedure above, or use SQLite's `.backup` command for an online database snapshot and separately archive the remaining `/data` files. A live `tar` of SQLite files without a coordinated snapshot can be inconsistent. Test restoration before relying on an automated schedule.
 
 > [!TIP]
-> [GitOps](GitOps) can version configuration but is **not a replacement** for `/data` and database backups. Certificate private keys are excluded from its exported certificate files; exported YAML may contain service tokens, and the repository must be private and access-controlled.
+> [GitOps](GitOps) can version configuration but is **not a replacement** for `/data` and database backups. Credentials are redacted in current exports, but a repository still reveals your hostnames, users, roles and Access List structure; keep it private and access-controlled. Certificate private keys and the database are never included.
 
 ---
 

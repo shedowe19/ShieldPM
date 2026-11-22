@@ -1,6 +1,6 @@
 # Docker Compose Reference
 
-This is an annotated example using host networking. The repository's checked-in [`compose.yaml`](https://github.com/shedowe19/ShieldPM/blob/develop/compose.yaml) uses the `shieldpm:develop` image; use `:latest` below for the latest released image. The [Configuration](Configuration) page explains runtime defaults, and [OpenAppSec](OpenAppSec) covers the optional agent setup.
+This is an annotated example using host networking. The example below uses the `shieldpm:develop` image; pin a release tag such as `:4.4.1` for a stable deployment, or use `:latest` for the newest release. The repository's checked-in [`compose.yaml`](https://github.com/shedowe19/ShieldPM/blob/develop/compose.yaml) also uses `shieldpm:develop`. The [Configuration](Configuration) page explains runtime defaults, and [OpenAppSec](OpenAppSec) covers the optional agent setup.
 
 GeoIP Country, City, and ASN data are prepared automatically at every ShieldPM startup, without MaxMind credentials or a sidecar. `GEOIP_AUTO_UPDATE=false` disables this for offline or custom data; `NGINX_LOAD_GEOIP2_MODULE=true` separately enables lookups. See [GeoIP setup and cache failures](./Analytics.md#enabling-geoip-country-statistics).
 
@@ -94,8 +94,8 @@ services:
 #      - "NGINX_WORKER_CONNECTIONS=1024" # value of worker_connections, default: 512
 # DISABLE_NGINX_BEAUTIFIER is obsolete; generated configuration is always preserved unchanged.
 #      - "FULLCLEAN=true" # Cleans unused config folders, default false
-#      - "LOGROTATE=true" # Enables writing http access logs to /opt/shieldpm/nginx/json_access.log, stream access logs to /opt/shieldpm/nginx/stream.log and enables daily logrotation, default false
-#      - "LOGROTATIONS=7" # Set how often the json_access.log should be rotated until it is deleted, default 3
+#      - "LOGROTATE=true" # Enables file logging for the base HTTP access log and stream log under /opt/shieldpm/nginx and rotates all /opt/shieldpm/nginx/*.log daily, default true. It does not control json_access.log: hosts with caching or an upstream pool write JSON entries independently. The error log is always written.
+#      - "LOGROTATIONS=7" # Number of rotated log files to keep, default 3
 #      - "SKIP_IP_RANGES=false" # Skip fetching/whitelisting ip ranges from cloudflare, default true
 #      - "IPRT=3" # Multiplier for the 6-hour Cloudflare IP range refresh, default 1; ignored when SKIP_IP_RANGES=true
 #      - "CRT=72" # Set how many hours should be between certbot trying to renew your certs, default 23
@@ -108,8 +108,9 @@ services:
 #      - "PHP84=true" # Activate PHP84, default false, supported, but not recommended, you should prefer to use a dedicated php-fpm container
 #      - "PHP84_APKS=php8.4-curl php8.4-gd" # Example optional packages; verify availability in the image's APT sources, also enables PHP84
 #      - "PHP_APKS=php-apcu php-redis" # Add php extensions, see available packages here: https://packages.debian.org/search?keywords=php-*, default none, requires PHP82, PHP83 and/or PHP84, not recommended, please use PHP82_APKS, PHP83_APKS or PHP84_APKS
-#      - "INITIAL_ADMIN_EMAIL=<initial@email.tld>" # with INITIAL_ADMIN_PASSWORD, creates the first admin instead of using the setup wizard
-#      - "INITIAL_ADMIN_PASSWORD=<initial-password>" # required with INITIAL_ADMIN_EMAIL; do not commit real passwords to a Compose file
+#      - "INITIAL_ADMIN_EMAIL=<initial@email.tld>" # with INITIAL_ADMIN_PASSWORD, creates the first admin instead of using the setup form
+#      - "INITIAL_ADMIN_PASSWORD=<initial-password>" # required with INITIAL_ADMIN_EMAIL; do not commit real passwords to a Compose file, and remove both values after the first start (they are visible via docker inspect)
+#      - "SETUP_TOKEN=<one-time-setup-token>" # overrides the generated first-start setup token; otherwise read /opt/shieldpm/setup-token (or the startup log)
 #      - "INITIAL_DEFAULT_PAGE=444" # default page to set on first start of ShieldPM for the initial user, default congratulations, can be one of: 404, 444, redirect, congratulations or html
 #      - "ENABLE_PRERUN=true" # run /data/prerun/*.sh at startup, default false
 #      - "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true" # loads the openappsec attachment module, you must also set ipc and enable the shm-volume for ShieldPM in this compose file, this will fully disable brotli, default false

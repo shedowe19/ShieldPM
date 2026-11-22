@@ -16,7 +16,8 @@ zuletzt fertig wurde, was bewusst fehlt und welche Risiken gerade aktiv sind.
 
 ## Stand
 
-- Branch `develop`, Arbeitsbaum sauber und synchron mit `origin/develop`.
+- Branch `fix/security-hardening` (Basis `develop` @ `b1826f19`); Arbeitsbaum
+  enthält die Behebung der Security-Review 2026-11.
 - Letzte Version `4.4.1` in `.version`, `backend/package.json` und
   `frontend/package.json`.
 - Wiki versioniert seit `443d764f`; die Nacharbeiten dieser Sitzung betreffen
@@ -26,6 +27,7 @@ zuletzt fertig wurde, was bewusst fehlt und welche Risiken gerade aktiv sind.
 
 | Datum      | Ergebnis                                                                                                           | Quelle                                                        |
 | ---------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| 2026-11-23 | Security-Review-Behebung: K-01/K-02/K-03, Identität, Betrieb, KI, Analytics, Secrets, Audit, UX und Doku           | [Sicherheit](./security/overview.md), Branch `fix/security-hardening` |
 | 2026-11-04 | Dependabot-Alarme für `qs`, `seroval` und `minimatch` geschlossen                                                  | [Log](./log.md)                                               |
 | 2026-11-05 | Warnungs-Triage: 350 Warnungen sortiert, 16 Sofortfixes, Folgeaufgaben T-020–T-027                                 | [Triage](./analyses/2026-11-05-warnungs-triage.md)            |
 | 2026-11-05 | Datei-Audit mit 173 Agents: 2.066 Dateien, 22 Fehler, 350 Warnungen; 21 Fehler behoben                             | [Analyse](./analyses/2026-11-05-datei-audit.md)               |

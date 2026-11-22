@@ -1,7 +1,7 @@
 # Sicherheit
 
 Status: active
-Last verified: 2026-11-04
+Last verified: 2026-11-23
 Confidence: high
 
 ## Zweck
@@ -25,6 +25,11 @@ und was extern bleibt.
 | Berechtigungen     | JSON-Schemas je Aktion                                                               | `lib/access/`                                                                                          |
 | Verschlüsselung    | sensible Felder                                                                      | `lib/encryption.js`                                                                                    |
 | Demo-Schutz        | sperrt ausgewählte Admin-Bereiche, prüft Host-Payloads (kein globaler Schreibschutz) | `lib/express/demo.js`                                                                                  |
+| Host-Eingaben      | zentrale Validierung aller Nginx-/Lua-Felder vor jedem Schreibpfad                   | `backend/lib/host-input.js`                                                                            |
+| Admin-Gates        | `path`-Modus, `advanced_config`, interne/private Upstreams, unix-Sockets, interne CA  | `lib/host-input.js`, `routes/nginx/certificates.js`                                                    |
+| Setup              | Einmal-Token (`SETUP_TOKEN` oder `/data/setup-token`, 0600)                           | `backend/setup.js`, `routes/users.js`                                                                  |
+| Audit-Kontext      | IP, User-Agent, Session-, Request-ID, Outcome, Actor je Request                       | `lib/request-context.js`, `internal/audit-log.js`                                                      |
+| Secret-Redaktion   | Logger, Settings-API, GitOps-Export und Host-Antworten maskieren Geheimnisse          | `backend/logger.js`, `internal/setting.js`, `internal/gitops.js`, `lib/host-response.js`               |
 
 ## Schutz auf Nginx-Ebene
 
@@ -60,6 +65,31 @@ Anwendungslogik.
   TLS-Passthrough. Bestehende Verbindungen werden nicht getrennt.
 - **Backup-Dateien:** Instanzbackups sind verschlüsselt; der Schlüssel gehört
   nicht ins gleiche Backup-Ziel.
+
+## Prüfung 2026-11 und Behebung
+
+Drei Prüfrunden mit 39 Rollen (rund 498 Rohbefunde, 463 nach Zusammenführung)
+ergaben drei kritische und 69 hohe Themen. Die kritischen lagen alle an den
+Trust-Grenzen: `path`-Forwarding gab `/data` frei, Host-Felder wurden als
+vertrauenswürdige Nginx-/Lua-Konfiguration behandelt, und die interne CA
+signierte beliebige Client-Zertifikate. Alle drei sind im Branch
+`fix/security-hardening` behoben; die Behebung ist read-only geprüft und durch
+Regressionstests abgesichert.
+
+Was bewusst außerhalb des Repositories bleibt:
+
+- Zertifizierungen (ISO 27001, SOC 2, PCI DSS, CRA), Auditor-Rolle und Access
+  Reviews.
+- AVV/SCC/TIA für externe Anbieter, DSAR-Verfahren und ein unterschriebener
+  Retention-Plan.
+- GitHub-Branch-Protection und Organisationsrichtlinien.
+- Live-Restore-Drill und Penetrationstest gegen eine laufende Instanz.
+- Cosign-Signatur der Release-Artefakte und SBOM-Attestierung im manuellen
+  `docker-latest`-Push (der Haupt-Build attestiert Provenienz und SBOM).
+- Rotation des bestehenden AES-Schlüssels (Formatwechsel und Re-Encrypt-
+  Migration nötig).
+- OIDC-Step-up-UI für lokale 2FA (das Backend lehnt den Login ohne zweiten
+  Faktor ab; eine eigene Challenge-Oberfläche fehlt).
 
 ## Abhängigkeiten
 
