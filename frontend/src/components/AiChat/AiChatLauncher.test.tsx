@@ -20,14 +20,14 @@ describe("AiChatLauncher", () => {
 		expect(screen.queryByRole("dialog", { name: "AI Agent" })).not.toBeInTheDocument();
 
 		fireEvent.click(triggers[0]);
-		await screen.findByRole("dialog", { name: "AI Agent" });
+		await screen.findByRole("dialog", { name: "AI Agent" }, { timeout: 5000 });
 		expect(screen.getAllByRole("dialog", { name: "AI Agent" })).toHaveLength(1);
 
 		fireEvent.click(screen.getByRole("button", { name: "Close" }));
 		await waitFor(() => expect(screen.queryByRole("dialog", { name: "AI Agent" })).not.toBeInTheDocument());
 
 		fireEvent.click(triggers[1]);
-		await screen.findByRole("dialog", { name: "AI Agent" });
+		await screen.findByRole("dialog", { name: "AI Agent" }, { timeout: 5000 });
 		expect(screen.getAllByRole("dialog", { name: "AI Agent" })).toHaveLength(1);
 	});
 

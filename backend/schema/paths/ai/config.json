@@ -54,6 +54,60 @@
                         "keep_alive": {
                             "type": "string",
                             "default": "5m"
+                        },
+                        "dialect": {
+                            "type": "string",
+                            "enum": [
+                                "",
+                                "ollama",
+                                "openai"
+                            ],
+                            "default": ""
+                        },
+                        "timeout_ms": {
+                            "type": "integer",
+                            "minimum": 1000,
+                            "maximum": 300000,
+                            "default": 60000
+                        },
+                        "max_output_tokens": {
+                            "type": "integer",
+                            "minimum": 64,
+                            "maximum": 32768,
+                            "default": 2048
+                        },
+                        "max_retries": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 5,
+                            "default": 2
+                        },
+                        "retry_delay_ms": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10000,
+                            "default": 200
+                        },
+                        "daily_token_budget": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "0 disables the daily budget",
+                            "default": 0
+                        },
+                        "fallback_provider": {
+                            "type": "string",
+                            "enum": [
+                                "",
+                                "gemini",
+                                "local"
+                            ],
+                            "default": ""
+                        },
+                        "fallback_model": {
+                            "type": "string"
+                        },
+                        "fallback_base_url": {
+                            "type": "string"
                         }
                     }
                 }

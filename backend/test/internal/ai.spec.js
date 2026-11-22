@@ -46,7 +46,7 @@ describe("internal/ai.js", () => {
 			const mockConfig = { enabled: true, provider: "local" };
 			internalSetting.get.mockResolvedValue({ meta: mockConfig });
 			const config = await internalAi.getConfig(mockAccess);
-			expect(config).toEqual(mockConfig);
+			expect(config).toMatchObject(mockConfig);
 		});
 	});
 

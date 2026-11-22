@@ -189,10 +189,18 @@ const internalChat = {
 
 					let response;
 					try {
+						// ChatOps has no dialog state: it must never execute state-changing tools.
 						// @ts-expect-error: Custom shieldAccess property on context is not typed
-						response = await ai.chat(ctx.shieldAccess, message, []);
+						response = await ai.chat(ctx.shieldAccess, message, [], { readOnly: true });
 					} finally {
 						clearInterval(typingInterval);
+					}
+
+					if (response.requires_confirmation) {
+						await ctx.reply(
+							"This action needs confirmation and is only available in the ShieldPM web interface. ChatOps is read-only.",
+						);
+						return;
 					}
 
 					// Send response

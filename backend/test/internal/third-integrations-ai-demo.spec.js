@@ -50,7 +50,11 @@ describe("AI Demo route parity", () => {
 	afterEach(() => vi.restoreAllMocks());
 	it.each(["create_stream", "update_stream"])("blocks internal forwarding_host for %s", async (name) => {
 		for (const host of ["127.0.0.1", "[::1]", "LOCALHOST.", "0.0.0.0", "[::ffff:127.0.0.1]"]) {
-			const result = await executeTools(access, [{ name, args: { id: 3, forwarding_host: host } }]);
+			const args =
+				name === "create_stream"
+					? { incoming_port: 3306, forwarding_port: 3306, forwarding_host: host }
+					: { id: 3, forwarding_host: host };
+			const result = await executeTools(access, [{ name, args }]);
 			expect(result[0].result).toContain("Demo Mode");
 		}
 		expect(mocks.mutate).not.toHaveBeenCalled();
@@ -69,17 +73,35 @@ describe("AI Demo route parity", () => {
 		"start_tor_onion_service",
 		"stop_tor_onion_service",
 	])("blocks %s before looking up Tor services", async (name) => {
-		const result = await executeTools(access, [{ name, args: { id: 3 } }]);
+		const args =
+			name === "create_tor_onion_service"
+				? { name: "new-onion", virtual_port: 80, target_port: 8080 }
+				: { id: 3 };
+		const result = await executeTools(access, [{ name, args }]);
 		expect(result[0].result).toContain("Demo Mode");
 		expect(mocks.tor).not.toHaveBeenCalled();
 	});
 	it("continues forwarding public demo streams and private non-demo streams", async () => {
 		expect(
-			(await executeTools(access, [{ name: "create_stream", args: { forwarding_host: "1.1.1.1" } }]))[0].result,
+			(
+				await executeTools(access, [
+					{
+						name: "create_stream",
+						args: { incoming_port: 3306, forwarding_port: 3306, forwarding_host: "1.1.1.1" },
+					},
+				])
+			)[0].result,
 		).toBe("Created Stream ID: 3");
 		mocks.demo = false;
 		expect(
-			(await executeTools(access, [{ name: "create_stream", args: { forwarding_host: "127.0.0.1" } }]))[0].result,
+			(
+				await executeTools(access, [
+					{
+						name: "create_stream",
+						args: { incoming_port: 3306, forwarding_port: 3306, forwarding_host: "127.0.0.1" },
+					},
+				])
+			)[0].result,
 		).toBe("Created Stream ID: 3");
 		expect(mocks.mutate).toHaveBeenCalledTimes(2);
 	});
@@ -90,7 +112,11 @@ describe("AI Demo route parity", () => {
 		mocks.demo = false;
 		mocks.mutate.mockRejectedValue(error);
 		const result = await executeTools(access, [
-			{ id: "failed-stream", name: "create_stream", args: { forwarding_host: "1.1.1.1" } },
+			{
+				id: "failed-stream",
+				name: "create_stream",
+				args: { incoming_port: 3306, forwarding_port: 3306, forwarding_host: "1.1.1.1" },
+			},
 		]);
 		expect(result).toEqual([
 			{ name: "create_stream", toolCallId: "failed-stream", result: "Error: Internal Error" },
@@ -100,7 +126,11 @@ describe("AI Demo route parity", () => {
 		mocks.demo = false;
 		mocks.mutate.mockRejectedValue(new errs.ValidationError("A forwarding port is required"));
 		const result = await executeTools(access, [
-			{ id: "invalid-stream", name: "create_stream", args: { forwarding_host: "1.1.1.1" } },
+			{
+				id: "invalid-stream",
+				name: "create_stream",
+				args: { incoming_port: 3306, forwarding_port: 3306, forwarding_host: "1.1.1.1" },
+			},
 		]);
 		expect(result[0]).toMatchObject({
 			toolCallId: "invalid-stream",
@@ -121,7 +151,11 @@ describe("AI Demo route parity", () => {
 			mocks.tor.mockReturnValue(query);
 			mocks.torCreate.mockResolvedValue(null);
 			mocks.torStart.mockResolvedValue(false);
-			const result = await executeTools(access, [{ name, args: { id: 3 } }]);
+			const args =
+				name === "create_tor_onion_service"
+					? { name: "new-onion", virtual_port: 80, target_port: 8080 }
+					: { id: 3 };
+			const result = await executeTools(access, [{ name, args }]);
 			expect(result[0].result).toMatch(/^Error: Unable to (create|start) onion service$/);
 			expect(mocks.audit).not.toHaveBeenCalled();
 		},

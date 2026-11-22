@@ -3,6 +3,8 @@
  * Extracted from ai.js for modularity
  */
 
+import { needsConfirmation } from "./confirmation.js";
+
 /**
  * Returns the full array of tool definitions for the AI chat.
  * @returns {Array} Tool definitions in OpenAI/Gemini function format
@@ -101,6 +103,7 @@ const getAllToolDefinitions = () => [
 				properties: {
 					id: { type: "integer" },
 					domain_names: { type: "array", items: { type: "string" } },
+					forward_scheme: { type: "string", enum: ["http", "https"] },
 					forward_host: { type: "string" },
 					forward_port: { type: "integer" },
 					locations: { type: "array", items: { type: "object" } },
@@ -406,7 +409,7 @@ const getAllToolDefinitions = () => [
 	{
 		function: {
 			name: "create_access_list",
-			description: "Create/Update an Access List",
+			description: "Create a new Access List (does not update an existing list)",
 			parameters: {
 				type: "object",
 				properties: {
@@ -708,6 +711,10 @@ const getAllToolDefinitions = () => [
 						},
 						required: ["type", "secret"],
 					},
+					password: {
+						type: "string",
+						description: "Deprecated alias for auth.secret (password auth only)",
+					},
 					is_disabled: { type: "boolean" },
 				},
 				required: ["name", "nickname", "email", "auth"],
@@ -748,6 +755,10 @@ const getAllToolDefinitions = () => [
 						type: "object",
 						properties: { type: { type: "string" }, secret: { type: "string" } },
 						required: ["type", "secret"],
+					},
+					password: {
+						type: "string",
+						description: "Deprecated alias for auth.secret (password auth only)",
 					},
 				},
 				required: ["id", "auth"],
@@ -833,8 +844,18 @@ const getAllToolDefinitions = () => [
 	{
 		function: {
 			name: "get_analytics_summary",
-			description: "Get recent analytics summary (24h)",
-			parameters: { type: "object", properties: {} },
+			description: "Get recent analytics summary (24h), optionally for one Proxy Host",
+			parameters: {
+				type: "object",
+				properties: {
+					host_id: { type: "integer", description: "Optional Proxy Host ID" },
+					range: {
+						type: "string",
+						description: "Time range (1h, 24h, 7d, 30d)",
+						enum: ["1h", "24h", "7d", "30d"],
+					},
+				},
+			},
 		},
 	},
 	{
@@ -1001,12 +1022,14 @@ const restrictedToolPermissions = new Map([
 /**
  * Returns the AI tool definitions the caller is authorized to receive.
  * Privileged system, Cloudflared, and Tor operations are hidden when their
- * corresponding capability cannot be verified.
+ * corresponding capability cannot be verified. With `readOnly`, every tool
+ * that changes state is hidden as well (used by the ChatOps channel).
  *
  * @param {import("../../lib/types.js").Access} access
+ * @param {{readOnly?: boolean}} [options]
  * @returns {Promise<Array>} Authorized tool definitions in OpenAI/Gemini function format
  */
-export const getToolDefinitions = async (access) => {
+export const getToolDefinitions = async (access, options = {}) => {
 	const authorization = new Map();
 
 	for (const permission of new Set(restrictedToolPermissions.values())) {
@@ -1021,6 +1044,8 @@ export const getToolDefinitions = async (access) => {
 
 	return getAllToolDefinitions().filter((tool) => {
 		const permission = restrictedToolPermissions.get(tool.function.name);
-		return !permission || authorization.get(permission);
+		if (permission && !authorization.get(permission)) return false;
+		if (options.readOnly === true && needsConfirmation(tool.function.name)) return false;
+		return true;
 	});
 };

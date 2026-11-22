@@ -77,6 +77,61 @@ describe("AiChat", () => {
 		expect(await screen.findByText("The configured AI provider is available.")).toBeInTheDocument();
 		expect(mocks.sendAiChat).toHaveBeenCalledTimes(2);
 	});
+
+	it("asks for confirmation and executes only the approved plan", async () => {
+		const pending = [{ name: "delete_proxy_host", target: "7", args: { id: 7 } }];
+		mocks.sendAiChat
+			.mockResolvedValueOnce({
+				role: "assistant",
+				content: "",
+				requiresConfirmation: true,
+				pendingTools: pending,
+			})
+			.mockResolvedValueOnce({ role: "assistant", content: "Deleted and verified." });
+		render(<ControlledAiChat />);
+
+		fireEvent.change(screen.getByRole("textbox"), { target: { value: "Delete host 7" } });
+		fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+		expect(await screen.findByText("Confirm AI actions")).toBeInTheDocument();
+		expect(screen.getByText("delete_proxy_host")).toBeInTheDocument();
+		expect(screen.getByText("Target: 7")).toBeInTheDocument();
+		expect(
+			screen.getByText((_, element) => element?.tagName === "PRE" && !!element.textContent?.includes('"id": 7')),
+		).toBeInTheDocument();
+
+		fireEvent.click(screen.getByRole("button", { name: "Confirm actions" }));
+
+		expect(await screen.findByText("Deleted and verified.")).toBeInTheDocument();
+		expect(mocks.sendAiChat).toHaveBeenLastCalledWith("Delete host 7", [], {
+			confirm: true,
+			pendingTools: pending,
+		});
+	});
+
+	it("cancels a pending plan without executing it", async () => {
+		mocks.sendAiChat.mockResolvedValueOnce({
+			role: "assistant",
+			content: "",
+			requiresConfirmation: true,
+			pendingTools: [{ name: "delete_proxy_host", args: { id: 7 } }],
+		});
+		render(<ControlledAiChat />);
+
+		fireEvent.change(screen.getByRole("textbox"), { target: { value: "Delete host 7" } });
+		fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+		expect(await screen.findByText("Confirm AI actions")).toBeInTheDocument();
+
+		fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+		expect(await screen.findByText("Action cancelled. No changes were made.")).toBeInTheDocument();
+		expect(mocks.sendAiChat).toHaveBeenCalledTimes(1);
+		expect(mocks.sendAiChat).not.toHaveBeenCalledWith(
+			expect.anything(),
+			expect.anything(),
+			expect.objectContaining({ confirm: true }),
+		);
+	});
 });
 
 it("does not bring back an in-flight response after the conversation is cleared", async () => {

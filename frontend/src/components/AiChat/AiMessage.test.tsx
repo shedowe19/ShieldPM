@@ -12,3 +12,15 @@ it("keeps inline code inline and preserves fenced code language classes", () => 
 	expect(block.closest("pre")).toBeInTheDocument();
 	expect(block).toHaveClass("language-nginx");
 });
+
+it("does not load remote images from model output", () => {
+	render(
+		<AiMessage
+			message={{
+				role: "assistant",
+				content: "![tracking](https://attacker.example/pixel.png)",
+			}}
+		/>,
+	);
+	expect(screen.queryByRole("img")).not.toBeInTheDocument();
+});
