@@ -3,6 +3,16 @@
 Ergebnisse für Menschen, neueste zuerst. Die Arbeit selbst steht im [Log](./log.md).
 Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
+## 2026-11-23
+
+- Security-Review mit drei Runden und 39 Rollen behoben: Die drei kritischen
+  Befunde (Dateisystemzugriff über `path`, Nginx-/Lua-Injection über Host-Felder,
+  beliebige Client-Zertifikate der internen CA) sind an der Trust-Grenze
+  geschlossen. Dazu kommen Identität/SSO, Audit-Kontext, Secret-Redaktion,
+  Analytics-Idempotenz, KI-Bestätigungen, Terminal-/Backup-/Container-Härtung,
+  Supply-Chain-Pinning und korrigierte Dokumentation.
+  ([Sicherheit](./security/overview.md), [Log](./log.md))
+
 ## 2026-11-05
 
 - T-019: 350 Warnungen triagiert, 16 sicherheits- und fehlerrelevante Punkte

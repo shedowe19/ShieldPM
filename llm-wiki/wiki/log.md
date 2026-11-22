@@ -2,6 +2,37 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-23] security | Drei Prüfrunden behoben, Branch `fix/security-hardening`
+
+- Command: "Behebe alle fehler wirklich alles und mach dann ein PR für alle auf".
+- Type: security
+- Areas affected: Backend, Frontend, Nginx-Templates, Rootfs/Container, CI und
+  Release, öffentliche Doku, internes Wiki.
+- Files changed: 159 Dateien; Schwerpunkte: zentrale Host-Validierung
+  (`lib/host-input.js`), Identität/Sessions, Audit-Kontext, KI-Bestätigungen,
+  Analytics-Ingestion, Secret-Redaktion, Terminal, Backup, Compose/CI,
+  Setup-Token, Frontend-Dialoge und Barrierefreiheit.
+- Wiki pages updated: [Sicherheit](./security/overview.md),
+  [Projektzustand](./current-project-state.md), [Aufgaben](./tasks.md),
+  [Changelog](./changelog.md), diese Seite.
+- New wiki pages: keine.
+- New TODOs: T-029 (Live-Restore-Drill und Penetrationstest) und T-030
+  (Cosign/SBOM im manuellen `docker-latest`-Push, AES-Schlüsselrotation,
+  OIDC-Step-up-UI) als blockierte externe Punkte.
+- New bugs: keine neuen offenen Fehler; vier frühere Review-Aussagen waren
+  bereits im Reality Check widerlegt und sind nicht als Fixes eingeflossen.
+- New decisions: `path`/`advanced_config`/private Upstreams/unix-Sockets sind
+  admin-only; `json_access.log` wird für alle Proxy-Hosts geschrieben;
+  `update-shieldpm` folgt dem letzten Release-Tag statt `develop`; Actions sind
+  per Commit-SHA gepinnt; Analytics-Fenster werden explizit ausgewiesen.
+- Open questions: keine neuen; die externen Nachweise bleiben T-028/T-029.
+- Next steps: PR gegen `develop` prüfen und mergen; danach T-028/T-029
+  organisatorisch verfolgen.
+- Verification: Backend- und Frontend-`tsc --noEmit` grün; Backend- und
+  Frontend-Vitest-Suite (ohne Windows-spezifische WSL-/POSIX-Fälle) grün;
+  Biome auf den geänderten Dateien; `node llm-wiki/tools/wiki-check.mjs` PASS;
+  Prettier auf den kuratierten Wiki-Seiten.
+
 ## [2026-11-05] chore | T-019 Triage und 16 Sofortfixes
 
 - Command: „T-019 mach das“.

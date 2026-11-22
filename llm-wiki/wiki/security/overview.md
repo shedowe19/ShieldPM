@@ -26,10 +26,10 @@ und was extern bleibt.
 | Verschlüsselung    | sensible Felder                                                                      | `lib/encryption.js`                                                                                    |
 | Demo-Schutz        | sperrt ausgewählte Admin-Bereiche, prüft Host-Payloads (kein globaler Schreibschutz) | `lib/express/demo.js`                                                                                  |
 | Host-Eingaben      | zentrale Validierung aller Nginx-/Lua-Felder vor jedem Schreibpfad                   | `backend/lib/host-input.js`                                                                            |
-| Admin-Gates        | `path`-Modus, `advanced_config`, interne/private Upstreams, unix-Sockets, interne CA  | `lib/host-input.js`, `routes/nginx/certificates.js`                                                    |
-| Setup              | Einmal-Token (`SETUP_TOKEN` oder `/data/setup-token`, 0600)                           | `backend/setup.js`, `routes/users.js`                                                                  |
-| Audit-Kontext      | IP, User-Agent, Session-, Request-ID, Outcome, Actor je Request                       | `lib/request-context.js`, `internal/audit-log.js`                                                      |
-| Secret-Redaktion   | Logger, Settings-API, GitOps-Export und Host-Antworten maskieren Geheimnisse          | `backend/logger.js`, `internal/setting.js`, `internal/gitops.js`, `lib/host-response.js`               |
+| Admin-Gates        | `path`-Modus, `advanced_config`, interne/private Upstreams, unix-Sockets, interne CA | `lib/host-input.js`, `routes/nginx/certificates.js`                                                    |
+| Setup              | Einmal-Token (`SETUP_TOKEN` oder `/data/setup-token`, 0600)                          | `backend/setup.js`, `routes/users.js`                                                                  |
+| Audit-Kontext      | IP, User-Agent, Session-, Request-ID, Outcome, Actor je Request                      | `lib/request-context.js`, `internal/audit-log.js`                                                      |
+| Secret-Redaktion   | Logger, Settings-API, GitOps-Export und Host-Antworten maskieren Geheimnisse         | `backend/logger.js`, `internal/setting.js`, `internal/gitops.js`, `lib/host-response.js`               |
 
 ## Schutz auf Nginx-Ebene
 

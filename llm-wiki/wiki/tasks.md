@@ -34,6 +34,15 @@
 
 ## Blocked
 
+- [ ] **T-029 Live-Restore-Drill und Penetrationstest.** Abnahme: ein
+      vollständiger Restore auf einer echten Instanz ist belegt und ein
+      autorisierter Pentest bestätigt die kritischen Pfade. Blockiert: braucht
+      eine laufende Instanz und einen Prüfauftrag außerhalb dieses Repositorys.
+- [ ] **T-030 Signatur und Rotation.** Abnahme: Release-Artefakte sind per
+      Cosign signiert, der manuelle `docker-latest`-Push attestiert SBOM und
+      Provenienz, der AES-Schlüssel ist rotiert und die OIDC-Step-up-UI für
+      lokale 2FA ist umgesetzt. Blockiert: Formatwechsel, neue
+      Signaturidentität und Produktentscheidung nötig.
 - [ ] **T-007 OpenAppSec-Policy auf einer laufenden Instanz anwenden.** Abnahme:
       `open-appsec-ctl --apply-policy` meldet keinen Schemafehler und die aktive
       Policy entspricht `local_policy.yaml`. Blockiert: braucht einen laufenden
@@ -61,6 +70,11 @@
 
 ## Done
 
+- [x] **T-028 Security-Review 2026-11 behoben.** Done 2026-11-23. Beleg: Branch
+      `fix/security-hardening`; K-01/K-02/K-03 an der Trust-Grenze geschlossen,
+      159 Dateien gehärtet, Regressionstests für Injection, Host-Typen,
+      API-Gates, Audit-Kontext und Analytics-Idempotenz. Details:
+      [Sicherheit](./security/overview.md) und [Log](./log.md).
 - [x] **T-019 Warnungen aus dem Datei-Audit triagiert.** Done 2026-11-05.
       Beleg: 355 Einträge nach Bereich und Schwere sortiert; 16 sicherheits- und
       fehlerrelevante Punkte sofort behoben; der Rest ist als T-020 bis T-027
