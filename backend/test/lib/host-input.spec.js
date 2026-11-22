@@ -28,8 +28,11 @@ describe("host input validation", () => {
 		expect(validateUpstreamHost("nextcloud", { allowPrivate: true })).toBe("nextcloud");
 	});
 
-	it("rejects unix sockets and Nginx syntax in upstreams", () => {
+	it("rejects unix sockets for delegated users and Nginx syntax in upstreams", () => {
 		expect(() => validateUpstreamHost("unix:/var/run/docker.sock:")).toThrow(/unix socket/);
+		expect(validateUpstreamHost("unix:/var/run/docker.sock:", { allowPrivate: true })).toBe(
+			"unix:/var/run/docker.sock:",
+		);
 		expect(() => validateUpstreamHost('example.com"; os.execute("id")')).toThrow(/whitespace|valid/);
 		expect(() => validateUpstreamHost("example.com; return 200")).toThrow(/whitespace|valid/);
 		expect(() => validateUpstreamHost("http://example.com")).toThrow(/scheme/);

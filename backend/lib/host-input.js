@@ -89,7 +89,13 @@ const isInternalName = (value) => {
 export const validateUpstreamHost = (value, { allowPrivate = false, label = "forward_host" } = {}) => {
 	requireString(value, label, 253);
 	if (value.startsWith("unix:")) {
-		fail(`${label} must not use a unix socket`);
+		if (!allowPrivate) {
+			fail(`${label} must not use a unix socket for delegated users`);
+		}
+		if (!/^unix:\/[A-Za-z0-9._/-]+:$/u.test(value) || value.includes("..")) {
+			fail(`${label} contains an invalid unix socket path`);
+		}
+		return value;
 	}
 	let bare = value;
 	if (bare.startsWith("[") && bare.endsWith("]")) {
