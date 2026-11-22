@@ -1,7 +1,13 @@
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ patch: vi.fn(), insert: vi.fn(), findById: vi.fn(), audit: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+	patch: vi.fn(),
+	insert: vi.fn(),
+	findById: vi.fn(),
+	audit: vi.fn(),
+	permissionInsert: vi.fn(),
+}));
 vi.mock("../../models/user.js", () => ({
 	default: {
 		knex: () => ({ client: { dialect: "sqlite3" } }),
@@ -14,7 +20,9 @@ vi.mock("../../models/setting.js", () => ({
 }));
 vi.mock("../../models/auth-session.js", () => ({ default: {} }));
 vi.mock("../../models/auth.js", () => ({ default: {} }));
-vi.mock("../../models/user_permission.js", () => ({ default: { query: () => ({ insert: vi.fn() }) } }));
+vi.mock("../../models/user_permission.js", () => ({
+	default: { query: () => ({ insert: mocks.permissionInsert }) },
+}));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: mocks.audit } }));
 vi.mock("../../internal/token.js", () => ({ default: {} }));
 vi.mock("../../lib/utils.js", () => ({ default: {} }));
@@ -99,5 +107,35 @@ describe("user account privilege and avatar boundaries", () => {
 		expect(mocks.insert).toHaveBeenCalledWith(
 			expect.objectContaining({ avatar: "https://example.com/avatar.png", avatar_type: "url" }),
 		);
+	});
+
+	it("defaults a new non-admin to read-only except for own host types", async () => {
+		vi.spyOn(service, "isEmailAvailable").mockResolvedValue(true);
+		mocks.insert.mockResolvedValue({ id: 7 });
+		await service.create(access(true), {
+			name: "Test",
+			nickname: "test",
+			email: "test@example.com",
+			roles: [],
+		});
+
+		const permissions = mocks.permissionInsert.mock.calls[0][0];
+		expect(permissions).toMatchObject({
+			visibility: "user",
+			proxy_hosts: "manage",
+			redirection_hosts: "manage",
+			dead_hosts: "manage",
+			streams: "manage",
+			certificates: "view",
+			access_lists: "view",
+			cloudflared_tunnels: "view",
+			analytics: "view",
+			ddns_providers: "view",
+			tor_onions: "view",
+			chat: "view",
+		});
+		expect(permissions.dashboard_notes).toBe("manage");
+		expect(permissions.certificates).not.toBe("manage");
+		expect(permissions.access_lists).not.toBe("manage");
 	});
 });
