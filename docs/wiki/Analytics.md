@@ -47,6 +47,8 @@ The built-in analytics service does not need a third-party analytics provider. I
 
 Built-in analytics are enabled by default. GoAccess is **off** by default (`GOA=false`); enable it with `GOA=true` to use its separate dashboard on `GOA_PORT` (default `91`). Per-host analytics is limited to hosts the user can view according to server-side permission checks; global analytics requires the `analytics:list` permission.
 
+Every enabled proxy host writes its requests to `/data/nginx/json_access.log` in the `json_analytics` format, so the dashboard and the request history cover all proxy hosts. The separate per-host traffic log (`spm_traffic_<host-id>`) is written only for hosts with an upstream pool or cache policy. Log rotation caps `json_access.log` at 100 MB by default and deletes rotated files after a few cycles; the analytics retention settings above bound the database rows.
+
 ### Enabling GeoIP (Country Statistics)
 
 ShieldPM prepares `GeoLite2-Country.mmdb`, `GeoLite2-City.mmdb`, and `GeoLite2-ASN.mmdb` in `/data/nginx` automatically before services start. The default `GEOIP_AUTO_UPDATE=true` checks the [latest GeoLite.mmdb release](https://github.com/shedowe19/GeoLite.mmdb/releases/latest) on the first start and every later start. This needs no MaxMind account, license key, or separate updater container.
