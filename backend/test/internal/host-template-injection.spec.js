@@ -196,6 +196,36 @@ describe("redirect, dead and stream host rendering", () => {
 		vi.unstubAllEnvs();
 	});
 
+	it("renders a proxy host with HTTP/1.1 for websocket upgrades without a pool", async () => {
+		const rendered = await renderTemplate("_proxy_logic.conf", {
+			id: 42,
+			enabled: true,
+			use_default_location: true,
+			forward_scheme: "http",
+			forward_host: "backend.example.test",
+			forward_port: 8080,
+			forward_path: null,
+			forward_query: null,
+			bandwidth_limit: null,
+			locations: [],
+		});
+		expect(rendered).toContain("proxy_http_version 1.1;");
+	});
+
+	it("renders http2 only when the host enables it", async () => {
+		const base = {
+			id: 43,
+			server_names: ["h2.example.test"],
+			certificate: { provider: "letsencrypt" },
+			certificate_id: 1,
+			http2_support: true,
+		};
+		const enabled = await renderTemplate("_common.conf", base);
+		expect(enabled).toContain("http2 on;");
+		const disabled = await renderTemplate("_common.conf", { ...base, http2_support: false });
+		expect(disabled).not.toContain("http2 on;");
+	});
+
 	it("renders a redirection host with its domain, target and preserved path", async () => {
 		const rendered = await nginx.renderConfig("redirection_host", {
 			id: 11,
