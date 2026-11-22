@@ -225,6 +225,20 @@ describe("Analytics", () => {
 		}
 	});
 
+	it("labels top lists and recent requests when the detail window is shorter than the KPI window", async () => {
+		vi.mocked(getAnalyticsSummary).mockResolvedValue({
+			count: 10,
+			detail_window: { complete: false, retention_hours: 24 },
+		} as never);
+		const { default: Analytics } = await import("./index");
+
+		render(<Analytics />, "/analytics?host=1&range=30d");
+
+		expect(
+			await screen.findByText("Top lists and recent requests cover only the last 24 hours."),
+		).toBeInTheDocument();
+	});
+
 	it("keeps the latest range data when an older request completes last", async () => {
 		let resolveFirstSummary: ((value: Awaited<ReturnType<typeof getAnalyticsSummary>>) => void) | undefined;
 		const firstSummary = new Promise<Awaited<ReturnType<typeof getAnalyticsSummary>>>((resolve) => {

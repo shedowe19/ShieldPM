@@ -14,6 +14,11 @@ vi.mock("node:fs", () => ({
 	default: {
 		closeSync: mocks.closeSync,
 		openSync: mocks.openSync,
+		statSync: vi.fn(() => {
+			const error = new Error("missing");
+			error.code = "ENOENT";
+			throw error;
+		}),
 	},
 }));
 

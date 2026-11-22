@@ -11,11 +11,61 @@ const router = express.Router();
 // Apply auth to all analytics endpoints
 router.use(jwtdecode());
 
-// Enforce global admin access for platform-wide analytics
+// Enforce global analytics access for platform-wide analytics.
+// The permission is cached on the response so every handler can derive the ownership scope
+// without trusting `permission_analytics: "view"` as access to other users' hosts.
 router.use(async (_req, res, next) => {
-	await res.locals.access.can("analytics:list");
+	res.locals.analyticsPermission = await res.locals.access.can("analytics:list");
 	next();
 });
+
+const resolveRequestScope = async (res) => {
+	const access = res?.locals?.access;
+	if (!access) return { allHosts: false, userId: 0 };
+	const permission = res.locals.analyticsPermission ?? (await access.can("analytics:list"));
+	return {
+		allHosts: Boolean(permission?.roles?.includes("admin") || permission?.permission_visibility === "all"),
+		userId: access?.token?.getUserId?.(0) || 0,
+	};
+};
+
+const visibleHostsQuery = (scope) =>
+	ProxyHost.query().where("is_deleted", 0).andWhere("owner_user_id", scope.userId).select("id");
+
+const applyHostScope = (query, scope, column) => {
+	if (scope.allHosts) return query;
+	return query.whereIn(column, visibleHostsQuery(scope));
+};
+
+const sumExpression = (query) =>
+	query
+		.sum("request_count as count")
+		.sum("bytes_sent as bytes")
+		.sum("status_code_2xx as s2xx")
+		.sum("status_code_3xx as s3xx")
+		.sum("status_code_4xx as s4xx")
+		.sum("status_code_5xx as s5xx")
+		.first();
+
+const parseStats = (stats) => {
+	const safeStats = {
+		bytes: 0,
+		count: 0,
+		s2xx: 0,
+		s3xx: 0,
+		s4xx: 0,
+		s5xx: 0,
+		...stats,
+	};
+	return {
+		bytes: Number.parseInt(safeStats.bytes || 0, 10),
+		count: Number.parseInt(safeStats.count || 0, 10),
+		status_2xx: Number.parseInt(safeStats.s2xx || 0, 10),
+		status_3xx: Number.parseInt(safeStats.s3xx || 0, 10),
+		status_4xx: Number.parseInt(safeStats.s4xx || 0, 10),
+		status_5xx: Number.parseInt(safeStats.s5xx || 0, 10),
+	};
+};
 
 /**
  * GET /api/analytics/summary
@@ -26,37 +76,36 @@ router.get("/summary", async (req, res) => {
 		// Default to last 24h
 		const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
 		const end = req.query.end || dayjs().toISOString();
-		const stats =
-			(await AnalyticCount.knex()
+		const scope = await resolveRequestScope(res);
+		const query = AnalyticCount.knex()
+			.from("analytic_count")
+			.where("timestamp", ">=", start)
+			.andWhere("timestamp", "<=", end);
+		applyHostScope(query, scope, "proxy_host_id");
+		// Host 0 is the global/unattributed bucket. It is reported separately and never mixed into
+		// the sum of real hosts, for administrators and normal users alike.
+		if (scope.allHosts) query.whereNotNull("proxy_host_id");
+		const stats = (await sumExpression(query)) || {};
+
+		let unattributed = null;
+		if (scope.allHosts) {
+			const unattributedQuery = AnalyticCount.knex()
 				.from("analytic_count")
+				.whereNull("proxy_host_id")
 				.where("timestamp", ">=", start)
-				.andWhere("timestamp", "<=", end)
-				.sum("request_count as count")
-				.sum("bytes_sent as bytes")
-				.sum("status_code_2xx as s2xx")
-				.sum("status_code_3xx as s3xx")
-				.sum("status_code_4xx as s4xx")
-				.sum("status_code_5xx as s5xx")
-				.first()) || {};
-		const defaults = {
-			count: 0,
-			bytes: 0,
-			s2xx: 0,
-			s3xx: 0,
-			s4xx: 0,
-			s5xx: 0,
-		};
-		const safeStats = {
-			...defaults,
-			...stats,
-		};
+				.andWhere("timestamp", "<=", end);
+			unattributed = parseStats((await sumExpression(unattributedQuery)) || {});
+		}
+
 		res.json({
-			count: Number.parseInt(safeStats.count || 0, 10),
-			bytes: Number.parseInt(safeStats.bytes || 0, 10),
-			status_2xx: Number.parseInt(safeStats.s2xx || 0, 10),
-			status_3xx: Number.parseInt(safeStats.s3xx || 0, 10),
-			status_4xx: Number.parseInt(safeStats.s4xx || 0, 10),
-			status_5xx: Number.parseInt(safeStats.s5xx || 0, 10),
+			...parseStats(stats),
+			kpi_window: {
+				range: null,
+				since: start,
+				source: "aggregates",
+				until: end,
+			},
+			unattributed,
 		});
 	} catch (err) {
 		res.status(500).json({
@@ -73,13 +122,14 @@ router.get("/series", async (req, res) => {
 	try {
 		const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
 		const end = req.query.end || dayjs().toISOString();
+		const scope = await resolveRequestScope(res);
 
 		// Fetch raw bucketed data
 		// For performance on large sets, we might want to aggregate by hour if range > 24h
-		const data = await AnalyticCount.query()
-			.where("timestamp", ">=", start)
-			.andWhere("timestamp", "<=", end)
-			.orderBy("timestamp", "asc");
+		const query = AnalyticCount.query().where("timestamp", ">=", start).andWhere("timestamp", "<=", end);
+		applyHostScope(query, scope, "proxy_host_id");
+		if (scope.allHosts) query.whereNotNull("proxy_host_id");
+		const data = await query.orderBy("timestamp", "asc");
 
 		// We might want to aggregate further per timestamp if multiple hosts exist
 		// But for now, we just pass the raw rows or aggregate in JS
@@ -122,6 +172,15 @@ router.get("/top-hosts", async (req, res) => {
 	try {
 		const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
 		const end = req.query.end || dayjs().toISOString();
+		const scope = await resolveRequestScope(res);
+		const detailStart = dayjs()
+			.subtract(analyticsService.detailRetentionHours ?? 24, "hour")
+			.toISOString();
+		const responseTimeStart = dayjs(start).isBefore(dayjs(detailStart)) ? detailStart : start;
+		// Long aggregate ranges must not silently rank response times from a shorter detail window.
+		res.set("X-Analytics-Kpi-Since", start);
+		res.set("X-Analytics-Detail-Since", responseTimeStart);
+
 		const sort = ["bytes", "client_errors", "response_time", "server_errors"].includes(req.query.sort)
 			? req.query.sort
 			: "requests";
@@ -131,12 +190,13 @@ router.get("/top-hosts", async (req, res) => {
 			.select("proxy_host.id")
 			.where("proxy_host.is_deleted", 0)
 			.groupBy("proxy_host.id");
+		applyHostScope(hostsWithDomains, scope, "proxy_host.id");
 		const rankings =
 			sort === "response_time"
 				? await AnalyticsLogs.query()
 						.alias("analytics_logs")
 						.whereIn("analytics_logs.host_id", hostsWithDomains)
-						.where("analytics_logs.time", ">=", start)
+						.where("analytics_logs.time", ">=", responseTimeStart)
 						.andWhere("analytics_logs.time", "<=", end)
 						.where("analytics_logs.duration", ">", 0)
 						.select("analytics_logs.host_id as id")
@@ -179,10 +239,9 @@ router.get("/top-hosts", async (req, res) => {
 				: rankings;
 		const metricsByHostId = new Map(metrics.map((metric) => [Number(metric.id), metric]));
 
-		const hosts = await ProxyHost.query()
-			.whereIn("id", hostIds)
-			.where("is_deleted", 0)
-			.withGraphFetched("host_domains");
+		const hostsQuery = ProxyHost.query().whereIn("id", hostIds).where("is_deleted", 0);
+		if (!scope.allHosts) hostsQuery.andWhere("owner_user_id", scope.userId);
+		const hosts = await hostsQuery.withGraphFetched("host_domains");
 		const domainsByHostId = new Map(hosts.map((host) => [host.id, host.domain_names[0]]));
 
 		res.json(

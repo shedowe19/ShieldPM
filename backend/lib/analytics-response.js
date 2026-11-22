@@ -6,6 +6,8 @@ const countItems = (mapper, items = []) => items.map((item) => ({ ...mapper(item
 
 const serializeAnalyticsSummary = (summary) => ({
 	count: number(summary.stats?.count),
+	detail_window: summary.detail_window,
+	kpi_window: summary.kpi_window,
 	recentRequests: (summary.recent_requests || []).map((request) => ({
 		countryCode: request.country_code || undefined,
 		duration: number(request.duration),
