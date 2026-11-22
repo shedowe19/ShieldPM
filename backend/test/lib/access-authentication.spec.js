@@ -53,4 +53,19 @@ describe("Access.load authenticates accounts before exposing a token", () => {
 		await expect(access.can("users:create", {})).resolves.toBe(true);
 		expect(state.query).not.toHaveBeenCalled();
 	});
+
+	it("reports administrator status without trusting a caller-provided flag", async () => {
+		const regular = new Access("signed-token");
+		await regular.load();
+		await expect(regular.isAdmin()).resolves.toBe(false);
+
+		state.user = { id: 7, roles: ["admin"], permissions: {} };
+		const admin = new Access("signed-token");
+		await admin.load();
+		await expect(admin.isAdmin()).resolves.toBe(true);
+
+		const internal = new Access(null);
+		await internal.load(true);
+		await expect(internal.isAdmin()).resolves.toBe(true);
+	});
 });
