@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { RouteErrorBoundary } from "src/components/RouteErrorBoundary";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -30,7 +30,11 @@ vi.mock("src/components/Sidebar", () => ({
 	Sidebar: () => <div>Sidebar</div>,
 }));
 vi.mock("src/components/SiteContainer", () => ({
-	SiteContainer: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+	SiteContainer: ({ children }: { children: React.ReactNode }) => (
+		<main id="app-content" tabIndex={-1}>
+			{children}
+		</main>
+	),
 }));
 vi.mock("src/components/SiteFooter", () => ({
 	SiteFooter: () => <div>Footer</div>,
@@ -179,5 +183,24 @@ describe("Router", () => {
 		expect(await screen.findByRole("alert")).toHaveTextContent("Diese Seite konnte nicht geladen werden.");
 		fireEvent.click(screen.getByRole("button", { name: "Seite neu laden" }));
 		expect(reloadSpy).toHaveBeenCalledOnce();
+	});
+
+	it("sets a route-specific document title and moves focus to the main landmark", async () => {
+		mocks.authenticated = true;
+		window.history.replaceState({}, "", "/");
+		const { default: Router } = await import("./Router");
+
+		render(<Router />);
+		expect(await screen.findByText("Dashboard")).toBeInTheDocument();
+		await waitFor(() => expect(document.title).toBe("Dashboard - ShieldPM"));
+
+		act(() => {
+			window.history.pushState({}, "", "/duo-callback");
+			window.dispatchEvent(new PopStateEvent("popstate"));
+		});
+
+		expect(await screen.findByText("Duo callback")).toBeInTheDocument();
+		await waitFor(() => expect(document.title).toBe("Duo Callback - ShieldPM"));
+		expect(document.getElementById("app-content")).toHaveFocus();
 	});
 });

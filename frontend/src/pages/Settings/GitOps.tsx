@@ -53,6 +53,16 @@ export default function GitOps() {
 	const [isInitialized, setIsInitialized] = useState(false);
 	const [openRevertId, setOpenRevertId] = useState<string | null>(null);
 	const [isImportOpen, setIsImportOpen] = useState(false);
+	const [importConfirmation, setImportConfirmation] = useState("");
+	const [lastImport, setLastImport] = useState<{
+		success: boolean;
+		imported?: number;
+		skipped?: number;
+		deleted?: number;
+		deletions?: Array<{ model: string; id: number }>;
+	} | null>(null);
+
+	const importConfirmed = importConfirmation.trim().toUpperCase() === "IMPORT";
 
 	// Initialize form data when config is loaded
 	if (config && !isInitialized) {
@@ -320,14 +330,20 @@ export default function GitOps() {
 								<span className="text-xs text-muted-foreground mt-1">Pull latest from remote</span>
 							</Button>
 
-							<Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+							<Dialog
+								open={isImportOpen}
+								onOpenChange={(open) => {
+									setIsImportOpen(open);
+									if (!open) setImportConfirmation("");
+								}}
+							>
 								<DialogTrigger asChild>
 									<Button
 										variant="outline"
 										className="h-auto py-4 flex-col border-amber-500/50 hover:border-amber-500"
 										disabled={actionsDisabled}
 									>
-										<RotateCcw className="h-6 w-6 mb-2 text-amber-500" />
+										<RotateCcw className="h-6 w-6 mb-2 text-amber-500" aria-hidden="true" />
 										<span className="font-medium">
 											<T id="settings.gitops.import" />
 										</span>
@@ -338,12 +354,34 @@ export default function GitOps() {
 								</DialogTrigger>
 								<DialogContent>
 									<DialogHeader>
-										<DialogTitle>Import Configuration from Git?</DialogTitle>
+										<DialogTitle>Replace this instance's configuration from Git?</DialogTitle>
 										<DialogDescription>
-											This will import proxy hosts, access lists, and other configuration from the
-											Git repository. Existing items with matching IDs may be overwritten.
+											This is a full sync. It creates and overwrites users (including their roles
+											and permissions), global settings and integrations, and proxy, redirection,
+											dead and stream hosts as well as certificates, access lists and other
+											exported objects. Objects that exist here but are missing in the repository
+											are deleted. The user running the import is kept. Credentials that the
+											repository marks as redacted stay as currently stored. This cannot be
+											undone.
 										</DialogDescription>
 									</DialogHeader>
+									<div className="space-y-2">
+										<p className="text-sm text-muted-foreground">
+											Create an instance backup under Settings → Backups first. GitOps does not
+											contain certificate private keys or a database backup.
+										</p>
+										<label htmlFor="gitops-import-confirmation" className="text-sm font-medium">
+											Type <span className="font-mono">IMPORT</span> to confirm the full sync
+										</label>
+										<Input
+											id="gitops-import-confirmation"
+											value={importConfirmation}
+											onChange={(event) => setImportConfirmation(event.target.value)}
+											autoComplete="off"
+											spellCheck={false}
+											aria-required="true"
+										/>
+									</div>
 									<DialogFooter>
 										<DialogClose asChild>
 											<Button variant="outline">Cancel</Button>
@@ -352,14 +390,28 @@ export default function GitOps() {
 											onClick={() =>
 												importConfig.mutate(true, {
 													onSuccess: (result) => {
-														if (result.success) setIsImportOpen(false);
+														const outcome = result as typeof result & {
+															deleted?: number;
+															deletions?: Array<{ model: string; id: number }>;
+														};
+														setLastImport({
+															success: outcome.success,
+															imported: outcome.imported,
+															skipped: outcome.skipped,
+															deleted: outcome.deleted,
+															deletions: outcome.deletions,
+														});
+														if (result.success) {
+															setIsImportOpen(false);
+															setImportConfirmation("");
+														}
 													},
 												})
 											}
 											className="bg-amber-600 hover:bg-amber-700"
-											disabled={actionsDisabled}
+											disabled={actionsDisabled || !importConfirmed}
 										>
-											Import
+											Import and delete missing objects
 										</Button>
 									</DialogFooter>
 								</DialogContent>
@@ -367,6 +419,29 @@ export default function GitOps() {
 						</div>
 					</CardContent>
 				</Card>
+			)}
+
+			{/* Last import result */}
+			{lastImport && (
+				<Alert variant={lastImport.success ? "default" : "destructive"}>
+					<AlertCircle className="h-4 w-4" />
+					<AlertTitle>{lastImport.success ? "Import complete" : "Import failed"}</AlertTitle>
+					<AlertDescription>
+						Imported: {lastImport.imported ?? 0}. Skipped: {lastImport.skipped ?? 0}. Removed during the
+						full sync: {lastImport.deleted ?? 0}
+						{lastImport.deletions && lastImport.deletions.length > 0
+							? ` (${Object.entries(
+									lastImport.deletions.reduce<Record<string, number>>((counts, item) => {
+										counts[item.model] = (counts[item.model] ?? 0) + 1;
+										return counts;
+									}, {}),
+								)
+									.map(([model, count]) => `${model}: ${count}`)
+									.join(", ")})`
+							: ""}
+						. Reload the page to see the current state.
+					</AlertDescription>
+				</Alert>
 			)}
 
 			{/* History Card */}
@@ -414,10 +489,13 @@ export default function GitOps() {
 												</DialogTrigger>
 												<DialogContent>
 													<DialogHeader>
-														<DialogTitle>Revert to this commit?</DialogTitle>
+														<DialogTitle>Revert to this commit and restart?</DialogTitle>
 														<DialogDescription>
 															Revert to commit {commit.sha.substring(0, 7)}: "
-															{commit.message}"
+															{commit.message}". This applies the stored configuration and
+															restarts the ShieldPM backend afterwards; active sessions
+															end and open pages must reconnect. Objects that are not part
+															of that revision can be overwritten or removed.
 														</DialogDescription>
 													</DialogHeader>
 													<DialogFooter>
@@ -436,9 +514,12 @@ export default function GitOps() {
 															disabled={actionsDisabled}
 														>
 															{revert.isPending && openRevertId === commit.sha && (
-																<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+																<Loader2
+																	className="mr-2 h-4 w-4 animate-spin"
+																	aria-hidden="true"
+																/>
 															)}
-															Revert
+															Revert and restart
 														</Button>
 													</DialogFooter>
 												</DialogContent>

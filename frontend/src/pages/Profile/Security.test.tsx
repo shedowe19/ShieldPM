@@ -215,9 +215,9 @@ describe("SecuritySettings", () => {
 		fireEvent.click(await screen.findByText("Regenerate Backup Codes"));
 		expect(await screen.findByText("fresh-recovery")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Regenerate Backup Codes" })).toBeDisabled();
-		expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+		expect(screen.getByRole("button", { name: "Delete: App" })).toBeDisabled();
 		await act(async () => finishRefresh());
-		await waitFor(() => expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled());
+		await waitFor(() => expect(screen.getByRole("button", { name: "Delete: App" })).toBeEnabled());
 	});
 
 	it("shows a setup status-refresh rejection without losing the returned recovery codes", async () => {
@@ -328,8 +328,8 @@ describe("SecuritySettings", () => {
 		mockRegenerate2faBackupCodes.mockReturnValue(new Promise(() => {}));
 		render(<SecuritySettings />, { wrapper: makeWrapper() });
 		fireEvent.click(await screen.findByText("Regenerate Backup Codes"));
-		await waitFor(() => expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled());
-		fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+		await waitFor(() => expect(screen.getByRole("button", { name: "Delete: App" })).toBeDisabled());
+		fireEvent.click(screen.getByRole("button", { name: "Delete: App" }));
 		expect(mockRemove2faMethod).not.toHaveBeenCalled();
 	});
 	it("shows recovery codes returned by the first YubiKey registration", async () => {
@@ -418,5 +418,52 @@ describe("SecuritySettings", () => {
 			finishPrompt({ id: "credential" } as never);
 		});
 		expect(mockCompletePasskeyRegistration).not.toHaveBeenCalled();
+	});
+
+	it("labels every 2FA setup control programmatically", async () => {
+		render(<SecuritySettings />, { wrapper: makeWrapper() });
+		fireEvent.click(await screen.findByText("Duo Security"));
+
+		expect(await screen.findByLabelText("Client ID")).toHaveAttribute("id", "duo-clientId");
+		expect(screen.getByLabelText("Client Secret")).toHaveAttribute("id", "duo-clientSecret");
+		expect(screen.getByLabelText("API Hostname")).toHaveAttribute("id", "duo-apiHost");
+		expect(screen.getByLabelText("Redirect URL")).toHaveAttribute("id", "duo-redirectUrl");
+		expect(screen.getByLabelText("Client ID")).toHaveAccessibleDescription(
+			"Enter your Duo Security Universal Prompt credentials from the Duo Admin Panel.",
+		);
+
+		fireEvent.click(screen.getByText("Cancel"));
+		fireEvent.click(await screen.findByText("YubiKey"));
+		expect(await screen.findByLabelText("YubiKey OTP")).toHaveAttribute("id", "yubikey-otp");
+		expect(screen.getByLabelText("Label (optional)")).toHaveAttribute("id", "yubikey-label");
+	});
+
+	it("marks a rejected TOTP code invalid and links the error message", async () => {
+		mockSetup2faTotp.mockResolvedValue({ qrDataUrl: "data:image/png;base64,fake" });
+		mockEnable2faTotp.mockRejectedValueOnce(new Error("Invalid verification code"));
+		render(<SecuritySettings />, { wrapper: makeWrapper() });
+		fireEvent.click(await screen.findByText("Authenticator App"));
+		const input = await screen.findByLabelText("Verification Code");
+		fireEvent.change(input, { target: { value: "123456" } });
+		fireEvent.click(screen.getByText("Verify & Enable"));
+
+		expect(await screen.findByText("Invalid verification code")).toBeInTheDocument();
+		expect(input).toHaveAttribute("aria-invalid", "true");
+		expect(input).toHaveAttribute("aria-describedby", "totp-verification-error");
+		expect(document.getElementById("totp-verification-error")).toHaveTextContent("Invalid verification code");
+	});
+
+	it("shows recovery codes as a list and keeps the delete action named per method", async () => {
+		mockGet2fa.mockResolvedValue({
+			methods: [{ id: 1, type: "totp", label: "Phone", isVerified: true }],
+			backupCodesRemaining: 5,
+		});
+		mockRegenerate2faBackupCodes.mockResolvedValue({ backupCodes: ["CODE1", "CODE2"] });
+		render(<SecuritySettings />, { wrapper: makeWrapper() });
+		fireEvent.click(await screen.findByText("Regenerate Backup Codes"));
+
+		expect(await screen.findByText("CODE1")).toBeInTheDocument();
+		expect(screen.getByRole("list")).toHaveTextContent("CODE1");
+		expect(screen.getByRole("button", { name: "Delete: Phone" })).toBeInTheDocument();
 	});
 });

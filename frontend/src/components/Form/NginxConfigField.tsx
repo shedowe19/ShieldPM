@@ -20,8 +20,9 @@ export function NginxConfigField({
 					<Label htmlFor={id}>
 						<T id={label} />
 					</Label>
-					<div className="rounded-md border overflow-hidden">
+					<div className="rounded-md border overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-inset">
 						<LazyCodeEditor
+							id={id}
 							language="nginx"
 							placeholder={intl.formatMessage({ id: "nginx-config.placeholder" })}
 							padding={15}

@@ -83,7 +83,7 @@ for (const replacedBy of ["newer login", "provider unmount"] as const) {
 				? auth.login("old@example.test", "password")
 				: action === "impersonation"
 					? auth.loginAs(2)
-					: auth.logout();
+					: auth.restoreAdminSession();
 
 		act(() => {
 			if (replacedBy === "newer login") auth.completeLogin(newerUser);
@@ -108,7 +108,7 @@ it("does not clear a newer login or send its cookies to logout after an old rest
 	await mountProvider();
 	const delayed = deferred<typeof administrator>();
 	mocks.restoreSession.mockReturnValueOnce(delayed.promise);
-	const operation = auth.logout();
+	const operation = auth.restoreAdminSession();
 	act(() => auth.completeLogin(newerUser));
 	queryClient.setQueryData(["profile"], newerUser.user);
 	await act(async () => {
@@ -142,7 +142,7 @@ it("still clears all authentication cookies when the backup administrator token 
 		new Response(JSON.stringify({ error: { code: 401, message: "Expired" } }), { status: 401 }),
 	);
 	await act(async () => {
-		await auth.logout();
+		await auth.restoreAdminSession();
 	});
 	expect(AuthStore.active).toBe(false);
 	expect(screen.getByText("signed out")).toBeInTheDocument();

@@ -233,16 +233,23 @@ export const AUDIT_LOG_OBJECT_TYPE = {
 	TOR_ONION: "tor-onion",
 	WIREGUARD_PEER: "wireguard-peer",
 	WIREGUARD_SETTINGS: "wireguard-settings",
+	AUTH_SESSION: "auth-session",
 } as const;
 export type AuditLogObjectType = (typeof AUDIT_LOG_OBJECT_TYPE)[keyof typeof AUDIT_LOG_OBJECT_TYPE];
 
 export const AUDIT_LOG_ACTION = {
 	CREATED: "created",
+	CLIENT_CERTIFICATE_CREATED: "client_certificate.created",
 	DELETED: "deleted",
 	UPDATED: "updated",
 	ENABLED: "enabled",
 	DISABLED: "disabled",
 	RENEWED: "renewed",
+	DOWNLOADED: "downloaded",
+	RESTORED: "restored",
+	REFRESH_REPLAY_DETECTED: "refresh_replay_detected",
+	USER_IMPERSONATED: "user.impersonated",
+	USER_OIDC_LINK_DENIED: "user.oidc_link_denied",
 } as const;
 export type AuditLogAction = (typeof AUDIT_LOG_ACTION)[keyof typeof AUDIT_LOG_ACTION];
 

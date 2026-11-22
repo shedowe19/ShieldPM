@@ -24,8 +24,10 @@
         --accent: 210 40% 96.1%;
         --accent-foreground: 222.2 47.4% 11.2%;
 
-        --destructive: 0 84.2% 60.2%;
+        --destructive: 0 74% 42%;
         --destructive-foreground: 210 40% 98%;
+        /* Text-only destructive colour with at least 4.5:1 on the light surface. */
+        --destructive-text: 0 74% 42%;
 
         --border: 214.3 31.8% 91.4%;
         --input: 214.3 31.8% 91.4%;
@@ -58,6 +60,8 @@
 
         --destructive: 0 62.8% 30.6%;
         --destructive-foreground: 210 40% 98%;
+        /* Light red for destructive text on the dark surface (>= 4.5:1). */
+        --destructive-text: 0 94% 82%;
 
         --border: 217.2 32.6% 17.5%;
         --input: 217.2 32.6% 17.5%;
@@ -72,6 +76,23 @@
 
     body {
         @apply bg-background text-foreground;
+    }
+}
+
+/*
+ * `--destructive` is a fill colour. Using it as body text fails WCAG AA in both
+ * themes (3.76:1 light, 2.41:1 dark), so destructive text uses its own token.
+ * This rule is intentionally unlayered to win over the generated utility.
+ */
+.text-destructive {
+    color: hsl(var(--destructive-text));
+}
+
+/* Box-shadow focus rings are not painted in forced-colors mode. */
+@media (forced-colors: active) {
+    :focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
     }
 }
 
