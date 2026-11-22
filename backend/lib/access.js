@@ -151,6 +151,17 @@ export default function (tokenString) {
 		reloadObjects: this.loadObjects,
 
 		/**
+		 * Returns true for administrators and trusted internal callers.
+		 * Used by host validation to gate expert-only Nginx fields.
+		 * @returns {Promise<boolean>}
+		 */
+		isAdmin: async () => {
+			if (allowInternalAccess === true) return true;
+			await this.init();
+			return userRoles.includes("admin");
+		},
+
+		/**
 		 *
 		 * @param {String}  permission
 		 * @param {*}       [data]

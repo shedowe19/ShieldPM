@@ -51,6 +51,8 @@
 		"forward_host": {
 			"type": "string",
 			"minLength": 1,
+			"pattern": "^[^\\s;{}\"'\\\\]+$",
+			"description": "Hostname, IP address, or absolute path for path forwarding. Nginx syntax characters are rejected.",
 			"example": "127.0.0.1"
 		},
 		"forward_port": {
@@ -169,6 +171,7 @@
 				"string",
 				"null"
 			],
+			"pattern": "^(?:[0-9]{1,9}[kKmM]?)?$",
 			"example": ""
 		},
 		"forward_query": {
@@ -176,6 +179,7 @@
 				"string",
 				"null"
 			],
+			"pattern": "^[^\\s;{}\"'\\\\$#]*$",
 			"example": "api_key=123"
 		},
 		"meta": {
@@ -255,7 +259,8 @@
 					},
 					"path": {
 						"type": "string",
-						"minLength": 1
+						"minLength": 1,
+						"pattern": "^/[^\\s;{}\"'\\\\?]*$"
 					},
 					"forward_scheme": {
 						"$ref": "#/properties/forward_scheme"
@@ -410,6 +415,7 @@
 				"string",
 				"null"
 			],
+			"pattern": "^(?!.*\\.\\.)[A-Za-z0-9._/-]*$",
 			"example": "index.html"
 		},
 		"git_repo_url": {

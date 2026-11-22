@@ -3,6 +3,7 @@ import _ from "lodash";
 import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
 import { withHostDomainClaims } from "../lib/host-domain-claims.js";
+import { validateDeadHostFields } from "../lib/host-input.js";
 import { sanitizeHostMeta } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import deadHostModel from "../models/dead_host.js";
@@ -35,6 +36,7 @@ const internalDeadHost = {
 		}
 
 		await access.can("dead_hosts:create", data);
+		await validateDeadHostFields(access, data);
 		await internalHost.validateReferences(access, data);
 		internalHost.validateDomainNames(data.domain_names);
 
@@ -114,6 +116,7 @@ const internalDeadHost = {
 		}
 
 		await access.can("dead_hosts:update", thisData.id);
+		await validateDeadHostFields(access, thisData);
 
 		if (thisData.domain_names !== undefined) internalHost.validateDomainNames(thisData.domain_names);
 

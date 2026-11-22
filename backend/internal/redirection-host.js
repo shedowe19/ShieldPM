@@ -3,6 +3,7 @@ import _ from "lodash";
 import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
 import { withHostDomainClaims } from "../lib/host-domain-claims.js";
+import { validateRedirectionHostFields } from "../lib/host-input.js";
 import { sanitizeHostMeta } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import redirectionHostModel from "../models/redirection_host.js";
@@ -45,6 +46,7 @@ const internalRedirectionHost = {
 		}
 
 		await access.can("redirection_hosts:create", thisData);
+		await validateRedirectionHostFields(access, thisData);
 		await internalHost.validateReferences(access, thisData);
 		internalHost.validateDomainNames(thisData.domain_names);
 
@@ -133,6 +135,7 @@ const internalRedirectionHost = {
 		}
 
 		await access.can("redirection_hosts:update", thisData.id);
+		await validateRedirectionHostFields(access, thisData);
 		let row = await internalRedirectionHost.get(access, { id: thisData.id });
 		await internalHost.validateReferences(access, thisData, row);
 

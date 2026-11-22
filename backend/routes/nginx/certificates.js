@@ -3,6 +3,7 @@ import express from "express";
 import fileUpload from "express-fileupload";
 import rateLimit from "express-rate-limit";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
+import internalAuditLog from "../../internal/audit-log.js";
 import internalCertificate from "../../internal/certificate.js";
 import internalPki from "../../internal/pki.js";
 import errs from "../../lib/error.js";
@@ -148,6 +149,14 @@ router
 		);
 
 		await res.locals.access.can("certificates:create", payload);
+		if (!(await res.locals.access.isAdmin())) {
+			throw new errs.PermissionError("Issuing internal client certificates requires administrator privileges");
+		}
+		await internalAuditLog.add(res.locals.access, {
+			action: "client_certificate.created",
+			object_type: "certificate",
+			meta: { common_name: payload.common_name, years: payload.years },
+		});
 		const tmpDir = await fs.mkdtemp("/tmp/shieldpm-client-cert-");
 		const cleanupTmpDir = async () => {
 			try {
