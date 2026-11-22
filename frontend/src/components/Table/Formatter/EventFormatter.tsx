@@ -61,6 +61,12 @@ const getEventValue = (event: AuditLog): ReactNode => {
 			);
 		case AUDIT_LOG_OBJECT_TYPE.WIREGUARD_SETTINGS:
 			return <T id="audit-log.filter.wireguard-settings" />;
+		case AUDIT_LOG_OBJECT_TYPE.AUTH_SESSION: {
+			const label = [meta.name, meta.sessionId, meta.session_id].find(
+				(value): value is string => typeof value === "string" && value.trim().length > 0,
+			);
+			return label ?? <T id="auth-session" />;
+		}
 		default:
 			return (
 				<T

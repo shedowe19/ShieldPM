@@ -130,6 +130,13 @@ describe("Audit event names", () => {
 
 const resourceEvents = [
 	{
+		type: "auth-session",
+		meta: { name: "Session for Administrator" },
+		value: "Session for Administrator",
+		de: "Anmeldesitzung",
+		en: "Auth session",
+	},
+	{
 		type: "access-list",
 		meta: { name: "Office Access" },
 		value: "Office Access",
