@@ -222,10 +222,15 @@ export const validateProxyHostFields = async (access, data = {}, existing = {}) 
 			if (location.path !== undefined) validateLocationPath(location.path);
 			if (location.forward_query !== undefined) validateForwardQuery(location.forward_query);
 			if (location.forward_host !== undefined) {
-				validateUpstreamHost(location.forward_host, {
-					allowPrivate: allowPrivate && location.forward_scheme !== "path",
-					label: `locations[${index}].forward_host`,
-				});
+				if (location.forward_scheme === "path") {
+					await requireAdmin(access, "path forwarding");
+					validateWebRoot(location.forward_host, { allowPrivate });
+				} else {
+					validateUpstreamHost(location.forward_host, {
+						allowPrivate,
+						label: `locations[${index}].forward_host`,
+					});
+				}
 			}
 			if (location.advanced_config !== undefined) {
 				await validateAdvancedConfig(access, location.advanced_config, `locations[${index}].advanced_config`);

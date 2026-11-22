@@ -38,6 +38,8 @@
 		"forwarding_host": {
 			"type": "string",
 			"minLength": 1,
+			"pattern": "^[^\\s;{}\"'\\\\]+$",
+			"description": "Hostname or IP address of the TCP/UDP upstream. Nginx syntax characters and unix sockets are rejected.",
 			"example": "127.0.0.1"
 		},
 		"forwarding_port": {
