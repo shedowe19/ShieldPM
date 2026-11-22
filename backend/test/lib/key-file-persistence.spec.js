@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../logger.js", () => ({ global: { info: vi.fn(), error: vi.fn() } }));
+vi.mock("../../logger.js", () => ({ global: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 let dataPath;
 let keysFile;
@@ -13,7 +13,8 @@ const originalWrite = fs.writeFileSync;
 beforeEach(() => {
 	vi.resetModules();
 	dataPath = fs.mkdtempSync(path.join(os.tmpdir(), "shieldpm-keys-"));
-	keysFile = path.join(dataPath, "shieldpm", "keys.json");
+	// Match the separator used by lib/config.js so fs spies compare the same path.
+	keysFile = `${dataPath}/shieldpm/keys.json`;
 	fs.mkdirSync(path.dirname(keysFile));
 	vi.stubEnv("DATA_PATH", dataPath);
 	vi.spyOn(process, "exit").mockImplementation(() => {
@@ -83,8 +84,29 @@ describe("persistent instance keys", () => {
 		const saved = JSON.parse(fs.readFileSync(keysFile, "utf8"));
 		expect(saved).toMatchObject(previous);
 		expect(saved.encryptionKey).toBe(config.getEncryptionKey());
-		expect(fs.statSync(keysFile).mode & 0o777).toBe(0o600);
+		// Windows only tracks the read-only bit, so POSIX mode bits are not observable there.
+		if (process.platform !== "win32") expect(fs.statSync(keysFile).mode & 0o777).toBe(0o600);
 		expect(fs.readdirSync(path.dirname(keysFile))).toEqual(["keys.json"]);
+	});
+
+	it("uses SHIELDPM_ENCRYPTION_KEY over keys.json and never persists the environment value", async () => {
+		const fileKey = crypto.randomBytes(32).toString("hex");
+		const envKey = crypto.randomBytes(32).toString("hex");
+		fs.writeFileSync(keysFile, JSON.stringify({ ...legacyKeys(), encryptionKey: fileKey }));
+		vi.stubEnv("SHIELDPM_ENCRYPTION_KEY", envKey);
+		const config = await import("../../lib/config.js");
+		expect(config.getEncryptionKey()).toBe(envKey);
+		expect(JSON.parse(fs.readFileSync(keysFile, "utf8")).encryptionKey).toBe(fileKey);
+	});
+
+	it("refuses an invalid SHIELDPM_ENCRYPTION_KEY instead of silently using another key", async () => {
+		fs.writeFileSync(
+			keysFile,
+			JSON.stringify({ ...legacyKeys(), encryptionKey: crypto.randomBytes(32).toString("hex") }),
+		);
+		vi.stubEnv("SHIELDPM_ENCRYPTION_KEY", "not-a-64-character-hex-key");
+		const config = await import("../../lib/config.js");
+		expect(() => config.getEncryptionKey()).toThrow("startup stopped");
 	});
 
 	it("uses the complete key pair already published by another creator", async () => {

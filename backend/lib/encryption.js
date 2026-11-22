@@ -1,9 +1,28 @@
 import crypto from "node:crypto";
 import { getEncryptionKey } from "./config.js";
 
-// Uses the persistent key from keys.json
+/**
+ * Data-at-rest encryption for stored credentials (AES-256-GCM).
+ *
+ * Key custody: the key is loaded once from `keys.json` (or, if set, from
+ * `SHIELDPM_ENCRYPTION_KEY`) and is shared by every encrypted column. A
+ * `/data` backup therefore contains both ciphertext and key material unless
+ * the operator keeps the key outside `/data` with `SHIELDPM_ENCRYPTION_KEY`.
+ * See the key-custody notes in `lib/config.js`.
+ *
+ * Rotation is deliberately NOT implemented here. The serialized format
+ * `iv:ciphertext:tag` has no key id, so a new key makes every existing value
+ * unreadable. A safe rotation needs a versioned ciphertext (`v2:...`), dual-key
+ * decryption during the transition, a re-encryption migration over every
+ * encrypted column and a tested rollback. Treat a leaked key as a compromise
+ * of every stored secret, not just of new writes.
+ */
 const algorithm = "aes-256-gcm";
 const key = Buffer.from(getEncryptionKey(), "hex");
+
+if (key.length !== 32) {
+	throw new Error("The ShieldPM encryption key must be exactly 32 bytes (64 hexadecimal characters)");
+}
 
 export const encrypt = (text) => {
 	const iv = crypto.randomBytes(12);

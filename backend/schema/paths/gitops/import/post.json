@@ -11,7 +11,63 @@
 	],
 	"responses": {
 		"200": {
-			"description": "Success"
+			"description": "Success. Objects present in the database but absent from the backup are deleted during a full sync; every deletion is listed in `deletions` so a client can require explicit confirmation before the response is acknowledged.",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"required": [
+							"success",
+							"imported",
+							"skipped",
+							"deleted",
+							"deletions",
+							"errors"
+						],
+						"properties": {
+							"success": {
+								"type": "boolean"
+							},
+							"imported": {
+								"type": "integer"
+							},
+							"skipped": {
+								"type": "integer"
+							},
+							"deleted": {
+								"type": "integer"
+							},
+							"deletions": {
+								"type": "array",
+								"description": "Every object removed from the instance because it was not present in the imported backup.",
+								"items": {
+									"type": "object",
+									"required": [
+										"model",
+										"id"
+									],
+									"properties": {
+										"model": {
+											"type": "string",
+											"example": "ProxyHost"
+										},
+										"id": {
+											"type": "integer",
+											"example": 42
+										}
+									}
+								}
+							},
+							"errors": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							}
+						}
+					}
+				}
+			}
 		},
 		"400": {
 			"description": "Invalid input"

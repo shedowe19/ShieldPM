@@ -16,7 +16,7 @@ import { normalizeFirewallPolicy } from "../lib/firewall-policy.js";
 import { assertNoSymlinkPath, assertSafeConfigTree, writeConfigFile } from "../lib/gitops-files.js";
 import { withImportedIdSequence } from "../lib/gitops-sequences.js";
 import { withHostDomainClaims } from "../lib/host-domain-claims.js";
-import { sanitizeHostMeta } from "../lib/host-response.js";
+import { isSecretFieldName, sanitizeHostMeta } from "../lib/host-response.js";
 import { notifyProxyHostDomainsChanged } from "../lib/proxy-host-domain-events.js";
 import { retireHostRuntime } from "../lib/retired-host-metadata.js";
 import { global as logger } from "../logger.js";
@@ -41,6 +41,145 @@ import { relayConfigForHost, validateRelayConfigForHost } from "./upload-relay.j
 
 const GITOPS_DIR = "/data/gitops";
 const CONFIG_SUBDIR = "shieldpm-config";
+
+/**
+ * Credentials are never written to a GitOps export. A GitOps repository is a
+ * configuration backup, not a secret store: it is frequently less protected
+ * than `/data` (shared repository, CI clone, support bundle). Operators
+ * re-enter the missing credentials after restoring to a different instance;
+ * on the instance that produced the backup the import preserves the stored
+ * value because a redacted field is treated as "not supplied".
+ */
+const REDACTED_SECRET = "********";
+
+const EXPORT_SECRET_FIELDS = {
+	CloudflaredTunnel: ["token"],
+	ProxyHost: ["git_credentials", "terminal_password", "terminal_private_key"],
+	WireguardPeer: ["client_private_key", "preshared_key"],
+};
+
+/** Per-model meta keys that are secret material but not obvious from the name. */
+const EXPORT_SECRET_META_FIELDS = {
+	AccessList: [
+		"oauth2_client_secret",
+		"oauth2ClientSecret",
+		"oauth2_cookie_secret",
+		"oauth2CookieSecret",
+		"oidc_client_secret",
+		"oidcClientSecret",
+	],
+	Certificate: ["certificate_key", "certificateKey", "dns_provider_credentials", "dnsProviderCredentials"],
+	CloudflaredTunnel: ["token"],
+	DdnsProvider: ["token", "url"],
+	ProxyHost: ["dns_provider_credentials", "dnsProviderCredentials"],
+	Setting: ["api_key", "apiKey", "clientSecret", "client_secret", "encrypted_credentials", "encryptedCredentials"],
+};
+
+const isExportSecretMetaField = (modelName, name) =>
+	(EXPORT_SECRET_META_FIELDS[modelName] || []).includes(name) || isSecretFieldName(name);
+
+const isRedactedSecretValue = (value) =>
+	value === undefined || value === null || value === "" || value === REDACTED_SECRET;
+
+/** Parse JSON metadata without ever turning an unknown shape into a silent loss. */
+const normalizeImportMeta = (value) => {
+	if (typeof value === "string") {
+		try {
+			const parsed = JSON.parse(value);
+			return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+		} catch {
+			return {};
+		}
+	}
+	return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+};
+
+/** Masks secret meta fields for an export; the input object is never mutated. */
+const redactExportMeta = (modelName, value) => {
+	let source = value;
+	if (typeof source === "string") {
+		try {
+			source = JSON.parse(source);
+		} catch {
+			return value;
+		}
+	}
+	if (!source || typeof source !== "object" || Array.isArray(source)) return value;
+	const walk = (entry, key) => {
+		if (Array.isArray(entry)) return entry.map((item) => walk(item));
+		if (entry && typeof entry === "object")
+			return Object.fromEntries(Object.entries(entry).map(([name, child]) => [name, walk(child, name)]));
+		if (key && isExportSecretMetaField(modelName, key) && !isRedactedSecretValue(entry)) return REDACTED_SECRET;
+		return entry;
+	};
+	return walk(source);
+};
+
+/** Keeps a saved secret when an imported YAML field is masked or absent. */
+const preserveMetaSecrets = (modelName, incoming, saved) => {
+	if (Array.isArray(incoming)) return incoming.map((entry) => preserveMetaSecrets(modelName, entry, undefined));
+	if (!incoming || typeof incoming !== "object") return incoming;
+	const savedMeta = normalizeImportMeta(saved);
+	const result = {};
+	for (const [key, entry] of Object.entries(incoming)) {
+		if (isExportSecretMetaField(modelName, key) && isRedactedSecretValue(entry)) {
+			if (!isRedactedSecretValue(savedMeta[key])) result[key] = savedMeta[key];
+			continue;
+		}
+		result[key] =
+			entry && typeof entry === "object" ? preserveMetaSecrets(modelName, entry, savedMeta[key]) : entry;
+	}
+	// A redacted export may omit the field entirely; the saved value still wins.
+	for (const [key, entry] of Object.entries(savedMeta)) {
+		if (isExportSecretMetaField(modelName, key) && !(key in result) && !isRedactedSecretValue(entry))
+			result[key] = entry;
+	}
+	return result;
+};
+
+/**
+ * Applies the export denylist for a model, replacing secrets with a mask.
+ * @param {string} modelName
+ * @param {Record<string, any>} row
+ * @returns {Record<string, any>}
+ */
+const sanitizeModelForExport = (modelName, row) => {
+	const result = { ...row };
+	for (const field of EXPORT_SECRET_FIELDS[modelName] || []) {
+		if (!isRedactedSecretValue(result[field])) result[field] = REDACTED_SECRET;
+	}
+	if (result.meta !== undefined && result.meta !== null) result.meta = redactExportMeta(modelName, result.meta);
+	if (modelName === "DdnsProvider") {
+		// Only non-secret routing data is portable; the token/custom URL stays local.
+		const config = normalizeImportMeta(result.config);
+		result.config = result.provider === "cloudflare" ? _.pick(config, ["zone_id"]) : {};
+	}
+	// Access List basic-auth verifiers (bcrypt/apr1) are retained deliberately:
+	// they are password hashes, not plaintext credentials, and the importer
+	// restores them so an existing ACL survives a round trip. The SSO client
+	// secrets in `meta` are masked above.
+	return result;
+};
+
+/** Restores saved credentials that a redacted export intentionally omitted. */
+const preserveImportedSecrets = (modelName, itemData, existing) => {
+	const result = { ...itemData };
+	for (const field of EXPORT_SECRET_FIELDS[modelName] || []) {
+		if (isRedactedSecretValue(result[field])) {
+			if (existing && !isRedactedSecretValue(existing[field])) result[field] = existing[field];
+			else delete result[field];
+		}
+	}
+	if (result.meta !== undefined) result.meta = preserveMetaSecrets(modelName, result.meta, existing?.meta);
+	if (modelName === "DdnsProvider" && existing && result.config && result.provider === existing.provider) {
+		result.config = { ...normalizeImportMeta(existing.config), ...normalizeImportMeta(result.config) };
+	}
+	// `cloudflared_tunnel.token` is NOT NULL. A restore into a fresh instance
+	// must create the row as a disabled/empty reference instead of failing the
+	// whole import; the operator re-enters the token afterwards.
+	if (modelName === "CloudflaredTunnel" && result.token === undefined) result.token = "";
+	return result;
+};
 
 /**
  * Whitelist of allowed import fields per model.
@@ -608,7 +747,7 @@ const internalGitOps = {
 		for (const host of proxyHosts) {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "proxy-hosts", filename);
-			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"], true);
+			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"], true, "ProxyHost");
 			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -640,7 +779,7 @@ const internalGitOps = {
 		for (const host of redirectionHosts) {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "redirection-hosts", filename);
-			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"], true);
+			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"], true, "RedirectionHost");
 			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -650,7 +789,7 @@ const internalGitOps = {
 		for (const host of deadHosts) {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "dead-hosts", filename);
-			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"], true);
+			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"], true, "DeadHost");
 			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -660,7 +799,7 @@ const internalGitOps = {
 		for (const stream of streams) {
 			const filename = `${stream.id}-${stream.incoming_port || "unknown"}.yaml`;
 			const filePath = path.join(configDir, "streams", filename);
-			const exportData = internalGitOps.sanitizeForExport(stream, ["is_deleted"], true);
+			const exportData = internalGitOps.sanitizeForExport(stream, ["is_deleted"], true, "Stream");
 			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -670,7 +809,7 @@ const internalGitOps = {
 		for (const cert of certificates) {
 			const filename = `${cert.id}-${(cert.nice_name || cert.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "certificates", filename);
-			const exportData = internalGitOps.sanitizeForExport(cert, ["is_deleted"]);
+			const exportData = internalGitOps.sanitizeForExport(cert, ["is_deleted"], false, "Certificate");
 			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -680,7 +819,7 @@ const internalGitOps = {
 		for (const user of users) {
 			const filename = `${user.id}-${(user.nickname || user.email || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "users", filename);
-			const exportData = internalGitOps.sanitizeForExport(user, ["is_deleted"]);
+			const exportData = internalGitOps.sanitizeForExport(user, ["is_deleted"], false, "User");
 			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -699,7 +838,7 @@ const internalGitOps = {
 			if (graph) query.withGraphFetched(graph);
 			for (const row of await query) {
 				const filePath = path.join(configDir, directory, `${row.id}.yaml`);
-				const exportData = internalGitOps.sanitizeForExport(row, ["is_deleted"]);
+				const exportData = internalGitOps.sanitizeForExport(row, ["is_deleted"], false, model.name);
 				if (model === AccessList && exportData.meta)
 					exportData.meta = _.omit(exportData.meta, ["authorization_revision"]);
 				await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
@@ -711,7 +850,7 @@ const internalGitOps = {
 		for (const setting of settings) {
 			const filename = `${encodeURIComponent(setting.id)}.yaml`;
 			const filePath = path.join(configDir, "settings", filename);
-			const exportData = { ...setting };
+			const exportData = internalGitOps.sanitizeForExport(setting, [], false, "Setting");
 			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -875,13 +1014,15 @@ const internalGitOps = {
 	 * Sanitize an object for export (remove sensitive/internal fields)
 	 * @param {Object} obj
 	 * @param {string[]} excludeFields
-	 * @param {boolean} [hostMetadata] - Apply host-only metadata rules without stripping certificate credentials.
+	 * @param {boolean} [hostMetadata] - Apply host-only runtime metadata rules.
+	 * @param {string|null} [modelName] - Applies the per-model secret denylist (ProxyHost, CloudflaredTunnel, Certificate, Setting, ...).
 	 * @returns {Object}
 	 */
-	sanitizeForExport: (obj, excludeFields, hostMetadata = false) => {
-		const result = hostMetadata ? retireHostRuntime(obj) : { ...obj };
+	sanitizeForExport: (obj, excludeFields, hostMetadata = false, modelName = null) => {
+		let result = hostMetadata ? retireHostRuntime(obj) : { ...obj };
 		if (hostMetadata && result.meta && typeof result.meta === "object" && !Array.isArray(result.meta))
 			result.meta = sanitizeHostMeta(result.meta);
+		if (modelName) result = sanitizeModelForExport(modelName, result);
 		for (const field of excludeFields) {
 			delete result[field];
 		}
@@ -1125,7 +1266,7 @@ const internalGitOps = {
 	 * @param {import("../lib/types.js").Access} access
 	 * @param {Object} options
 	 * @param {boolean} [options.overwrite=false] - Overwrite existing hosts
-	 * @returns {Promise<{success: boolean, imported: number, skipped: number, deleted: number, errors: string[]}>}
+	 * @returns {Promise<{success: boolean, imported: number, skipped: number, deleted: number, deletions: Array<{model: string, id: number}>, errors: string[]}>}
 	 */
 	importConfig: async (access, options = {}) => {
 		if (isDemoMode()) {
@@ -1145,6 +1286,8 @@ const internalGitOps = {
 			let skipped = 0;
 			let deleted = 0;
 			const errors = [];
+			/** @type {Array<{model: string, id: number}>} */
+			const deletions = [];
 			/** @type {Array<() => Promise<void>>} */
 			const deferredFirewallPrunes = [];
 			const deferredAccessListPrunes = [];
@@ -1290,7 +1433,7 @@ const internalGitOps = {
 
 								if (data && typeof data === "object") {
 									// Apply field whitelist validation to prevent DB field injection
-									const itemData = sanitizeImportData(modelClass.name, data);
+									let itemData = sanitizeImportData(modelClass.name, data);
 									if (!itemData) {
 										errors.push(
 											`${dirName}/${file}: Model "${modelClass.name}" not allowed or no valid fields`,
@@ -1320,6 +1463,9 @@ const internalGitOps = {
 											return;
 										}
 									}
+									// A redacted export must never clear credentials that are already
+									// stored on this instance. Only a real (non-mask) value replaces them.
+									itemData = preserveImportedSecrets(modelClass.name, itemData, existing);
 									if (modelClass === AccessList) {
 										await rememberAccessList(existingId);
 										for (const item of itemData.items || []) {
@@ -1333,6 +1479,7 @@ const internalGitOps = {
 									}
 									const activateCloudflared =
 										modelClass === CloudflaredTunnel &&
+										Boolean(itemData.token || existing?.token) &&
 										(!existing ||
 											(Object.hasOwn(itemData, "token") && existing.token !== itemData.token) ||
 											existing.status === 3);
@@ -1587,6 +1734,7 @@ const internalGitOps = {
 								// Persist deletion before stopping: queued starts then see the deleted row.
 								if (modelClass === CloudflaredTunnel) await internalCloudflared.stop(item.id);
 								deleted++;
+								deletions.push({ model: modelClass.name, id: item.id });
 								logger.info(`GitOps Full Sync: Deleted ${dirName} #${item.id}`);
 							};
 							await deleteItem();
@@ -1677,6 +1825,7 @@ const internalGitOps = {
 						for (const monitor of removed) {
 							await internalProxyHostMonitor.removeHost(monitor.host_id);
 							deleted++;
+							deletions.push({ model: "ProxyHostMonitor", id: monitor.host_id });
 						}
 					}
 				}
@@ -1727,8 +1876,21 @@ const internalGitOps = {
 
 									const existing = await settingModel.query().findById(settingData.id);
 									if (existing) {
+										// Masked/omitted secret fields in a redacted export keep the saved value.
+										if (settingData.meta !== undefined)
+											settingData.meta = preserveMetaSecrets(
+												"Setting",
+												settingData.meta,
+												existing.meta,
+											);
 										await settingModel.query().patchAndFetchById(settingData.id, settingData);
 									} else {
+										if (settingData.meta !== undefined)
+											settingData.meta = preserveMetaSecrets(
+												"Setting",
+												settingData.meta,
+												undefined,
+											);
 										await settingModel.query().insert(settingData);
 									}
 									imported++;
@@ -1971,7 +2133,20 @@ const internalGitOps = {
 				logger.info(
 					`GitOps import: ${imported} imported, ${skipped} skipped, ${deleted} deleted, ${errors.length} errors`,
 				);
-				return { success: errors.length === 0, imported, skipped, deleted, errors };
+				if (deletions.length)
+					logger.warn(
+						`GitOps import removed ${deletions.length} object(s) absent from the backup: ${deletions
+							.map((entry) => `${entry.model}#${entry.id}`)
+							.join(", ")}`,
+					);
+				return {
+					success: errors.length === 0,
+					imported,
+					skipped,
+					deleted,
+					deletions,
+					errors,
+				};
 			} catch (err) {
 				const errorMessage = err instanceof Error ? err.message : "Unknown error";
 				logger.error("GitOps import failed:", err);
@@ -2006,6 +2181,9 @@ const internalGitOps = {
 								0,
 								deleted - [...accessListChanges.values()].filter((change) => change.pruned).length,
 							),
+					deletions: proxyActivated
+						? deletions
+						: deletions.filter((entry) => !["AccessList", "ProxyHost"].includes(entry.model)),
 					errors: [...errors, errorMessage],
 				};
 			}
