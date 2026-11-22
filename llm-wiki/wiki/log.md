@@ -8,7 +8,7 @@ Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Felder
 - Type: security
 - Areas affected: Backend, Frontend, Nginx-Templates, Rootfs/Container, CI und
   Release, öffentliche Doku, internes Wiki.
-- Files changed: 159 Dateien; Schwerpunkte: zentrale Host-Validierung
+- Files changed: 229 Dateien; Schwerpunkte: zentrale Host-Validierung
   (`lib/host-input.js`), Identität/Sessions, Audit-Kontext, KI-Bestätigungen,
   Analytics-Ingestion, Secret-Redaktion, Terminal, Backup, Compose/CI,
   Setup-Token, Frontend-Dialoge und Barrierefreiheit.

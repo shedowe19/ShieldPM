@@ -72,7 +72,7 @@
 
 - [x] **T-028 Security-Review 2026-11 behoben.** Done 2026-11-23. Beleg: Branch
       `fix/security-hardening`; K-01/K-02/K-03 an der Trust-Grenze geschlossen,
-      159 Dateien gehärtet, Regressionstests für Injection, Host-Typen,
+      229 Dateien gehärtet, Regressionstests für Injection, Host-Typen,
       API-Gates, Audit-Kontext und Analytics-Idempotenz. Details:
       [Sicherheit](./security/overview.md) und [Log](./log.md).
 - [x] **T-019 Warnungen aus dem Datei-Audit triagiert.** Done 2026-11-05.
