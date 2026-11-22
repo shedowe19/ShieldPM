@@ -24,6 +24,41 @@ const getGravatarUrl = (email) => {
 
 const DEFAULT_AVATAR = getGravatarUrl("admin@example.com");
 
+// Default permission matrix for new accounts.
+// - Admins bypass permission checks entirely; the row stays fully manageable so
+//   the users UI has a meaningful starting point if the role is ever removed.
+// - New non-admin accounts get read-only access to shared/security-sensitive
+//   resources (PKI, access lists, integrations) but may create and manage their
+//   own host types. This avoids handing every invite "manage" on eight areas.
+const ADMIN_DEFAULT_PERMISSIONS = {
+	access_lists: "manage",
+	certificates: "manage",
+	proxy_hosts: "manage",
+	redirection_hosts: "manage",
+	streams: "manage",
+	dead_hosts: "manage",
+	cloudflared_tunnels: "manage",
+	analytics: "view",
+	dashboard_notes: "manage",
+	ddns_providers: "manage",
+	tor_onions: "manage",
+	chat: "manage",
+};
+const NON_ADMIN_DEFAULT_PERMISSIONS = {
+	access_lists: "view",
+	certificates: "view",
+	proxy_hosts: "manage",
+	redirection_hosts: "manage",
+	streams: "manage",
+	dead_hosts: "manage",
+	cloudflared_tunnels: "view",
+	analytics: "view",
+	dashboard_notes: "manage",
+	ddns_providers: "view",
+	tor_onions: "view",
+	chat: "view",
+};
+
 const AVATAR_SIGNATURES = [
 	{
 		mimeType: "image/png",
@@ -89,6 +124,13 @@ const emailClaimTransaction = (callback) => {
 	return userModel.transaction(callback);
 };
 
+const revokeSessionsForDisabledUser = async (trx, userId) => {
+	await AuthSession.query(trx).where("user_id", userId).whereNull("revoked_at").patch({
+		revoked_at: trx.fn.now(),
+		revoked_reason: "account_disabled",
+	});
+};
+
 const internalUser = {
 	/**
 	 * Create a user can happen unauthenticated only once and only when no active users exist.
@@ -148,19 +190,13 @@ const internalUser = {
 
 			// Create permissions row as well
 			const _isAdmin = data.roles.indexOf("admin") !== -1;
+			const defaultPermissions = _isAdmin ? ADMIN_DEFAULT_PERMISSIONS : NON_ADMIN_DEFAULT_PERMISSIONS;
 
 			await userPermissionModel.query(trx).insert(
 				/** @type {any} */ ({
 					user_id: user.id,
 					visibility: "user",
-					access_lists: "manage",
-					certificates: "manage",
-					proxy_hosts: "manage",
-					redirection_hosts: "manage",
-					streams: "manage",
-					dead_hosts: "manage",
-					cloudflared_tunnels: "manage",
-					analytics: "view",
+					...defaultPermissions,
 				}),
 			);
 		});
@@ -215,6 +251,12 @@ const internalUser = {
 			data.email = data.email.toLowerCase().trim();
 		}
 
+		// A block must revoke every refresh family in the same transaction as the
+		// flag. Revoking on every privileged `is_disabled=true` write also cleans
+		// up sessions left behind by accounts disabled before this fix. Re-enabling
+		// never touches `revoked_at`, so old families cannot come back.
+		const revokeSessions = typeof data.is_disabled !== "undefined" && Boolean(data.is_disabled);
+
 		if (user.id !== data.id) {
 			// Sanity check that something crazy hasn't happened
 			throw new errs.InternalValidationError(
@@ -256,15 +298,24 @@ const internalUser = {
 			}
 		}
 
-		if (typeof data.email !== "undefined") {
-			await emailClaimTransaction(async (trx) => {
+		const persistUser = async (trx) => {
+			if (typeof data.email !== "undefined") {
 				const lock = await settingModel.query(trx).findById("default-site").forUpdate();
 				if (!lock) throw new errs.PermissionError("Initial setup is not ready");
 				if (!(await internalUser.isEmailAvailable(data.email, user.id, trx))) {
 					throw new errs.ValidationError(`Email address already in use - ${data.email}`);
 				}
-				await userModel.query(trx).patchAndFetchById(user.id, data);
-			});
+			}
+			await userModel.query(trx).patchAndFetchById(user.id, data);
+			if (revokeSessions) {
+				await revokeSessionsForDisabledUser(trx, user.id);
+			}
+		};
+
+		if (typeof data.email !== "undefined") {
+			await emailClaimTransaction(persistUser);
+		} else if (revokeSessions) {
+			await userModel.transaction(persistUser);
 		} else {
 			await userModel.query().patchAndFetchById(user.id, data);
 		}
@@ -593,7 +644,10 @@ const internalUser = {
 	loginAs: async (access, data) => {
 		await access.can("users:loginas", data.id);
 		const user = await internalUser.get(access, data);
-		return internalToken.getTokenFromUser(user);
+		return internalToken.getTokenFromUser(user, {
+			actorUserId: access.token.getUserId(0),
+			sessionId: access.token.get("sid"),
+		});
 	},
 
 	/**

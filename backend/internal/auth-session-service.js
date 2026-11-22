@@ -4,6 +4,7 @@ import { transaction } from "objection";
 import db from "../db.js";
 import errs from "../lib/error.js";
 import { parseDatePeriod } from "../lib/helpers.js";
+import { global as logger } from "../logger.js";
 import AuthSession from "../models/auth-session.js";
 import TokenModel from "../models/token.js";
 
@@ -33,13 +34,16 @@ const _REFRESH_TOKEN_EXPIRY = requireValidTtl(REFRESH_TOKEN_TTL, "refresh token"
 
 const buildRefreshToken = () => crypto.randomBytes(48).toString("base64url");
 
-const buildAccessToken = async (user, scope) => {
+const buildAccessToken = async (user, scope, session = null) => {
 	const Token = TokenModel();
 	return Token.create({
 		iss: "api",
 		attrs: {
 			id: user.id,
 		},
+		// Correlation anchor for audit entries: the refresh family survives
+		// access-token rotation, so a stolen token stays linkable to its device.
+		...(session?.family_id ? { sid: session.family_id } : {}),
 		scope: AuthSession.normalizeScope(scope),
 		expiresIn: ACCESS_TOKEN_TTL,
 	});
@@ -122,6 +126,56 @@ const revokeFamily = async (familyId, reason = "family_revoked", trx = null) => 
 		.whereNull("revoked_at");
 };
 
+const reportRefreshReplay = async (session, meta = {}) => {
+	const details = {
+		event: "security.refresh_replay",
+		severity: "high",
+		family_id: session.family_id,
+		session_id: session.id,
+		revoked_reason: "refresh_token_replay_detected",
+	};
+	const ip = meta.ip || null;
+	const userAgent = meta.userAgent || null;
+	logger.warn(`[Auth] Refresh token replay detected for user ${session.user_id}, family ${session.family_id}`);
+
+	// A replay is the strongest signal for a stolen refresh token: persist it
+	// even though the session family is already revoked.
+	try {
+		const { default: internalAuditLog } = await import("./audit-log.js");
+		await internalAuditLog.add(/** @type {any} */ ({ token: { getUserId: () => session.user_id } }), {
+			action: "refresh_replay_detected",
+			object_type: "auth-session",
+			object_id: session.id,
+			user_id: session.user_id,
+			session_id: session.family_id,
+			outcome: "denied",
+			actor_type: "user",
+			ip,
+			user_agent: userAgent,
+			meta: details,
+		});
+	} catch (error) {
+		logger.error(`[Auth] Could not audit refresh replay: ${error?.message}`);
+	}
+
+	// Do not extend the refresh request with a notification round trip; the
+	// alert is delivered in the background to every enabled target.
+	try {
+		const { default: incidents } = await import("./incidents.js");
+		Promise.resolve(
+			incidents.securityAlert({
+				owner_user_id: session.user_id,
+				event: "security.refresh_replay",
+				severity: "high",
+				message: "Refresh token replay detected; the session family was revoked",
+				meta: { family_id: session.family_id, session_id: session.id, ip, user_agent: userAgent },
+			}),
+		).catch((error) => logger.error(`[Auth] Could not notify refresh replay: ${error?.message}`));
+	} catch (error) {
+		logger.error(`[Auth] Could not notify refresh replay: ${error?.message}`);
+	}
+};
+
 const issueTokenPair = async (user, scope = "user", meta = {}) => {
 	const normalizedScope = AuthSession.normalizeScope(scope);
 	const rawRefreshToken = buildRefreshToken();
@@ -137,7 +191,7 @@ const issueTokenPair = async (user, scope = "user", meta = {}) => {
 			meta,
 		});
 
-		const accessToken = await buildAccessToken(user, normalizedScope);
+		const accessToken = await buildAccessToken(user, normalizedScope, refreshSession);
 
 		return buildTokenResponse({
 			accessToken,
@@ -175,7 +229,7 @@ const refreshTokenPair = async (rawRefreshToken, meta = {}) => {
 
 		if (session.rotated_at || session.replaced_by_session_id) {
 			await revokeFamily(session.family_id, "refresh_token_replay_detected", trx);
-			return { error: new errs.UnauthorizedError(TOKEN_REPLAY_MESSAGE) };
+			return { error: new errs.UnauthorizedError(TOKEN_REPLAY_MESSAGE), replay: session };
 		}
 
 		if (!session.user || session.user.is_deleted || session.user.is_disabled) {
@@ -207,10 +261,10 @@ const refreshTokenPair = async (rawRefreshToken, meta = {}) => {
 
 		if (updatedRows === 0) {
 			await revokeFamily(session.family_id, "refresh_token_rotation_race", trx);
-			return { error: new errs.UnauthorizedError(TOKEN_REPLAY_MESSAGE) };
+			return { error: new errs.UnauthorizedError(TOKEN_REPLAY_MESSAGE), replay: session };
 		}
 
-		const accessToken = await buildAccessToken(session.user, session.scope);
+		const accessToken = await buildAccessToken(session.user, session.scope, nextSession);
 
 		return buildTokenResponse({
 			accessToken,
@@ -223,6 +277,9 @@ const refreshTokenPair = async (rawRefreshToken, meta = {}) => {
 	// Throw only after the transaction commits so security revocations survive
 	// a rejected refresh. Throwing inside the callback rolls them back.
 	if ("error" in result) {
+		if (result.replay) {
+			await reportRefreshReplay(result.replay, meta);
+		}
 		throw result.error;
 	}
 	return result;

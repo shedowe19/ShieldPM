@@ -406,6 +406,66 @@ const incidents = {
 		});
 		return true;
 	},
+
+	/**
+	 * Deliver a security event to every enabled notification target of the
+	 * affected account. Unlike availability incidents there is no host/incident
+	 * row, so the delivery is sent directly and never blocks the caller: a
+	 * stolen refresh token must be revocable even when the notification
+	 * endpoint is slow or broken.
+	 *
+	 * @param {Object} alert
+	 * @param {number} alert.owner_user_id
+	 * @param {string} [alert.event]
+	 * @param {string} [alert.severity]
+	 * @param {string} [alert.message]
+	 * @param {Object} [alert.meta]
+	 */
+	async securityAlert(alert = /** @type {any} */ ({})) {
+		const { owner_user_id, event, severity = "high", message = "", meta = {} } = alert;
+		try {
+			const owner = idNumber(owner_user_id);
+			const targets = await NotificationTarget.query()
+				.where("owner_user_id", owner)
+				.where("enabled", 1)
+				.limit(100);
+			if (!targets.length) return 0;
+
+			const payload = {
+				event: text(event, 32) || "security.alert",
+				severity: text(severity, 16) || "high",
+				state: "security",
+				host_id: 0,
+				incident_id: 0,
+				message: text(message, 255),
+				checked_at: iso(),
+				...meta,
+			};
+
+			await Promise.allSettled(
+				targets.map(async (target) => {
+					try {
+						await deliverNotification(
+							target,
+							JSON.parse(decrypt(target.secret)),
+							payload,
+							target.id,
+							undefined,
+						);
+					} catch (error) {
+						logger.warn(
+							`[Incidents] Security alert delivery failed for target ${target.id}: ${error?.message}`,
+						);
+					}
+				}),
+			);
+			return targets.length;
+		} catch (error) {
+			logger.error(`[Incidents] Security alert failed: ${error?.message}`);
+			return 0;
+		}
+	},
+
 	async deliveries(access) {
 		await access.can("proxy_hosts:list");
 		const rows = await NotificationDelivery.query()
@@ -519,6 +579,9 @@ const incidents = {
 				);
 			if (Date.now() - lastCleanup > 3_600_000) {
 				lastCleanup = Date.now();
+				await internalAuditLog
+					.cleanup()
+					.catch((error) => logger.warn(`[Incidents] Audit retention cleanup failed: ${error?.message}`));
 				await MonitorLatency.query()
 					.where("bucket", "<", iso(Date.now() - 7 * DAY_MS))
 					.delete();

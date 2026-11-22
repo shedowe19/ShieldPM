@@ -5,13 +5,29 @@ import twoFaService from "../internal/2fa-service.js";
 import internalToken from "../internal/token.js";
 import { clearAuthCookies, clearDuoCookie, readDuoCookie, setAuthCookies, setDuoCookie } from "../lib/auth-cookies.js";
 import errs from "../lib/error.js";
-import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
 import { debug, express as logger } from "../logger.js";
 import TokenModel from "../models/token.js";
 import User from "../models/user.js";
 import UserTwoFa from "../models/user-2fa.js";
 import { getValidationSchema } from "../schema/index.js";
+
+/**
+ * OIDC enforcement can be disabled for break-glass access with
+ * `OIDC_ENFORCE_SSO=false`. Without that override the database setting wins.
+ * The setting model is imported lazily so token-only test fixtures and routes
+ * do not need a database connection merely to import this module.
+ */
+export const isLocalPasswordLoginForbidden = async () => {
+	const override = process.env.OIDC_ENFORCE_SSO;
+	if (typeof override === "string" && ["false", "0", "no", "off"].includes(override.trim().toLowerCase())) {
+		return false;
+	}
+
+	const { default: settingModel } = await import("../models/setting.js");
+	const settings = await settingModel.query().where({ id: "oidc-config" }).first();
+	return settings?.meta?.enabled === true && settings?.meta?.enforce_sso === true;
+};
 
 /**
  * Rate limiter for sensitive auth endpoints (refresh, logout, restore).
@@ -49,6 +65,7 @@ const LOGIN_ATTEMPT_TABLE = "login_attempts";
 const LOGIN_ATTEMPT_LIMIT = 5;
 const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_ATTEMPT_BLOCK_MS = 15 * 60 * 1000;
+const LEGACY_GET_TOKENS_SUNSET = new Date("2027-01-01T00:00:00Z").toUTCString();
 let loginAttemptTableInitPromise = null;
 
 const getLoginAttemptKnex = () => User.knex();
@@ -201,28 +218,20 @@ router
 	/**
 	 * GET /tokens
 	 *
-	 * Get a new Token, given they already have a token they want to refresh
-	 * We also piggy back on to this method, allowing admins to get tokens
-	 * for services like Job board and Worker.
+	 * Removed. The old flow issued long-lived access tokens with an
+	 * unvalidated `expiry` query parameter and without a revocable session.
+	 * Clients must rotate with POST /tokens/refresh.
 	 */
-	.get(authRateLimiter, jwtdecode(), async (req, res) => {
-		logger.warn(`Legacy GET /tokens accessed from IP ${req.ip || "unknown"} – migrate to POST /tokens/refresh`);
-
-		const expiry = typeof req.query.expiry === "string" ? req.query.expiry : null;
-		const scope = typeof req.query.scope === "string" ? req.query.scope : null;
-		const query = { expiry, scope };
-		const data = await internalToken.getFreshToken(res.locals.access, query);
-
-		res.cookie("shieldpm_jwt", data.token, {
-			httpOnly: true,
-			secure: req.secure,
-			sameSite: "strict",
-			maxAge: data.expires ? Math.max(0, new Date(data.expires).getTime() - Date.now()) : undefined,
+	.get(authRateLimiter, (_req, res) => {
+		res.set("Deprecation", "true");
+		res.set("Sunset", LEGACY_GET_TOKENS_SUNSET);
+		res.set("Cache-Control", "no-store");
+		res.status(410).send({
+			error: {
+				code: 410,
+				message: "GET /tokens has been removed. Use POST /tokens/refresh to rotate a session.",
+			},
 		});
-
-		res.clearCookie("shieldpm_oidc");
-		res.locals.refreshCsrfToken?.(data.token);
-		res.status(200).send({ ...data, csrfToken: res.locals.csrfToken });
 	})
 
 	/**
@@ -231,6 +240,19 @@ router
 	 * Create a new Token
 	 */
 	.post(authRateLimiter, async (req, res, next) => {
+		// Enforce SSO before touching credentials or login-attempt counters: an
+		// enforced tenant must not be able to authenticate with a local password.
+		if (await isLocalPasswordLoginForbidden()) {
+			logger.warn(`Blocked local password login from ${req.ip || "unknown"} because OIDC/SSO is enforced`);
+			return res.status(403).send({
+				error: {
+					code: 403,
+					message:
+						"Local password login is disabled because OIDC/SSO is enforced. Sign in through your identity provider.",
+				},
+			});
+		}
+
 		const ip = req.ip || "unknown";
 		const now = Date.now();
 		const loginIdentifier = normalizeLoginIdentifier(req.body);

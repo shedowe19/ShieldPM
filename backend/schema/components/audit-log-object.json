@@ -42,6 +42,35 @@
 			"type": "object",
 			"example": {}
 		},
+		"ip": {
+			"type": ["string", "null"],
+			"description": "Client address captured from the request context."
+		},
+		"user_agent": {
+			"type": ["string", "null"]
+		},
+		"session_id": {
+			"type": ["string", "null"],
+			"description": "Auth session or token-family identifier."
+		},
+		"request_id": {
+			"type": ["string", "null"]
+		},
+		"outcome": {
+			"type": ["string", "null"],
+			"enum": ["success", "denied", "failure", null]
+		},
+		"actor_user_id": {
+			"type": ["integer", "null"],
+			"description": "Administrator who acted on behalf of user_id during impersonation."
+		},
+		"actor_type": {
+			"type": ["string", "null"],
+			"enum": ["user", "impersonated", "system", null]
+		},
+		"jti": {
+			"type": ["string", "null"]
+		},
 		"user": {
 			"$ref": "./user-object.json"
 		}

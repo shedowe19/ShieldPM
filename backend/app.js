@@ -3,9 +3,11 @@ import cookieParser from "cookie-parser";
 import { doubleCsrf } from "csrf-csrf";
 import express from "express";
 import helmet from "helmet";
+import ipaddr from "ipaddr.js";
 import swaggerUi from "swagger-ui-express";
 import jsonBody from "./lib/express/json-body.js";
 import jwt from "./lib/express/jwt.js";
+import { requestContext } from "./lib/request-context.js";
 import { debug, express as logger } from "./logger.js";
 import mainRoutes from "./routes/main.js";
 import { getCompiledSchema } from "./schema/index.js";
@@ -16,23 +18,64 @@ import { isSetup } from "./setup.js";
 // Global API Rate Limiter
 import rateLimit from "express-rate-limit";
 
-const resolveTrustProxy = () => {
-	const raw = process.env.TRUST_PROXY;
-	if (typeof raw === "undefined" || raw === null || raw === "") {
-		return 1;
-	}
+// Private ranges are the only peers a proxy may legitimately have when it is
+// reachable directly. Never trust every address with `true` or `1`: those make
+// X-Forwarded-For spoofable and defeat the login throttling in routes/tokens.js.
+const DEFAULT_TRUST_PROXY = ["loopback", "linklocal", "uniquelocal"];
+const TRUST_PROXY_RANGES = new Set(DEFAULT_TRUST_PROXY);
 
-	const normalized = String(raw).trim().toLowerCase();
-	if (["true", "yes", "on"].includes(normalized)) {
-		return true;
+const parseTrustProxyCidrs = (raw) => {
+	const entries = String(raw)
+		.split(",")
+		.map((entry) => entry.trim().toLowerCase())
+		.filter(Boolean);
+	if (entries.length === 0) {
+		throw new Error("TRUST_PROXY_CIDRS must contain at least one CIDR or named range");
 	}
-	if (["false", "no", "off"].includes(normalized)) {
+	return entries.map((entry) => {
+		if (TRUST_PROXY_RANGES.has(entry)) {
+			return entry;
+		}
+		try {
+			if (entry.includes("/")) {
+				ipaddr.parseCIDR(entry);
+			} else {
+				ipaddr.parse(entry);
+			}
+		} catch {
+			throw new Error(
+				`Invalid TRUST_PROXY entry "${entry}". Use an IP, a CIDR, or loopback/linklocal/uniquelocal.`,
+			);
+		}
+		return entry;
+	});
+};
+
+export const resolveTrustProxy = (env = process.env) => {
+	const raw = env.TRUST_PROXY;
+	const normalized = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+	// An explicit off switch wins even when a CIDR list is configured.
+	if (["false", "no", "off", "0"].includes(normalized)) {
 		return false;
 	}
-	if (/^\d+$/.test(normalized)) {
-		return Number.parseInt(normalized, 10);
+
+	const explicitCidrs = env.TRUST_PROXY_CIDRS?.trim();
+	if (explicitCidrs) {
+		return parseTrustProxyCidrs(explicitCidrs);
 	}
-	return raw;
+
+	// Unset, `true` and `1` all get the same conservative default. A numeric hop
+	// count is only honoured when it is greater than the single-proxy shortcut.
+	if (normalized === "" || ["true", "yes", "on", "1"].includes(normalized)) {
+		return [...DEFAULT_TRUST_PROXY];
+	}
+	if (/^\d+$/.test(normalized)) {
+		const hops = Number.parseInt(normalized, 10);
+		return hops <= 1 ? [...DEFAULT_TRUST_PROXY] : hops;
+	}
+
+	// Named ranges and CIDR lists are accepted directly for backwards compatibility.
+	return parseTrustProxyCidrs(raw);
 };
 
 const TRUST_PROXY = resolveTrustProxy();
@@ -137,6 +180,9 @@ const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", TRUST_PROXY);
 app.enable("strict routing");
+// Audit context (request id, IP, user agent, session id) must exist before
+// auth, CSRF and route handlers run.
+app.use(requestContext());
 logger.info(
 	`Express trust proxy configured as: ${typeof TRUST_PROXY === "string" ? TRUST_PROXY : JSON.stringify(TRUST_PROXY)}`,
 );

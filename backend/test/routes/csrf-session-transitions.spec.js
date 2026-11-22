@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
 	healthBlock: null,
 	healthStarted: null,
 	writes: 0,
+	audit: vi.fn(),
 }));
 vi.mock("../../db.js", async () => {
 	const { default: knex } = await import("knex");
@@ -23,10 +24,10 @@ vi.mock("../../lib/config.js", () => ({
 	getPrivateKey: () => state.keys.privateKey,
 	getPublicKey: () => state.keys.publicKey,
 }));
-vi.mock("../../internal/audit-log.js", () => ({ default: { add: vi.fn() } }));
+vi.mock("../../internal/audit-log.js", () => ({ default: { add: state.audit } }));
 vi.mock("../../internal/nginx.js", () => ({ default: {} }));
 vi.mock("../../lib/express/demo.js", () => ({ default: (_req, _res, next) => next() }));
-vi.mock("../../setup.js", () => ({ isSetup: async () => true }));
+vi.mock("../../setup.js", () => ({ isSetup: async () => true, isSetupTokenValid: async () => true }));
 // Factor verification has separate cryptographic/SQLite integration suites.
 // This suite exercises the real HTTP transition after a successful factor.
 vi.mock("../../internal/2fa-service.js", () => ({
@@ -342,7 +343,15 @@ describe("CSRF follows the response's session cookies without an extra health re
 	});
 	it("switches CSRF to the impersonated user and back to the original administrator", async () => {
 		const client = browser();
-		client.jar.set("shieldpm_jwt", await signed(1));
+		const adminToken = (
+			await Token().create({
+				attrs: { id: 1 },
+				scope: ["user"],
+				expiresIn: "5m",
+				sid: "admin-family",
+			})
+		).token;
+		client.jar.set("shieldpm_jwt", adminToken);
 		await client.request("/");
 		const impersonated = await client.request("/users/2/login", "POST", {});
 		expect(impersonated.response.status).toBe(200);
@@ -351,6 +360,23 @@ describe("CSRF follows the response's session cookies without an extra health re
 			schema.paths["/users/{userID}/login"].post.responses[200].content["application/json"].schema,
 		);
 		expect(validate(impersonated.data), JSON.stringify(validate.errors)).toBe(true);
+
+		const impersonatedClaims = await Token().load(client.jar.get("shieldpm_jwt"));
+		expect(impersonatedClaims.attrs.id).toBe(2);
+		expect(impersonatedClaims.sub).toBe(2);
+		expect(impersonatedClaims.act).toEqual({ sub: 1 });
+		expect(impersonatedClaims.sid).toBe("admin-family");
+		expect(impersonatedClaims.jti).toEqual(expect.any(String));
+		expect(state.audit).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				action: "user.impersonated",
+				object_type: "user",
+				object_id: 2,
+				user_id: 2,
+			}),
+		);
+
 		await assertProtected(client, 2);
 		expect((await client.request("/tokens/restore", "POST", {})).response.status).toBe(200);
 		await assertProtected(client, 1);

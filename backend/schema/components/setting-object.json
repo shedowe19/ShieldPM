@@ -51,7 +51,7 @@
 			]
 		},
 		"meta": {
-			"description": "Extra metadata",
+			"description": "Extra metadata. Secret-bearing values (API keys, client secrets, encrypted credentials, tokens) are returned as the mask `********` with a `<field>_configured` boolean; the stored value is never returned by the settings API.",
 			"example": {
 				"redirect": "http://example.com",
 				"html": "<h1>404</h1>"

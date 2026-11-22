@@ -76,6 +76,8 @@ async function appStart() {
 		await internalChat.init();
 		internalGitDeploy.init();
 
+		// The request context middleware is registered at the top of app.js,
+		// before auth and routes.
 		const server = app.listen("/run/shieldpm/shieldpm.sock", async (err) => {
 			if (err) {
 				logger.error("Backend socket failed to listen:", err);

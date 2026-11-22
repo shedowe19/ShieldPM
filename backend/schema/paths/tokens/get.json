@@ -1,6 +1,6 @@
 {
 	"operationId": "refreshToken",
-	"summary": "Refresh your access token (DEPRECATED — use POST /tokens/refresh)",
+	"summary": "Legacy token renewal (REMOVED - use POST /tokens/refresh)",
 	"deprecated": true,
 	"tags": [
 		"tokens"
@@ -11,20 +11,38 @@
 		}
 	],
 	"responses": {
-		"200": {
-			"description": "200 response",
+		"410": {
+			"description": "The legacy renewal endpoint no longer issues tokens",
+			"headers": {
+				"Deprecation": {
+					"description": "Marks the endpoint as removed",
+					"schema": {
+						"type": "string",
+						"example": "true"
+					}
+				},
+				"Sunset": {
+					"description": "Date after which the endpoint is guaranteed to be gone",
+					"schema": {
+						"type": "string",
+						"example": "Fri, 01 Jan 2027 00:00:00 GMT"
+					}
+				}
+			},
 			"content": {
 				"application/json": {
 					"examples": {
 						"default": {
 							"value": {
-								"expires": "2025-02-04T20:40:46.340Z",
-								"token": "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.ey...xaHKYr3Kk6MvkUjcC4"
+								"error": {
+									"code": 410,
+									"message": "GET /tokens has been removed. Use POST /tokens/refresh to rotate a session."
+								}
 							}
 						}
 					},
 					"schema": {
-						"$ref": "../../components/token-object.json"
+						"$ref": "../../components/error.json"
 					}
 				}
 			}

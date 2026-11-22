@@ -34,6 +34,7 @@ function fillSetup(password: string) {
 	);
 	fireEvent.change(screen.getByLabelText("user.full-name"), { target: { value: "Admin User" } });
 	fireEvent.change(screen.getByLabelText("email-address"), { target: { value: "admin@example.test" } });
+	fireEvent.change(screen.getByLabelText("Setup token"), { target: { value: "setup-token" } });
 	fireEvent.change(screen.getByLabelText("user.new-password"), { target: { value: password } });
 	fireEvent.click(screen.getByRole("button", { name: "save" }));
 	return view;
@@ -45,13 +46,28 @@ describe("Setup", () => {
 		expect(await screen.findByText("error.max-character-length")).toBeInTheDocument();
 		expect(mocks.createUser).not.toHaveBeenCalled();
 	});
+	it("requires the setup token before creating the first administrator", async () => {
+		render(
+			<QueryClientProvider client={client}>
+				<Setup />
+			</QueryClientProvider>,
+		);
+		fireEvent.change(screen.getByLabelText("user.full-name"), { target: { value: "Admin User" } });
+		fireEvent.change(screen.getByLabelText("email-address"), { target: { value: "admin@example.test" } });
+		fireEvent.change(screen.getByLabelText("user.new-password"), { target: { value: "valid-password" } });
+		fireEvent.click(screen.getByRole("button", { name: "save" }));
+		expect(await screen.findByText("error.required")).toBeInTheDocument();
+		expect(mocks.createUser).not.toHaveBeenCalled();
+	});
 	it("accepts a password at the API character limit", async () => {
 		fillSetup("p".repeat(72));
 		await waitFor(() => expect(mocks.login).toHaveBeenCalledWith("admin@example.test", "p".repeat(72)));
 		expect(mocks.createUser).toHaveBeenCalledWith(
 			expect.objectContaining({ auth: { type: "password", secret: "p".repeat(72) } }),
 			true,
+			"setup-token",
 		);
+		expect(mocks.createUser.mock.calls[0][0]).not.toHaveProperty("setupToken");
 	});
 	it("refreshes setup status after creation even if automatic login fails", async () => {
 		mocks.login.mockRejectedValue(new Error("Login temporarily unavailable"));

@@ -6,6 +6,7 @@ import { pipeline } from "node:stream/promises";
 import express from "express";
 import fileUpload from "express-fileupload";
 import rateLimit from "express-rate-limit";
+import internalAuditLog from "../internal/audit-log.js";
 import internalBackups from "../internal/instance-backups.js";
 import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
@@ -38,6 +39,21 @@ const identifier = (value) => {
 		throw new errs.ValidationError("Invalid backup identifier");
 	return value;
 };
+/**
+ * A backup archive contains the whole instance; downloading, restoring or
+ * deleting it must leave a trace with actor, object id and outcome. `add()`
+ * never throws, so a failed audit insert cannot block the operation.
+ */
+const auditBackup = (access, action, id, outcome, meta = {}) =>
+	internalAuditLog
+		.add(access, {
+			action,
+			object_type: "setting",
+			object_id: 0,
+			outcome,
+			meta: { setting_id: "instance-backups", operation: action, backup_id: id, ...meta },
+		})
+		.catch(() => null);
 /** Multipart paths are library-generated, but only a direct child of our private upload root is accepted. */
 export const confinedUploadPath = (directory, filename) => {
 	if (typeof filename !== "string" || !path.isAbsolute(filename))
@@ -170,11 +186,20 @@ router.get("/:id/download", async (req, res) => {
 	const { stream, size } = await internalBackups.download(res.locals.access, id);
 	res.attachment(`shieldpm-${id}.spmb`);
 	res.setHeader("Content-Length", size);
-	await pipeline(stream, res);
+	try {
+		await pipeline(stream, res);
+	} finally {
+		await auditBackup(res.locals.access, "downloaded", id, res.writableFinished ? "success" : "failure", {
+			size,
+		});
+	}
 });
-router.delete("/:id", async (req, res) =>
-	res.send(await internalBackups.remove(res.locals.access, identifier(req.params.id))),
-);
+router.delete("/:id", async (req, res) => {
+	const id = identifier(req.params.id);
+	const result = await internalBackups.remove(res.locals.access, id);
+	await auditBackup(res.locals.access, "deleted", id, "success");
+	res.send(result);
+});
 router.post("/:id/preflight", sensitive, async (req, res) =>
 	res
 		.status(202)
@@ -186,11 +211,10 @@ router.post("/:id/preflight", sensitive, async (req, res) =>
 			),
 		),
 );
-router.post("/:id/restore", sensitive, async (req, res) =>
-	res
-		.status(202)
-		.send(
-			await internalBackups.restore(res.locals.access, identifier(req.params.id), await validatedInput(req.body)),
-		),
-);
+router.post("/:id/restore", sensitive, async (req, res) => {
+	const id = identifier(req.params.id);
+	const result = await internalBackups.restore(res.locals.access, id, await validatedInput(req.body));
+	await auditBackup(res.locals.access, "restored", id, "success");
+	res.status(202).send(result);
+});
 export default router;

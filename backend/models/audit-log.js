@@ -21,6 +21,22 @@ class AuditLog extends Model {
 	object_type;
 	/** @type {Object} */
 	meta;
+	/** @type {string | null} */
+	ip;
+	/** @type {string | null} */
+	user_agent;
+	/** @type {string | null} */
+	session_id;
+	/** @type {string | null} */
+	request_id;
+	/** @type {string | null} */
+	outcome;
+	/** @type {number | null} */
+	actor_user_id;
+	/** @type {string | null} */
+	actor_type;
+	/** @type {string | null} */
+	jti;
 	/** @type {string} */
 	created_on;
 	/** @type {string} */

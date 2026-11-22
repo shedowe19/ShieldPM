@@ -22,6 +22,7 @@ vi.mock("../../lib/express/demo.js", () => ({ default: (_req, _res, next) => nex
 // Use the same persisted setup-state query without importing unrelated startup jobs.
 vi.mock("../../setup.js", () => ({
 	isSetup: async () => Boolean(await state.db("user").select("id").where("is_deleted", 0).first()),
+	isSetupTokenValid: (token) => token === "test-setup-token",
 }));
 // This boundary suite covers the password path; factor cryptography and login
 // transitions have their own real-service and real-app integration suites.
@@ -75,7 +76,12 @@ const formBody = (contentType, fields) => {
 const jsonPost = (path, body, headers = {}) =>
 	fetch(`${origin}${path}`, {
 		method: "POST",
-		headers: { "Content-Type": "Application/JSON; Charset=UTF-8", "X-Forwarded-For": "198.51.100.77", ...headers },
+		headers: {
+			"Content-Type": "Application/JSON; Charset=UTF-8",
+			"X-Forwarded-For": "198.51.100.77",
+			"X-Setup-Token": "test-setup-token",
+			...headers,
+		},
 		...(body === undefined ? {} : { body: JSON.stringify(body) }),
 	});
 // Native HTTP keeps Content-Type genuinely absent even when a body is supplied.
@@ -116,6 +122,10 @@ beforeAll(async () => {
 	await state.db.schema.alterTable("user_permission", (table) => {
 		table.string("cloudflared_tunnels");
 		table.string("analytics");
+		table.string("dashboard_notes");
+		table.string("ddns_providers");
+		table.string("tor_onions");
+		table.string("chat");
 	});
 	await state
 		.db("setting")
@@ -339,6 +349,22 @@ describe.each(["", "/api"])("authentication Content-Type boundary at %s", (prefi
 		expect(response.status).toBe(201);
 		expect((await response.json()).roles).toContain("admin");
 		expect(await state.db("user").where("is_deleted", 0)).toHaveLength(1);
+	});
+
+	it("rejects initial-administrator setup without the startup token", async () => {
+		await state.db("user").delete();
+		const response = await fetch(`${origin}${prefix}/users`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				name: "Admin",
+				nickname: "admin",
+				email: "admin@example.test",
+				auth: { type: "password", secret: "initial-password" },
+			}),
+		});
+		expect(response.status).toBe(403);
+		expect(await state.db("user")).toHaveLength(0);
 	});
 });
 

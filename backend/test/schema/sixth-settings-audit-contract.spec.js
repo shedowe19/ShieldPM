@@ -33,6 +33,14 @@ describe("settings events in the published audit response", () => {
 			table.string("object_type");
 			table.string("action");
 			table.json("meta");
+			table.string("ip");
+			table.string("user_agent");
+			table.string("session_id");
+			table.string("request_id");
+			table.string("outcome");
+			table.integer("actor_user_id");
+			table.string("actor_type");
+			table.string("jti");
 		});
 		await state.database("setting").insert({
 			id: "oidc-config",

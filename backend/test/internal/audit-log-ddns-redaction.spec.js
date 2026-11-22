@@ -65,6 +65,14 @@ describe("DDNS audit metadata privacy", () => {
 			table.string("object_type");
 			table.string("action");
 			table.json("meta");
+			table.string("ip");
+			table.string("user_agent");
+			table.string("session_id");
+			table.string("request_id");
+			table.string("outcome");
+			table.integer("actor_user_id");
+			table.string("actor_type");
+			table.string("jti");
 		});
 	});
 
