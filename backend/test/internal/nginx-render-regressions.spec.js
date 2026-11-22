@@ -231,6 +231,46 @@ describe("Nginx configuration regressions", () => {
 		},
 	);
 
+	it.each([
+		"http://auth.example.test",
+		"https://127.0.0.1",
+		"https://169.254.169.254/latest/meta-data",
+		"https://auth.local",
+		"https://user:pass@auth.example.test",
+		"https://auth.example.test/outpost",
+		"unix:/run/shieldpm/oauth2-proxy.sock",
+	])("renders no Authentik proxy target for an unsafe origin: %s", async (authentikHost) => {
+		const rendered = await internalNginx.renderConfig(
+			"proxy_host",
+			host({
+				access_list_id: 4,
+				access_list: {
+					meta: { auth_type: "authentik_proxy", authentik_host: authentikHost },
+					items: [],
+					clients: [],
+				},
+			}),
+		);
+		expect(rendered).not.toContain("goauthentik.io");
+		expect(rendered).toContain("return 503;");
+	});
+
+	it("renders the validated Authentik origin, not the raw stored string", async () => {
+		const rendered = await internalNginx.renderConfig(
+			"proxy_host",
+			host({
+				access_list_id: 4,
+				access_list: {
+					meta: { auth_type: "authentik_proxy", authentik_host: "https://auth.example.test/" },
+					items: [],
+					clients: [],
+				},
+			}),
+		);
+		expect(rendered).toContain("proxy_pass              https://auth.example.test/outpost.goauthentik.io;");
+		expect(rendered).not.toContain("https://auth.example.test//outpost");
+	});
+
 	it.each([false, true])("retains terminal authentication with Anubis=%s", async (anubisEnabled) => {
 		await internalNginx.generateConfig(
 			"proxy_host",

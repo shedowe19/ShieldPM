@@ -147,6 +147,14 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 		expect(updater).toContain('cp -a "$TEMP_DIR/frontend/dist/." "$FRONTEND_DIR/"');
 	});
 
+	it("defaults to the latest published release instead of a moving branch", () => {
+		expect(updater).toContain("resolve_release_ref()");
+		expect(updater).toContain("releases/latest");
+		expect(updater).toContain("^v[0-9]+\\.[0-9]+\\.[0-9]+$");
+		expect(updater).toContain("Pass --branch <ref> to update from a specific branch or tag deliberately.");
+		expect(updater).not.toContain('BRANCH="develop" # Default branch for content');
+	});
+
 	it("checks the native backend health endpoint at the socket root", () => {
 		const commandDirectory = fs.mkdtempSync(join(tmpdir(), "shieldpm-update-health-check-"));
 		temporaryDirectories.push(commandDirectory);

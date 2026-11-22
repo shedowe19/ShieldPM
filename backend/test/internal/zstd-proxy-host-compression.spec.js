@@ -60,6 +60,12 @@ describe("Proxy Host Zstd compression", () => {
 		}
 	});
 
+	it("escapes bandwidth_limit inside the Lua string instead of emitting code", async () => {
+		const rendered = await renderProxyHost({ bandwidth_limit: '1m"; os.execute("id"); --' });
+		expect(rendered).toContain('local limit_str = "1m\\034; os.execute(\\034id\\034); --"');
+		expect(rendered).not.toContain('local limit_str = "1m"; os.execute');
+	});
+
 	it("exposes the opt-in setting through the create and update API contracts", async () => {
 		const readJson = (path) => JSON.parse(fs.readFileSync(new URL(path, import.meta.url), "utf8"));
 		const common = readJson("../../schema/common.json");

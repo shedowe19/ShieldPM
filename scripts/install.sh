@@ -61,6 +61,90 @@ INSTALL_SERVICE_WAS_RUNNING=false
 INSTALL_BACKEND_DIR=/app
 INSTALL_FRONTEND_DIR=/html/frontend
 
+# Third-party installers run as root. Pin the scripts to reviewed hashes; an
+# upstream change fails closed until the constant (or environment override) is
+# updated and reviewed.
+CROWDSEC_INSTALL_URL="${CROWDSEC_INSTALL_URL:-https://install.crowdsec.net}"
+CROWDSEC_INSTALL_SHA256="${CROWDSEC_INSTALL_SHA256:-b0fb116217e1aa4c2fb09fe3b887615a80c17ca7b80253e56df176dc9d555591}"
+OPENAPPSEC_INSTALL_URL="${OPENAPPSEC_INSTALL_URL:-https://downloads.openappsec.io/open-appsec-install}"
+OPENAPPSEC_INSTALL_SHA256="${OPENAPPSEC_INSTALL_SHA256:-f624957050d133171f25197f94e495ef34322e883b8609080d5b67b41b7322ed}"
+
+verify_sha256() {
+    local file=$1 expected=$2 label=$3 actual
+    if [ ! -s "$file" ]; then
+        echo "ERROR: $label download is empty." >&2
+        return 1
+    fi
+    actual=$(sha256sum "$file" | awk '{print $1}' | tr 'A-F' 'a-f')
+    if [ "$actual" != "$(printf '%s' "$expected" | tr 'A-F' 'a-f')" ]; then
+        echo "ERROR: $label SHA-256 mismatch (expected $expected, got $actual)." >&2
+        rm -f "$file"
+        return 1
+    fi
+    echo "  > Verified $label SHA-256."
+}
+
+confirm_database_recovery_checkpoint() {
+    local data_path="${DATA_PATH:-/data}"
+    local sqlite_source="$data_path/shieldpm/database.sqlite"
+    local checkpoint_dir=/var/backups/shieldpm
+    local checkpoint="$checkpoint_dir/database-backup-$(date +%Y%m%dT%H%M%S).sqlite"
+    local external_database=false
+    local reply
+
+    if grep -qsE '^[[:space:]]*(export[[:space:]]+)?DB_(MYSQL|POSTGRES)_HOST=' "$data_path/.env"; then
+        external_database=true
+    elif [ -f "$data_path/shieldpm/default.json" ] && DATA_PATH="$data_path" node --input-type=module -e '
+        import fs from "node:fs";
+        const engine = JSON.parse(fs.readFileSync(process.env.DATA_PATH + "/shieldpm/default.json", "utf8"))?.database?.engine;
+        process.exit(["mysql", "mysql2", "pg"].includes(engine) ? 0 : 1);
+    '; then
+        external_database=true
+    fi
+
+    install -d -o 0 -g 0 -m 700 "$checkpoint_dir" || return 1
+    if [ "$external_database" = true ]; then
+        echo "    ! An external database backup is required before migrations run."
+        read -r -p "    ? Confirm a current external database backup exists [y/N] " -n 1 reply || reply=""
+        echo ""
+        if [[ ! $reply =~ ^[Yy]$ ]]; then
+            echo "    ! Installation aborted before replacing application files." >&2
+            return 1
+        fi
+        printf 'database_kind=external\nbackup_confirmed_at=%s\n' "$(date -Is)" > "$checkpoint_dir/checkpoint.txt"
+        echo "    - External database backup checkpoint recorded."
+        return 0
+    fi
+
+    if [ -s "$sqlite_source" ]; then
+        if ! python3 - "$sqlite_source" "$checkpoint" <<'PY'
+import sqlite3
+import sys
+from pathlib import Path
+
+source_path, target_path = sys.argv[1:]
+source = sqlite3.connect(f"{Path(source_path).resolve().as_uri()}?mode=ro", uri=True)
+target = sqlite3.connect(target_path)
+try:
+    source.backup(target)
+finally:
+    target.close()
+    source.close()
+PY
+        then
+            echo "    ! SQLite recovery snapshot failed; no application files were replaced." >&2
+            return 1
+        fi
+        chmod 600 "$checkpoint"
+        printf 'database_kind=sqlite\nsnapshot=%s\ncreated_at=%s\n' "$checkpoint" "$(date -Is)" > "$checkpoint_dir/checkpoint.txt"
+        echo "    - SQLite recovery snapshot created at $checkpoint."
+        return 0
+    fi
+
+    printf 'database_kind=none\ncreated_at=%s\n' "$(date -Is)" > "$checkpoint_dir/checkpoint.txt"
+    echo "    - No local database snapshot was required."
+}
+
 backup_install_directory() {
     local target=$1 backup=$2
     if [ "$(readlink -m "$target")" != "$target" ] || { [ -e "$target" ] && [ ! -d "$target" ]; }; then
@@ -360,7 +444,8 @@ LEGACY_PY
         python3 "$helper" binary "$INSTALL_TMP_DIR/oauth2.tar.gz" "$INSTALL_TMP_DIR/oauth2-proxy" "$arch" "oauth2-proxy-v7.15.3.linux-$arch/oauth2-proxy"
     fi
     if [[ "$cs_choice" =~ ^[Yy]$ ]]; then
-        curl -fL --connect-timeout 10 --max-time 120 -o "$INSTALL_TMP_DIR/crowdsec-install" https://install.crowdsec.net
+        curl -fL --connect-timeout 10 --max-time 120 -o "$INSTALL_TMP_DIR/crowdsec-install" "$CROWDSEC_INSTALL_URL"
+        verify_sha256 "$INSTALL_TMP_DIR/crowdsec-install" "$CROWDSEC_INSTALL_SHA256" "CrowdSec installer" || exit 1
         bash -n "$INSTALL_TMP_DIR/crowdsec-install"
         bash "$INSTALL_TMP_DIR/crowdsec-install"
         apt-get install -y crowdsec
@@ -371,7 +456,8 @@ LEGACY_PY
         cscli scenarios install crowdsecurity/nginx-req-limit-exceeded 2>/dev/null || true
     fi
     if [[ "$oas_choice" =~ ^[Yy]$ ]]; then
-        curl -fL --connect-timeout 10 --max-time 120 -o "$INSTALL_TMP_DIR/open-appsec-install" https://downloads.openappsec.io/open-appsec-install
+        curl -fL --connect-timeout 10 --max-time 120 -o "$INSTALL_TMP_DIR/open-appsec-install" "$OPENAPPSEC_INSTALL_URL"
+        verify_sha256 "$INSTALL_TMP_DIR/open-appsec-install" "$OPENAPPSEC_INSTALL_SHA256" "OpenAppSec installer" || exit 1
         bash -n "$INSTALL_TMP_DIR/open-appsec-install"
         chmod 700 "$INSTALL_TMP_DIR/open-appsec-install"
     fi
@@ -383,6 +469,12 @@ LEGACY_PY
     fi
 }
 prepare_install_inputs
+
+echo "--> Creating a recoverable database checkpoint before replacing files or running migrations..."
+if ! confirm_database_recovery_checkpoint; then
+    echo "ERROR: Database checkpoint could not be confirmed; installation stopped before replacing files." >&2
+    exit 1
+fi
 
 # 3. Copy Pre-built Binaries (Nginx, Certbot, Cloudflared, Libs)
 # Back up the exact application trees before stopping an existing installation.

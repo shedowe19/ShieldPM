@@ -15,7 +15,18 @@ import { assertSupportedDatabase, validateMysqlDump, validatePostgresCatalog } f
 import { removeRetiredHostHooks } from "./retired-host-config.js";
 
 const MAGIC = Buffer.from("SPMBKP01");
-export const MAX_BACKUP_BYTES = 8 * 1024 ** 3;
+export const DEFAULT_MAX_BACKUP_BYTES = 64 * 1024 ** 3;
+const MIN_MAX_BACKUP_BYTES = 1 * 1024 ** 3;
+const MAX_MAX_BACKUP_BYTES = 1024 ** 4;
+
+/** Configurable archive/instance ceiling. The old fixed 8 GiB cap caused silent truncation risk. */
+export const getMaxBackupBytes = () => {
+	const configured = Number(process.env.BACKUP_MAX_BYTES);
+	if (!Number.isSafeInteger(configured) || configured <= 0) return DEFAULT_MAX_BACKUP_BYTES;
+	return Math.min(Math.max(configured, MIN_MAX_BACKUP_BYTES), MAX_MAX_BACKUP_BYTES);
+};
+export const MAX_BACKUP_BYTES = DEFAULT_MAX_BACKUP_BYTES;
+
 const MAX_FILES = 30_000;
 const MAX_MANIFEST = 16 * 1024 ** 2;
 const STORE = "instance-backups";
@@ -147,10 +158,14 @@ function byteLimit(limit) {
  * No shell, bounded execution/output, no credential-bearing diagnostics.
  * @param {string} binary
  * @param {string[]} args
- * @param {{env?: NodeJS.ProcessEnv, input?: string, output?: string, timeout?: number}} options
+ * @param {{env?: NodeJS.ProcessEnv, input?: string, output?: string, timeout?: number, maxBytes?: number}} options
  * @returns {Promise<string>}
  */
-export async function backupCommand(binary, args, { env = {}, input, output, timeout = 300_000 } = {}) {
+export async function backupCommand(
+	binary,
+	args,
+	{ env = {}, input, output, timeout = 300_000, maxBytes = getMaxBackupBytes() } = {},
+) {
 	const child = spawn(binary, args, {
 		env: { ...process.env, ...env },
 		stdio: [input ? "pipe" : "ignore", "pipe", "pipe"],
@@ -172,11 +187,7 @@ export async function backupCommand(binary, args, { env = {}, input, output, tim
 	let result = "";
 	if (output)
 		transfers.push(
-			pipeline(
-				child.stdout,
-				byteLimit(MAX_BACKUP_BYTES),
-				createWriteStream(output, { flags: "wx", mode: 0o600 }),
-			),
+			pipeline(child.stdout, byteLimit(maxBytes), createWriteStream(output, { flags: "wx", mode: 0o600 })),
 		);
 	else
 		transfers.push(
@@ -353,12 +364,95 @@ export class InstanceBackup {
 		if (Number(info.bavail) * Number(info.bsize) < bytes + 64 * 1024 ** 2)
 			throw new Error("Insufficient free disk space for a recoverable backup/restore");
 	}
+	/** Measure the instance before copying so a too-large backup fails explicitly. */
+	async measureData() {
+		let bytes = 0;
+		let files = 0;
+		const visit = async (relative = "") => {
+			for (const item of await fs.readdir(path.join(this.directory, relative), { withFileTypes: true })) {
+				const name = relative ? `${relative}/${item.name}` : item.name;
+				if (
+					(!relative && [STORE, ".database"].includes(item.name)) ||
+					/^shieldpm\/database\.sqlite(?:-wal|-shm)?$/.test(name)
+				)
+					continue;
+				safePath(name);
+				if (++files > MAX_FILES) throw new Error("Instance contains too many files");
+				const info = await fs.lstat(path.join(this.directory, name));
+				if (info.isDirectory()) await visit(name);
+				else if (info.isFile()) bytes += info.size;
+				// Symlinks are archived as links, not followed, and add no payload bytes.
+			}
+		};
+		await visit();
+		return { bytes, files };
+	}
+	sqliteFilename() {
+		return this.config?.knex?.connection?.filename || path.join(this.directory, "shieldpm/database.sqlite");
+	}
+	/** Database payload estimate; external engines are queried read-only. */
+	async databaseBytes() {
+		const engine = providerName(this.config);
+		if (engine === "sqlite") {
+			let total = 0;
+			for (const suffix of ["", "-wal"]) {
+				try {
+					total += (await fs.stat(`${this.sqliteFilename()}${suffix}`)).size;
+				} catch (error) {
+					if (error.code !== "ENOENT") throw error;
+				}
+			}
+			return total;
+		}
+		if (!engine) throw new Error("Unsupported database provider");
+		const connection = serverConnection(this.config);
+		try {
+			await assertSupportedDatabase(connection);
+			const result = await connection.raw(
+				engine === "postgres"
+					? "SELECT pg_database_size(current_database()) AS size"
+					: "SELECT COALESCE(SUM(data_length + index_length), 0) AS size FROM information_schema.tables WHERE table_schema = DATABASE()",
+			);
+			const row = Array.isArray(result) ? result[0]?.[0] : result?.rows?.[0];
+			return Math.max(0, Number(row?.size) || 0);
+		} finally {
+			await connection.destroy();
+		}
+	}
+	async preflightSize() {
+		const maxBytes = getMaxBackupBytes();
+		const data = await this.measureData();
+		const database = await this.databaseBytes();
+		const total = data.bytes + database;
+		if (total > maxBytes)
+			throw new Error(
+				`Instance size (${total} bytes) exceeds the configured backup limit (${maxBytes} bytes); increase BACKUP_MAX_BYTES`,
+			);
+		await this.requireSpace(total * 2);
+		return { maxBytes, total, data: data.bytes, database };
+	}
 	async initialize() {
 		const info = await fs.lstat(this.directory);
 		if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("Unsafe instance data directory");
 		await fs.mkdir(this.store, { recursive: true, mode: 0o700 });
 		if ((await fs.lstat(this.store)).isSymbolicLink()) throw new Error("Unsafe backup directory");
 		await fs.chmod(this.store, 0o700);
+		await this.cleanupCompletedRestores();
+	}
+	/** Remove old restore staging directories once they can no longer be activated. */
+	async cleanupCompletedRestores() {
+		const pending = await this.pending().catch(() => null);
+		const keep = pending?.work;
+		for (const name of await fs.readdir(this.store)) {
+			if (!name.startsWith(".restore-") || name === keep) continue;
+			const work = path.join(this.store, name);
+			try {
+				if ((await fs.lstat(path.join(work, "completed.json"))).isFile())
+					await fs.rm(work, { recursive: true, force: true });
+			} catch (error) {
+				if (error.code !== "ENOENT") throw error;
+			}
+		}
 	}
 	archive(id) {
 		return backupArchivePath(this.store, id);
@@ -385,7 +479,7 @@ export class InstanceBackup {
 		}
 		return rows.sort((a, b) => b.created_on.localeCompare(a.created_on));
 	}
-	async copyData(destination) {
+	async copyData(destination, maxBytes = getMaxBackupBytes()) {
 		const entries = [];
 		let total = 0;
 		const visit = async (relative = "") => {
@@ -417,13 +511,13 @@ export class InstanceBackup {
 					entries.push({ name, type: "symlink", target: link });
 				} else if (info.isFile()) {
 					total += info.size;
-					if (total > MAX_BACKUP_BYTES) throw new Error("Instance exceeds backup size limit");
+					if (total > maxBytes) throw new Error("Instance exceeds backup size limit");
 					await this.requireSpace(info.size * 2);
 					const handle = await fs.open(source, constants.O_RDONLY | constants.O_NOFOLLOW);
 					try {
 						await pipeline(
 							handle.createReadStream({ autoClose: false }),
-							byteLimit(MAX_BACKUP_BYTES - total + info.size),
+							byteLimit(maxBytes - total + info.size),
 							createWriteStream(target, { flags: "wx", mode: 0o600 }),
 						);
 					} finally {
@@ -441,16 +535,13 @@ export class InstanceBackup {
 		validateLinkGraph(entries);
 		return entries;
 	}
-	async snapshotDatabase(work) {
+	async snapshotDatabase(work, maxBytes = getMaxBackupBytes()) {
 		const engine = providerName(this.config);
 		if (!engine) throw new Error("Unsupported database provider");
 		const filename = path.join(work, engine === "sqlite" ? "database.sqlite" : "database.dump");
 		let description;
 		if (engine === "sqlite") {
-			const source = new Database(
-				this.config.knex?.connection?.filename || path.join(this.directory, "shieldpm/database.sqlite"),
-				{ fileMustExist: true },
-			);
+			const source = new Database(this.sqliteFilename(), { fileMustExist: true });
 			try {
 				const deadline = Date.now() + 300_000;
 				await source.backup(filename, {
@@ -489,12 +580,20 @@ export class InstanceBackup {
 				output: filename,
 			});
 		}
-		return { engine, filename, ...description };
+		const size = (await fs.stat(filename)).size;
+		if (size > maxBytes)
+			throw new Error(
+				`Database snapshot (${size} bytes) exceeds the configured backup limit (${maxBytes} bytes)`,
+			);
+		return { engine, filename, size, ...description };
 	}
 	async create(password, name = "", progress = (_phase) => {}) {
 		await this.initialize();
 		if ((await this.list()).length >= 50)
 			throw new Error("Archive limit reached; remove an older encrypted backup first");
+		const maxBytes = getMaxBackupBytes();
+		progress("preflight");
+		await this.preflightSize();
 		const id = crypto.randomUUID();
 		const work = await fs.mkdtemp(path.join(this.store, ".create-"));
 		const partial = `${this.archive(id)}.tmp`;
@@ -505,8 +604,8 @@ export class InstanceBackup {
 			progress("snapshot");
 			const data = path.join(work, "data");
 			const { entries, database } = await this.snapshotLock(async () => ({
-				entries: await this.copyData(data),
-				database: await this.snapshotDatabase(work),
+				entries: await this.copyData(data, maxBytes),
+				database: await this.snapshotDatabase(work, maxBytes),
 			}));
 			await fs.mkdir(path.join(data, ".database"), { mode: 0o700 });
 			const dbName = `.database/${path.basename(database.filename)}`;
@@ -551,10 +650,10 @@ export class InstanceBackup {
 			await fs.writeFile(partial, header, { mode: 0o600, flag: "wx" });
 			await pipeline(
 				Readable.from(payload()),
-				byteLimit(MAX_BACKUP_BYTES),
+				byteLimit(maxBytes),
 				createGzip(),
 				cipher,
-				byteLimit(MAX_BACKUP_BYTES - 52),
+				byteLimit(maxBytes - 52),
 				createWriteStream(partial, { flags: "a", flush: true }),
 			);
 			await fs.appendFile(partial, cipher.getAuthTag(), { flush: true });
@@ -575,6 +674,7 @@ export class InstanceBackup {
 		}
 	}
 	async decrypt(id, password, work) {
+		const maxBytes = getMaxBackupBytes();
 		const archive = backupArchivePath(this.store, id);
 		const compressed = path.join(work, "payload.gz");
 		// Keep one no-follow descriptor for metadata, authentication and ciphertext streaming.
@@ -582,8 +682,7 @@ export class InstanceBackup {
 		const handle = await fs.open(archive, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
 		try {
 			const info = await handle.stat();
-			if (!info.isFile() || info.size < 52 || info.size > MAX_BACKUP_BYTES)
-				throw new Error("Invalid backup archive");
+			if (!info.isFile() || info.size < 52 || info.size > maxBytes) throw new Error("Invalid backup archive");
 			const header = Buffer.alloc(36);
 			const tag = Buffer.alloc(16);
 			await handle.read(header, 0, 36, 0);
@@ -607,7 +706,7 @@ export class InstanceBackup {
 			await handle.close();
 		}
 		const unpacked = new PassThrough();
-		const pumping = pipeline(createReadStream(compressed), createGunzip(), byteLimit(MAX_BACKUP_BYTES), unpacked);
+		const pumping = pipeline(createReadStream(compressed), createGunzip(), byteLimit(maxBytes), unpacked);
 		pumping.catch(() => {}); // The iterator observes the same failure; never leave an unhandled stream error.
 		const iterator = unpacked[Symbol.asyncIterator]();
 		let buffered = Buffer.alloc(0);
@@ -647,7 +746,7 @@ export class InstanceBackup {
 					(entry.type === "file" && Number.isSafeInteger(entry.size) && entry.size >= 0 ? entry.size : 0),
 				0,
 			);
-			if (declared > MAX_BACKUP_BYTES) throw new Error("Backup exceeds its size limit");
+			if (declared > maxBytes) throw new Error("Backup exceeds its size limit");
 			await this.requireSpace(declared * 3);
 			const data = path.join(work, "data");
 			await fs.mkdir(data, { mode: 0o700 });
@@ -673,7 +772,7 @@ export class InstanceBackup {
 					if (!Number.isSafeInteger(entry.size) || entry.size < 0 || !/^[a-f0-9]{64}$/.test(entry.sha256))
 						throw new Error("Invalid file metadata");
 					total += entry.size;
-					if (total > MAX_BACKUP_BYTES) throw new Error("Backup exceeds its size limit");
+					if (total > maxBytes) throw new Error("Backup exceeds its size limit");
 					const file = await fs.open(target, "wx", 0o600);
 					const hash = crypto.createHash("sha256");
 					try {
@@ -1115,13 +1214,18 @@ export class InstanceBackup {
 	async commit() {
 		const pending = await this.pending();
 		if (pending?.phase !== "activated") return false;
-		await privateJson(path.join(this.pendingWork(pending), "completed.json"), {
+		const work = this.pendingWork(pending);
+		await privateJson(path.join(work, "completed.json"), {
 			completed_on: new Date().toISOString(),
 			id: pending.id,
 		});
 		await fs.rm(path.join(this.store, "pending.json"));
 		await syncDirectory(this.store);
-		// Keep the previous instance privately for explicit recovery; never delete it at startup.
+		// The restore is healthy and committed. Drop the old instance copy and
+		// every older completed staging tree instead of retaining it forever.
+		await fs.rm(work, { recursive: true, force: true });
+		await this.cleanupCompletedRestores();
+		await syncDirectory(this.store);
 		return true;
 	}
 }

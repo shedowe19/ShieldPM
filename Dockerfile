@@ -2,7 +2,11 @@
 # Stage 1: Build Frontend
 # ==========================================
 ARG DEBIAN_IMAGE=debian:trixie-slim@sha256:3a39a0592364683e6bab97937b72cad5a8fa6dcbbee90edb3bb48c7f8e94f258
-ARG SHIELDPM_NGINX_IMAGE=ghcr.io/shedowe19/shieldpm-nginx:master
+# Supply an immutable base reference:
+#   --build-arg SHIELDPM_NGINX_IMAGE=ghcr.io/shedowe19/shieldpm-nginx@sha256:<64 hex>
+# CI resolves the current image tag to its digest before every build. A mutable
+# tag is deliberately not accepted as a default here.
+ARG SHIELDPM_NGINX_IMAGE
 
 FROM --platform="$BUILDPLATFORM" ${DEBIAN_IMAGE} AS frontend
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
@@ -73,12 +77,20 @@ RUN bash /usr/local/bin/setup-node-apt.sh && \
 
 # From Backend & Frontend
 COPY --from=backend  /app      /app
+COPY LICENSE THIRD-PARTY-NOTICES.md /app/
 COPY --from=backend  /app/anubis /usr/local/bin/anubis
 COPY --from=backend  /app/oauth2-proxy /usr/local/bin/oauth2-proxy
 COPY --from=frontend /app/dist /html/frontend
 
 # Static Files
 COPY rootfs /
+
+# Terminal assets are bundled from the pinned frontend dependencies instead of
+# a mutable CDN. Keep this list in sync with rootfs/html/terminal/index.html.
+COPY --from=frontend /app/node_modules/@xterm/xterm/lib/xterm.js /html/terminal/vendor/xterm.js
+COPY --from=frontend /app/node_modules/@xterm/xterm/css/xterm.css /html/terminal/vendor/xterm.css
+COPY --from=frontend /app/node_modules/@xterm/addon-fit/lib/addon-fit.js /html/terminal/vendor/addon-fit.js
+COPY --from=frontend /app/node_modules/@xterm/addon-web-links/lib/addon-web-links.js /html/terminal/vendor/addon-web-links.js
 
 # --- Runtime dependencies: GeoIP updates and WireGuard ---
 RUN apt-get update && apt-get install -y --no-install-recommends \

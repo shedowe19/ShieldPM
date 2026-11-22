@@ -1,16 +1,38 @@
+# Bounded container logs: the json-file driver is otherwise unbounded.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   shieldpm:
     container_name: shieldpm
     image: ghcr.io/shedowe19/shieldpm:develop
     restart: always
     network_mode: host
+    stop_grace_period: 30s
+    security_opt:
+      - "no-new-privileges:true"
+    # Root owns /data, but every unneeded Linux capability is dropped.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
+      - KILL
+    logging: *default-logging
     volumes:
       - "/opt/shieldpm:/data"
       # - "/var/www:/var/www" # Optional: If you want to use ShieldPM key folders
     environment:
       # Set your timezone
       - "TZ=Europe/Berlin"
-      
+
       # Minimal Configuration
       - "PUID=0" # Run as root by default (easy start)
       - "PGID=0"
@@ -24,6 +46,8 @@ services:
 
       # Optional: Enable Quick Features
       # - "DISABLE_IPV6=true" # Disable IPv6 if your network/docker doesn't support it
+      # - "STREAM_LISTEN_LOCALHOST=true" # Keep stream listeners on loopback only
 
       # Security (Optional)
       # - "CSRF_SECRET=your-secure-random-secret" # Min. 32 characters recommended. Generate with: openssl rand -hex 32
+      # - "BACKUP_MAX_BYTES=68719476736" # Instance backup ceiling, default: 64 GiB

@@ -31,12 +31,18 @@ import { prepareTrafficFiles, prepareTrafficRender } from "./host-traffic-policy
 /** @type {Promise<unknown>} */
 let configurationQueue = Promise.resolve();
 const configurationContext = new AsyncLocalStorage();
+const CONFIGURATION_LOCK_TIMEOUT_MS = Number(process.env.NGINX_LOCK_ACQUIRE_TIMEOUT_MS) || 600_000;
+let configurationActiveSince = 0;
+let configurationActiveLabel = "";
 const runConfigurationOperation = async (callback) => {
-	const store = { active: true };
+	const store = { active: true, started: Date.now() };
+	configurationActiveSince = store.started;
 	try {
 		return await configurationContext.run(store, callback);
 	} finally {
 		store.active = false;
+		configurationActiveSince = 0;
+		configurationActiveLabel = "";
 	}
 };
 
@@ -70,15 +76,47 @@ const internalNginx = {
 
 	/**
 	 * Serialize config changes and certificate activation; callbacks must not call configure().
+	 * Waiters fail fast after a bounded acquire timeout so one stuck helper cannot
+	 * make every host operation hang indefinitely.
 	 * @template T
 	 * @param {() => T | PromiseLike<T>} callback
+	 * @param {{timeoutMs?: number, label?: string}} [options]
 	 * @returns {Promise<T>}
 	 */
-	withConfigurationLock: (callback) => {
-		const operation = configurationQueue.then(() => runConfigurationOperation(callback));
+	withConfigurationLock: (callback, options = {}) => {
+		const timeoutMs = Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : CONFIGURATION_LOCK_TIMEOUT_MS;
+		const label = options.label || "configuration operation";
+		let canceled = false;
+		const operation = configurationQueue.then(async () => {
+			if (canceled) throw new errs.ConfigurationError("Configuration lock wait was abandoned");
+			configurationActiveLabel = label;
+			return runConfigurationOperation(callback);
+		});
 		configurationQueue = operation.catch(() => {});
-		return operation;
+		if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return operation;
+		let timer;
+		const deadline = new Promise((_, reject) => {
+			timer = setTimeout(() => {
+				canceled = true;
+				const since = configurationActiveSince
+					? `; an operation has been active for ${Date.now() - configurationActiveSince}ms`
+					: "";
+				reject(
+					new errs.ConfigurationError(
+						`Timed out after ${timeoutMs}ms waiting for the configuration lock${since}`,
+					),
+				);
+			}, timeoutMs);
+		});
+		return Promise.race([operation, deadline]).finally(() => clearTimeout(timer));
 	},
+
+	/** Diagnostic state for health checks and tests; never exposes configuration data. */
+	getConfigurationLockState: () => ({
+		busy: Boolean(configurationActiveSince),
+		active_for_ms: configurationActiveSince ? Date.now() - configurationActiveSince : 0,
+		label: configurationActiveLabel,
+	}),
 
 	/**
 	 * Refresh one render graph immediately before staging it inside the configuration lock.

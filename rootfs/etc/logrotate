@@ -1,8 +1,35 @@
-/data/nginx/*.log /data/logs/ip_firewall_*.log {
+/data/nginx/access.log /data/nginx/error.log /data/nginx/stream.log {
         daily
-        rotate 3
+        maxsize 100M
+        rotate 7
         missingok
         notifempty
+        compress
+        delaycompress
+        copytruncate
+}
+
+# json_access.log is written for every enabled proxy host and grows independently
+# of the optional access_log switch. Rotate it with a hard size ceiling.
+/data/nginx/json_access.log {
+        daily
+        maxsize 100M
+        rotate 7
+        missingok
+        notifempty
+        compress
+        delaycompress
+        copytruncate
+}
+
+/data/logs/ip_firewall_*.log {
+        daily
+        maxsize 100M
+        rotate 7
+        missingok
+        notifempty
+        compress
+        delaycompress
         copytruncate
 }
 
