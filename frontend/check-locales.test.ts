@@ -29,7 +29,11 @@ const withFakeFormatJs = <T>(source: string, callback: () => T): T => {
 };
 
 describe("check-locales", () => {
-	it("fails closed when the project FormatJS executable cannot extract locale IDs", () => {
+	// The project FormatJS bin is a POSIX shell script; Windows needs a .cmd shim
+	// that this fixture does not replace. CI runs these checks on Linux.
+	it.skipIf(process.platform === "win32")(
+		"fails closed when the project FormatJS executable cannot extract locale IDs",
+		() => {
 		fakeBin = mkdtempSync(join(tmpdir(), "shieldpm-locale-check-"));
 		const fakeYarn = join(fakeBin, "yarn");
 		writeFileSync(
@@ -55,7 +59,9 @@ fs.writeFileSync(args[args.indexOf("--out-file") + 1], "{}");
 		expect(`${result.stdout}\n${result.stderr}`).toContain("Locale extraction failed: exit code 7");
 	});
 
-	it("passes the source glob to the project FormatJS executable without shell quotes", () => {
+	it.skipIf(process.platform === "win32")(
+		"passes the source glob to the project FormatJS executable without shell quotes",
+		() => {
 		fakeBin = mkdtempSync(join(tmpdir(), "shieldpm-locale-check-"));
 		const argsFile = join(fakeBin, "formatjs-args.json");
 
