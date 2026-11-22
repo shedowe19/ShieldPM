@@ -32,6 +32,15 @@ const connect = (filename) =>
 		},
 	});
 
+/**
+ * Synthetic fixture, not a release artifact.
+ *
+ * No released SQLite dump is available as a test fixture, so this schema is a
+ * hand-written approximation of the tables and columns these import tests
+ * exercise. It therefore does not prove that the importer accepts every
+ * historical release schema; add a real dump as a fixture before making such a
+ * claim or changing the compatibility gate.
+ */
 const createSchema = async (knex) => {
 	await knex.schema.createTable("migrations", (table) => {
 		table.increments("id");

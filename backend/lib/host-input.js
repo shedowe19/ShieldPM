@@ -18,7 +18,9 @@ const LUA_META = /[;$]/u;
 const BANDWIDTH_LIMIT = /^\d{1,9}[kKmM]?$/u;
 const QUERY_VALUE = /^[A-Za-z0-9\-._~!$&'()*+,=:@/?%[\]]*$/u;
 const INDEX_FILE = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[A-Za-z0-9._/-]+$/u;
-const LOCATION_PATH = /^\/[A-Za-z0-9._~!$&'()*+,=:@/%-]*$/u;
+// `$` is excluded: the custom-location template echoes the path into a
+// `return 301` directive, where Nginx would expand it as a variable.
+const LOCATION_PATH = /^\/[A-Za-z0-9._~!&'()*+,=:@/%-]*$/u;
 const SINGLE_LABEL = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/u;
 const PUBLIC_FQDN =
 	/^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/u;

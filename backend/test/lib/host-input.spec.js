@@ -57,6 +57,7 @@ describe("host input validation", () => {
 		expect(validateLocationPath("/app")).toBe("/app");
 		expect(() => validateLocationPath("/app; return 200")).toThrow(/location path/);
 		expect(() => validateLocationPath("~ ^/app")).toThrow(/location path/);
+		expect(() => validateLocationPath("/$http_authorization")).toThrow(/location path/);
 	});
 
 	it("reserves advanced configuration and path forwarding for administrators", async () => {
