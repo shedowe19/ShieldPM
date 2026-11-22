@@ -116,5 +116,8 @@ describe("host input validation", () => {
 			validateStreamHostFields(access(false), { forwarding_host: "unix:/var/run/docker.sock:" }),
 		).rejects.toThrow(/unix socket/);
 		await expect(validateStreamHostFields(access(false), { forwarding_port: 70000 })).rejects.toThrow(/65535/);
+		await expect(
+			validateRedirectionHostFields(access(true), { forward_domain_name: "unix:/var/run/docker.sock:" }),
+		).rejects.toThrow(/unix socket/);
 	});
 });

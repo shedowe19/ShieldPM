@@ -276,6 +276,9 @@ export const validateRedirectionHostFields = async (access, data = {}) => {
 	if (Object.hasOwn(data, "advanced_config")) await validateAdvancedConfig(access, data.advanced_config);
 	if (data.forward_domain_name !== undefined) {
 		const name = requireString(data.forward_domain_name, "forward_domain_name", 253);
+		if (name.startsWith("unix:")) {
+			fail("forward_domain_name must not use a unix socket");
+		}
 		if (name.includes("://") || name.includes("/") || (name.includes(":") && net.isIP(name) !== 6)) {
 			fail("forward_domain_name must be a hostname or IP address without a scheme or path");
 		}
