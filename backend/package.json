@@ -76,6 +76,7 @@
     "@electric-sql/pglite": "0.5.15",
     "@types/json-schema": "^7.0.15",
     "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "5.1.0",
     "es-module-lexer": "3.0.4",
     "openapi-types": "^12.1.3",
     "typescript": "^7.0.2",
