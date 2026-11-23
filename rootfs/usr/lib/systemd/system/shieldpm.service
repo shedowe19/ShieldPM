@@ -31,7 +31,7 @@ ProtectHostname=yes
 RestrictSUIDSGID=yes
 RestrictRealtime=yes
 LockPersonality=yes
-UMask=0077
+UMask=0022
 LimitNOFILE=65535
 TimeoutStopSec=35
 

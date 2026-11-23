@@ -330,7 +330,7 @@ class NativeServiceSandboxTests(unittest.TestCase):
             "ProtectControlGroups=yes",
             "RestrictSUIDSGID=yes",
             "LockPersonality=yes",
-            "UMask=0077",
+            "UMask=0022",
         ]:
             self.assertIn(directive, unit)
         self.assertIn("ReadWritePaths=/data /etc/nginx /etc/letsencrypt", unit)

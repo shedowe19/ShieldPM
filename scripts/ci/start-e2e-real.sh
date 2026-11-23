@@ -30,7 +30,12 @@ cat > "$BIN/nginx" <<'STUB'
 # The E2E verifies the application, not the Nginx binary.
 exit 0
 STUB
-chmod +x "$BIN/nginx"
+cat > "$BIN/certbot" <<'STUB'
+#!/usr/bin/env bash
+# Certificate operations are outside this browser flow.
+exit 0
+STUB
+chmod +x "$BIN/nginx" "$BIN/certbot"
 
 cd "$ROOT/backend"
 DATA_PATH="$DATA" PATH="$BIN:$PATH" SETUP_TOKEN="$TOKEN" SKIP_IP_RANGES=true node index.js \
