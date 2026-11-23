@@ -165,7 +165,7 @@ const DeleteConfirmModal = EasyModal.create(
 			const resolvedName = objectName ?? (record ? readObjectName(record) : null);
 			const resolvedDependents = dependencies ?? findDependents(queryClient, resolvedType, resolvedId, record);
 			return { type: resolvedType, id: resolvedId, name: resolvedName, dependents: resolvedDependents };
-		}, [dependencies, invalidations, objectIdKey(invalidations), objectName, objectType, queryClient]);
+		}, [dependencies, invalidations, objectName, objectType, queryClient]);
 
 		const typeLabel = identity.type
 			? intl.formatMessage({ id: identity.type, defaultMessage: identity.type })
@@ -261,11 +261,5 @@ const DeleteConfirmModal = EasyModal.create(
 		);
 	},
 );
-
-// Query keys are arrays; this keeps the memo dependency stable for the common case
-// while still reacting when a caller opens the dialog for another object.
-function objectIdKey(invalidations: QueryKey[] | undefined): string {
-	return JSON.stringify(invalidations ?? []);
-}
 
 export { showDeleteConfirmModal };

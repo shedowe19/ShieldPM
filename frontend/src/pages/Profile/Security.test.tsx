@@ -38,6 +38,11 @@ vi.mock("@simplewebauthn/browser", () => ({
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 const queryClients = new Set<QueryClient>();
+let activeQueryClient: QueryClient;
+
+const Wrapper = ({ children }: { children: React.ReactNode }) => (
+	<QueryClientProvider client={activeQueryClient}>{children}</QueryClientProvider>
+);
 
 const makeWrapper = (
 	client = new QueryClient({
@@ -45,9 +50,7 @@ const makeWrapper = (
 	}),
 ) => {
 	queryClients.add(client);
-	const Wrapper = ({ children }: { children: React.ReactNode }) => (
-		<QueryClientProvider client={client}>{children}</QueryClientProvider>
-	);
+	activeQueryClient = client;
 	return Wrapper;
 };
 
