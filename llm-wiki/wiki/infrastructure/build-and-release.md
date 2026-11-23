@@ -65,7 +65,7 @@ docker build -t shieldpm:local .
   `frontend/package.json` (`GEMINI.md:346-356`).
 - Vor dem Erhöhen wird der Umfang (Patch/Minor/Major) mit dem Nutzer geklärt.
 - Danach alle drei Dateien ändern und den Commit taggen.
-- Tags folgen `v*` (z. B. `v4.4.1`).
+- Tags folgen `v*` (z. B. `v4.5.0`).
 
 ## Risiken und Stolperfallen
 

@@ -1,7 +1,7 @@
 # ShieldPM — LLM-Wiki Index
 
 ShieldPM ist ein sicherheitsfokussierter Nginx-Reverse-Proxy-Manager mit Web-UI:
-Proxy-Hosts, TLS, WAF/IPS, Tunnels und DDNS. Version `4.4.1`, proprietär, zwei
+Proxy-Hosts, TLS, WAF/IPS, Tunnels und DDNS. Version `4.5.0`, proprietär, zwei
 Repositories (`ShieldPM` für die Anwendung, `shieldpm-nginx` für den Nginx-Build).
 
 Dieses Wiki ist der Einstieg für Agenten und Menschen. Es fasst zusammen und

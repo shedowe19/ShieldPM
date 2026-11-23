@@ -326,7 +326,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [set-function-length@1.2.2](https://www.npmjs.com/package/set-function-length/v/1.2.2) - MIT
 - [setprototypeof@1.2.0](https://www.npmjs.com/package/setprototypeof/v/1.2.0) - ISC
 - [sha.js@2.4.12](https://www.npmjs.com/package/sha.js/v/2.4.12) - (MIT AND BSD-3-Clause)
-- [shieldpm@4.4.1](https://www.npmjs.com/package/shieldpm/v/4.4.1) - UNLICENSED
+- [shieldpm@4.5.0](https://www.npmjs.com/package/shieldpm/v/4.5.0) - UNLICENSED
 - [side-channel-list@1.0.1](https://www.npmjs.com/package/side-channel-list/v/1.0.1) - MIT
 - [side-channel-map@1.0.1](https://www.npmjs.com/package/side-channel-map/v/1.0.1) - MIT
 - [side-channel-weakmap@1.0.2](https://www.npmjs.com/package/side-channel-weakmap/v/1.0.2) - MIT
@@ -437,7 +437,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [require-main-filename@2.0.0](https://www.npmjs.com/package/require-main-filename/v/2.0.0) - ISC
 - [rolldown@1.2.15](https://www.npmjs.com/package/rolldown/v/1.2.15) - MIT
 - [set-blocking@2.0.0](https://www.npmjs.com/package/set-blocking/v/2.0.0) - ISC
-- [shieldpm@4.4.1](https://www.npmjs.com/package/shieldpm/v/4.4.1) - UNLICENSED
+- [shieldpm@4.5.0](https://www.npmjs.com/package/shieldpm/v/4.5.0) - UNLICENSED
 - [source-map-js@1.2.2](https://www.npmjs.com/package/source-map-js/v/1.2.2) - BSD-3-Clause
 - [std-env@4.3.0](https://www.npmjs.com/package/std-env/v/4.3.0) - MIT
 - [tinybench@6.2.2](https://www.npmjs.com/package/tinybench/v/6.2.2) - MIT
@@ -775,7 +775,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [safe-buffer@5.2.1](https://www.npmjs.com/package/safe-buffer/v/5.2.1) - MIT
 - [scheduler@0.28.0](https://www.npmjs.com/package/scheduler/v/0.28.0) - MIT
 - [set-cookie-parser@2.7.2](https://www.npmjs.com/package/set-cookie-parser/v/2.7.2) - MIT
-- [shieldpm@4.4.1](https://www.npmjs.com/package/shieldpm/v/4.4.1) - UNLICENSED
+- [shieldpm@4.5.0](https://www.npmjs.com/package/shieldpm/v/4.5.0) - UNLICENSED
 - [source-map@0.5.7](https://www.npmjs.com/package/source-map/v/0.5.7) - BSD-3-Clause
 - [space-separated-tokens@2.0.2](https://www.npmjs.com/package/space-separated-tokens/v/2.0.2) - MIT
 - [split-on-first@4.0.0](https://www.npmjs.com/package/split-on-first/v/4.0.0) - MIT
@@ -941,7 +941,7 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [sass@1.107.1](https://www.npmjs.com/package/sass/v/1.107.1) - MIT
 - [seroval-plugins@1.6.8](https://www.npmjs.com/package/seroval-plugins/v/1.6.8) - MIT
 - [seroval@1.6.11](https://www.npmjs.com/package/seroval/v/1.6.11) - MIT
-- [shieldpm@4.4.1](https://www.npmjs.com/package/shieldpm/v/4.4.1) - UNLICENSED
+- [shieldpm@4.5.0](https://www.npmjs.com/package/shieldpm/v/4.5.0) - UNLICENSED
 - [signal-exit@3.0.7](https://www.npmjs.com/package/signal-exit/v/3.0.7) - ISC
 - [solid-js@1.9.16](https://www.npmjs.com/package/solid-js/v/1.9.16) - MIT
 - [solid-presence@0.2.0](https://www.npmjs.com/package/solid-presence/v/0.2.0) - MIT
