@@ -38,11 +38,13 @@
       vollständiger Restore auf einer echten Instanz ist belegt und ein
       autorisierter Pentest bestätigt die kritischen Pfade. Blockiert: braucht
       eine laufende Instanz und einen Prüfauftrag außerhalb dieses Repositorys.
-- [ ] **T-030 Signatur und Rotation.** Abnahme: Release-Artefakte sind per
-      Cosign signiert, der manuelle `docker-latest`-Push attestiert SBOM und
-      Provenienz, der AES-Schlüssel ist rotiert und die OIDC-Step-up-UI für
-      lokale 2FA ist umgesetzt. Blockiert: Formatwechsel, neue
-      Signaturidentität und Produktentscheidung nötig.
+- [ ] **T-031 Produktiven AES-Schlüssel rotieren.** Abnahme: Auf der laufenden
+      Instanz ist `SHIELDPM_ENCRYPTION_KEY` auf den neuen Schlüssel gesetzt,
+      `SHIELDPM_ENCRYPTION_KEY_PREVIOUS` enthält den alten, der Re-Encrypt-Lauf
+      meldet keine verbleibenden Werte und ein Neustart ohne Previous-Key
+      funktioniert. Blockiert: braucht den produktiven Schlüssel, ein
+      Datenbank-Backup und ein Wartungsfenster; Werkzeug und Anleitung liegen
+      vor.
 - [ ] **T-007 OpenAppSec-Policy auf einer laufenden Instanz anwenden.** Abnahme:
       `open-appsec-ctl --apply-policy` meldet keinen Schemafehler und die aktive
       Policy entspricht `local_policy.yaml`. Blockiert: braucht einen laufenden
@@ -70,6 +72,13 @@
 
 ## Done
 
+- [x] **T-030 Signatur, Attestierung, Rotation und OIDC-Step-up.** Done
+      2026-11-23. Beleg: Keyless-Cosign für Image und `SHA256SUMS`,
+      SBOM-/Provenienz-Attestierung im manuellen `docker-latest`-Push,
+      versionierter AES-Envelope mit Previous-Key und Re-Encrypt-CLI,
+      OIDC-Step-up für lokale 2FA sowie verschlüsselte TOTP-/Duo-/OIDC-Secrets.
+      Tests: `encryption-rotation.spec.js`, `third-auth-encryption.spec.js`,
+      `oidc-security.spec.js`, `2fa-otplib.spec.js`, `ai-chat-confirmation.spec.js`.
 - [x] **T-028 Security-Review 2026-11 behoben.** Done 2026-11-23. Beleg: Branch
       `fix/security-hardening`; K-01/K-02/K-03 an der Trust-Grenze geschlossen,
       229 Dateien gehärtet, Regressionstests für Injection, Host-Typen,

@@ -5,6 +5,13 @@ Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
 ## 2026-11-23
 
+- T-030 umgesetzt: Release-Images und `SHA256SUMS` sind keyless per Cosign
+  signiert, der manuelle `docker-latest`-Push attestiert SBOM und Provenienz,
+  der AES-Envelope ist versioniert und per Re-Encrypt-CLI rotierbar, TOTP-/Duo-
+  und OIDC-Secrets liegen verschlüsselt, OIDC nutzt eine Step-up-Seite für
+  lokale 2FA und das KI-Budget liegt in der Datenbank.
+  ([Sicherheit](./security/overview.md), [Log](./log.md))
+
 - Security-Review mit drei Runden und 39 Rollen behoben: Die drei kritischen
   Befunde (Dateisystemzugriff über `path`, Nginx-/Lua-Injection über Host-Felder,
   beliebige Client-Zertifikate der internen CA) sind an der Trust-Grenze

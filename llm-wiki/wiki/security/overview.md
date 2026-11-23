@@ -84,12 +84,20 @@ Was bewusst außerhalb des Repositories bleibt:
   Retention-Plan.
 - GitHub-Branch-Protection und Organisationsrichtlinien.
 - Live-Restore-Drill und Penetrationstest gegen eine laufende Instanz.
-- Cosign-Signatur der Release-Artefakte und SBOM-Attestierung im manuellen
-  `docker-latest`-Push (der Haupt-Build attestiert Provenienz und SBOM).
-- Rotation des bestehenden AES-Schlüssels (Formatwechsel und Re-Encrypt-
-  Migration nötig).
-- OIDC-Step-up-UI für lokale 2FA (das Backend lehnt den Login ohne zweiten
-  Faktor ab; eine eigene Challenge-Oberfläche fehlt).
+- Die tatsächliche Rotation des produktiven AES-Schlüssels: Das Werkzeug ist
+  umgesetzt (`v2`-Envelope, Previous-Key, Re-Encrypt-CLI), die Ausführung
+  braucht den produktiven Schlüssel und ein Datenbank-Backup.
+
+Umgesetzt und nicht mehr offen:
+
+- Cosign-Signatur der Release-Artefakte (keyless über GitHub OIDC) sowie
+  SBOM- und Provenienz-Attestierung im manuellen `docker-latest`-Push.
+- AES-Schlüsselrotation mit versioniertem Ciphertext, Previous-Key und
+  Re-Encrypt-Werkzeug.
+- OIDC-Step-up-UI für lokale 2FA: Der Callback stellt einen kurzlebigen
+  Pending-Token aus, die Login-Seite fragt den zweiten Faktor ab.
+- TOTP-Seeds, Duo-Client-Secrets und OIDC-Client-Secrets liegen verschlüsselt
+  in der Datenbank.
 
 ## Abhängigkeiten
 

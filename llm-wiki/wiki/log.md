@@ -2,6 +2,26 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-23] security | T-030 umgesetzt: Signatur, SBOM, Rotation, Step-up
+
+- Command: "Hast du alle Fehler behoben? habe ja alle gesagt".
+- Type: security
+- Areas affected: CI/Release, Verschlüsselung, OIDC/2FA, KI-Budget, Settings-UI.
+- Files changed: `docker.yml`, `docker-latest.yml`, `lib/encryption.js`,
+  `scripts/rotate-encryption-key.js`, `2fa-service.js`, `internal/setting.js`,
+  `routes/oidc.js`, `internal/ai/usage.js`, Migration `ai_token_usage`,
+  OIDC-Step-up im Login, OIDC-Settings-Tab.
+- Wiki pages updated: [Sicherheit](./security/overview.md),
+  [Aufgaben](./tasks.md), [Changelog](./changelog.md), diese Seite.
+- New TODOs: T-031 (produktive AES-Rotation auf der laufenden Instanz).
+- New bugs: keine neuen offenen Fehler.
+- New decisions: Ciphertext ist `v2:<key-id>:...`; alte Envelopes bleiben
+  lesbar; Previous-Key nur während der Rotation; TOTP-/Duo-/OIDC-Secrets werden
+  verschlüsselt gespeichert; das KI-Tagesbudget liegt in der Datenbank.
+- Verification: Encryption-, 2FA-, OIDC-, AI- und Workflow-Tests grün;
+  Frontend-/Backend-`tsc` grün; Re-Encrypt-CLI gegen eine SQLite-Fixture
+  geprüft (Legacy- und Previous-Key-Werte, TOTP/Duo/OIDC-Klartext).
+
 ## [2026-11-23] security | Drei Prüfrunden behoben, Branch `fix/security-hardening`
 
 - Command: "Behebe alle fehler wirklich alles und mach dann ein PR für alle auf".

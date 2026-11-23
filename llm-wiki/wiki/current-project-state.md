@@ -27,6 +27,7 @@ zuletzt fertig wurde, was bewusst fehlt und welche Risiken gerade aktiv sind.
 
 | Datum      | Ergebnis                                                                                                           | Quelle                                                                |
 | ---------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| 2026-11-23 | T-030: Cosign/SBOM/Provenienz, AES-Rotation, OIDC-Step-up, verschlüsselte 2FA-/OIDC-Secrets, DB-gestütztes KI-Budget | [Sicherheit](./security/overview.md), [Aufgaben](./tasks.md)          |
 | 2026-11-23 | Security-Review-Behebung: K-01/K-02/K-03, Identität, Betrieb, KI, Analytics, Secrets, Audit, UX und Doku           | [Sicherheit](./security/overview.md), Branch `fix/security-hardening` |
 | 2026-11-04 | Dependabot-Alarme für `qs`, `seroval` und `minimatch` geschlossen                                                  | [Log](./log.md)                                                       |
 | 2026-11-05 | Warnungs-Triage: 350 Warnungen sortiert, 16 Sofortfixes, Folgeaufgaben T-020–T-027                                 | [Triage](./analyses/2026-11-05-warnungs-triage.md)                    |
