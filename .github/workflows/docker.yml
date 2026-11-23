@@ -199,8 +199,8 @@ jobs:
           file: ./Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           load: ${{ github.event_name == 'pull_request' }}
-          provenance: mode=max
-          sbom: true
+          provenance: ${{ github.event_name != 'pull_request' && 'mode=max' || '' }}
+          sbom: ${{ github.event_name != 'pull_request' }}
           tags: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
           build-args: |
             SHIELDPM_NGINX_IMAGE=${{ steps.base.outputs.image }}
