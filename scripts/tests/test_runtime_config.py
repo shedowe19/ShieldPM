@@ -356,7 +356,9 @@ access_log off; # stream
                 self.assertIn("    real_ip_header X-Forwarded-For;", content)
                 self.assertNotIn("includeSubDomains;", content)
                 self.assertIn("access_log off; # stream", content)
-                self.assertIn("#error_log /data/nginx/error.log warn;", content)
+                # Disabling rotation must never disable error logging.
+                self.assertIn("error_log /data/nginx/error.log warn;", content)
+                self.assertNotIn("#error_log /data/nginx/error.log", content)
 
     def configure_asn_fixture(self, config, database, enabled="true"):
         # Redirect only the fixed DB path in a helper copy; production has no
