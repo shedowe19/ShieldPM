@@ -15,20 +15,15 @@ EnvironmentFile=-/etc/default/locale
 # Run the same entrypoint as Docker
 ExecStart=/usr/local/bin/entrypoint.sh
 
-# Sandbox the root service. Nginx and certbot still need to write their own
-# directories, so those stay writable while the kernel, home and system paths
-# are protected.
+# Sandbox the root service with restrictions that cannot block its own
+# management work. The unit intentionally does not make /etc, /usr or /root
+# read-only: startup rewrites /etc/logrotate, /etc/tor/torrc and
+# /usr/local/nginx/conf in place, WireGuard sets rp_filter through sysctl,
+# packages are managed from the built-in terminal, and the updater copies a new
+# rootfs over /. Filesystem and kernel confinement is the container boundary.
 NoNewPrivileges=yes
 PrivateTmp=yes
-ProtectHome=read-only
-ProtectSystem=full
-ReadWritePaths=/data /etc/nginx /etc/letsencrypt /var/lib/letsencrypt /var/log/nginx
-ProtectKernelTunables=yes
-ProtectKernelModules=yes
 ProtectControlGroups=yes
-ProtectClock=yes
-ProtectHostname=yes
-RestrictSUIDSGID=yes
 RestrictRealtime=yes
 LockPersonality=yes
 UMask=0022

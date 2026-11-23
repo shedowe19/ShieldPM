@@ -323,17 +323,31 @@ class NativeServiceSandboxTests(unittest.TestCase):
             "ExecStart=/usr/local/bin/entrypoint.sh",
             "NoNewPrivileges=yes",
             "PrivateTmp=yes",
-            "ProtectHome=read-only",
-            "ProtectSystem=full",
-            "ProtectKernelTunables=yes",
-            "ProtectKernelModules=yes",
             "ProtectControlGroups=yes",
-            "RestrictSUIDSGID=yes",
+            "RestrictRealtime=yes",
             "LockPersonality=yes",
             "UMask=0022",
         ]:
             self.assertIn(directive, unit)
-        self.assertIn("ReadWritePaths=/data /etc/nginx /etc/letsencrypt", unit)
+
+    def test_native_unit_keeps_paths_the_service_must_write(self):
+        # Startup rewrites /etc/logrotate, /etc/tor/torrc and
+        # /usr/local/nginx/conf, WireGuard sets rp_filter through sysctl, the
+        # terminal runs package management and the updater copies a rootfs over
+        # /. Read-only system paths or a SUID ban brick the service
+        # (226/NAMESPACE) or break updates, so these directives must stay out.
+        unit = (REPO / "rootfs/usr/lib/systemd/system/shieldpm.service").read_text()
+        for directive in [
+            "ProtectSystem=",
+            "ProtectHome=",
+            "ReadWritePaths=",
+            "ProtectKernelTunables=yes",
+            "ProtectKernelModules=yes",
+            "ProtectClock=yes",
+            "ProtectHostname=yes",
+            "RestrictSUIDSGID=yes",
+        ]:
+            self.assertNotIn(directive, unit)
 
 
 if __name__ == "__main__":
