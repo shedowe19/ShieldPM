@@ -256,6 +256,7 @@ pid ${directory}/nginx.pid;
 error_log ${directory}/error.log notice;
 events { worker_connections 64; }
 http {
+    log_format json_analytics escape=json '{"time":"$time_iso8601","status":$status}';
     access_log off;
     ${["client_body", "proxy", "fastcgi", "uwsgi", "scgi"].map((name) => `${name}_temp_path ${directory}/${name};`).join("\n")}
     server {
