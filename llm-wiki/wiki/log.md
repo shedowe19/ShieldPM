@@ -28,10 +28,11 @@ Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Felder
 - Open questions: keine neuen; die externen Nachweise bleiben T-028/T-029.
 - Next steps: PR gegen `develop` prüfen und mergen; danach T-028/T-029
   organisatorisch verfolgen.
-- Verification: Backend- und Frontend-`tsc --noEmit` grün; Backend- und
-  Frontend-Vitest-Suite (ohne Windows-spezifische WSL-/POSIX-Fälle) grün;
-  Biome auf den geänderten Dateien; `node llm-wiki/tools/wiki-check.mjs` PASS;
-  Prettier auf den kuratierten Wiki-Seiten.
+- Verification: Backend- und Frontend-`tsc --noEmit` grün; Frontend-Vollsuite
+  1.013 Tests grün (zwei POSIX-only Locale-Tests unter Windows übersprungen);
+  Backend-Zielsuites je geändertem Bereich grün, die Vollsuite läuft in der
+  Linux-CI; Biome auf den geänderten Dateien; `node llm-wiki/tools/wiki-check.mjs`
+  PASS; Prettier auf den kuratierten Wiki-Seiten.
 
 ## [2026-11-05] chore | T-019 Triage und 16 Sofortfixes
 
