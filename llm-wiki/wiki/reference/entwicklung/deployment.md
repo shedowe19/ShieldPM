@@ -110,7 +110,7 @@ Das Skript fragt wie gewohnt nach Bestätigung und führt anschließend das norm
 
 - **Source of Truth**: `.version` + `backend/package.json` + `frontend/package.json`
 - Alle drei müssen synchron gehalten werden
-- Aktueller Stand: `4.5.1`
+- Aktueller Stand: `4.5.2`
 
 ## CI/CD (GitHub Workflows)
 

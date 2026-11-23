@@ -18,7 +18,7 @@ zuletzt fertig wurde, was bewusst fehlt und welche Risiken gerade aktiv sind.
 
 - Branch `fix/security-hardening` (Basis `develop` @ `b1826f19`); Arbeitsbaum
   enthält die Behebung der Security-Review 2026-11.
-- Letzte Version `4.5.1` in `.version`, `backend/package.json` und
+- Letzte Version `4.5.2` in `.version`, `backend/package.json` und
   `frontend/package.json`.
 - Wiki versioniert seit `443d764f`; die Nacharbeiten dieser Sitzung betreffen
   OpenAPI, OpenAppSec, die Wiki-Prüfung in CI und zwei Dependabot-Alarme.
