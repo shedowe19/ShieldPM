@@ -21,7 +21,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:ci": "playwright test --reporter=list"
+    "test:e2e:ci": "playwright test --reporter=list",
+    "test:e2e:real": "playwright test -c playwright.real.config.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.2",

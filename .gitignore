@@ -20,3 +20,7 @@ __pycache__/
 .tscanner/reports/
 
 coverage/
+
+e2e-bin/
+e2e-backend.log
+e2e-frontend.log

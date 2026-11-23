@@ -172,6 +172,15 @@ jobs:
       - name: Run browser smoke test
         run: cd /tmp && CI=1 npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/frontend" test:e2e:ci
 
+      - name: Install backend dependencies for the real E2E
+        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/backend" install --frozen-lockfile
+
+      - name: Install socat
+        run: sudo apt-get update && sudo apt-get install -y socat
+
+      - name: Run real-backend browser E2E
+        run: cd /tmp && CI=1 npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/frontend" test:e2e:real
+
       - name: Upload browser screenshots and failure traces
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
