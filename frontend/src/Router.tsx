@@ -305,11 +305,13 @@ function Router() {
 
 	if (!health.data?.setup) {
 		return (
-			<RouteErrorBoundary>
-				<Suspense fallback={<LoadingPage />}>
-					<Setup />
-				</Suspense>
-			</RouteErrorBoundary>
+			<BrowserRouter>
+				<RouteErrorBoundary>
+					<Suspense fallback={<LoadingPage />}>
+						<Setup />
+					</Suspense>
+				</RouteErrorBoundary>
+			</BrowserRouter>
 		);
 	}
 
