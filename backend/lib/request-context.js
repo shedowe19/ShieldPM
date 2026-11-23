@@ -46,13 +46,21 @@ export const resolveClientIp = (req) => {
 	if (typeof req?.socket?.remoteAddress === "string" && req.socket.remoteAddress) return req.socket.remoteAddress;
 	const realIp = req?.headers?.["x-real-ip"];
 	const forwardedFor = req?.headers?.["x-forwarded-for"];
+	const supplied = Boolean(
+		(typeof realIp === "string" && realIp.trim()) || (typeof forwardedFor === "string" && forwardedFor.trim()),
+	);
 	const candidate =
 		typeof realIp === "string" && realIp.trim()
 			? realIp.trim()
 			: typeof forwardedFor === "string"
 				? (forwardedFor.split(",")[0] || "").trim()
 				: "";
-	return isIP(candidate) ? candidate : null;
+	if (candidate) return isIP(candidate) ? candidate : null;
+	// A Unix-socket peer has no remote address. Nginx supplies X-Real-IP for
+	// proxied client traffic; a request without either is a local process such
+	// as the updater health check, so loopback is the accurate address.
+	if (!supplied && !req?.socket?.remoteAddress) return "127.0.0.1";
+	return null;
 };
 
 const decodeClaims = (token) => {

@@ -22,8 +22,11 @@ describe("client IP resolution on Unix-socket listeners", () => {
 		);
 	});
 
-	it("rejects a malformed or missing proxy address", () => {
+	it("rejects a malformed proxy address", () => {
 		expect(resolveClientIp(request({ headers: { "x-real-ip": "not-an-ip" } }))).toBeNull();
-		expect(resolveClientIp(request({ headers: {} }))).toBeNull();
+	});
+
+	it("uses loopback for a headerless local socket", () => {
+		expect(resolveClientIp(request({ headers: {} }))).toBe("127.0.0.1");
 	});
 });
