@@ -695,13 +695,19 @@ export class AnalyticsService {
 		}
 	}
 
-	/** True when a previous release already wrote analytics rows without an offset. */
+	/**
+	 * True when a previous release already wrote analytics data without an offset.
+	 * Detail rows can be pruned by retention while the aggregates remain, so both
+	 * tables count as evidence: replaying the log would double count either way.
+	 */
 	async hasExistingAnalyticsRows() {
 		const knex = typeof AnalyticsLogs.knex === "function" ? AnalyticsLogs.knex() : null;
 		if (!knex) return false;
 		try {
-			const row = await knex("analytics_logs").select("id").limit(1).first();
-			return Boolean(row);
+			const detail = await knex("analytics_logs").select("id").limit(1).first();
+			if (detail) return true;
+			const aggregate = await knex("analytic_count").select("id").limit(1).first();
+			return Boolean(aggregate);
 		} catch (err) {
 			logger.error(`Failed to inspect existing analytics rows: ${err.message}`);
 			return false;

@@ -8,6 +8,7 @@ vi.mock("../../models/analytics_logs.js", () => ({ default: {} }));
 vi.mock("../../models/proxy_host.js", () => ({ default: {} }));
 
 import { AnalyticsService, resolveIngestStartMode, resolveRetentionConfig } from "../../internal/analytics.js";
+import AnalyticsLogs from "../../models/analytics_logs.js";
 
 const line = (path) =>
 	`${JSON.stringify({
@@ -84,6 +85,26 @@ describe("analytics log offset and backfill", () => {
 		expect(offset).toBe(size);
 		expect(service.detailedLogBuffer).toHaveLength(0);
 		expect(store.state.byte_offset).toBe(size);
+	});
+
+	it("treats legacy aggregates as existing data when detail rows were pruned", async () => {
+		const service = createService(logFile, createStore());
+		const knex = vi.fn((table) => ({
+			select: () => ({
+				limit: () => ({
+					first: async () => (table === "analytic_count" ? { id: 1 } : undefined),
+				}),
+			}),
+		}));
+		const originalKnex = AnalyticsLogs.knex;
+		AnalyticsLogs.knex = () => knex;
+		try {
+			await expect(service.hasExistingAnalyticsRows()).resolves.toBe(true);
+			expect(knex).toHaveBeenCalledWith("analytics_logs");
+			expect(knex).toHaveBeenCalledWith("analytic_count");
+		} finally {
+			AnalyticsLogs.knex = originalKnex;
+		}
 	});
 
 	it("persists only the offset covered by the committed batch", async () => {
