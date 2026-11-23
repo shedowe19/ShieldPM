@@ -486,7 +486,8 @@ apply_staged_native_binaries() {
 # builds copy them from node_modules; a native update must install them too.
 install_terminal_assets() {
     local source="$TEMP_DIR/frontend/node_modules/@xterm"
-    local target="/html/terminal/vendor"
+    local target
+    target="$(dirname "$FRONTEND_DIR")/terminal/vendor"
     install -d -m 755 "$target"
     install -m 644 "$source/xterm/lib/xterm.js" "$target/xterm.js"
     install -m 644 "$source/xterm/css/xterm.css" "$target/xterm.css"

@@ -149,7 +149,7 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 
 	it("installs the bundled terminal vendor assets during native updates", () => {
 		expect(updater).toContain("install_terminal_assets()");
-		expect(updater).toContain("/html/terminal/vendor");
+		expect(updater).toContain('$(dirname "$FRONTEND_DIR")/terminal/vendor');
 		for (const asset of [
 			"xterm/lib/xterm.js",
 			"xterm/css/xterm.css",

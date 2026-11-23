@@ -231,6 +231,11 @@ cp() {
         shutil.copy(STAGER, source / "rootfs/usr/local/bin/stage-native-binaries.py")
         (source / "backend/package.json").write_text("new backend")
         (source / "frontend/dist/index.html").write_text("new frontend")
+        for asset in ("xterm/lib/xterm.js", "xterm/css/xterm.css", "addon-fit/lib/addon-fit.js",
+                      "addon-web-links/lib/addon-web-links.js"):
+            asset_path = source / "frontend/node_modules/@xterm" / asset
+            asset_path.parent.mkdir(parents=True, exist_ok=True)
+            asset_path.write_text(asset)
         (live / "app/old.js").write_text("old backend")
         (live / "html/frontend/old.html").write_text("old frontend")
         for binary in ("anubis", "oauth2-proxy"):
