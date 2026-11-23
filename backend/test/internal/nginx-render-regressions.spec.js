@@ -253,6 +253,9 @@ describe("Nginx configuration regressions", () => {
 		);
 		expect(rendered).not.toContain("goauthentik.io");
 		expect(rendered).toContain("return 503;");
+		// The location include must not reference variables the skipped auth
+		// block would have defined; Nginx rejects such a configuration outright.
+		expect(rendered).not.toContain("$authentik_host");
 	});
 
 	it("renders the validated Authentik origin, not the raw stored string", async () => {
@@ -269,6 +272,7 @@ describe("Nginx configuration regressions", () => {
 		);
 		expect(rendered).toContain("proxy_pass              https://auth.example.test/outpost.goauthentik.io;");
 		expect(rendered).not.toContain("https://auth.example.test//outpost");
+		expect(rendered).toContain("proxy_set_header X-Authentik-Host $authentik_host;");
 	});
 
 	it.each([false, true])("retains terminal authentication with Anubis=%s", async (anubisEnabled) => {

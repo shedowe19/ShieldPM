@@ -900,10 +900,21 @@ async function checkAcmeAuthentication({
 		const engine = utils.getRenderEngine();
 		const variants = [
 			{ name: "baseline", expected: 200 },
-			...["oauth2_proxy", "authentik_proxy", "oidc"].flatMap((auth) => [
-				{ name: auth, auth, expected: 302 },
-				{ name: `${auth}-firewall`, auth, firewall: true, expected: 302 },
-			]),
+			{ name: "oauth2_proxy", auth: "oauth2_proxy", expected: 302 },
+			{ name: "oauth2_proxy-firewall", auth: "oauth2_proxy", firewall: true, expected: 302 },
+			// The fixture outpost is a loopback HTTP service, which the product
+			// rejects as an Authentik origin. The host must fail closed with 503
+			// instead of rendering undefined auth variables.
+			{ name: "authentik_proxy", auth: "authentik_proxy", expected: 503, failClosed: true },
+			{
+				name: "authentik_proxy-firewall",
+				auth: "authentik_proxy",
+				firewall: true,
+				expected: 503,
+				failClosed: true,
+			},
+			{ name: "oidc", auth: "oidc", expected: 302 },
+			{ name: "oidc-firewall", auth: "oidc", firewall: true, expected: 302 },
 			{ name: "mtls", mtls: true, expected: 403 },
 			{ name: "redirect", redirect: true, expected: 308 },
 		];
@@ -1059,8 +1070,10 @@ http {
 				assert.equal(challenge.body, "challenge-proof", host);
 			const ordinary = await request(port, { host, uri: "/private" });
 			assert.equal(ordinary.status, variant.expected, host);
-			if (variant.auth)
+			if (variant.auth && !variant.failClosed)
 				assert(ordinary.headers.location, `${host} must require sign-in`);
+			if (variant.failClosed)
+				assert.equal(ordinary.headers.location, undefined, `${host} must not redirect`);
 			if (variant.redirect)
 				assert.equal(
 					ordinary.headers.location,
