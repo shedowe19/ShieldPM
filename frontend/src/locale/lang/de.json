@@ -476,6 +476,7 @@
 	"object.event.updated": "{object} aktualisiert",
 	"object.event.user.impersonated": "{object} impersoniert",
 	"object.event.user.oidc_link_denied": "OIDC-Kontoverknüpfung für {object} abgelehnt",
+	"object.event.user.oidc_step_up_required": "OIDC-Anmeldung erfordert den lokalen zweiten Faktor für {object}",
 	"objectType": "Objekttyp",
 	"offline": "Offline",
 	"oidcClientId": "OIDC-Client-ID",

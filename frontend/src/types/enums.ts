@@ -251,6 +251,7 @@ export const AUDIT_LOG_ACTION = {
 	REFRESH_REPLAY_DETECTED: "refresh_replay_detected",
 	USER_IMPERSONATED: "user.impersonated",
 	USER_OIDC_LINK_DENIED: "user.oidc_link_denied",
+	USER_OIDC_STEP_UP_REQUIRED: "user.oidc_step_up_required",
 } as const;
 export type AuditLogAction = (typeof AUDIT_LOG_ACTION)[keyof typeof AUDIT_LOG_ACTION];
 
