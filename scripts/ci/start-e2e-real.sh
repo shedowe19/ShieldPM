@@ -7,16 +7,20 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if [ "${CI:-}" != "true" ]; then
-	echo "This script resets /data and is intended for the CI browser job only." >&2
-	exit 1
-fi
+case "${CI:-}" in
+	true | 1) ;;
+	*)
+		echo "This script resets /data and is intended for the CI browser job only." >&2
+		exit 1
+		;;
+esac
 DATA="/data"
 BIN="$ROOT/e2e-bin"
 TOKEN="${E2E_SETUP_TOKEN:-e2e-token}"
 
 sudo mkdir -p "$DATA" /run/shieldpm
 sudo chown "$(id -u):$(id -g)" "$DATA" /run/shieldpm
+sudo rm -f /run/shieldpm/shieldpm.sock
 find "$DATA" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 rm -rf "$BIN"
 mkdir -p "$DATA/nginx" "$BIN"
