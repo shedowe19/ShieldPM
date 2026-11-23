@@ -7,8 +7,7 @@
  * SQLite stores integers with dynamic width and ignores the declared type, so
  * the change is only needed for the server databases.
  */
-const supportsColumnTypeChange = (knex) =>
-	!["sqlite3", "better-sqlite3"].includes(knex.client.config.client);
+const supportsColumnTypeChange = (knex) => !["sqlite3", "better-sqlite3"].includes(knex.client.config.client);
 
 export const up = async (knex) => {
 	if (!supportsColumnTypeChange(knex)) return;
