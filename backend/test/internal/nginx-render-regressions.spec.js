@@ -253,6 +253,8 @@ describe("Nginx configuration regressions", () => {
 		);
 		expect(rendered).not.toContain("goauthentik.io");
 		expect(rendered).toContain("return 503;");
+		// Certificate renewals must still reach the ACME HTTP-01 location.
+		expect(rendered).toContain('if ($uri !~ "^/\\.well-known/acme-challenge/") {');
 		// The location include must not reference variables the skipped auth
 		// block would have defined; Nginx rejects such a configuration outright.
 		expect(rendered).not.toContain("$authentik_host");
