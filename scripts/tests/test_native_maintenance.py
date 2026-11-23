@@ -316,5 +316,25 @@ curl() {
         self.assertEqual((live / "app/old.js").read_text(), "old backend")
 
 
+class NativeServiceSandboxTests(unittest.TestCase):
+    def test_native_unit_hardens_the_root_service(self):
+        unit = (REPO / "rootfs/usr/lib/systemd/system/shieldpm.service").read_text()
+        for directive in [
+            "ExecStart=/usr/local/bin/entrypoint.sh",
+            "NoNewPrivileges=yes",
+            "PrivateTmp=yes",
+            "ProtectHome=read-only",
+            "ProtectSystem=full",
+            "ProtectKernelTunables=yes",
+            "ProtectKernelModules=yes",
+            "ProtectControlGroups=yes",
+            "RestrictSUIDSGID=yes",
+            "LockPersonality=yes",
+            "UMask=0077",
+        ]:
+            self.assertIn(directive, unit)
+        self.assertIn("ReadWritePaths=/data /etc/nginx /etc/letsencrypt", unit)
+
+
 if __name__ == "__main__":
     unittest.main()

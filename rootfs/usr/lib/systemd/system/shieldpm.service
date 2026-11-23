@@ -15,6 +15,26 @@ EnvironmentFile=-/etc/default/locale
 # Run the same entrypoint as Docker
 ExecStart=/usr/local/bin/entrypoint.sh
 
+# Sandbox the root service. Nginx and certbot still need to write their own
+# directories, so those stay writable while the kernel, home and system paths
+# are protected.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=read-only
+ProtectSystem=full
+ReadWritePaths=/data /etc/nginx /etc/letsencrypt /var/lib/letsencrypt /var/log/nginx
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+UMask=0077
+LimitNOFILE=65535
+TimeoutStopSec=35
+
 # Restart logic
 Restart=always
 RestartSec=5
