@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../logger.js", () => ({ global: { debug: vi.fn(), info: vi.fn(), warn: vi.fn() } }));
 
-import { callGemini, callLocalLLM, callLocalWithResults } from "../../internal/ai/providers.js";
+import { callGemini, callGeminiWithResults, callLocalLLM, callLocalWithResults } from "../../internal/ai/providers.js";
 
 const localConfig = {
 	base_url: "https://provider.example/v1",
@@ -90,6 +90,40 @@ describe("AI provider resilience", () => {
 		expect(body.generationConfig).toMatchObject({ temperature: 0, maxOutputTokens: 2048 });
 		expect(response.content).toBe("Hello");
 		expect(response.usage).toEqual({ input_tokens: 3, output_tokens: 4, total_tokens: 7 });
+	});
+
+	it("keeps earlier Gemini tool rounds in continuation requests", async () => {
+		const fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: async () => ({ candidates: [{ content: { parts: [{ text: "done" }] } }] }),
+		});
+		vi.stubGlobal("fetch", fetch);
+		const previousResponse = {
+			content: "",
+			toolCalls: [{ name: "get_certificates", args: {} }],
+			geminiContents: [
+				{ role: "user", parts: [{ text: "hi" }] },
+				{ role: "model", parts: [{ functionCall: { name: "get_hosts", args: {} } }] },
+				{ role: "function", parts: [{ functionResponse: { name: "get_hosts", response: { content: "hosts" } } }] },
+			],
+		};
+
+		await callGeminiWithResults(
+			geminiConfig,
+			"system",
+			"hi",
+			[],
+			previousResponse,
+			[{ name: "get_certificates", result: "certificates" }],
+			[],
+		);
+
+		const body = JSON.parse(fetch.mock.calls[0][1].body);
+		const toolNames = body.contents
+			.flatMap((entry) => entry.parts || [])
+			.map((part) => part.functionCall?.name || part.functionResponse?.name)
+			.filter(Boolean);
+		expect(toolNames).toEqual(["get_hosts", "get_hosts", "get_certificates", "get_certificates"]);
 	});
 
 	it("parses Ollama token counters", async () => {

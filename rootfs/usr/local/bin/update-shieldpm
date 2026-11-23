@@ -482,6 +482,19 @@ apply_staged_native_binaries() {
     fi
 }
 
+# The terminal page loads its xterm assets from /html/terminal/vendor. Docker
+# builds copy them from node_modules; a native update must install them too.
+install_terminal_assets() {
+    local source="$TEMP_DIR/frontend/node_modules/@xterm"
+    local target="/html/terminal/vendor"
+    install -d -m 755 "$target"
+    install -m 644 "$source/xterm/lib/xterm.js" "$target/xterm.js"
+    install -m 644 "$source/xterm/css/xterm.css" "$target/xterm.css"
+    install -m 644 "$source/addon-fit/lib/addon-fit.js" "$target/addon-fit.js"
+    install -m 644 "$source/addon-web-links/lib/addon-web-links.js" "$target/addon-web-links.js"
+    echo "    - Terminal assets installed."
+}
+
 echo "--> [1/9] Updating System & Dependencies..."
 
 apt-get update
@@ -557,6 +570,7 @@ echo "    - Updating System Configs (rootfs)..."
 # SAFETY: Remove /data from the update payload to PREVENT overwriting user config (.env) and database
 rm -rf "$TEMP_DIR/rootfs/data"
 cp -rf "$TEMP_DIR/rootfs/"* /
+install_terminal_assets
 
 # Only prepared local files are installed while ShieldPM is stopped.
 apply_staged_native_binaries

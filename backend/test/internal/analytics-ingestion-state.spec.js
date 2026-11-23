@@ -72,8 +72,38 @@ describe("analytics log offset and backfill", () => {
 		expect(store.state.byte_offset).toBe(secondOffset);
 	});
 
-	it("detects truncation and replays the current file from its start", async () => {
-		fs.writeFileSync(logFile, line("/one") + line("/two"));
+	it("starts at the current end when a previous release already has analytics rows", async () => {
+		fs.writeFileSync(logFile, line("/historic"));
+		const size = fs.statSync(logFile).size;
+		const store = createStore();
+		const service = createService(logFile, store);
+		vi.spyOn(service, "hasExistingAnalyticsRows").mockResolvedValue(true);
+
+		const offset = await service.resumeFromPersistedOffset();
+
+		expect(offset).toBe(size);
+		expect(service.detailedLogBuffer).toHaveLength(0);
+		expect(store.state.byte_offset).toBe(size);
+	});
+
+	it("persists only the offset covered by the committed batch", async () => {
+		fs.writeFileSync(logFile, line("/one"));
+		const committedSize = fs.statSync(logFile).size;
+		const store = createStore();
+		const service = new AnalyticsService(logFile, { stateStore: store, startMode: "beginning" });
+		service.tail = { currentCursorPos: committedSize, buffer: "" };
+		service.detailedLogBuffer = [{ path: "/one" }];
+		service.flushBatch = async () => {
+			fs.appendFileSync(logFile, line("/new"));
+			service.tail.currentCursorPos = fs.statSync(logFile).size;
+		};
+
+		await service.flush();
+
+		expect(store.state.byte_offset).toBe(committedSize);
+	});
+
+	it("detects truncation and replays the current file from its start", async () => {		fs.writeFileSync(logFile, line("/one") + line("/two"));
 		const store = createStore();
 		const first = createService(logFile, store);
 		await first.resumeFromPersistedOffset();

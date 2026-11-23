@@ -17,8 +17,18 @@ describe("Nginx configuration lock", () => {
 		await blocker;
 	});
 
-	it("serializes operations and exposes only bounded lock diagnostics", async () => {
-		const events = [];
+	it("does not reject a callback that already acquired the lock", async () => {
+		const result = await internalNginx.withConfigurationLock(
+			async () => {
+				await new Promise((resolve) => setTimeout(resolve, 40));
+				return "committed";
+			},
+			{ timeoutMs: 10 },
+		);
+		expect(result).toBe("committed");
+	});
+
+	it("serializes operations and exposes only bounded lock diagnostics", async () => {		const events = [];
 		const first = internalNginx.withConfigurationLock(async () => {
 			events.push("first:start");
 			await new Promise((resolve) => setTimeout(resolve, 10));

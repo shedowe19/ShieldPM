@@ -147,6 +147,19 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 		expect(updater).toContain('cp -a "$TEMP_DIR/frontend/dist/." "$FRONTEND_DIR/"');
 	});
 
+	it("installs the bundled terminal vendor assets during native updates", () => {
+		expect(updater).toContain("install_terminal_assets()");
+		expect(updater).toContain("/html/terminal/vendor");
+		for (const asset of [
+			"xterm/lib/xterm.js",
+			"xterm/css/xterm.css",
+			"addon-fit/lib/addon-fit.js",
+			"addon-web-links/lib/addon-web-links.js",
+		]) {
+			expect(updater).toContain(asset);
+		}
+	});
+
 	it("defaults to the latest published release instead of a moving branch", () => {
 		expect(updater).toContain("resolve_release_ref()");
 		expect(updater).toContain("releases/latest");

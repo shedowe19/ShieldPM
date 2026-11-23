@@ -194,12 +194,22 @@ const appendGeminiContent = (contents, role, parts) => {
 	contents.push({ role, parts });
 };
 
-const buildGeminiContents = (history, message, previousResponse, toolResults) => {
+const baseGeminiContents = (history, message) => {
 	const contents = [];
 	for (const entry of normalizeHistory(history)) {
 		appendGeminiContent(contents, entry.role === "user" ? "user" : "model", [{ text: entry.content }]);
 	}
 	appendGeminiContent(contents, "user", [{ text: message }]);
+	return contents;
+};
+
+const buildGeminiContents = (history, message, previousResponse, toolResults) => {
+	// Gemini needs the complete functionCall/functionResponse history of earlier
+	// tool rounds; rebuilding only from the browser history loses it from the
+	// third provider request onward.
+	const contents = Array.isArray(previousResponse?.geminiContents)
+		? structuredClone(previousResponse.geminiContents)
+		: baseGeminiContents(history, message);
 	if (previousResponse?.toolCalls?.length) {
 		contents.push({
 			role: "model",
@@ -310,7 +320,8 @@ const geminiRequest = async (config, systemPrompt, contents, tools, externalSign
  */
 export const callGemini = async (config, systemPrompt, message, history, tools, options = {}) => {
 	const contents = buildGeminiContents(history, message, null, null);
-	return geminiRequest(config, systemPrompt, contents, tools, options.signal, "Gemini Error");
+	const response = await geminiRequest(config, systemPrompt, contents, tools, options.signal, "Gemini Error");
+	return { ...response, geminiContents: contents };
 };
 
 /**
@@ -335,7 +346,8 @@ export const callGeminiWithResults = async (
 	options = {},
 ) => {
 	const contents = buildGeminiContents(history, message, previousResponse, toolResults);
-	return geminiRequest(config, systemPrompt, contents, tools, options.signal, "Gemini Result Error");
+	const response = await geminiRequest(config, systemPrompt, contents, tools, options.signal, "Gemini Result Error");
+	return { ...response, geminiContents: contents };
 };
 
 const localDialect = (config) => {

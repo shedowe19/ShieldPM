@@ -616,6 +616,9 @@ export class AnalyticsService {
 		this.flushPromise = (async () => {
 			const detailedBatch = this.detailedLogBuffer;
 			const aggregationBatch = Array.from(this.aggregationBuffer.values());
+			// Capture the offset covered by this batch before new lines can arrive.
+			// Persisting a later cursor would skip rows that are still uncommitted.
+			const batchOffset = this.getReadableOffset();
 
 			this.detailedLogBuffer = [];
 			this.aggregationBuffer = new Map();
@@ -623,7 +626,7 @@ export class AnalyticsService {
 			try {
 				await this.flushBatch(detailedBatch, aggregationBatch);
 				this.lastFlushSucceeded = true;
-				await this.persistOffsetIfSafe();
+				await this.persistOffset(batchOffset);
 			} catch (err) {
 				this.lastFlushSucceeded = false;
 				logger.error(`Failed to flush analytics batch: ${err.message}`);
@@ -713,6 +716,19 @@ export class AnalyticsService {
 		}
 	}
 
+	/** True when a previous release already wrote analytics rows without an offset. */
+	async hasExistingAnalyticsRows() {
+		const knex = typeof AnalyticsLogs.knex === "function" ? AnalyticsLogs.knex() : null;
+		if (!knex) return false;
+		try {
+			const row = await knex("analytics_logs").select("id").limit(1).first();
+			return Boolean(row);
+		} catch (err) {
+			logger.error(`Failed to inspect existing analytics rows: ${err.message}`);
+			return false;
+		}
+	}
+
 	async saveIngestState({ offset, stat, lastLineAt }) {
 		if (!Number.isInteger(offset) || offset < 0) return;
 		this.persistedOffset = offset;
@@ -748,8 +764,15 @@ export class AnalyticsService {
 
 		const state = await this.loadIngestState();
 		if (!state) {
-			if (this.startMode === "end") {
-				logger.info(`No analytics ingestion offset found; starting at the current end (${stat.size} bytes).`);
+			// An upgrade from a release without ingestion state already has rows and
+			// aggregates. Replaying the whole log would count them a second time.
+			const hasExistingData = await this.hasExistingAnalyticsRows();
+			if (this.startMode === "end" || hasExistingData) {
+				logger.info(
+					hasExistingData
+						? `Existing analytics data found without an ingestion offset; starting at the current end (${stat.size} bytes) to avoid double counting.`
+						: `No analytics ingestion offset found; starting at the current end (${stat.size} bytes).`,
+				);
 				await this.saveIngestState({ lastLineAt: null, offset: stat.size, stat });
 				return stat.size;
 			}
@@ -858,10 +881,8 @@ export class AnalyticsService {
 		return this.persistedOffset;
 	}
 
-	async persistOffsetIfSafe() {
-		if (this.lineQueue.length > 0) return;
-		const offset = this.getReadableOffset();
-		if (offset <= this.persistedOffset) return;
+	async persistOffset(offset) {
+		if (!Number.isInteger(offset) || offset <= this.persistedOffset) return;
 		const stat = this.statFile(this.logFile);
 		if (!stat) return;
 		try {

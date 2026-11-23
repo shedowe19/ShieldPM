@@ -87,14 +87,17 @@ const internalNginx = {
 		const timeoutMs = Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : CONFIGURATION_LOCK_TIMEOUT_MS;
 		const label = options.label || "configuration operation";
 		let canceled = false;
+		let timer;
 		const operation = configurationQueue.then(async () => {
 			if (canceled) throw new errs.ConfigurationError("Configuration lock wait was abandoned");
+			// The deadline only covers waiting for the lock. Once the callback runs,
+			// it must not be reported as failed while it still commits its work.
+			if (timer) clearTimeout(timer);
 			configurationActiveLabel = label;
 			return runConfigurationOperation(callback);
 		});
 		configurationQueue = operation.catch(() => {});
 		if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return operation;
-		let timer;
 		const deadline = new Promise((_, reject) => {
 			timer = setTimeout(() => {
 				canceled = true;
