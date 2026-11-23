@@ -50,7 +50,7 @@ const JSON_COLUMNS = [
 
 const parseJson = (value) => (typeof value === "string" ? JSON.parse(value) : value);
 
-const encodeJson = (value, wasString) => (wasString ? JSON.stringify(value) : value);
+const encodeJson = (value) => JSON.stringify(value);
 
 const rotateScalar = (value, { encryptPlaintext = false } = {}) => {
 	if (typeof value !== "string" || value === "" || value === "********") {
@@ -67,7 +67,6 @@ const rotateScalar = (value, { encryptPlaintext = false } = {}) => {
 
 const rotateJson = (value, entry) => {
 	if (value === null || value === undefined) return { changed: false, value };
-	const wasString = typeof value === "string";
 	let parsed;
 	try {
 		parsed = parseJson(value);
@@ -90,7 +89,7 @@ const rotateJson = (value, entry) => {
 			changed = true;
 		}
 	}
-	return { changed, value: changed ? encodeJson(result, wasString) : value };
+	return { changed, value: changed ? encodeJson(result) : value };
 };
 
 const countRemaining = (value, entry) => {
