@@ -60,16 +60,26 @@ export const addDailyTokenUsage = async (userId, tokens) => {
 	const user = bucketUser(userId);
 
 	await database.transaction(async (trx) => {
-		const updated = await trx("ai_token_usage").where({ day, user_id: user }).increment("tokens", amount);
-		if (updated) return;
-		try {
-			await trx("ai_token_usage").insert({ day, user_id: user, tokens: amount });
-		} catch (error) {
-			// Two workers raced on the first write of the day. The unique key
-			// rejected one of them; the winner's row is incremented instead.
-			const retried = await trx("ai_token_usage").where({ day, user_id: user }).increment("tokens", amount);
-			if (!retried) throw error;
+		const client = trx.client.config.client;
+		if (["better-sqlite3", "sqlite3", "pg"].includes(client)) {
+			await trx("ai_token_usage")
+				.insert({ day, user_id: user, tokens: amount })
+				.onConflict(["day", "user_id"])
+				.merge({ tokens: trx.raw("?? + ?", ["tokens", amount]) });
+			return;
 		}
+		await trx.raw("INSERT INTO ?? (??, ??, ??) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE ?? = ?? + ?", [
+			"ai_token_usage",
+			"day",
+			"user_id",
+			"tokens",
+			day,
+			user,
+			amount,
+			"tokens",
+			"tokens",
+			amount,
+		]);
 	});
 
 	return getDailyTokenUsage(userId);
