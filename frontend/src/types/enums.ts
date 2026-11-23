@@ -235,6 +235,9 @@ export const AUDIT_LOG_OBJECT_TYPE = {
 	WIREGUARD_PEER: "wireguard-peer",
 	WIREGUARD_SETTINGS: "wireguard-settings",
 	AUTH_SESSION: "auth-session",
+	AUTH: "auth",
+	TERMINAL: "terminal",
+	SECURITY_INCIDENT: "security-incident",
 } as const;
 export type AuditLogObjectType = (typeof AUDIT_LOG_OBJECT_TYPE)[keyof typeof AUDIT_LOG_OBJECT_TYPE];
 
