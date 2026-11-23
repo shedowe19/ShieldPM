@@ -232,7 +232,7 @@ ${backendHealthCheck}
 SECONDS=0
 curl() { ((SECONDS >= 242)) && printf '{"status":"OK"}'; }
 jq() { body=$(cat); [[ "$body" == '{"status":"OK"}' ]]; }
-sleep() { if ((SECONDS == 0)); then SECONDS=241; else SECONDS=$((SECONDS + 1)); fi; }
+sleep() { if ((SECONDS < 241)); then SECONDS=241; else SECONDS=$((SECONDS + 1)); fi; }
 wait_for_backend_health
 printf 'elapsed=%s' "$SECONDS"
 `,
@@ -240,7 +240,11 @@ printf 'elapsed=%s' "$SECONDS"
 			{ encoding: "utf8", timeout: 5000 },
 		);
 		expect(result.status, result.stderr).toBe(0);
-		expect(result.stdout).toContain("elapsed=242");
+		const elapsed = Number.parseInt(result.stdout.match(/elapsed=(\d+)/)?.[1] ?? "", 10);
+		// The faked clock jumps to 241, but real wall-clock seconds keep counting
+		// while the pipeline forks, so the exact final value is not deterministic.
+		expect(elapsed).toBeGreaterThanOrEqual(242);
+		expect(elapsed).toBeLessThan(360);
 	});
 
 	it("updates optional runtime binaries and waits for migrations to become healthy", () => {
