@@ -7,7 +7,11 @@ vi.mock("../../db.js", async () => {
 	state.database = knex({ client: "better-sqlite3", connection: { filename: ":memory:" }, useNullAsDefault: true });
 	return { default: () => state.database };
 });
-vi.mock("../../lib/config.js", () => ({ isSqlite: () => true, isPostgres: () => false }));
+vi.mock("../../lib/config.js", () => ({
+	isSqlite: () => true,
+	isPostgres: () => false,
+	getEncryptionKey: () => "01".repeat(32),
+}));
 vi.mock("../../internal/nginx.js", () => ({ default: {} }));
 
 import auditLog from "../../internal/audit-log.js";

@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { encrypt, isEncrypted } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import { isSecretFieldName } from "../lib/host-response.js";
 import settingModel from "../models/setting.js";
@@ -25,6 +26,26 @@ const normalizeMeta = (value) => {
 };
 
 const isUnsetSecretValue = (value) => value === undefined || value === null || value === "" || value === SECRET_MASK;
+
+// Setting rows whose meta carries a credential that must be encrypted at rest.
+// New values are encrypted here; a value that is already an envelope (for
+// example a preserved masked secret) is left untouched.
+const SECRET_META_FIELDS = {
+	"oidc-config": ["clientSecret"],
+};
+
+const encryptMetaSecrets = (id, meta) => {
+	const fields = SECRET_META_FIELDS[id];
+	if (!fields || !meta || typeof meta !== "object" || Array.isArray(meta)) return meta;
+	const result = { ...meta };
+	for (const field of fields) {
+		const value = result[field];
+		if (typeof value === "string" && value && value !== SECRET_MASK && !isEncrypted(value)) {
+			result[field] = encrypt(value);
+		}
+	}
+	return result;
+};
 
 const maskMeta = (value, root = true) => {
 	if (Array.isArray(value)) return value.map((entry) => maskMeta(entry, false));
@@ -98,7 +119,9 @@ const internalSetting = {
 			}
 			const patch = {
 				...(data.value !== undefined ? { value: data.value } : {}),
-				...(data.meta !== undefined ? { meta: preserveMetaSecrets(data.meta, row.meta) } : {}),
+				...(data.meta !== undefined
+					? { meta: encryptMetaSecrets(data.id, preserveMetaSecrets(data.meta, row.meta)) }
+					: {}),
 			};
 			if (row.id !== "default-site") {
 				await settingModel.query().where({ id: data.id }).patch(patch);

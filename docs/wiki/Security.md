@@ -86,6 +86,35 @@ ShieldPM supports modern TLS protocols out of the box:
 
 👉 **[SSL Certificates Guide](SSL-Certificates)** | **[Internal PKI Guide](Internal-PKI)**
 
+### Data at Rest and Key Rotation
+
+Credentials (Git tokens, terminal passwords and keys, tunnel tokens, WireGuard
+keys, notification secrets, TOTP seeds, Duo client secrets and the OIDC client
+secret) are encrypted with AES-256-GCM before they reach the database.
+
+The ciphertext names its key (`v2:<key-id>:...`). To rotate the data key:
+
+1. Take a database backup.
+2. Set `SHIELDPM_ENCRYPTION_KEY` to the new 64-hex key and
+   `SHIELDPM_ENCRYPTION_KEY_PREVIOUS` to the old key. Restart ShieldPM.
+3. Run the re-encryption inside the instance:
+   ```bash
+   node /app/scripts/rotate-encryption-key.js --dry-run
+   node /app/scripts/rotate-encryption-key.js --yes
+   ```
+4. When the report shows no remaining values, remove
+   `SHIELDPM_ENCRYPTION_KEY_PREVIOUS` and restart again.
+
+A value encrypted with an unknown key id is rejected, never guessed. Keep the
+key outside `/data` (for example in a secrets manager) so a volume backup does
+not contain both the ciphertext and its key.
+
+### Verifying Releases
+
+Release images and `SHA256SUMS` are signed keylessly with Cosign. See
+[SECURITY.md](https://github.com/shedowe19/ShieldPM/blob/develop/SECURITY.md#verifying-releases)
+for the exact `cosign verify` commands and the expected workflow identity.
+
 ---
 
 ## 🚪 Admin UI Exposure and First Start
