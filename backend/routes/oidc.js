@@ -146,7 +146,9 @@ router
 				throw new errs.AuthError("User cannot be loaded for OIDC step-up");
 			}
 			const activeMethods = await UserTwoFa.getActiveForUser(user.id);
-			res.clearCookie(OIDC_STEPUP_COOKIE);
+			// Keep the short-lived step-up cookie so a reload or a StrictMode
+			// double effect can resume the same challenge. It expires with the
+			// pending token and is cleared on any failure below.
 			res.clearCookie(OIDC_COOKIE);
 			res.status(200).send({
 				requires_2fa: true,

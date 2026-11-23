@@ -321,7 +321,6 @@ describe("OIDC callback binding and session claims", () => {
 			methods: ["totp"],
 			csrfToken: "csrf-token",
 		});
-		expect(res.clearCookie).toHaveBeenCalledWith("shieldpm_oidc_stepup");
 	});
 
 	it("rejects an expired OIDC step-up cookie", async () => {
