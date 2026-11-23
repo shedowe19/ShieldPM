@@ -18,7 +18,7 @@ von Nginx Proxy Manager, der über NPMplus von Nginx Proxy Manager abstammt
 sich ein Nginx-Reverse-Proxy verwalten lässt: Proxy-Hosts, Redirects, TCP/UDP-
 Streams, TLS-Zertifikate, Access-Lists, IP-Firewall, WAF/IPS, Tunnels und DDNS.
 
-- **Version:** `4.5.0` (`.version`, `backend/package.json:3`)
+- **Version:** `4.5.1` (`.version`, `backend/package.json:3`)
 - **Lizenz:** proprietär; das Badge nennt „Proprietary“, die Pakete `UNLICENSED`
   (`README.md:5`, `backend/package.json:6`)
 - **Primäre Ausgaben:** Docker-Image `ghcr.io/shedowe19/shieldpm:develop` und
@@ -90,7 +90,7 @@ Details: [Laufzeit und Start](./infrastructure/runtime.md),
 
 Aktive Entwicklung auf Branch `develop`. Der letzte gemergte Stand ist
 `9c434181` („Merge pull request #158 …“, 2026-10-27). Die letzte Release-Marke ist
-`v4.5.0`. Was gerade fertig ist und was offen ist, steht im
+`v4.5.1`. Was gerade fertig ist und was offen ist, steht im
 [aktuellen Projektzustand](./current-project-state.md) und in den
 [Aufgaben](./tasks.md).
 
