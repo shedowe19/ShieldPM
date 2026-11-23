@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import utils, { validatePublicHttpsUrl } from "../../lib/utils.js";
+import utils, { CERTBOT_EXEC_TIMEOUT_MS, validatePublicHttpsUrl } from "../../lib/utils.js";
 
 describe("public HTTPS target validation", () => {
 	it.each(["https://auth.example.test", "https://auth.example.test:8443", "https://93.184.216.34"])(
@@ -43,5 +43,9 @@ describe("bounded command execution", () => {
 		await expect(
 			utils.execFile(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { timeout: 50 }),
 		).rejects.toThrow(/terminated after timeout/);
+	});
+
+	it("lets certbot outlive its 30 minute authorization polling deadline", () => {
+		expect(CERTBOT_EXEC_TIMEOUT_MS).toBeGreaterThanOrEqual(45 * 60_000);
 	});
 });

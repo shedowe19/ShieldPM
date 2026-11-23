@@ -9,6 +9,7 @@ import internalPki from "../../internal/pki.js";
 import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import { AUDIT_ACTION } from "../../lib/security-events.js";
+import { CERTBOT_EXEC_TIMEOUT_MS } from "../../lib/utils.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
 import { express as logger } from "../../logger.js";
@@ -125,7 +126,7 @@ router
 	 */
 	.post(async (req, res, _next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/certificates", "post"), req.body);
-		req.setTimeout(900000); // 15 minutes timeout
+		req.setTimeout(CERTBOT_EXEC_TIMEOUT_MS + 60_000); // certbot's own timeout plus one minute
 		const result = await internalCertificate.create(res.locals.access, payload);
 		res.status(201).send(result);
 	});
@@ -389,7 +390,7 @@ router
 	 * Renew certificate
 	 */
 	.post(async (req, res) => {
-		req.setTimeout(900000); // 15 minutes timeout
+		req.setTimeout(CERTBOT_EXEC_TIMEOUT_MS + 60_000); // certbot's own timeout plus one minute
 		const result = await internalCertificate.renew(res.locals.access, {
 			id: certificateId(req.params.certificate_id),
 		});

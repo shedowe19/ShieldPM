@@ -14,11 +14,18 @@ import { normalizeAddress } from "./firewall-addresses.js";
 
 const nodeExecFilePromise = promisify(nodeExecFile);
 
+/**
+ * Certbot's authorization polling deadline is 30 minutes. CAs such as ZeroSSL
+ * answer with a long Retry-After that certbot waits out in full, and DNS
+ * propagation comes on top, so a shorter cap kills valid renewals mid-poll.
+ */
+export const CERTBOT_EXEC_TIMEOUT_MS = 60 * 60_000;
+
 /** Bounded execution per tool; a stuck helper must not hold the configuration lock forever. */
 const COMMAND_TIMEOUTS = {
 	nginx: 60_000,
 	openssl: 30_000,
-	certbot: 15 * 60_000,
+	certbot: CERTBOT_EXEC_TIMEOUT_MS,
 	"certbot-ocsp-fetcher.sh": 5 * 60_000,
 	pip: 10 * 60_000,
 	chmod: 15_000,
