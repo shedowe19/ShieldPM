@@ -3,6 +3,7 @@ import internalAuditLog from "../../internal/audit-log.js";
 import internalWireguard from "../../internal/wireguard.js";
 import { isDemoMode } from "../../lib/config.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
+import { AUDIT_ACTION } from "../../lib/security-events.js";
 import apiValidator from "../../lib/validator/api.js";
 import { global as logger } from "../../logger.js";
 import WireguardPeer from "../../models/wireguard_peer.js";
@@ -327,6 +328,13 @@ router.get("/:id/config", async (req, res, next) => {
 
 	try {
 		const config = await internalWireguard.generateClientConfig(peer.id);
+		await internalAuditLog.add(res.locals.access, {
+			action: AUDIT_ACTION.WIREGUARD_CONFIG_EXPORTED,
+			object_type: "wireguard-peer",
+			object_id: peer.id,
+			outcome: "success",
+			meta: { name: peer.name, format: "config" },
+		});
 		res.status(200).send({ config });
 	} catch (err) {
 		next(err);
@@ -352,6 +360,13 @@ router.get("/:id/qrcode", async (req, res, next) => {
 
 	try {
 		const qrcode = await internalWireguard.generateQRCode(peer.id);
+		await internalAuditLog.add(res.locals.access, {
+			action: AUDIT_ACTION.WIREGUARD_CONFIG_EXPORTED,
+			object_type: "wireguard-peer",
+			object_id: peer.id,
+			outcome: "success",
+			meta: { name: peer.name, format: "qrcode" },
+		});
 		res.status(200).send({ qrcode });
 	} catch (err) {
 		next(err);

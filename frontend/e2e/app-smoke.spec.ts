@@ -131,6 +131,10 @@ async function installMockApi(page: Page) {
 			return fulfill(route, { error: { message: "No mocked OIDC token" } }, 404);
 		}
 
+		if (method === "GET" && path === "/api/oidc/step-up") {
+			return fulfill(route, { error: { message: "No mocked OIDC step-up" } }, 404);
+		}
+
 		if (method === "POST" && path === "/api/tokens") {
 			authenticated = true;
 			return fulfill(route, { expires: Date.now() + 3_600_000, user: { id: 1 } });

@@ -1,7 +1,7 @@
 # Sicherheit
 
 Status: active
-Last verified: 2026-11-04
+Last verified: 2026-11-23
 Confidence: high
 
 ## Zweck
@@ -25,6 +25,11 @@ und was extern bleibt.
 | Berechtigungen     | JSON-Schemas je Aktion                                                               | `lib/access/`                                                                                          |
 | Verschlüsselung    | sensible Felder                                                                      | `lib/encryption.js`                                                                                    |
 | Demo-Schutz        | sperrt ausgewählte Admin-Bereiche, prüft Host-Payloads (kein globaler Schreibschutz) | `lib/express/demo.js`                                                                                  |
+| Host-Eingaben      | zentrale Validierung aller Nginx-/Lua-Felder vor jedem Schreibpfad                   | `backend/lib/host-input.js`                                                                            |
+| Admin-Gates        | `path`-Modus, `advanced_config`, interne/private Upstreams, unix-Sockets, interne CA | `lib/host-input.js`, `routes/nginx/certificates.js`                                                    |
+| Setup              | Einmal-Token (`SETUP_TOKEN` oder `/data/setup-token`, 0600)                          | `backend/setup.js`, `routes/users.js`                                                                  |
+| Audit-Kontext      | IP, User-Agent, Session-, Request-ID, Outcome, Actor je Request                      | `lib/request-context.js`, `internal/audit-log.js`                                                      |
+| Secret-Redaktion   | Logger, Settings-API, GitOps-Export und Host-Antworten maskieren Geheimnisse         | `backend/logger.js`, `internal/setting.js`, `internal/gitops.js`, `lib/host-response.js`               |
 
 ## Schutz auf Nginx-Ebene
 
@@ -60,6 +65,64 @@ Anwendungslogik.
   TLS-Passthrough. Bestehende Verbindungen werden nicht getrennt.
 - **Backup-Dateien:** Instanzbackups sind verschlüsselt; der Schlüssel gehört
   nicht ins gleiche Backup-Ziel.
+
+## Sicherheitsdetektion
+
+Seit 2026-11-23 schreibt ShieldPM sicherheitsrelevante Aktionen mit
+Request-Kontext (IP, User-Agent, Session/Familie, Request-ID, Outcome) ins
+Audit-Log und wandelt sie in Security-Incidents um. Jeder Incident traegt eine
+stabile Regel-ID, eine Severity und einen Dedup-Zaehler; Wiederholungen innerhalb
+des Fensters erhoehen den Zaehler statt neue Zeilen zu erzeugen.
+
+- Regeln: SPM-AUTH-001..010 (Login, OIDC, Replay, 2FA, Rollen/Rechte, Passwort,
+  SSO-Blockade), SPM-TOKEN-001 (Familie von neuer IP), SPM-EXFIL-001..004
+  (Backup, Zertifikat/Key, WireGuard, Root-CA), SPM-EXEC-001 (Terminal),
+  SPM-CONFIG-001..005 (GitOps, Git-Deploy, Docker, WAF/CrowdSec aus),
+  SPM-TUNNEL-001 (Cloudflare-Token), SPM-CHATOPS-001, SPM-ACME-001.
+- Zustellung: bestehende Notification-Targets (Webhook/ntfy/Discord); Admins
+  erhalten Alarme auch fuer Aktionen anderer Konten.
+- Sichtbarkeit: `GET /api/incidents/security`,
+  `POST /api/incidents/security/{id}/resolve` (nur `auditlog:list`).
+- Grenzen: kein SIEM-Push, keine Hash-Kette, keine Container-/FIM-Telemetrie;
+  Container-Escape, Dateiaenderungen und Manipulation der Audit-DB bleiben
+  ausserhalb der Regelabdeckung.
+
+## Prüfung 2026-11 und Behebung
+
+Drei Prüfrunden mit 39 Rollen (rund 498 Rohbefunde, 463 nach Zusammenführung)
+ergaben drei kritische und 69 hohe Themen. Die kritischen lagen alle an den
+Trust-Grenzen: `path`-Forwarding gab `/data` frei, Host-Felder wurden als
+vertrauenswürdige Nginx-/Lua-Konfiguration behandelt, und die interne CA
+signierte beliebige Client-Zertifikate. Alle drei sind im Branch
+`fix/security-hardening` behoben; die Behebung ist read-only geprüft und durch
+Regressionstests abgesichert.
+
+Was bewusst außerhalb des Repositories bleibt:
+
+- Zertifizierungen (ISO 27001, SOC 2, PCI DSS, CRA), Auditor-Rolle und Access
+  Reviews.
+- Unterschriebene AVV/SCC/TIA-Verträge und ein rechtlich freigegebener
+  Retention-Plan; die Vorlagen liegen unter `docs/legal/`.
+- Ein unabhängiger Pentest gegen eine öffentlich erreichbare Instanz; der
+  lokale Restore-Drill und der interne Pentest sind belegt.
+- Die tatsächliche Rotation des produktiven AES-Schlüssels: Das Werkzeug ist
+  umgesetzt (`v2`-Envelope, Previous-Key, Re-Encrypt-CLI), die Ausführung
+  braucht den produktiven Schlüssel und ein Datenbank-Backup.
+
+Umgesetzt und nicht mehr offen:
+
+- Cosign-Signatur der Release-Artefakte (keyless über GitHub OIDC) sowie
+  SBOM- und Provenienz-Attestierung im manuellen `docker-latest`-Push.
+- AES-Schlüsselrotation mit versioniertem Ciphertext, Previous-Key und
+  Re-Encrypt-Werkzeug.
+- OIDC-Step-up-UI für lokale 2FA: Der Callback stellt einen kurzlebigen
+  Pending-Token aus, die Login-Seite fragt den zweiten Faktor ab.
+- TOTP-Seeds, Duo-Client-Secrets und OIDC-Client-Secrets liegen verschlüsselt
+  in der Datenbank.
+- GitHub-Rulesets für `develop` und `v*`-Tags, Secret Scanning samt Push
+  Protection und Dependabot Security Updates.
+- Lokaler Live-Restore-Drill und interner Pentest am 2026-11-23; Belege unter
+  `docs/legal/`.
 
 ## Abhängigkeiten
 

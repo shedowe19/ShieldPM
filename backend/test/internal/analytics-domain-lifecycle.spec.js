@@ -1,7 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ hosts: vi.fn(), tail: vi.fn(), unwatch: vi.fn(), error: vi.fn() }));
-vi.mock("node:fs", () => ({ default: { openSync: vi.fn(() => 1), closeSync: vi.fn() } }));
+vi.mock("node:fs", () => ({
+	default: {
+		closeSync: vi.fn(),
+		openSync: vi.fn(() => 1),
+		statSync: vi.fn(() => {
+			const error = new Error("missing");
+			error.code = "ENOENT";
+			throw error;
+		}),
+	},
+}));
 vi.mock("tail", () => ({
 	Tail: class {
 		constructor() {

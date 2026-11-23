@@ -11,6 +11,7 @@ process.on("uncaughtException", (err) => {
 
 import app from "./app.js";
 import analyticsService from "./internal/analytics.js";
+import analyticsRollup from "./internal/analytics-rollup.js";
 import internalSessionCleanup from "./internal/auth-session-cleanup.js";
 import internalCertificate from "./internal/certificate.js";
 import internalChat from "./internal/chat.js";
@@ -28,6 +29,7 @@ import internalMaintenance from "./internal/maintenance.js";
 import internalNginx from "./internal/nginx.js";
 import internalOAuth2Proxy from "./internal/oauth2-proxy.js";
 import internalProxyHostMonitor from "./internal/proxy-host-monitor.js";
+import securityDetection from "./internal/security-detection.js";
 import internalTerminal from "./internal/terminal.js";
 import internalTor from "./internal/tor.js";
 import internalUploadRelay from "./internal/upload-relay.js";
@@ -44,7 +46,9 @@ async function appStart() {
 	try {
 		await migrateFromSqliteToNewDb();
 		await migrateUp();
+		securityDetection.install();
 		await analyticsService.init();
+		await analyticsRollup.init();
 		internalUploadRelay.init();
 		await setup();
 		await getCompiledSchema();
@@ -76,6 +80,8 @@ async function appStart() {
 		await internalChat.init();
 		internalGitDeploy.init();
 
+		// The request context middleware is registered at the top of app.js,
+		// before auth and routes.
 		const server = app.listen("/run/shieldpm/shieldpm.sock", async (err) => {
 			if (err) {
 				logger.error("Backend socket failed to listen:", err);
@@ -109,6 +115,7 @@ async function appStart() {
 					await internalSessionCleanup.stop();
 					await internalFirewallList.stopTimer();
 					await analyticsService.stop();
+					await analyticsRollup.stop();
 					await internalUploadRelay.stop();
 					logger.info("Stopping.");
 					process.exit(0);

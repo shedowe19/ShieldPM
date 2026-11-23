@@ -1,10 +1,18 @@
 import { IconRobot } from "@tabler/icons-react";
-import { Loader2, Send, Trash2 } from "lucide-react";
+import { Loader2, Send, ShieldAlert, Trash2 } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { sendAiChat } from "src/api/backend/ai";
-import type { AiChatMessage } from "src/api/backend/models";
+import type { AiChatMessage, AiPendingTool } from "src/api/backend/models";
 import { Button } from "src/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "src/components/ui/dialog";
 import { Input } from "src/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "src/components/ui/sheet";
 import { intl, T } from "src/locale";
@@ -13,15 +21,35 @@ import { AiMessage } from "./AiMessage";
 
 type ChatMessage = AiChatMessage & { id: string };
 
+interface PendingConfirmation {
+	message: string;
+	history: AiChatMessage[];
+	tools: AiPendingTool[];
+}
+
 interface AiChatProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }
 
+const newId = () => Math.random().toString(36).substring(7);
+
+const describeTarget = (tool: AiPendingTool): string => {
+	if (tool.target) return tool.target;
+	const args = tool.args || {};
+	if (Array.isArray(args.domain_names) && args.domain_names.length > 0) return args.domain_names.join(", ");
+	for (const key of ["name", "email", "common_name", "nickname", "id", "host_id", "proxy_host_id"]) {
+		const value = args[key];
+		if (value !== undefined && value !== null && value !== "") return String(value);
+	}
+	return "—";
+};
+
 export function AiChat({ open, onOpenChange }: AiChatProps) {
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [input, setInput] = useState("");
 	const [loading, setLoading] = useState(false);
+	const [confirmation, setConfirmation] = useState<PendingConfirmation | null>(null);
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const conversation = useRef(0);
 	const clearChatLabel = intl.formatMessage({ id: "ai.chat.clear" });
@@ -32,43 +60,70 @@ export function AiChat({ open, onOpenChange }: AiChatProps) {
 		if (scrollRef.current) {
 			scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
 		}
-	}, [messages, loading]);
+	}, [messages, loading, confirmation]);
+
+	useEffect(() => {
+		if (!open) setConfirmation(null);
+	}, [open]);
+
+	const appendAssistant = (content: string) => {
+		setMessages((prev) => [...prev, { role: AI_ROLE.ASSISTANT, content, id: newId() }]);
+	};
+
+	const runRequest = async (
+		message: string,
+		history: AiChatMessage[],
+		options?: { confirm: boolean; pendingTools: AiPendingTool[] },
+	) => {
+		const generation = conversation.current;
+		setLoading(true);
+		try {
+			const response = options ? await sendAiChat(message, history, options) : await sendAiChat(message, history);
+			if (generation !== conversation.current) return;
+
+			if (response.requiresConfirmation && response.pendingTools?.length) {
+				setConfirmation({ message, history, tools: response.pendingTools });
+				return;
+			}
+			appendAssistant(response.content);
+		} catch (err) {
+			if (generation !== conversation.current) return;
+			const msg = err instanceof Error ? err.message : String(err);
+			appendAssistant(`Error: ${msg}`);
+		} finally {
+			if (generation === conversation.current) setLoading(false);
+		}
+	};
 
 	const handleSend = async () => {
 		if (!input.trim() || loading) return;
 
-		const generation = conversation.current;
 		const userMsg: ChatMessage = {
 			role: AI_ROLE.USER,
 			content: input,
-			id: Math.random().toString(36).substring(7),
+			id: newId(),
 		};
+		// History is captured before the new message; a confirmed plan reuses it.
+		const history = messages.map(({ id, ...rest }) => rest);
 		setMessages((prev) => [...prev, userMsg]);
 		setInput("");
-		setLoading(true);
+		await runRequest(userMsg.content, history);
+	};
 
-		try {
-			// Filter history to exclude failed/loading states if any,
-			// but here we just pass the valid history (stripped of internal IDs)
-			const history = messages.map(({ id, ...rest }) => rest);
+	const handleConfirm = async () => {
+		if (!confirmation || loading) return;
+		const pending = confirmation;
+		setConfirmation(null);
+		await runRequest(pending.message, pending.history, {
+			confirm: true,
+			pendingTools: pending.tools,
+		});
+	};
 
-			const response = await sendAiChat(userMsg.content, history);
-			if (generation !== conversation.current) return;
-
-			setMessages((prev) => [
-				...prev,
-				{ role: AI_ROLE.ASSISTANT, content: response.content, id: Math.random().toString(36).substring(7) },
-			]);
-		} catch (err) {
-			if (generation !== conversation.current) return;
-			const msg = err instanceof Error ? err.message : String(err);
-			setMessages((prev) => [
-				...prev,
-				{ role: AI_ROLE.ASSISTANT, content: `Error: ${msg}`, id: Math.random().toString(36).substring(7) },
-			]);
-		} finally {
-			if (generation === conversation.current) setLoading(false);
-		}
+	const handleCancel = () => {
+		if (!confirmation) return;
+		setConfirmation(null);
+		appendAssistant("Action cancelled. No changes were made.");
 	};
 
 	const handleKeyDown = async (e: React.KeyboardEvent) => {
@@ -92,6 +147,7 @@ export function AiChat({ open, onOpenChange }: AiChatProps) {
 						onClick={() => {
 							conversation.current += 1;
 							setMessages([]);
+							setConfirmation(null);
 							setLoading(false);
 						}}
 						aria-label={clearChatLabel}
@@ -147,6 +203,48 @@ export function AiChat({ open, onOpenChange }: AiChatProps) {
 					</Button>
 				</div>
 			</SheetContent>
+
+			<Dialog
+				open={confirmation !== null}
+				onOpenChange={(nextOpen: boolean) => {
+					if (!nextOpen) handleCancel();
+				}}
+			>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2">
+							<ShieldAlert className="h-5 w-5 text-amber-500" />
+							Confirm AI actions
+						</DialogTitle>
+						<DialogDescription>
+							The AI wants to change ShieldPM state. Review the exact tool calls before they run.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="space-y-3 max-h-[50vh] overflow-y-auto">
+						{confirmation?.tools.map((tool, index) => (
+							<div
+								// biome-ignore lint/suspicious/noArrayIndexKey: plan entries are positional
+								key={`${tool.name}-${index}`}
+								className="rounded-md border p-3 text-sm space-y-1"
+							>
+								<div className="font-medium">{tool.name}</div>
+								<div className="text-muted-foreground">Target: {describeTarget(tool)}</div>
+								<pre className="text-xs overflow-x-auto bg-muted p-2 rounded">
+									{JSON.stringify(tool.args, null, 2)}
+								</pre>
+							</div>
+						))}
+					</div>
+					<DialogFooter className="gap-2">
+						<Button variant="outline" onClick={handleCancel}>
+							Cancel
+						</Button>
+						<Button variant="destructive" onClick={handleConfirm}>
+							Confirm actions
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</Sheet>
 	);
 }

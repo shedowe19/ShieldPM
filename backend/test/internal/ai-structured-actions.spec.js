@@ -28,11 +28,26 @@ describe("AI structured action contract", () => {
 		expect(mocks.execute).not.toHaveBeenCalled();
 		expect(mocks.followup).not.toHaveBeenCalled();
 	});
-	it("continues executing structured provider tool calls", async () => {
+	it("continues executing confirmed structured provider tool calls", async () => {
 		const call = { id: "call1", name: "delete_proxy_host", args: { id: 7 } };
 		mocks.call.mockResolvedValue({ content: "", toolCalls: [call] });
-		expect(await ai.chat(access, "Delete host 7")).toMatchObject({ content: "Finished" });
-		expect(mocks.execute).toHaveBeenCalledWith(access, [call]);
+		expect(await ai.chat(access, "Delete host 7", [], { confirm: true, pendingTools: [call] })).toMatchObject({
+			content: "Finished",
+		});
+		expect(mocks.execute).toHaveBeenCalledWith(
+			access,
+			[call],
+			expect.objectContaining({ toolDefinitions: expect.any(Array) }),
+		);
+	});
+	it("requires confirmation for a state-changing tool instead of executing it", async () => {
+		const call = { id: "call1", name: "delete_proxy_host", args: { id: 7 } };
+		mocks.call.mockResolvedValue({ content: "", toolCalls: [call] });
+		const response = await ai.chat(access, "Delete host 7");
+		expect(response).toMatchObject({ requires_confirmation: true });
+		expect(response.pending_tools).toEqual([{ name: "delete_proxy_host", target: "7", args: { id: 7 } }]);
+		expect(mocks.execute).not.toHaveBeenCalled();
+		expect(mocks.followup).not.toHaveBeenCalled();
 	});
 	it("advertises unique tool names and the account password/scheduling contract", async () => {
 		const tools = (await getToolDefinitions(access)).map((tool) => tool.function);

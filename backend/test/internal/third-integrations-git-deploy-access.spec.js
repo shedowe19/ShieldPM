@@ -1,12 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ rows: [], clone: vi.fn(), patch: vi.fn(), mkdir: vi.fn() }));
-vi.mock("node:fs", () => ({ default: { existsSync: () => false, mkdirSync: state.mkdir } }));
+const state = vi.hoisted(() => ({ rows: [], clone: vi.fn(), patch: vi.fn(), mkdir: vi.fn(), audit: vi.fn() }));
+vi.mock("node:fs", () => ({
+	default: {
+		existsSync: () => false,
+		mkdirSync: state.mkdir,
+		statSync: () => ({ mode: 0o755 }),
+		chmodSync: vi.fn(),
+		renameSync: vi.fn(),
+		rmSync: vi.fn(),
+	},
+}));
 vi.mock("isomorphic-git", () => ({ default: { clone: state.clone, log: async () => [{ oid: "revision" }] } }));
 vi.mock("isomorphic-git/http/node", () => ({ default: {} }));
 vi.mock("../../lib/config.js", () => ({ isDemoMode: () => false }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: (value) => value, decrypt: (value) => value }));
-vi.mock("../../internal/nginx.js", () => ({ default: {} }));
+vi.mock("../../internal/nginx.js", () => ({ default: { configure: vi.fn() } }));
+vi.mock("../../internal/audit-log.js", () => ({ default: { add: state.audit } }));
 vi.mock("../../models/proxy_host.js", () => ({
 	default: {
 		query: () => {
@@ -18,6 +28,7 @@ vi.mock("../../models/proxy_host.js", () => ({
 					return query;
 				},
 				findById: (id) => query.where("id", id),
+				withGraphFetched: () => query,
 				patch: async (data) => {
 					state.patch(data);
 					for (const row of rows()) Object.assign(row, data);
@@ -40,6 +51,7 @@ const access = (visibility) => ({
 describe("Git Deploy caller ownership", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		state.audit.mockResolvedValue({ id: 1 });
 		state.rows = [
 			{
 				id: 3,

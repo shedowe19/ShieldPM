@@ -95,6 +95,9 @@
 										},
 										"redirectURL": {
 											"type": "string"
+										},
+										"enforce_sso": {
+											"type": "boolean"
 										}
 									}
 								}

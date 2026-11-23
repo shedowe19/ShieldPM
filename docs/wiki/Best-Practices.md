@@ -6,9 +6,9 @@ Ensure your ShieldPM installation is secure, reliable, and performant with these
 
 ## 🛡️ Security Hardening
 
-### Initial Setup Wizard
+### Initial Setup
 
-When you access ShieldPM for the first time, a **Setup Wizard** guides you through creating your admin account. There are **no default credentials** — you choose your own email and password during setup.
+When you access ShieldPM for the first time, a single form creates your administrator account. There are **no default credentials** — you choose your own email and password during setup. On first start ShieldPM generates a random setup token in `${DATA_PATH}/setup-token` and logs its path; enter it in the setup form (`SETUP_TOKEN` overrides it for automation). Complete setup before exposing port 81, or run the first start with `NPM_LISTEN_LOCALHOST=true` / over an SSH tunnel.
 
 > [!TIP]
 > Use a strong, unique password for your admin account. Consider using a password manager to generate one.
@@ -24,7 +24,7 @@ Security headers add an extra layer of protection for visitors:
 
 ### Block Common Exploits
 
-Enable **Block Exploits** where appropriate and test the upstream application. This turns on ModSecurity rules for that Proxy Host; inspect ModSecurity logs if legitimate requests are blocked.
+New Proxy Hosts enable **Block Exploits** by default. Verify the option and test the upstream application; this turns on ModSecurity rules for that Proxy Host. Inspect `/data/nginx/error.log` if legitimate requests are blocked. Disable it only deliberately — the Security tab's WAF ruleset selection has no effect while Block Exploits is off.
 
 ### Network Isolation (Docker)
 
@@ -59,8 +59,10 @@ Restrict access to the Admin UI (port 81) from the public internet:
 | Access Lists     | `/data/access/`                                                 |              ✅              |
 | Tor Keys         | `/data/tor/`                                                    | ⚠️ (if using Onion Services) |
 
+The easiest way to capture all of this consistently is **Settings → Backups**: it creates an encrypted instance archive, verifies it in an isolated restore, and stages it for the next restart. The archive password is required for every restore and cannot be recovered. Archives are not scheduled automatically; trigger them before updates and on a routine you control.
+
 > [!TIP]
-> [GitOps](GitOps) can auto-push versioned configuration when enabled. It is not a complete backup: certificate private keys are excluded from exported certificate files, and service credentials may appear in YAML. Keep the repository private and back up `/data` separately.
+> [GitOps](GitOps) can auto-push versioned configuration when enabled. It is not a backup: it contains no database dump and no certificate private keys. Current exports redact credentials, but the repository still reveals your topology; keep it private and back up `/data` or an instance archive separately.
 
 ### Backup Commands
 
@@ -145,7 +147,7 @@ update-shieldpm
 ```
 
 > [!IMPORTANT]
-> Always create a backup **before** updating. While ShieldPM includes automatic database migrations, it's always safer to have a rollback option.
+> Always create a backup **before** updating — preferably a verified instance backup (Settings → Backups) or a `/data` + database dump. While ShieldPM includes automatic database migrations, downgrades are not supported and a backup is the only rollback path. See [Backup & Restore](Backup-Restore).
 
 ---
 
@@ -153,13 +155,14 @@ update-shieldpm
 
 Before exposing ShieldPM to the internet, verify:
 
-- [ ] Setup Wizard completed (admin account created)
-- [ ] Admin UI not publicly accessible (or protected by Access List)
+- [ ] Setup completed with the setup token before port 81 is reachable
+- [ ] Admin UI bound to localhost or blocked by firewall/VPN; an Access List alone does not close port 81
 - [ ] ACME email configured for certificate notices and for providers that require it
 - [ ] Time zone set correctly (`TZ` variable)
-- [ ] Backup strategy in place (manual or GitOps)
-- [ ] Block Exploits enabled on all Proxy Hosts
+- [ ] Backup strategy verified (encrypted instance backup or `/data` + database dump; GitOps is not a backup)
+- [ ] Block Exploits enabled on all Proxy Hosts (default for new hosts)
 - [ ] HSTS enabled on production hosts
+- [ ] Terminal hosts use Force SSL/HTTPS
 - [ ] CrowdSec configured (recommended)
 - [ ] HTTP/3 enabled and UDP 443 open (recommended)
 

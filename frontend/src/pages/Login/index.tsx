@@ -1,7 +1,7 @@
 import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { claimOidcToken } from "src/api/backend";
+import { claimOidcToken, getOidcStepUp } from "src/api/backend";
 import type { TokenResponse } from "src/api/backend/responseTypes";
 import type { TwoFaChallengeResponse } from "src/api/backend/verify2fa";
 import { LocalePicker } from "src/components/LocalePicker";
@@ -64,15 +64,28 @@ export default function Login() {
 		let active = true;
 		mounted.current = true;
 		emailRef.current?.focus();
-		// Try to claim OIDC token if available
-		oidcRequest.current ??= claimOidcToken();
-		oidcRequest.current
-			.then((response) => {
+		const initialize = async () => {
+			// An OIDC callback for an account with local 2FA sets a pending
+			// challenge instead of a session. Prefer it over claiming a handoff.
+			const stepUp = await getOidcStepUp();
+			if (!active || passwordLoginStarted.current) return;
+			if (stepUp) {
+				if (stepUp.csrfToken) {
+					AuthStore.setCsrfToken(stepUp.csrfToken);
+				}
+				setPending2FA({ token: stepUp.pendingToken, methods: stepUp.methods });
+				window.history.replaceState({}, "", "/login");
+				return;
+			}
+			oidcRequest.current ??= claimOidcToken();
+			try {
+				const response = await oidcRequest.current;
 				if (active && !passwordLoginStarted.current) completeLogin(response);
-			})
-			.catch(() => {
+			} catch {
 				// Ignore errors, no pending OIDC login
-			});
+			}
+		};
+		void initialize();
 		return () => {
 			active = false;
 			mounted.current = false;

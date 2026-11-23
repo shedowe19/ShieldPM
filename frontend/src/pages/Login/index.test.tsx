@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	claimOidcToken: vi.fn(),
+	getOidcStepUp: vi.fn(),
 	completeLogin: vi.fn(),
 	login: vi.fn(),
 	authStoreAdd: vi.fn(),
@@ -12,7 +13,10 @@ const mocks = vi.hoisted(() => ({
 	twoFaResponse: { expires: Date.now() + 60 * 60 * 1000 },
 }));
 
-vi.mock("src/api/backend", () => ({ claimOidcToken: mocks.claimOidcToken }));
+vi.mock("src/api/backend", () => ({
+	claimOidcToken: mocks.claimOidcToken,
+	getOidcStepUp: mocks.getOidcStepUp,
+}));
 
 vi.mock("src/components/LocalePicker", () => ({ LocalePicker: () => <div>locale picker</div> }));
 vi.mock("src/components/ThemeSwitcher", () => ({ ThemeSwitcher: () => <div>theme switcher</div> }));
@@ -51,11 +55,27 @@ import Login from "./index";
 describe("Login", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mocks.getOidcStepUp.mockResolvedValue(null);
 		mocks.claimOidcToken.mockRejectedValue(new Error("No pending OIDC login"));
 	});
 
 	afterEach(() => {
 		cleanup();
+	});
+
+	it("shows the local second factor for an OIDC step-up challenge", async () => {
+		mocks.getOidcStepUp.mockResolvedValue({
+			requires2fa: true,
+			pendingToken: "pending-token",
+			methods: ["totp"],
+			csrfToken: "csrf-token",
+		});
+
+		render(<Login />);
+
+		await waitFor(() => expect(mocks.authStoreSetCsrfToken).toHaveBeenCalledWith("csrf-token"));
+		expect(screen.getByText("Complete two-factor verification")).toBeInTheDocument();
+		expect(mocks.claimOidcToken).not.toHaveBeenCalled();
 	});
 
 	it("adopts a claimed OIDC token through AuthContext instead of forcing a page reload", async () => {

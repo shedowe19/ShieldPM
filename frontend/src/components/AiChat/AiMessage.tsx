@@ -23,7 +23,16 @@ export function AiMessage({ message }: AiMessageProps) {
 				<div className="prose prose-sm dark:prose-invert max-w-none">
 					<ReactMarkdown
 						remarkPlugins={[remarkGfm]}
+						// Model output is untrusted: never load remote images (beacon/tracking pixel)
+						// and only allow ordinary links.
+						urlTransform={(url) => (/^(https?:|mailto:|#|\/(?!\/))/i.test(url) ? url : "")}
 						components={{
+							img: () => null,
+							a: ({ children, href }) => (
+								<a href={href} target="_blank" rel="noopener noreferrer nofollow">
+									{children}
+								</a>
+							),
 							pre: ({ children }) => (
 								<pre className="p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-x-auto [&_code]:p-0">
 									{children}

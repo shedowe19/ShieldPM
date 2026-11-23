@@ -245,7 +245,9 @@ describe("AI tunnel tool permissions", () => {
 
 		const results = await executeTools(access, tunnelCalls);
 
-		expect(results.map((result) => result.result)).toEqual(tunnelCalls.map(() => "Error: Permission Denied"));
+		expect(results.map((result) => result.result)).toEqual(
+			tunnelCalls.map((call) => `Error: Tool not permitted: ${call.name}`),
+		);
 		expect(mocks.cloudflaredQuery).not.toHaveBeenCalled();
 		expect(mocks.torOnionQuery).not.toHaveBeenCalled();
 		expect(mocks.addAuditLog).not.toHaveBeenCalled();

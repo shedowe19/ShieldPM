@@ -34,6 +34,20 @@
 
 ## Blocked
 
+- [ ] **T-029 Unabhängiger Penetrationstest.** Der lokale Live-Restore-Drill und
+      der interne Pentest sind am 2026-11-23 bestanden (Belege:
+      `docs/legal/Live-Restore-Drill-2026-11-23.md` und
+      `docs/legal/Pentest-Report-2026-11-23.md`). Abnahme des verbleibenden
+      Teils: Ein unabhängiger Prüfer bestätigt die kritischen Pfade gegen eine
+      öffentlich erreichbare Instanz. Blockiert: braucht einen externen
+      Prüfauftrag.
+- [ ] **T-031 Produktiven AES-Schlüssel rotieren.** Abnahme: Auf der laufenden
+      Instanz ist `SHIELDPM_ENCRYPTION_KEY` auf den neuen Schlüssel gesetzt,
+      `SHIELDPM_ENCRYPTION_KEY_PREVIOUS` enthält den alten, der Re-Encrypt-Lauf
+      meldet keine verbleibenden Werte und ein Neustart ohne Previous-Key
+      funktioniert. Blockiert: braucht den produktiven Schlüssel, ein
+      Datenbank-Backup und ein Wartungsfenster; Werkzeug und Anleitung liegen
+      vor.
 - [ ] **T-007 OpenAppSec-Policy auf einer laufenden Instanz anwenden.** Abnahme:
       `open-appsec-ctl --apply-policy` meldet keinen Schemafehler und die aktive
       Policy entspricht `local_policy.yaml`. Blockiert: braucht einen laufenden
@@ -61,6 +75,39 @@
 
 ## Done
 
+- [x] **T-034 Branch-Protection, Secret Scanning und Rechtstemplates.** Done 2026-11-23. Beleg: Ruleset `Protect develop` (1 Review, Quality/Frontend-Smoke/MariaDB-Pflicht, Admin-Bypass), Tag-Ruleset `v*`, Secret Scanning samt Push Protection, Dependabot Security Updates; AVV-/SCC-TIA-/Retention-/DSAR-/Unterauftragnehmer-Vorlagen unter `docs/legal/`.
+- [x] **T-032 P2-Analytics-Rollup umgesetzt.** Done 2026-11-23. Beleg:
+      `analytics_hourly` und `analytics_rollup_state` mit Migration für SQLite,
+      MariaDB/MySQL und PostgreSQL; idempotenter Stunden-Job mit
+      Wasserzeichen, Set-Semantik und spätem Fenster; Detail-Retention erst
+      nach committetem Rollup; 7d/30d- und globale Langzeit-KPIs aus dem
+      Rollup. Tests: `analytics-rollup.spec.js`,
+      `analytics-query.spec.js`, `analytics-hourly-rollup.spec.js`,
+      `analytics-retention-rollup.spec.js`; bestehende Analytics-Tests grün.
+
+- [x] **T-033 Sicherheitsdetektion und Alarmierung.** Done 2026-11-23. Beleg:
+      Audit-Ereignisse fuer Login/OIDC/Token, 2FA, Rollen/Rechte, Secret-Exporte,
+      Terminal, GitOps, Git-Deploy, Docker, ChatOps und ACME; Regelwerk
+      `SPM-AUTH-001` bis `SPM-ACME-001` mit Severity und Dedup in
+      `security_incident`; Zustellung ueber vorhandene Notification-Targets;
+      API `GET /api/incidents/security`. Tests:
+      `security-detection.spec.js`, `security-event-audit.spec.js`,
+      `two-factor-audit.spec.js`, `wireguard-export-audit.spec.js`,
+      `certificate-lifecycle.spec.js`. Offen bleiben SIEM-Push, Hash-Kette und
+      Host-/FIM-Telemetrie.
+
+- [x] **T-030 Signatur, Attestierung, Rotation und OIDC-Step-up.** Done
+      2026-11-23. Beleg: Keyless-Cosign für Image und `SHA256SUMS`,
+      SBOM-/Provenienz-Attestierung im manuellen `docker-latest`-Push,
+      versionierter AES-Envelope mit Previous-Key und Re-Encrypt-CLI,
+      OIDC-Step-up für lokale 2FA sowie verschlüsselte TOTP-/Duo-/OIDC-Secrets.
+      Tests: `encryption-rotation.spec.js`, `third-auth-encryption.spec.js`,
+      `oidc-security.spec.js`, `2fa-otplib.spec.js`, `ai-chat-confirmation.spec.js`.
+- [x] **T-028 Security-Review 2026-11 behoben.** Done 2026-11-23. Beleg: Branch
+      `fix/security-hardening`; K-01/K-02/K-03 an der Trust-Grenze geschlossen,
+      229 Dateien gehärtet, Regressionstests für Injection, Host-Typen,
+      API-Gates, Audit-Kontext und Analytics-Idempotenz. Details:
+      [Sicherheit](./security/overview.md) und [Log](./log.md).
 - [x] **T-019 Warnungen aus dem Datei-Audit triagiert.** Done 2026-11-05.
       Beleg: 355 Einträge nach Bereich und Schwere sortiert; 16 sicherheits- und
       fehlerrelevante Punkte sofort behoben; der Rest ist als T-020 bis T-027

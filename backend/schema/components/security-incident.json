@@ -1,0 +1,63 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"id",
+		"created_on",
+		"last_seen_at",
+		"rule_id",
+		"severity",
+		"status",
+		"title",
+		"message",
+		"count"
+	],
+	"properties": {
+		"id": {
+			"type": "integer"
+		},
+		"created_on": {
+			"type": "string"
+		},
+		"last_seen_at": {
+			"type": "string"
+		},
+		"rule_id": {
+			"type": "string",
+			"example": "SPM-AUTH-004"
+		},
+		"severity": {
+			"enum": ["low", "medium", "high", "critical"]
+		},
+		"status": {
+			"enum": ["open", "resolved"]
+		},
+		"title": {
+			"type": "string"
+		},
+		"message": {
+			"type": "string"
+		},
+		"actor_user_id": {
+			"type": ["integer", "null"]
+		},
+		"user_id": {
+			"type": ["integer", "null"]
+		},
+		"ip": {
+			"type": ["string", "null"]
+		},
+		"request_id": {
+			"type": ["string", "null"]
+		},
+		"count": {
+			"type": "integer"
+		},
+		"meta": {
+			"type": ["object", "null"]
+		},
+		"resolved_at": {
+			"type": ["string", "null"]
+		}
+	}
+}

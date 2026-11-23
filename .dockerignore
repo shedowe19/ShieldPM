@@ -1,11 +1,15 @@
 .git
 .tscanner
 .vscode
+.github
+llm-wiki
+docs
 **/node_modules
 **/dist
 **/coverage
 **/.cache
 **/*.log
+**/*.spmb
 **/.env
 **/.env.*
 !rootfs/data/.env

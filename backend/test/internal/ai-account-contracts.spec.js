@@ -86,7 +86,9 @@ describe("AI account tool argument contracts", () => {
 		);
 	});
 	it("uses password auth for the legacy flat password input too", async () => {
-		await executeTools(access, [{ name: "create_user", args: { name: "User", password: "secure-secret" } }]);
+		await executeTools(access, [
+			{ name: "create_user", args: { name: "User", email: "user@example.com", password: "secure-secret" } },
+		]);
 		expect(mocks.create).toHaveBeenCalledWith(
 			access,
 			expect.objectContaining({ auth: { type: "password", secret: "secure-secret" } }),
@@ -109,7 +111,8 @@ describe("AI account tool argument contracts", () => {
 	it("does not mint an impersonation token when browser login cannot be completed", async () => {
 		const [result] = await executeTools(access, [{ name: "login_as_user", args: { id: 5 } }]);
 		expect(mocks.login).not.toHaveBeenCalled();
-		expect(result.result).toContain("Users page");
+		// login_as_user is intentionally not advertised, so it is rejected before dispatch.
+		expect(result.result).toContain("Tool not permitted");
 	});
 	it("lets proxy-host update configure maintenance without rendering a sanitized public host again", async () => {
 		const [result] = await executeTools(access, [{ name: "set_maintenance_mode", args: { id: 5, active: true } }]);

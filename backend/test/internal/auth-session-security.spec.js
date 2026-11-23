@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ rows: [], race: false, signed: vi.fn() }));
+const state = vi.hoisted(() => ({ rows: [], race: false, signed: vi.fn(), audit: vi.fn(), alert: vi.fn() }));
 vi.mock("objection", () => ({
 	transaction: async (_knex, callback) => {
 		const before = structuredClone(state.rows);
@@ -13,6 +13,8 @@ vi.mock("objection", () => ({
 		}
 	},
 }));
+vi.mock("../../internal/audit-log.js", () => ({ default: { add: state.audit } }));
+vi.mock("../../internal/incidents.js", () => ({ default: { securityAlert: state.alert } }));
 vi.mock("../../db.js", () => ({ default: () => ({ fn: { now: () => new Date().toISOString() } }) }));
 vi.mock("../../lib/helpers.js", () => ({
 	parseDatePeriod: (ttl) => dayjs().add(Number.parseInt(ttl, 10), ttl.endsWith("m") ? "minute" : "day"),
@@ -71,6 +73,8 @@ describe("refresh token security transactions", () => {
 	beforeEach(() => {
 		state.race = false;
 		state.signed.mockReset().mockResolvedValue({ token: "access-token" });
+		state.audit.mockReset().mockResolvedValue({ id: 1 });
+		state.alert.mockReset().mockResolvedValue(1);
 		state.rows = [
 			{
 				id: 1,
@@ -87,9 +91,33 @@ describe("refresh token security transactions", () => {
 	it("commits family revocation before rejecting a replayed refresh token", async () => {
 		state.rows[0].rotated_at = new Date().toISOString();
 		state.rows.push({ id: 2, family_id: "family", token_hash: "replacement" });
-		await expect(service.refreshTokenPair("refresh-token")).rejects.toThrow("replay detected");
+		await expect(
+			service.refreshTokenPair("refresh-token", { ip: "203.0.113.9", userAgent: "test-agent" }),
+		).rejects.toThrow("replay detected");
 		expect(state.rows.every((row) => row.revoked_reason === "refresh_token_replay_detected")).toBe(true);
 		expect(state.signed).not.toHaveBeenCalled();
+		expect(state.audit).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				action: "refresh_replay_detected",
+				object_type: "auth-session",
+				object_id: 1,
+				user_id: 7,
+				session_id: "family",
+				outcome: "denied",
+				ip: "203.0.113.9",
+				user_agent: "test-agent",
+				meta: expect.objectContaining({ event: "security.refresh_replay", severity: "high" }),
+			}),
+		);
+		expect(state.alert).toHaveBeenCalledWith(
+			expect.objectContaining({
+				owner_user_id: 7,
+				event: "security.refresh_replay",
+				severity: "high",
+				meta: expect.objectContaining({ family_id: "family" }),
+			}),
+		);
 	});
 
 	it("persists expiry revocation", async () => {
@@ -111,6 +139,15 @@ describe("refresh token security transactions", () => {
 		expect(state.rows).toHaveLength(2);
 		expect(state.rows.every((row) => row.revoked_reason === "refresh_token_rotation_race")).toBe(true);
 		expect(state.signed).not.toHaveBeenCalled();
+		expect(state.audit).toHaveBeenCalledOnce();
+		expect(state.alert).toHaveBeenCalledOnce();
+	});
+
+	it("still rejects the replay when the audit sink fails", async () => {
+		state.rows[0].rotated_at = new Date().toISOString();
+		state.audit.mockRejectedValue(new Error("audit database unavailable"));
+		await expect(service.refreshTokenPair("refresh-token")).rejects.toThrow("replay detected");
+		expect(state.alert).toHaveBeenCalledOnce();
 	});
 
 	it("rotates a valid session and returns its successor", async () => {
@@ -119,5 +156,6 @@ describe("refresh token security transactions", () => {
 		expect(pair.session.parent_session_id).toBe(1);
 		expect(state.rows[0].replaced_by_session_id).toBe(pair.session.id);
 		expect(state.rows[1].revoked_at).toBeUndefined();
+		expect(state.signed).toHaveBeenCalledWith(expect.objectContaining({ sid: "family" }));
 	});
 });

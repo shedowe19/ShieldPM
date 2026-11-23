@@ -3,6 +3,7 @@ import { SYSTEM_USER_ID } from "../lib/constants.js";
 import errs from "../lib/error.js";
 import { withHostDomainClaims } from "../lib/host-domain-claims.js";
 import { notifyProxyHostDomainsChanged } from "../lib/proxy-host-domain-events.js";
+import { AUDIT_ACTION } from "../lib/security-events.js";
 import { global as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
 import internalCertificate from "./certificate.js";
@@ -37,6 +38,29 @@ const mockAccess = {
 		hasScope: () => true,
 	},
 	can: () => Promise.resolve({ permission_visibility: "all" }),
+};
+
+/**
+ * Discovery runs without an HTTP request, so the audit entry names the system
+ * actor and carries the container identity instead of a request context.
+ *
+ * @param {string} action
+ * @param {any} host
+ * @param {Record<string, any>} [meta]
+ */
+const auditDockerDiscovery = async (action, host, meta = {}) => {
+	try {
+		const { default: internalAuditLog } = await import("./audit-log.js");
+		await internalAuditLog.add(mockAccess, {
+			action,
+			object_type: "proxy-host",
+			object_id: host.id,
+			outcome: "success",
+			meta: { auto_discovered: true, ...meta },
+		});
+	} catch (error) {
+		logger.error?.(`[Docker] Could not audit ${action} for host ${host.id}: ${error?.message}`);
+	}
 };
 
 class DockerService {
@@ -680,6 +704,11 @@ class DockerService {
 				}
 				// RELOAD NGINX via Helper
 				await this.configureNginx(updatedHost.id);
+				await auditDockerDiscovery(AUDIT_ACTION.PROXY_HOST_UPDATED, updatedHost, {
+					docker_container_id: payload.meta.docker_container_id,
+					domain_names: domains,
+					upstream_changed: upstreamChanged,
+				});
 				logger.info(`Docker Auto-Discovery: Updated host #${existingHost.id}`);
 			} else {
 				// Create
@@ -693,6 +722,10 @@ class DockerService {
 				await notifyProxyHostDomainsChanged();
 				// RELOAD NGINX via Helper
 				await this.configureNginx(newHost.id);
+				await auditDockerDiscovery(AUDIT_ACTION.DOCKER_DISCOVERED, newHost, {
+					docker_container_id: payload.meta.docker_container_id,
+					domain_names: domains,
+				});
 				logger.info(`Docker Auto-Discovery: Created host #${newHost.id}`);
 			}
 		} catch (dbErr) {
@@ -719,6 +752,9 @@ class DockerService {
 			if (existingHost) {
 				const disabledHost = await ProxyHost.query().patchAndFetchById(existingHost.id, { enabled: 0 });
 				await this.configureNginx(disabledHost.id);
+				await auditDockerDiscovery(AUDIT_ACTION.DOCKER_DISABLED, disabledHost, {
+					docker_container_id: containerId,
+				});
 				logger.info(`Docker Auto-Discovery: Disabled host #${existingHost.id} (Container stopped)`);
 			}
 		} catch (err) {

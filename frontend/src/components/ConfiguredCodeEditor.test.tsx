@@ -60,4 +60,33 @@ describe("configured code editor", () => {
 		expect(container.querySelector("script, img")).toBeNull();
 		expect(container.querySelector(".token")).not.toBeNull();
 	});
+
+	it("lets Escape leave the editor instead of trapping keyboard focus", () => {
+		render(<ConfiguredCodeEditor aria-label="Escapable configuration" language="nginx" value="server {}" />);
+		const input = screen.getByRole("textbox", { name: "Escapable configuration" });
+		input.focus();
+		expect(input).toHaveFocus();
+
+		fireEvent.keyDown(input, { key: "Escape" });
+
+		expect(input).not.toHaveFocus();
+	});
+
+	it("passes Ctrl/Meta+Tab through so the editor can be left by keyboard", () => {
+		render(<ConfiguredCodeEditor aria-label="Navigable configuration" language="nginx" value="server {}" />);
+		const input = screen.getByRole("textbox", { name: "Navigable configuration" });
+
+		expect(fireEvent.keyDown(input, { key: "Tab", ctrlKey: true })).toBe(true);
+		expect(input).toHaveValue("server {}");
+		expect(fireEvent.keyDown(input, { key: "Tab", metaKey: true })).toBe(true);
+		expect(input).toHaveValue("server {}");
+	});
+
+	it("shows a visible focus ring on the editor frame", () => {
+		render(<ConfiguredCodeEditor aria-label="Focusable configuration" language="nginx" value="server {}" />);
+		const frame = screen.getByTestId("code-editor-frame");
+
+		expect(frame.className).toContain("focus-within:ring-2");
+		expect(frame.className).toContain("focus-within:ring-ring");
+	});
 });

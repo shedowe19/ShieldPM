@@ -1,5 +1,5 @@
 import express from "express";
-import internalSetting from "../internal/setting.js";
+import internalSetting, { redactSetting } from "../internal/setting.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
 import validator from "../lib/validator/index.js";
@@ -12,6 +12,15 @@ const router = express.Router({
 });
 
 /**
+ * Secret-bearing responses must not be stored by browsers, proxies or
+ * service-worker caches.
+ */
+const noStore = (_req, res, next) => {
+	res.set("Cache-Control", "no-store");
+	next();
+};
+
+/**
  * /api/settings
  */
 router
@@ -19,12 +28,14 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.all(jwtdecode())
+	.all(jwtdecode(), noStore)
 
 	/**
 	 * GET /api/settings
 	 *
-	 * Retrieve all settings
+	 * Retrieve all settings. Secret meta values are masked for every caller,
+	 * including administrators: the API reports `<field>_configured` instead of
+	 * the stored value, so a browser/HAR/log leak cannot disclose credentials.
 	 */
 	.get(async (_req, res) => {
 		const rows = await internalSetting.getAll(res.locals.access);
@@ -41,7 +52,7 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.all(jwtdecode())
+	.all(jwtdecode(), noStore)
 
 	/**
 	 * GET /settings/something
@@ -64,16 +75,25 @@ router
 				setting_id: req.params.setting_id,
 			},
 		);
-		const row = await internalSetting.get(res.locals.access, {
-			id: data.setting_id,
-		});
+		const row = await internalSetting.get(
+			res.locals.access,
+			{
+				id: data.setting_id,
+			},
+			{ redactSecrets: true },
+		);
 		if (row.id === "oidc-config") {
 			// Redact oidc configuration via api (unauthenticated get call)
 			const m = row.meta;
 			row.meta = {
 				name: m.name,
 				enabled:
-					m.enabled === true && !!(m.clientID && m.clientSecret && m.issuerURL && m.redirectURL && m.name),
+					m.enabled === true &&
+					!!m.clientSecret_configured &&
+					!!m.clientID &&
+					!!m.issuerURL &&
+					!!m.redirectURL &&
+					!!m.name,
 			};
 
 			// Remove these temporary cookies used during oidc authentication
@@ -105,7 +125,8 @@ router
 		const payload = await apiValidator(getValidationSchema("/settings/{settingID}", "put"), req.body);
 		payload.id = params.setting_id;
 		const result = await internalSetting.update(res.locals.access, payload);
-		res.status(200).send(result);
+		// Never echo a freshly written secret back to the browser.
+		res.status(200).send(redactSetting(result));
 	});
 
 export default router;

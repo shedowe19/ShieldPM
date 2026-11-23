@@ -21,6 +21,7 @@ ShieldPM abstrahiert Let's Encrypt via Certbot. Dieses Modul kümmert sich um di
 - Beantragt Zertifikate via HTTP-01 oder DNS-01 Challenge.
 - Erneuert ablaufende Zertifikate asynchron.
 - Beantragung, manuelle Erneuerung, Timer-Erneuerung und Widerruf teilen sich `runCertbot()` und dieselbe Prozesssperre. Gleichzeitige Aufrufe erhalten einen nachvollziehbaren Validierungsfehler; die Sperre wird bei Erfolg und Fehler freigegeben.
+- Certbot-Aufrufe laufen mit einem Zeitbudget von 60 Minuten (`CERTBOT_EXEC_TIMEOUT_MS` in `backend/lib/utils.js`). Certbot pollt Autorisierungen bis zu 30 Minuten; ACME-Server wie ZeroSSL beantworten eine noch nicht validierte DNS-Challenge mit einem langen `Retry-After`, das Certbot bis zu dieser Deadline aussitzt. DNS-Propagation kommt hinzu. Ein kürzeres Limit beendet gültige Erneuerungen mitten im Poll per `SIGKILL`.
 - Beim Widerruf kann `revokeCertbot()` unter dieser Sperre die Host-Abkopplung vorbereiten. Die Zertifikatslöschung verwendet diesen Ablauf, damit ein belegter Certbot-Prozess keine bereits gelöschte Datenbankzeile mit weiterhin aktiver Certbot-Lineage hinterlässt. Vorbereitungsfehler verhindern den Widerruf und geben die Sperre frei.
 - DNS-Zugangsdaten werden mit Dateimodus `0600` gespeichert. Numerische Propagationszeiten werden für CLI-Argumente in Strings umgewandelt.
 - Die gemeinsame Prozesssperre umfasst bei DNS-Ausstellungen auch die Plugin-Installation und das Schreiben der Zugangsdaten; diese Schritte können keine laufende Erneuerung mehr verändern. Auch ein Vorbereitungsfehler gibt die Sperre frei.

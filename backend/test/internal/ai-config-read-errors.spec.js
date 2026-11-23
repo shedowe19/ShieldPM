@@ -11,7 +11,11 @@ vi.mock("../../internal/ai/executor.js", () => ({ executeTools: vi.fn() }));
 vi.mock("../../internal/ai/tools.js", () => ({ getToolDefinitions: vi.fn() }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: vi.fn() } }));
 vi.mock("../../internal/nginx.js", () => ({ default: {} }));
-vi.mock("../../logger.js", () => ({ global: {}, migrate: { info: vi.fn() } }));
+vi.mock("../../logger.js", () => ({
+	global: {},
+	migrate: { info: vi.fn() },
+	isSecretFieldName: (name) => /(key|secret|token|password)/i.test(name),
+}));
 
 import ai from "../../internal/ai.js";
 import { decrypt, encrypt } from "../../lib/encryption.js";

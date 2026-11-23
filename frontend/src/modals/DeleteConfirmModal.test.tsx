@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { showDeleteConfirmModal } from "./DeleteConfirmModal";
 
 const mocks = vi.hoisted(() => ({
+	getQueriesData: vi.fn((_filters: { queryKey: unknown[] }) => [] as unknown[]),
 	invalidateQueries: vi.fn(),
 	onConfirm: vi.fn(),
 	remove: vi.fn(),
@@ -17,7 +18,10 @@ vi.mock("ez-modal-react", () => ({
 }));
 
 vi.mock("@tanstack/react-query", () => ({
-	useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries }),
+	useQueryClient: () => ({
+		getQueriesData: mocks.getQueriesData,
+		invalidateQueries: mocks.invalidateQueries,
+	}),
 }));
 
 const renderConfirmation = () => {
@@ -35,6 +39,7 @@ const renderConfirmation = () => {
 describe("DeleteConfirmModal", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mocks.getQueriesData.mockReturnValue([]);
 		mocks.onConfirm.mockResolvedValue(undefined);
 		mocks.invalidateQueries.mockResolvedValue(undefined);
 	});
@@ -93,5 +98,41 @@ describe("DeleteConfirmModal", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 		expect(await screen.findByText("Unknown error")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled();
+	});
+
+	it("names the object and lists hosts that depend on it", () => {
+		mocks.getQueriesData.mockImplementation(({ queryKey }: { queryKey: unknown[] }) => {
+			if (queryKey[0] === "access-lists") {
+				return [[["access-lists", { expand: [] }], [{ id: 7, name: "Office network" }]]];
+			}
+			if (queryKey[0] === "proxy-hosts") {
+				return [
+					[
+						["proxy-hosts", { expand: [] }],
+						[
+							{ id: 3, domainNames: ["app.example.test"], accessListId: 7 },
+							{ id: 4, domainNames: ["other.example.test"], accessListId: 9 },
+						],
+					],
+				];
+			}
+			return [];
+		});
+		const props = {
+			title: "Delete access list",
+			children: "Confirm access list removal",
+			onConfirm: mocks.onConfirm,
+			invalidations: [["access-lists"], ["access-list", 7]],
+		};
+		showDeleteConfirmModal(props);
+		const Modal = mocks.show.mock.calls[0][0];
+		render(<Modal {...props} visible remove={mocks.remove} />);
+
+		expect(screen.getByText("Access List")).toBeInTheDocument();
+		expect(screen.getByText("Office network")).toBeInTheDocument();
+		expect(screen.getByText("In Use")).toBeInTheDocument();
+		expect(screen.getByText("app.example.test")).toBeInTheDocument();
+		expect(screen.queryByText("other.example.test")).not.toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Delete Access List" })).toBeInTheDocument();
 	});
 });

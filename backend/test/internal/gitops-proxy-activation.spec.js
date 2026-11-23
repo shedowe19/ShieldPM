@@ -26,10 +26,13 @@ vi.mock("../../internal/proxy-host-monitor.js", () => ({ assertMonitorConfig: vi
 vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn() } }));
 vi.mock("node:fs", async (importOriginal) => {
 	const actual = await importOriginal();
-	const map = (value) =>
-		typeof value === "string" && value.startsWith("/data/gitops")
-			? value.replace("/data/gitops", state.directory)
+	const normalize = (value) => (typeof value === "string" ? value.replaceAll("\\", "/") : value);
+	const map = (value) => {
+		const normalized = normalize(value);
+		return typeof normalized === "string" && normalized.startsWith("/data/gitops")
+			? normalized.replace("/data/gitops", state.directory.replaceAll("\\", "/"))
 			: value;
+	};
 	const promises = new Proxy(actual.default.promises, {
 		get: (target, key) =>
 			typeof target[key] === "function" ? (...args) => target[key](...args.map(map)) : target[key],
@@ -41,10 +44,13 @@ vi.mock("node:fs", async (importOriginal) => {
 });
 vi.mock("node:fs/promises", async (importOriginal) => {
 	const actual = await importOriginal();
-	const map = (value) =>
-		typeof value === "string" && value.startsWith("/data/gitops")
-			? value.replace("/data/gitops", state.directory)
+	const normalize = (value) => (typeof value === "string" ? value.replaceAll("\\", "/") : value);
+	const map = (value) => {
+		const normalized = normalize(value);
+		return typeof normalized === "string" && normalized.startsWith("/data/gitops")
+			? normalized.replace("/data/gitops", state.directory.replaceAll("\\", "/"))
 			: value;
+	};
 	const mapped = Object.fromEntries(
 		Object.entries(actual).map(([key, value]) => [
 			key,
@@ -168,7 +174,7 @@ describe("GitOps proxy accepted-state boundary with real SQLite and configuratio
 		expect(JSON.parse(JSON.stringify(await row()))).toEqual(previous);
 		expect((await HostDomainClaimOwner.query()).map((item) => item.domain_name)).toEqual(["old.example"]);
 		expect(await fs.readFile(configFile(1), "utf8")).toBe("# accepted old configuration\n");
-		expect((await fs.stat(configFile(1))).mode & 0o777).toBe(0o640);
+		expect((await fs.stat(configFile(1))).mode & 0o777).toBe(process.platform === "win32" ? 0o666 : 0o640);
 		expect(await Revision.query().where("action", "imported")).toHaveLength(0);
 		expect(reconcileRestoredHost).not.toHaveBeenCalled();
 		expect(nginx.reload).toHaveBeenCalledOnce();

@@ -134,7 +134,7 @@ Matching requests are recorded as JSON lines in `/data/logs/ip_firewall_<host-id
 
 The bundled startup scripts preserve these logs across restarts and prepare the directory for the configured runtime user before Nginx validates the host configuration. Keep `/data` on persistent storage to retain the history across container replacements.
 
-The bundled logrotate configuration includes these files. Enable `LOGROTATE=true` to use daily rotation; it is disabled by default. `LOGROTATIONS` controls the retained file count and defaults to 3. Native deployments must use the corresponding logrotate configuration.
+The bundled logrotate configuration includes these files. Log rotation is enabled by default (`LOGROTATE=true`) and rotates daily or once a file reaches 100 MB; `LOGROTATIONS` controls the retained file count and defaults to 3. Set `LOGROTATE=false` explicitly in `/data/.env` only if you ship logs yourself. Native deployments must use the corresponding logrotate configuration.
 
 ## GitOps backups
 

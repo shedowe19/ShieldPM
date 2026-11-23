@@ -1,5 +1,10 @@
 #!/usr/bin/env sh
 
+# Log rotation is on by default. Set LOGROTATE=false in the environment or in
+# /data/.env only when log shipping is handled externally.
+export LOGROTATE="${LOGROTATE:-true}"
+export LOGROTATIONS="${LOGROTATIONS:-3}"
+
 # Native overlays retain files removed from later application versions.
 # Retire only ShieldPM's own runtime block and its two obsolete Lua helpers.
 remove_legacy_wasm_runtime() {
@@ -367,7 +372,8 @@ for line in source.splitlines(keepends=True):
             line = match[1] + "access_log " + setting + "\n"
     error_log = re.match(r"^(\s*)#?\s*(error_log /data/nginx/error\.log\s+.*)", line)
     if error_log:
-        line = error_log[1] + ("" if enabled("LOGROTATE") else "#") + error_log[2] + "\n"
+        # Error logging is always active; Docker's log driver bounds it.
+        line = error_log[1] + error_log[2] + "\n"
     lines.append(line)
 
 # ASN is optional and independent of the existing Country/City setup. Reserved

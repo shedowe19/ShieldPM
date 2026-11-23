@@ -24,18 +24,10 @@ const apiValidator = async (schema, payload /*, description*/) => {
 		throw new errs.ValidationError("Payload is undefined");
 	}
 
-	// 🛡️ Nginx Config Injection Sanitizer
-	if (payload && typeof payload.advanced_config === "string") {
-		const toxics = ["lua", "alias", "root", "exec", "system", "os.execute"];
-		const lowerConfig = payload.advanced_config.toLowerCase();
-		for (const keyword of toxics) {
-			if (lowerConfig.includes(keyword)) {
-				throw new errs.ValidationError(
-					`Security restriction: Toxic keyword '${keyword}' is not allowed in advanced_config.`,
-				);
-			}
-		}
-	}
+	// Nginx/Lua-bearing fields are validated by the internal host services with
+	// administrator gating (lib/host-input.js). Keeping a keyword denylist here
+	// would block legitimate administrator configuration and still miss nested
+	// fields, so validation lives at the write boundary instead.
 
 	const validate = ajv.compile(schema);
 

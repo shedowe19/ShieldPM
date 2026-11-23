@@ -13,11 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code.
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Check spelling
-        uses: codespell-project/actions-codespell@v2.2
+        uses: codespell-project/actions-codespell@8f01853be192eb0f849a5c7d721450e7a467c579 # v2.2
         with:
           check_filenames: true
           check_hidden: true
-          skip: yarn.lock,package-lock.json,./frontend/src/locale/lang,./frontend/src/locale/HelpDoc,./llm-wiki,./agent.md,./scripts/lib,./scripts/wiki-graph.py,./backend/schema/components/firewall-country-code.json
+          skip: yarn.lock,package-lock.json,./frontend/src/locale/lang,./frontend/src/locale/HelpDoc,./llm-wiki,./docs/legal,./agent.md,./scripts/lib,./scripts/wiki-graph.py,./backend/schema/components/firewall-country-code.json
           ignore_words_list: afterAll,alog,nd,devlop,trough,hastable,elease,eleases,ublish,Paket,paket,statics,ist,vor,unter,alle,Methode,Funktion,als,oder,deine,lokal,lokale,separat,sie,aktive,rekursive,manuell,alternativ,tage,normale,Modell,modell,startet

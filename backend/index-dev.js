@@ -9,6 +9,7 @@ process.env.INITIAL_DEFAULT_PAGE ||= "congratulations";
 // environment must be established before evaluating any application module.
 const [
 	{ default: app },
+	{ default: analyticsRollup },
 	{ default: analyticsService },
 	{ default: internalCertificate },
 	{ default: internalIpRanges },
@@ -24,6 +25,7 @@ const [
 	{ default: setup },
 ] = await Promise.all([
 	import("./app.js"),
+	import("./internal/analytics-rollup.js"),
 	import("./internal/analytics.js"),
 	import("./internal/certificate.js"),
 	import("./internal/ip_ranges.js"),
@@ -87,6 +89,7 @@ async function start() {
 		logger.info("Starting DB Migration...");
 		await migrateUp();
 		await analyticsService.init();
+		await analyticsRollup.init();
 		logger.info("Starting Setup...");
 		await setup();
 		logger.info("Compiling Schema...");
@@ -118,6 +121,7 @@ async function start() {
 					await internalHostTraffic.stop();
 					await internalSessionCleanup.stop();
 					await analyticsService.stop();
+					await analyticsRollup.stop();
 					process.exit(0);
 				});
 			};

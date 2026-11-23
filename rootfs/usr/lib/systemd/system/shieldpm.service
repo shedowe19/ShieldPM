@@ -15,6 +15,21 @@ EnvironmentFile=-/etc/default/locale
 # Run the same entrypoint as Docker
 ExecStart=/usr/local/bin/entrypoint.sh
 
+# Sandbox the root service with restrictions that cannot block its own
+# management work. The unit intentionally does not make /etc, /usr or /root
+# read-only: startup rewrites /etc/logrotate, /etc/tor/torrc and
+# /usr/local/nginx/conf in place, WireGuard sets rp_filter through sysctl,
+# packages are managed from the built-in terminal, and the updater copies a new
+# rootfs over /. Filesystem and kernel confinement is the container boundary.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+LockPersonality=yes
+UMask=0022
+LimitNOFILE=65535
+TimeoutStopSec=35
+
 # Restart logic
 Restart=always
 RestartSec=5

@@ -9,7 +9,7 @@
         "content": {
             "application/json": {
                 "schema": {
-                    "description": "Send a message to the AI Agent",
+                    "description": "Send a message to the AI Agent. State-changing tool calls are only executed when the client confirms the plan returned by a previous response.",
                     "type": "object",
                     "additionalProperties": false,
                     "required": [
@@ -18,10 +18,12 @@
                     "properties": {
                         "message": {
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "maxLength": 32000
                         },
                         "history": {
                             "type": "array",
+                            "maxItems": 50,
                             "items": {
                                 "type": "object",
                                 "properties": {
@@ -34,7 +36,8 @@
                                         ]
                                     },
                                     "content": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "maxLength": 8000
                                     },
                                     "toolCalls": {
                                         "type": "array",
@@ -56,6 +59,37 @@
                                 ],
                                 "additionalProperties": false
                             }
+                        },
+                        "confirm": {
+                            "type": "boolean",
+                            "description": "Explicit user confirmation for the pending state-changing tool calls"
+                        },
+                        "pending_tools": {
+                            "type": "array",
+                            "maxItems": 20,
+                            "description": "The exact tool calls the user reviewed and approved",
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 100
+                                    },
+                                    "target": {
+                                        "type": "string",
+                                        "maxLength": 500
+                                    },
+                                    "args": {
+                                        "type": "object",
+                                        "additionalProperties": true
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -64,14 +98,88 @@
     },
     "responses": {
         "200": {
-            "description": "AI Response",
+            "description": "AI Response. When requires_confirmation is true, pending_tools lists the exact calls that need approval.",
             "content": {
                 "application/json": {
                     "schema": {
                         "type": "object",
                         "properties": {
+                            "role": {
+                                "type": "string",
+                                "enum": [
+                                    "assistant"
+                                ]
+                            },
                             "content": {
                                 "type": "string"
+                            },
+                            "requires_confirmation": {
+                                "type": "boolean"
+                            },
+                            "pending_tools": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "target": {
+                                            "type": "string"
+                                        },
+                                        "args": {
+                                            "type": "object"
+                                        }
+                                    }
+                                }
+                            },
+                            "actions": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "tool": {
+                                            "type": "string"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "success",
+                                                "error"
+                                            ]
+                                        },
+                                        "object_id": {
+                                            "type": [
+                                                "integer",
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "round": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            },
+                            "usage": {
+                                "type": "object",
+                                "properties": {
+                                    "input_tokens": {
+                                        "type": "integer"
+                                    },
+                                    "output_tokens": {
+                                        "type": "integer"
+                                    },
+                                    "total_tokens": {
+                                        "type": "integer"
+                                    },
+                                    "requests": {
+                                        "type": "integer"
+                                    }
+                                }
+                            },
+                            "degraded": {
+                                "type": "boolean"
                             }
                         }
                     }

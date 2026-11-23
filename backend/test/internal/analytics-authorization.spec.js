@@ -36,11 +36,19 @@ describe("host analytics authorization", () => {
 		await expect(new AnalyticsService().assertHostAccess(access, 7)).rejects.toBeInstanceOf(errs.PermissionError);
 	});
 
-	it("allows global analytics permission regardless of host ownership", async () => {
+	it("allows administrators regardless of host ownership", async () => {
 		access.token.getUserId = () => 9;
-		access.can.mockResolvedValue({ permission_analytics: "view" });
+		access.can.mockResolvedValue({ permission_analytics: "view", permission_visibility: "user", roles: ["admin"] });
 		await expect(new AnalyticsService().assertHostAccess(access, 7)).resolves.toBe(host);
 		expect(access.can).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not treat the default analytics view permission as ownership", async () => {
+		access.token.getUserId = () => 9;
+		access.can
+			.mockResolvedValueOnce({ permission_analytics: "view", permission_visibility: "user", roles: ["user"] })
+			.mockResolvedValueOnce({ permission_proxy_hosts: "view", permission_visibility: "user", roles: ["user"] });
+		await expect(new AnalyticsService().assertHostAccess(access, 7)).rejects.toBeInstanceOf(errs.PermissionError);
 	});
 
 	it("does not hide unexpected authorization failures with an ownership fallback", async () => {

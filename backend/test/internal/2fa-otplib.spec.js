@@ -10,6 +10,7 @@ vi.mock("../../db.js", async () => {
 vi.mock("../../lib/config.js", () => ({ isSqlite: () => true, getEncryptionKey: () => "01".repeat(32) }));
 
 import service from "../../internal/2fa-service.js";
+import { decrypt } from "../../lib/encryption.js";
 
 // RFC 6238's SHA-1 secret and 59-second vector, reduced to the six login digits.
 const vectorSecret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
@@ -56,7 +57,8 @@ describe("installed otplib compatibility with the real 2FA service", () => {
 		expect(uri.searchParams.get("period") ?? "30").toBe("30");
 		const png = Buffer.from(setup.qrDataUrl.split(",")[1], "base64");
 		expect(png.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
-		expect(await state.db("user_2fa").where({ user_id: 7 }).first()).toMatchObject({
+		const stored = await state.db("user_2fa").where({ user_id: 7 }).first();
+		expect({ ...stored, secret: decrypt(stored.secret) }).toMatchObject({
 			secret: setup.secret,
 			is_verified: 0,
 		});

@@ -1,4 +1,6 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
+import path from "node:path";
 import internalNginx from "./internal/nginx.js";
 import { validatePasswordAuth } from "./lib/auth-password.js";
 import { installPlugins } from "./lib/certbot.js";
@@ -17,6 +19,94 @@ import userPermissionModel from "./models/user_permission.js";
 export const isSetup = async () => {
 	const row = await userModel.query().select("id").where("is_deleted", 0).first();
 	return row?.id > 0;
+};
+
+const SETUP_TOKEN_FILE = "setup-token";
+let setupTokenCache = null;
+
+export const getSetupTokenPath = () => path.join(process.env.DATA_PATH || "/data", SETUP_TOKEN_FILE);
+
+const readOrCreateSetupToken = () => {
+	const tokenPath = getSetupTokenPath();
+	if (setupTokenCache?.path === tokenPath) {
+		return setupTokenCache.token;
+	}
+
+	let token = null;
+	try {
+		token = fs.readFileSync(tokenPath, "utf8").trim();
+	} catch (error) {
+		if (error.code !== "ENOENT") {
+			throw error;
+		}
+	}
+
+	if (!token) {
+		fs.mkdirSync(path.dirname(tokenPath), { recursive: true, mode: 0o700 });
+		const generated = crypto.randomBytes(32).toString("base64url");
+		try {
+			// The token authenticates the unauthenticated first-administrator
+			// route. `wx` prevents replicas starting together from clobbering
+			// each other's token; the loser reads the winner's file below.
+			fs.writeFileSync(tokenPath, `${generated}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
+			token = generated;
+		} catch (error) {
+			if (error.code !== "EEXIST") {
+				throw error;
+			}
+			token = fs.readFileSync(tokenPath, "utf8").trim();
+			if (!token) {
+				throw new Error(`Setup token file ${tokenPath} exists but is empty`);
+			}
+		}
+	}
+
+	try {
+		fs.chmodSync(tokenPath, 0o600);
+	} catch {
+		// Non-POSIX platforms have no mode bits; the file still lives in DATA_PATH.
+	}
+
+	setupTokenCache = { path: tokenPath, token };
+	logger.info(`Initial setup token is available at ${tokenPath}`);
+	return token;
+};
+
+/**
+ * Returns the effective setup token. `SETUP_TOKEN` is the documented
+ * break-glass/automation override; otherwise a random token is persisted in
+ * DATA_PATH so the first administrator can never be created anonymously over
+ * the network.
+ */
+export const getSetupToken = () => {
+	const configured = process.env.SETUP_TOKEN;
+	if (typeof configured === "string" && configured.length > 0) {
+		return configured;
+	}
+	return readOrCreateSetupToken();
+};
+
+/**
+ * Exact, constant-time comparison of the X-Setup-Token header. Missing values
+ * always fail; the token is never trimmed or case-normalized.
+ */
+export const isSetupTokenValid = (provided) => {
+	if (typeof provided !== "string" || provided.length === 0) {
+		return false;
+	}
+	const expected = getSetupToken();
+	const left = Buffer.from(provided, "utf8");
+	const right = Buffer.from(expected, "utf8");
+	return left.length === right.length && crypto.timingSafeEqual(left, right);
+};
+
+const ensureInitialSetupToken = async () => {
+	if (await isSetup()) {
+		return;
+	}
+	// Fail startup loudly if DATA_PATH cannot hold the secret: an operator who
+	// cannot read the token must not be able to create the first admin either.
+	readOrCreateSetupToken();
 };
 
 /**
@@ -268,6 +358,7 @@ export const regenerateAllHosts = async () => {
 
 export default async () => {
 	await setupDefaultUser();
+	await ensureInitialSetupToken();
 	await setupDefaultSettings();
 	await setupCertbotPlugins();
 	await regenerateAllHosts();

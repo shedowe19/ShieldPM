@@ -344,6 +344,14 @@ export interface AiConfig {
 	numThread?: number;
 	keepAlive?: string;
 	systemPrompt?: string;
+	timeoutMs?: number;
+	maxOutputTokens?: number;
+	maxRetries?: number;
+	retryDelayMs?: number;
+	dailyTokenBudget?: number;
+	fallbackProvider?: "" | AiProvider;
+	fallbackModel?: string;
+	fallbackBaseUrl?: string;
 }
 
 export interface AiChatMessage {
@@ -353,9 +361,34 @@ export interface AiChatMessage {
 	rawParts?: unknown[];
 }
 
+export interface AiPendingTool {
+	name: string;
+	target?: string;
+	args: Record<string, unknown>;
+}
+
+export interface AiExecutedAction {
+	tool: string;
+	status: "success" | "error";
+	objectId?: number | string | null;
+	round?: number;
+}
+
+export interface AiUsage {
+	inputTokens: number;
+	outputTokens: number;
+	totalTokens: number;
+	requests: number;
+}
+
 export interface AiChatResponse {
 	role: "assistant";
 	content: string;
+	requiresConfirmation?: boolean;
+	pendingTools?: AiPendingTool[];
+	actions?: AiExecutedAction[];
+	usage?: AiUsage;
+	degraded?: boolean;
 }
 
 export interface DdnsProvider {

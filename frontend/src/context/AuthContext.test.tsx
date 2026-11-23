@@ -45,7 +45,7 @@ let nextSessionProbeInstance = 0;
 const queryClients = new Set<QueryClient>();
 
 function AuthProbe() {
-	const { authenticated, loading, completeLogin, login, loginAs, logout } = useAuthState();
+	const { authenticated, loading, completeLogin, login, loginAs, logout, restoreAdminSession } = useAuthState();
 
 	return (
 		<>
@@ -60,6 +60,9 @@ function AuthProbe() {
 				Impersonate user
 			</button>
 			<button type="button" onClick={() => void logout()}>
+				Sign out
+			</button>
+			<button type="button" onClick={() => void restoreAdminSession()}>
 				Return to administrator
 			</button>
 		</>
@@ -205,7 +208,7 @@ describe("AuthProvider", () => {
 			}),
 		);
 		const pendingRefresh = mocks.useIntervalWhen.mock.lastCall?.[0]();
-		fireEvent.click(screen.getByRole("button", { name: "Return to administrator" }));
+		fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
 		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:false"));
 
 		await act(async () => {

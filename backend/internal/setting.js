@@ -1,8 +1,102 @@
 import fs from "node:fs";
+import { encrypt, isEncrypted } from "../lib/encryption.js";
 import errs from "../lib/error.js";
+import { isSecretFieldName } from "../lib/host-response.js";
 import settingModel from "../models/setting.js";
 import internalAuditLog from "./audit-log.js";
 import internalNginx from "./nginx.js";
+
+/**
+ * Secret values in a setting response are replaced by this mask. The mask is
+ * also accepted on write: a client that round-trips a masked form keeps the
+ * stored secret instead of replacing it with the literal asterisks.
+ */
+export const SECRET_MASK = "********";
+
+const normalizeMeta = (value) => {
+	if (typeof value === "string") {
+		try {
+			const parsed = JSON.parse(value);
+			return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+		} catch {
+			return {};
+		}
+	}
+	return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+};
+
+const isUnsetSecretValue = (value) => value === undefined || value === null || value === "" || value === SECRET_MASK;
+
+// Setting rows whose meta carries a credential that must be encrypted at rest.
+// New values are encrypted here; a value that is already an envelope (for
+// example a preserved masked secret) is left untouched.
+const SECRET_META_FIELDS = {
+	"oidc-config": ["clientSecret"],
+};
+
+const encryptMetaSecrets = (id, meta) => {
+	const fields = SECRET_META_FIELDS[id];
+	if (!fields || !meta || typeof meta !== "object" || Array.isArray(meta)) return meta;
+	const result = { ...meta };
+	for (const field of fields) {
+		const value = result[field];
+		if (typeof value === "string" && value && value !== SECRET_MASK && !isEncrypted(value)) {
+			result[field] = encrypt(value);
+		}
+	}
+	return result;
+};
+
+const maskMeta = (value, root = true) => {
+	if (Array.isArray(value)) return value.map((entry) => maskMeta(entry, false));
+	if (value && typeof value === "object") {
+		const result = {};
+		for (const [key, entry] of Object.entries(value)) {
+			if (isSecretFieldName(key) && !isUnsetSecretValue(entry)) result[key] = SECRET_MASK;
+			else result[key] = maskMeta(entry, false);
+			if (root && isSecretFieldName(key)) result[`${key}_configured`] = !isUnsetSecretValue(entry);
+		}
+		return result;
+	}
+	return value;
+};
+
+/**
+ * Public projection of a setting row. Secret-bearing meta fields are masked and
+ * accompanied by a `<field>_configured` flag; the stored value never leaves the
+ * process. Used by both the settings list and the single-setting route so the
+ * list can no longer expose what the detail endpoint hides.
+ */
+export const redactSetting = (row) => {
+	if (!row) return row;
+	const value = typeof row.toJSON === "function" ? row.toJSON() : { ...row };
+	return { ...value, meta: maskMeta(normalizeMeta(value.meta)) };
+};
+
+export const redactSettings = (rows) => rows.map((row) => redactSetting(row));
+
+/**
+ * Keeps saved secrets when an update or GitOps import only carries a mask, a
+ * blank form field, or omits the field entirely. An explicit value still wins.
+ */
+export const preserveMetaSecrets = (incoming, saved) => {
+	if (Array.isArray(incoming)) return incoming.map((entry) => preserveMetaSecrets(entry, undefined));
+	if (!incoming || typeof incoming !== "object") return incoming;
+	const savedMeta = normalizeMeta(saved);
+	const result = {};
+	for (const [key, entry] of Object.entries(incoming)) {
+		if (isSecretFieldName(key) && isUnsetSecretValue(entry)) {
+			if (!isUnsetSecretValue(savedMeta[key])) result[key] = savedMeta[key];
+			continue;
+		}
+		result[key] = entry && typeof entry === "object" ? preserveMetaSecrets(entry, savedMeta[key]) : entry;
+	}
+	// A redacted export may omit the secret field completely; keep the saved one.
+	for (const [key, entry] of Object.entries(savedMeta)) {
+		if (isSecretFieldName(key) && !(key in result) && !isUnsetSecretValue(entry)) result[key] = entry;
+	}
+	return result;
+};
 
 const internalSetting = {
 	/**
@@ -25,7 +119,9 @@ const internalSetting = {
 			}
 			const patch = {
 				...(data.value !== undefined ? { value: data.value } : {}),
-				...(data.meta !== undefined ? { meta: data.meta } : {}),
+				...(data.meta !== undefined
+					? { meta: encryptMetaSecrets(data.id, preserveMetaSecrets(data.meta, row.meta)) }
+					: {}),
 			};
 			if (row.id !== "default-site") {
 				await settingModel.query().where({ id: data.id }).patch(patch);
@@ -92,13 +188,15 @@ const internalSetting = {
 	 * @param  {import("../lib/types.js").Access}   access
 	 * @param  {Object}   data
 	 * @param  {String}   data.id
+	 * @param  {Object}   [options]
+	 * @param  {boolean}  [options.redactSecrets] - Mask secret meta fields (HTTP responses).
 	 * @return {Promise}
 	 */
-	get: async (access, data) => {
+	get: async (access, data, options = {}) => {
 		await access.can("settings:get", data.id);
 		const row = await settingModel.query().where("id", data.id).first();
 		if (row) {
-			return row;
+			return options.redactSecrets ? redactSetting(row) : row;
 		}
 		throw new errs.ItemNotFoundError(data.id);
 	},
@@ -118,12 +216,19 @@ const internalSetting = {
 	/**
 	 * All settings
 	 *
+	 * Secret values are masked by default because this list is consumed by the
+	 * admin browser (and previously exposed the OIDC client secret). Internal
+	 * callers that need raw metadata must opt out explicitly.
+	 *
 	 * @param   {import("../lib/types.js").Access}  access
+	 * @param   {Object}  [options]
+	 * @param   {boolean} [options.redactSecrets=true]
 	 * @returns {Promise}
 	 */
-	getAll: async (access) => {
+	getAll: async (access, options = {}) => {
 		await access.can("settings:list");
-		return settingModel.query().orderBy("description", "ASC");
+		const rows = await settingModel.query().orderBy("description", "ASC");
+		return options.redactSecrets === false ? rows : redactSettings(rows);
 	},
 };
 

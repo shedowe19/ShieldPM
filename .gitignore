@@ -18,3 +18,9 @@ __pycache__/
 .tscanner/cache/
 .tscanner/.cache/
 .tscanner/reports/
+
+coverage/
+
+e2e-bin/
+e2e-backend.log
+e2e-frontend.log

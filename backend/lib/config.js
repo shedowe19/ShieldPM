@@ -3,8 +3,38 @@ import fs from "node:fs";
 import { dirname } from "node:path";
 import { global as logger } from "../logger.js";
 
+/**
+ * Key custody
+ * ===========
+ *
+ * `keys.json` contains three independent secrets: the RSA-2048 JWT signing
+ * key pair and the 32-byte AES-256-GCM data key. The file lives under
+ * `/data/shieldpm/` and is created with mode 0600.
+ *
+ * Consequences for backups and operators:
+ * - A `/data` backup contains ciphertext **and** the key that decrypts it.
+ *   The database encryption therefore protects a stolen database file or a
+ *   stray `mysqldump`, not a stolen `/data` volume. Store key material in a
+ *   separate custody boundary from the data backup (for example a password
+ *   manager or a secrets manager) and restrict who can read either copy.
+ * - The AES key also derives the terminal handoff HMAC, so its disclosure
+ *   is equivalent to a terminal token disclosure.
+ * - `SHIELDPM_ENCRYPTION_KEY` may be set to a 64-character hex value to keep
+ *   the data key outside `/data` and outside image/volume backups. It takes
+ *   precedence over `keys.json`; the value is intentionally never written
+ *   back to disk. All replicas must use the same value.
+ * - Rotation is NOT implemented: the ciphertext format carries no key id, so
+ *   replacing the key without re-encrypting every protected column first makes
+ *   existing secrets unreadable. A rotation requires (a) a key-versioned
+ *   ciphertext format, (b) a re-encryption migration for every encrypted field
+ *   and (c) a rollback plan. Until then, treat the key as long-lived and
+ *   protect it accordingly; a suspected key compromise is a credential
+ *   incident for every stored secret.
+ */
+
 const dataPath = process.env.DATA_PATH || "/data";
 const keysFile = `${dataPath}/shieldpm/keys.json`;
+const encryptionKeyEnv = "SHIELDPM_ENCRYPTION_KEY";
 const mysqlEngine = "mysql2";
 const postgresEngine = "pg";
 const sqliteClientName = "better-sqlite3";
@@ -112,6 +142,17 @@ const configure = () => {
 	};
 };
 
+const readEncryptionKeyFromEnvironment = () => {
+	const raw = process.env[encryptionKeyEnv];
+	if (raw === undefined || raw.trim() === "") return null;
+	const value = raw.trim().toLowerCase();
+	if (!/^[a-f0-9]{64}$/.test(value)) {
+		logger.error(`${encryptionKeyEnv} must be exactly 64 hexadecimal characters (32 bytes); refusing to start`);
+		process.exit(1);
+	}
+	return value;
+};
+
 const getKeys = () => {
 	// Get keys from file
 	logger.info("Checking for keys file:", keysFile);
@@ -126,6 +167,18 @@ const getKeys = () => {
 		fs.chmodSync(keysFile, 0o600);
 		const rawData = fs.readFileSync(keysFile);
 		let keys = JSON.parse(rawData.toString());
+		const envEncryptionKey = readEncryptionKeyFromEnvironment();
+
+		// An explicitly supplied data key is authoritative and never persisted:
+		// the point of the environment variable is to keep it out of /data.
+		if (envEncryptionKey) {
+			if (keys.encryptionKey && keys.encryptionKey !== envEncryptionKey) {
+				logger.warn(
+					`${encryptionKeyEnv} differs from the data key in ${keysFile}; the environment key is used. Existing values encrypted with the file key are unreadable until they are re-encrypted.`,
+				);
+			}
+			return { ...keys, encryptionKey: envEncryptionKey };
+		}
 
 		// Migration: Add encryptionKey if missing
 		if (!keys.encryptionKey) {
@@ -206,6 +259,9 @@ const generateKeys = () => {
 	const keys = {
 		key: privateKey,
 		pub: publicKey,
+		// A file key is always created so the file remains self-contained when the
+		// environment override is removed. When SHIELDPM_ENCRYPTION_KEY is set it
+		// takes precedence and is never copied into this file.
 		encryptionKey: crypto.randomBytes(32).toString("hex"),
 	};
 

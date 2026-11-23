@@ -18,6 +18,7 @@ import bcrypt from "bcryptjs";
 import { generateSecret, generateURI, verifySync } from "otplib";
 import qrcode from "qrcode";
 import { getEncryptionKey } from "../lib/config.js";
+import { decrypt, encrypt, isEncrypted } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import userModel from "../models/user.js";
 import UserTwoFa from "../models/user-2fa.js";
@@ -39,6 +40,16 @@ const PASSKEY_CHALLENGE_TTL_MS = 5 * 60 * 1000;
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+// Existing rows may still contain a plaintext secret from before encryption
+// at rest was introduced; both forms stay readable until the rotation command
+// re-encrypts them.
+const readEncryptedSecret = (value) => (isEncrypted(value) ? decrypt(value) : value);
+
+const readDuoConfig = (meta) => ({
+	...meta,
+	clientSecret: readEncryptedSecret(meta?.clientSecret),
+});
 
 const generateBackupCode = () =>
 	crypto
@@ -101,7 +112,7 @@ const setupTotp = async (userId, userEmail) => {
 		user_id: userId,
 		type: "totp",
 		label: "Authenticator App",
-		secret,
+		secret: encrypt(secret),
 		is_verified: 0,
 	});
 
@@ -120,12 +131,17 @@ const verifyAndEnableTotp = async (userId, code) => {
 		throw new errs.ValidationError("No pending TOTP setup found. Please restart setup.");
 	}
 
-	const isValid = verifySync({ token: code, secret: record.secret }).valid;
+	const isValid = verifySync({ token: code, secret: readEncryptedSecret(record.secret) }).valid;
 	if (!isValid) {
 		throw new errs.ValidationError("Invalid TOTP code");
 	}
 
-	await UserTwoFa.query().patch({ is_verified: 1 }).where({ id: record.id });
+	await UserTwoFa.query()
+		.patch({
+			is_verified: 1,
+			...(isEncrypted(record.secret) ? {} : { secret: encrypt(record.secret) }),
+		})
+		.where({ id: record.id });
 	return regenerateBackupCodes(userId);
 };
 
@@ -138,7 +154,7 @@ const verifyAndEnableTotp = async (userId, code) => {
 const verifyTotp = async (userId, code) => {
 	const records = await UserTwoFa.query().where({ user_id: userId, type: "totp", is_verified: 1, is_deleted: 0 });
 	for (const record of records) {
-		const verification = verifySync({ token: code, secret: record.secret });
+		const verification = verifySync({ token: code, secret: readEncryptedSecret(record.secret) });
 		if (!verification.valid || !("timeStep" in verification) || verification.timeStep <= (record.counter || 0))
 			continue;
 
@@ -594,7 +610,7 @@ const setupDuo = async (userId, config) => {
 			user_id: userId,
 			type: "duo",
 			label: "Duo Security",
-			meta: { clientId, clientSecret, apiHost, redirectUrl },
+			meta: { clientId, clientSecret: encrypt(clientSecret), apiHost, redirectUrl },
 			is_verified: 1,
 		});
 	});
@@ -632,7 +648,7 @@ const beginDuoAuthentication = async (userId, userEmail, browserToken, expiresAt
 		throw new errs.ValidationError("Duo Security is not configured for this user");
 	}
 
-	const client = createDuoClient(duoRecord.meta);
+	const client = createDuoClient(readDuoConfig(duoRecord.meta));
 	const state = crypto.randomBytes(32).toString("base64url");
 	const authUrl = await client.createAuthUrl(userEmail, state);
 	await UserTwoFa.query().delete().where({ user_id: userId, type: "duo_auth_challenge", is_verified: 0 });
@@ -686,7 +702,7 @@ const completeDuoAuthentication = async (browserToken, duoCode, state) => {
 		throw new errs.ValidationError("Duo Security is not configured for this user");
 	}
 
-	const client = createDuoClient(duoRecord.meta);
+	const client = createDuoClient(readDuoConfig(duoRecord.meta));
 	// Claim before contacting Duo: concurrent callbacks must never exchange the
 	// same code or issue two sessions, including when an exchange fails.
 	await consumeChallenge(challenge, "Duo");

@@ -1,5 +1,5 @@
 import { AnimatePresence, domAnimation, LazyMotion } from "framer-motion";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { AnimatedPage } from "src/components/AnimatedPage";
 import { ErrorNotFound } from "src/components/ErrorNotFound";
@@ -41,8 +41,51 @@ const DuoCallback = lazy(() => import("src/pages/DuoCallback"));
 const Incidents = lazy(() => import("src/pages/Incidents"));
 const Backups = lazy(() => import("src/pages/Settings/Backups"));
 
+const ROUTE_TITLES: Array<[string, string]> = [
+	["/", "Dashboard"],
+	["/incidents", "Incident Center"],
+	["/analytics", "Analytics"],
+	["/certificates", "Certificates"],
+	["/access", "Access Lists"],
+	["/firewall", "Firewall"],
+	["/audit-log", "Audit Log"],
+	["/settings/backups", "Instance Backups"],
+	["/settings", "Settings"],
+	["/users", "Users"],
+	["/nginx/proxy", "Proxy Hosts"],
+	["/nginx/redirection", "Redirection Hosts"],
+	["/nginx/404", "404 Hosts"],
+	["/nginx/stream", "Streams"],
+	["/nginx/cloudflared", "Cloudflare Tunnels"],
+	["/nginx/ddns", "DDNS Providers"],
+	["/nginx/tor", "Tor Onion Services"],
+	["/nginx/wireguard", "WireGuard Tunnels"],
+	["/chatops", "ChatOps"],
+	["/profile", "Profile"],
+	["/duo-callback", "Duo Callback"],
+];
+
+function titleForPath(pathname: string): string {
+	const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+	const match = ROUTE_TITLES.find(([path]) => path === normalized);
+	return match ? `${match[1]} - ShieldPM` : "ShieldPM";
+}
+
 function Content() {
 	const location = useLocation();
+	const initialPath = useRef(location.pathname);
+
+	// A client-side route change must announce itself: update the window title and
+	// move focus to the main landmark so keyboard and screen-reader users start at
+	// the new content instead of the sidebar link they just activated.
+	useEffect(() => {
+		document.title = titleForPath(location.pathname);
+		if (initialPath.current === location.pathname) return;
+		initialPath.current = location.pathname;
+		const main = document.getElementById("app-content");
+		main?.focus({ preventScroll: true });
+	}, [location.pathname]);
+
 	const routes = (
 		<AnimatePresence mode="wait">
 			<Routes location={location} key={location.pathname}>
@@ -237,6 +280,21 @@ function Router() {
 	const health = useHealth();
 	const { authenticated, loading } = useAuthState();
 
+	useEffect(() => {
+		if (health.isLoading) return;
+		if (health.isError || health.data?.status !== "OK") {
+			document.title = "Service Unavailable - ShieldPM";
+			return;
+		}
+		if (!health.data?.setup) {
+			document.title = "Setup - ShieldPM";
+			return;
+		}
+		if (!loading && !authenticated) {
+			document.title = "Sign In - ShieldPM";
+		}
+	}, [authenticated, health.data?.setup, health.data?.status, health.isError, health.isLoading, loading]);
+
 	if (health.isLoading) {
 		return <LoadingPage />;
 	}
@@ -247,11 +305,13 @@ function Router() {
 
 	if (!health.data?.setup) {
 		return (
-			<RouteErrorBoundary>
-				<Suspense fallback={<LoadingPage />}>
-					<Setup />
-				</Suspense>
-			</RouteErrorBoundary>
+			<BrowserRouter>
+				<RouteErrorBoundary>
+					<Suspense fallback={<LoadingPage />}>
+						<Setup />
+					</Suspense>
+				</RouteErrorBoundary>
+			</BrowserRouter>
 		);
 	}
 

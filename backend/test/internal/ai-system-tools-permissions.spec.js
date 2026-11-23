@@ -137,7 +137,7 @@ describe("AI system tool permissions", () => {
 
 		const results = await executeTools(access, [{ name: systemStatusToolName, args: {} }]);
 
-		expect(results.map((result) => result.result)).toEqual(["Error: Not allowed"]);
+		expect(results.map((result) => result.result)).toEqual([`Error: Tool not permitted: ${systemStatusToolName}`]);
 	});
 
 	it("does not advertise or read audit logs without auditlog:list", async () => {
@@ -152,7 +152,7 @@ describe("AI system tool permissions", () => {
 		const results = await executeTools(access, [{ name: auditLogToolName, args: {} }]);
 
 		expect(toolNames).not.toContain(auditLogToolName);
-		expect(results.map((result) => result.result)).toEqual(["Error: Not allowed"]);
+		expect(results.map((result) => result.result)).toEqual([`Error: Tool not permitted: ${auditLogToolName}`]);
 		expect(mocks.getAuditLog).not.toHaveBeenCalled();
 	});
 
@@ -178,7 +178,9 @@ describe("AI system tool permissions", () => {
 		]);
 
 		expect(toolNames).not.toContain(clientCertificateToolName);
-		expect(results.map((result) => result.result)).toEqual(["Error: Not allowed"]);
+		expect(results.map((result) => result.result)).toEqual([
+			`Error: Tool not permitted: ${clientCertificateToolName}`,
+		]);
 		expect(mocks.createClientCertificate).not.toHaveBeenCalled();
 	});
 
@@ -214,8 +216,10 @@ describe("AI system tool permissions", () => {
 		const results = await executeTools(access, [{ name: certificateRenewalToolName, args: { id: 42 } }]);
 
 		expect(toolNames).not.toContain(certificateRenewalToolName);
-		expect(results.map((result) => result.result)).toEqual(["Error: Not allowed"]);
-		expect(mocks.renewCertificate).toHaveBeenCalledWith(access, { id: 42 });
+		expect(results.map((result) => result.result)).toEqual([
+			`Error: Tool not permitted: ${certificateRenewalToolName}`,
+		]);
+		expect(mocks.renewCertificate).not.toHaveBeenCalled();
 		expect(mocks.requestCertbot).not.toHaveBeenCalled();
 	});
 
@@ -236,11 +240,9 @@ describe("AI system tool permissions", () => {
 
 		const results = await executeTools(access, systemToolCalls);
 
-		expect(results.map((result) => result.result)).toEqual([
-			"Error: Not allowed",
-			"Error: Not allowed",
-			"Error: Not allowed",
-		]);
+		expect(results.map((result) => result.result)).toEqual(
+			systemToolNames.map((name) => `Error: Tool not permitted: ${name}`),
+		);
 		expect(mocks.testNginx).not.toHaveBeenCalled();
 		expect(mocks.reloadNginx).not.toHaveBeenCalled();
 		expect(mocks.fetchIpRanges).not.toHaveBeenCalled();
@@ -259,9 +261,6 @@ describe("AI system tool permissions", () => {
 		expect(mocks.testNginx).toHaveBeenCalledOnce();
 		expect(mocks.reloadNginx).toHaveBeenCalledOnce();
 		expect(mocks.fetchIpRanges).toHaveBeenCalledOnce();
-		expect(access.can).toHaveBeenCalledTimes(3);
-		expect(access.can).toHaveBeenNthCalledWith(1, "settings:update");
-		expect(access.can).toHaveBeenNthCalledWith(2, "settings:update");
-		expect(access.can).toHaveBeenNthCalledWith(3, "settings:update");
+		expect(access.can).toHaveBeenCalledWith("settings:update");
 	});
 });

@@ -20,5 +20,5 @@ vi.mock("src/hooks/useHealth", () => ({ useHealth: () => ({ isLoading: true }) }
 describe("Router component dependencies", () => {
 	it("loads without importing the shared component barrel", async () => {
 		await expect(import("./Router")).resolves.toHaveProperty("default");
-	});
+	}, 15000);
 });

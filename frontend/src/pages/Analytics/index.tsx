@@ -26,6 +26,9 @@ const Analytics = () => {
 	const isDemo = health.data?.demo;
 	const { loading, series, summary, error } = useAnalyticsData(selectedHostId, range);
 	const { dbStats, networkSpeed } = useAnalyticsLiveMetrics();
+	const detailWindow = (
+		summary as unknown as { detail_window?: { complete?: boolean; retention_hours?: number } } | null | undefined
+	)?.detail_window;
 
 	useEffect(() => {
 		if (!hosts?.length) {
@@ -113,6 +116,18 @@ const Analytics = () => {
 			<AnalyticsCharts series={series} />
 
 			<AnalyticsGeography summary={summary} />
+
+			{detailWindow?.complete === false && (
+				<p className="text-xs text-muted-foreground">
+					{intl.formatMessage(
+						{
+							defaultMessage: "Top lists and recent requests cover only the last {hours} hours.",
+							id: "analytics.detail-window-note",
+						},
+						{ hours: detailWindow.retention_hours ?? 24 },
+					)}
+				</p>
+			)}
 
 			{/* Top Lists */}
 			<AnalyticsTopLists summary={summary} isDemo={isDemo} />

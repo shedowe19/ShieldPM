@@ -17,7 +17,7 @@ describe("createProxyHostInitialValues", () => {
 			anubisEnabled: false,
 			anubisRules: [],
 			bandwidthLimit: "",
-			blockExploits: false,
+			blockExploits: true,
 			cachingEnabled: false,
 			certificateId: 0,
 			crowdsecEnabled: false,
@@ -84,6 +84,13 @@ describe("createProxyHostInitialValues", () => {
 			uploadRelayTargetPath: "/",
 			zstdEnabled: false,
 		});
+	});
+
+	it("enables the WAF by default for new hosts but keeps an existing host's choice", () => {
+		expect(createProxyHostInitialValues({}).blockExploits).toBe(true);
+		expect(createProxyHostInitialValues({ id: 12 }).blockExploits).toBe(false);
+		expect(createProxyHostInitialValues({ id: 12, blockExploits: true }).blockExploits).toBe(true);
+		expect(createProxyHostInitialValues({ blockExploits: false }).blockExploits).toBe(false);
 	});
 
 	it("preserves configured values while formatting maintenance timestamps for datetime-local fields", () => {

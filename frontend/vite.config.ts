@@ -78,8 +78,20 @@ export default defineConfig({
 
 	test: {
 		environment: "happy-dom",
-		exclude: [...configDefaults.exclude, "e2e/**"],
+		exclude: [...configDefaults.exclude, "e2e/**", "e2e-real/**"],
 		setupFiles: ["./vitest-setup.js"],
+		coverage: {
+			provider: "v8",
+			reporter: ["text-summary"],
+			include: ["src/**/*.{ts,tsx}"],
+			exclude: ["src/**/*.test.{ts,tsx}", "src/**/*.spec.{ts,tsx}", "src/test/**", "src/vite-env.d.ts"],
+			thresholds: {
+				branches: 68,
+				functions: 63,
+				lines: 74,
+				statements: 73,
+			},
+		},
 	},
 	assetsInclude: ["**/*.md", "**/*.png", "**/*.svg"],
 });

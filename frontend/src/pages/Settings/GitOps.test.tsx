@@ -94,14 +94,35 @@ describe("GitOps settings actions", () => {
 	it.each([true, false])("closes the import dialog only on success (%s)", (success) => {
 		render(<GitOps />);
 		fireEvent.click(screen.getByRole("button", { name: /settings.gitops.import/ }));
-		fireEvent.click(screen.getByRole("button", { name: "Import" }));
+		const confirmButton = screen.getByRole("button", { name: /Import and delete missing objects/ });
+		expect(confirmButton).toBeDisabled();
+		fireEvent.change(screen.getByLabelText(/Type IMPORT to confirm/), { target: { value: "IMPORT" } });
+		expect(confirmButton).toBeEnabled();
+		fireEvent.click(confirmButton);
 		expect(mutations.importConfig.mutate).toHaveBeenCalledWith(true, expect.any(Object));
-		act(() => mutations.importConfig.mutate.mock.calls[0][1].onSuccess({ success }));
+		act(() =>
+			mutations.importConfig.mutate.mock.calls[0][1].onSuccess({
+				success,
+				imported: 4,
+				skipped: 1,
+				deleted: 2,
+			}),
+		);
 		if (success) {
 			expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+			expect(screen.getByText(/Removed during the full sync: 2/)).toBeInTheDocument();
 		} else {
 			expect(screen.getByRole("dialog")).toBeInTheDocument();
 		}
+	});
+
+	it("states the destructive scope of a full sync before it can be confirmed", () => {
+		render(<GitOps />);
+		fireEvent.click(screen.getByRole("button", { name: /settings.gitops.import/ }));
+		expect(screen.getByText(/This is a full sync/)).toBeInTheDocument();
+		expect(screen.getByText(/users \(including their roles and permissions\)/)).toBeInTheDocument();
+		expect(screen.getByText(/missing in the repository are deleted/)).toBeInTheDocument();
+		expect(screen.getByText(/GitOps does not contain certificate private keys/)).toBeInTheDocument();
 	});
 
 	it("clears a saved token from the form and omits unchanged credentials on later saves", () => {

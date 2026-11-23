@@ -10,9 +10,16 @@ import { showError } from "src/notifications";
 export interface AuthContextType {
 	authenticated: boolean;
 	completeLogin: (response: TokenResponse) => void;
+	impersonating: boolean;
 	login: (username: string, password: string) => Promise<void>;
 	loginAs: (id: number) => Promise<void>;
+	/** Ends the session completely. Never restores an impersonated administrator. */
 	logout: () => void;
+	/**
+	 * Explicitly return from an impersonated session to the administrator.
+	 * Never call this implicitly: ending a session must not raise privileges.
+	 */
+	restoreAdminSession: () => Promise<void>;
 	loading?: boolean;
 }
 
@@ -27,6 +34,7 @@ interface Props {
 function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props) {
 	const queryClient = useQueryClient();
 	const [authenticated, setAuthenticated] = useState(false);
+	const [impersonating, setImpersonating] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [sessionVersion, setSessionVersion] = useState(0);
 	const [isDuoCallback] = useState(
@@ -39,6 +47,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	const handleTokenUpdate = useCallback((response: TokenResponse) => {
 		AuthStore.set(response);
 		setAuthenticated(true);
+		setImpersonating(false);
 	}, []);
 
 	const completeLogin = useCallback(
@@ -56,6 +65,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		// to the administrator, so keep an in-memory impersonated session intact.
 		if (AuthStore.isImpersonating) {
 			setAuthenticated(true);
+			setImpersonating(true);
 			setLoading(false);
 			return;
 		}
@@ -96,6 +106,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		const handleAuthenticationExpired = () => {
 			sessionGeneration.current += 1;
 			setAuthenticated(false);
+			setImpersonating(false);
 		};
 
 		window.addEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
@@ -128,41 +139,63 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		if (generation !== sessionGeneration.current) return;
 		sessionGeneration.current += 1;
 		AuthStore.add(response, true);
+		setImpersonating(true);
 		queryClient.clear();
 		setSessionVersion((version) => version + 1);
 	};
 
+	/**
+	 * Perform a real logout. This is the only path behind the "Sign out" action and
+	 * intentionally never calls `restoreSession`: after an impersonation it must not
+	 * silently turn the target user back into the administrator. `/tokens/logout`
+	 * also clears the backup administrator cookie.
+	 */
+	const startFullLogout = async () => {
+		const request = ++logoutRequest.current;
+		setLoading(true);
+		AuthStore.clear();
+		setAuthenticated(false);
+		setImpersonating(false);
+		queryClient.clear();
+		try {
+			// Keep Login unmounted until this response has cleared the old cookies.
+			await api.post({ url: "/tokens/logout", silentAuth: true });
+		} catch (error) {
+			if (mounted.current && request === logoutRequest.current) {
+				showError(error instanceof Error ? error.message : String(error));
+			}
+		} finally {
+			if (mounted.current && request === logoutRequest.current) {
+				setLoading(false);
+			}
+		}
+	};
+
 	const logout = async () => {
+		sessionGeneration.current += 1;
+		await startFullLogout();
+	};
+
+	/**
+	 * Explicitly leave an impersonated session and resume the administrator.
+	 * Only wire this to a clearly labelled confirmation ("Return to administrator"),
+	 * never to the regular sign-out action. If the backup session is gone, the user
+	 * is signed out completely instead of staying on the impersonated identity.
+	 */
+	const restoreAdminSession = async () => {
 		const generation = ++sessionGeneration.current;
 		try {
-			// Check if we have a backup admin session cookie on the backend
 			const response = await restoreSession();
 			if (generation !== sessionGeneration.current) return;
 			sessionGeneration.current += 1;
 			AuthStore.add(response);
+			setImpersonating(false);
 			queryClient.clear();
 			setSessionVersion((version) => version + 1);
 		} catch (_err) {
 			if (generation !== sessionGeneration.current) return;
 			sessionGeneration.current += 1;
-			const request = ++logoutRequest.current;
-			// No backup session found or failed to restore, do a full logout
-			setLoading(true);
-			AuthStore.clear();
-			setAuthenticated(false);
-			queryClient.clear();
-			try {
-				// Keep Login unmounted until this response has cleared the old cookies.
-				await api.post({ url: "/tokens/logout", silentAuth: true });
-			} catch (error) {
-				if (mounted.current && request === logoutRequest.current) {
-					showError(error instanceof Error ? error.message : String(error));
-				}
-			} finally {
-				if (mounted.current && request === logoutRequest.current) {
-					setLoading(false);
-				}
-			}
+			await startFullLogout();
 		}
 	};
 
@@ -195,7 +228,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		authenticated,
 	);
 
-	const value = { authenticated, completeLogin, login, logout, loginAs, loading };
+	const value = { authenticated, completeLogin, impersonating, login, logout, loginAs, loading, restoreAdminSession };
 
 	return (
 		<AuthContext.Provider value={value}>

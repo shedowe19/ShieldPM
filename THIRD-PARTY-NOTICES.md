@@ -565,7 +565,6 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [@types/react-dom@19.3.0](https://www.npmjs.com/package/@types/react-dom/v/19.3.0) - MIT
 - [@types/react-transition-group@4.4.12](https://www.npmjs.com/package/@types/react-transition-group/v/4.4.12) - MIT
 - [@types/react@19.3.0](https://www.npmjs.com/package/@types/react/v/19.3.0) - MIT
-- [@types/ua-parser-js@0.7.39](https://www.npmjs.com/package/@types/ua-parser-js/v/0.7.39) - MIT
 - [@types/unist@3.0.3](https://www.npmjs.com/package/@types/unist/v/3.0.3) - MIT
 - [@types/use-sync-external-store@0.0.6](https://www.npmjs.com/package/@types/use-sync-external-store/v/0.0.6) - MIT
 - [@typescript/typescript-linux-x64@7.0.2](https://www.npmjs.com/package/@typescript/typescript-linux-x64/v/7.0.2) - Apache-2.0
@@ -795,8 +794,6 @@ ShieldPM offers HTTPS URL presets for the VPN and VPN/datacenter lists maintaine
 - [trough@2.2.0](https://www.npmjs.com/package/trough/v/2.2.0) - MIT
 - [tslib@2.8.1](https://www.npmjs.com/package/tslib/v/2.8.1) - 0BSD
 - [typescript@7.0.2](https://www.npmjs.com/package/typescript/v/7.0.2) - Apache-2.0
-- [ua-is-frozen@0.1.2](https://www.npmjs.com/package/ua-is-frozen/v/0.1.2) - MIT
-- [ua-parser-js@2.0.10](https://www.npmjs.com/package/ua-parser-js/v/2.0.10) - AGPL-3.0-or-later
 - [unified@11.0.5](https://www.npmjs.com/package/unified/v/11.0.5) - MIT
 - [unist-util-filter@5.0.1](https://www.npmjs.com/package/unist-util-filter/v/5.0.1) - MIT
 - [unist-util-is@6.0.1](https://www.npmjs.com/package/unist-util-is/v/6.0.1) - MIT

@@ -3,10 +3,13 @@ import express from "express";
 import fileUpload from "express-fileupload";
 import rateLimit from "express-rate-limit";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
+import internalAuditLog from "../../internal/audit-log.js";
 import internalCertificate from "../../internal/certificate.js";
 import internalPki from "../../internal/pki.js";
 import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
+import { AUDIT_ACTION } from "../../lib/security-events.js";
+import { CERTBOT_EXEC_TIMEOUT_MS } from "../../lib/utils.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
 import { express as logger } from "../../logger.js";
@@ -69,6 +72,13 @@ const createCertLimiter = rateLimit({
  */
 router.get("/root-ca", jwtdecode(), async (_req, res) => {
 	const certContent = await internalPki.getRootCa();
+	await internalAuditLog.add(res.locals.access, {
+		action: AUDIT_ACTION.CERTIFICATE_ROOT_CA_DOWNLOADED,
+		object_type: "certificate",
+		object_id: 0,
+		outcome: "success",
+		meta: { format: "pem" },
+	});
 	res.status(200)
 		.header("Content-Type", "application/x-pem-file")
 		.header("Content-Disposition", 'attachment; filename="root_ca.crt"')
@@ -116,7 +126,7 @@ router
 	 */
 	.post(async (req, res, _next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/certificates", "post"), req.body);
-		req.setTimeout(900000); // 15 minutes timeout
+		req.setTimeout(CERTBOT_EXEC_TIMEOUT_MS + 60_000); // certbot's own timeout plus one minute
 		const result = await internalCertificate.create(res.locals.access, payload);
 		res.status(201).send(result);
 	});
@@ -148,6 +158,14 @@ router
 		);
 
 		await res.locals.access.can("certificates:create", payload);
+		if (!(await res.locals.access.isAdmin())) {
+			throw new errs.PermissionError("Issuing internal client certificates requires administrator privileges");
+		}
+		await internalAuditLog.add(res.locals.access, {
+			action: "client_certificate.created",
+			object_type: "certificate",
+			meta: { common_name: payload.common_name, years: payload.years },
+		});
 		const tmpDir = await fs.mkdtemp("/tmp/shieldpm-client-cert-");
 		const cleanupTmpDir = async () => {
 			try {
@@ -372,7 +390,7 @@ router
 	 * Renew certificate
 	 */
 	.post(async (req, res) => {
-		req.setTimeout(900000); // 15 minutes timeout
+		req.setTimeout(CERTBOT_EXEC_TIMEOUT_MS + 60_000); // certbot's own timeout plus one minute
 		const result = await internalCertificate.renew(res.locals.access, {
 			id: certificateId(req.params.certificate_id),
 		});

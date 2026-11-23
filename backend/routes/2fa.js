@@ -11,6 +11,7 @@ import twoFaService from "../internal/2fa-service.js";
 import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import userIdFromMe from "../lib/express/user-id-from-me.js";
+import { AUDIT_ACTION } from "../lib/security-events.js";
 import UserTwoFa from "../models/user-2fa.js";
 import UserTwoFaBackupCode from "../models/user-2fa-backup-codes.js";
 
@@ -33,6 +34,27 @@ router.use(jwtdecode());
 
 // Resolve :user_id ("me" → numeric id)
 router.use(userIdFromMe);
+
+/**
+ * @param {import("../lib/types.js").Access} access
+ * @param {number} userId
+ * @param {string} action
+ * @param {Record<string, any>} [meta]
+ */
+const auditTwoFactor = async (access, userId, action, meta = {}) => {
+	try {
+		const { default: internalAuditLog } = await import("../internal/audit-log.js");
+		await internalAuditLog.add(access, {
+			action,
+			object_type: "user",
+			object_id: userId,
+			user_id: userId,
+			meta,
+		});
+	} catch {
+		// Auditing must never block enabling or removing a second factor.
+	}
+};
 
 /**
  * Helper: assert the requesting user is the target user or an admin.
@@ -118,6 +140,7 @@ router.post("/totp/enable", twoFaRateLimiter, async (req, res) => {
 	}
 
 	const backupCodes = await twoFaService.verifyAndEnableTotp(userId, code);
+	await auditTwoFactor(res.locals.access, userId, AUDIT_ACTION.TWO_FACTOR_ENABLED, { method: "totp" });
 	res.status(200).json({ message: "TOTP enabled successfully", backup_codes: backupCodes });
 });
 
@@ -138,6 +161,7 @@ router.post("/yubikey/add", twoFaRateLimiter, async (req, res) => {
 	}
 
 	const record = await twoFaService.addYubikey(userId, otp, label);
+	await auditTwoFactor(res.locals.access, userId, AUDIT_ACTION.TWO_FACTOR_ENABLED, { method: "yubikey" });
 	res.status(201).json({
 		id: record.id,
 		type: record.type,
@@ -187,6 +211,7 @@ router.post("/passkey/register/complete", twoFaRateLimiter, async (req, res) => 
 		req,
 		label,
 	);
+	await auditTwoFactor(res.locals.access, userId, AUDIT_ACTION.TWO_FACTOR_ENABLED, { method: "passkey" });
 	res.status(201).json({ message: "Passkey registered successfully", backup_codes: result.backupCodes });
 });
 
@@ -208,6 +233,7 @@ router.post("/duo/setup", twoFaRateLimiter, async (req, res) => {
 		apiHost: api_host,
 		redirectUrl: redirect_url,
 	});
+	await auditTwoFactor(res.locals.access, userId, AUDIT_ACTION.TWO_FACTOR_ENABLED, { method: "duo" });
 
 	res.status(201).json({
 		id: record.id,
@@ -235,6 +261,7 @@ router.delete("/:methodId", twoFaRateLimiter, async (req, res) => {
 	}
 
 	await twoFaService.removeTwoFaMethod(userId, methodId);
+	await auditTwoFactor(res.locals.access, userId, AUDIT_ACTION.TWO_FACTOR_DISABLED, { method_id: methodId });
 	res.sendStatus(204);
 });
 
@@ -259,6 +286,7 @@ router.get("/backup-codes/count", async (req, res) => {
 router.post("/backup-codes/regenerate", twoFaRateLimiter, async (req, res) => {
 	const userId = await requireSelfOrAdmin(req, res);
 	const codes = await twoFaService.regenerateBackupCodes(userId);
+	await auditTwoFactor(res.locals.access, userId, AUDIT_ACTION.TWO_FACTOR_BACKUP_CODES_REGENERATED);
 	res.status(200).json({ backup_codes: codes });
 });
 

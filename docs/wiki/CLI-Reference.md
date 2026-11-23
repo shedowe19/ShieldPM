@@ -8,7 +8,7 @@ ShieldPM includes several internal CLI tools and scripts to help manage the appl
 
 Updates ShieldPM to the latest version. Available on **Native** and **LXC** installations.
 
-- **Usage:** `sudo update-shieldpm` on native installations; the pre-built LXC template also installs the `update` alias. Use `sudo update-shieldpm --branch <branch>` to select another source branch (default: `develop`). The updater asks for confirmation before changing the installation.
+- **Usage:** `sudo update-shieldpm` on native installations; the pre-built LXC template also installs the `update` alias. By default the updater installs the latest published release tag; use `sudo update-shieldpm --branch <branch-or-tag>` to select another source deliberately (for example `--branch develop` for a development build). The updater asks for confirmation before changing the installation.
 - **What it does:**
   1.  Self-updates the script itself.
   2.  Checks GitHub for newer code.

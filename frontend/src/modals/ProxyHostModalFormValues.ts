@@ -84,7 +84,8 @@ export const createProxyHostInitialValues = (data: Partial<ProxyHost> = {}): Pro
 	cachingEnabled: data.cachingEnabled || false,
 	zstdEnabled: data.zstdEnabled || false,
 	disableBuffering: data.disableBuffering || false,
-	blockExploits: data.blockExploits || false,
+	// Secure default: new hosts get the WAF; an existing host keeps its stored choice.
+	blockExploits: data.blockExploits ?? !data.id,
 	allowWebsocketUpgrade: data.allowWebsocketUpgrade || false,
 	maintenanceOnFailure: data.maintenanceOnFailure || false,
 	// PHP hosting (for scheme=path)

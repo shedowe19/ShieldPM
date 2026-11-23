@@ -9,6 +9,13 @@
 # ║  For a simpler setup, see compose.easy.yaml                                  ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
+# Bounded container logs: the json-file driver is otherwise unbounded.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
 
   # ┌──────────────────────────────────────────────────────────────────────────┐
@@ -19,6 +26,22 @@ services:
     container_name: shieldpm
     restart: always
     network_mode: host
+    stop_grace_period: 30s
+    security_opt:
+      - "no-new-privileges:true"
+    # The application runs as root to own /data. Drop every capability and add
+    # back only what Nginx, chown and the entrypoint need.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
+      - KILL
+    logging: *default-logging
 
     volumes:
       - "/opt/shieldpm:/data"
@@ -42,6 +65,8 @@ services:
       # - "DISABLE_HTTP=false"                     # Stop listening on port 80
       # - "DISABLE_H3_QUIC=false"                  # Fully disable HTTP/3 + QUIC
       # - "LISTEN_PROXY_PROTOCOL=false"            # Use PROXY protocol (disables H3)
+      # - "STREAM_LISTEN_LOCALHOST=false"          # Bind stream hosts to 127.0.0.1 only
+      # - "BACKUP_MAX_BYTES=68719476736"            # Instance backup ceiling, default: 64 GiB
 
       # ── Bind Addresses ─────────────────────────────────────────────────────
       # - "IPV4_BINDING=127.0.0.1"                 # IPv4 bind for all hosts
@@ -60,7 +85,7 @@ services:
       # - "DB_MYSQL_HOST=127.0.0.1"
       # - "DB_MYSQL_PORT=3306"
       # - "DB_MYSQL_USER=npm"
-      # - "DB_MYSQL_PASSWORD=npm"
+      # - "DB_MYSQL_PASSWORD=${DB_MYSQL_PASSWORD}"   # Generate: openssl rand -hex 24
       # - "DB_MYSQL_NAME=npm"
       # - "DB_MYSQL_SSL=false"
       # - "DB_MYSQL_SSL_REJECT_UNAUTHORIZED=true"
@@ -70,7 +95,7 @@ services:
       # - "DB_POSTGRES_HOST=127.0.0.1"
       # - "DB_POSTGRES_PORT=5432"
       # - "DB_POSTGRES_USER=npm"
-      # - "DB_POSTGRES_PASSWORD=npm"
+      # - "DB_POSTGRES_PASSWORD=${DB_POSTGRES_PASSWORD}"   # Generate: openssl rand -hex 24
       # - "DB_POSTGRES_NAME=npm"
 
       # ── SSL & ACME ────────────────────────────────────────────────────────
@@ -88,7 +113,7 @@ services:
       # - "CRT=72"                                 # Hours between cert renewal checks, default: 23
 
       # ── Logging & Analytics ────────────────────────────────────────────────
-      # - "LOGROTATE=true"                         # Enable access logs + daily rotation
+      # - "LOGROTATE=true"                         # Default: true; access + error logs rotate
       # - "LOGROTATIONS=7"                         # Keep N rotated logs, default: 3
       # - "NGINX_LOG_NOT_FOUND=true"               # Log 404s to docker logs
       # - "GOA=true"                               # Enable GoAccess (implies LOGROTATE=true)
@@ -181,6 +206,9 @@ services:
   #   image: docker.io/crowdsecurity/crowdsec:latest
   #   restart: always
   #   network_mode: bridge
+  #   logging: *default-logging
+  #   security_opt:
+  #     - "no-new-privileges:true"
   #   ports:
   #     - "127.0.0.1:7422:7422"
   #     - "127.0.0.1:8080:8080"
@@ -204,13 +232,14 @@ services:
   #   image: mysql:8                               # or mariadb:10
   #   restart: always
   #   network_mode: bridge
+  #   logging: *default-logging
   #   environment:
-  #     - "MYSQL_ROOT_PASSWORD=npm"
+  #     - "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD}"
   #     - "MYSQL_DATABASE=npm"
   #     - "MYSQL_USER=npm"
-  #     - "MYSQL_PASSWORD=npm"
+  #     - "MYSQL_PASSWORD=${MYSQL_PASSWORD:?set MYSQL_PASSWORD}"
   #   ports:
-  #     - "3306:3306"
+  #     - "127.0.0.1:3306:3306"                    # Never expose the database publicly
   #   volumes:
   #     - "db_data:/var/lib/mysql"
 
@@ -221,12 +250,13 @@ services:
   #   image: postgres:17-bookworm
   #   restart: always
   #   network_mode: bridge
+  #   logging: *default-logging
   #   environment:
   #     - "POSTGRES_DB=npm"
   #     - "POSTGRES_USER=npm"
-  #     - "POSTGRES_PASSWORD=npm"
+  #     - "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}"
   #   ports:
-  #     - "5432:5432"
+  #     - "127.0.0.1:5432:5432"                    # Never expose the database publicly
   #   volumes:
   #     - "/opt/shieldpm/postgres:/var/lib/postgresql/data"
 
@@ -238,6 +268,7 @@ services:
   #   image: ghcr.io/maxmind/geoipupdate:latest
   #   restart: always
   #   network_mode: bridge
+  #   logging: *default-logging
   #   environment:
   #     - "TZ=Europe/Berlin"
   #     - "GEOIPUPDATE_EDITION_IDS=GeoLite2-Country GeoLite2-City GeoLite2-ASN"
@@ -254,6 +285,9 @@ services:
   #   image: ghcr.io/shedowe19/shieldpm:caddy
   #   restart: always
   #   network_mode: bridge
+  #   logging: *default-logging
+  #   security_opt:
+  #     - "no-new-privileges:true"
   #   ports:
   #     - "80:80"
   #   environment:

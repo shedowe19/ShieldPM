@@ -12,16 +12,21 @@ flowchart TD
   L --> B["Backend analytics tailer"]
   L --> G["GoAccess (optional)"]
   B --> D["Application database"]
+  D --> H["Hourly rollup job"]
+  H --> D
   D --> A["Analytics API"]
   A --> R["React dashboard"]
 ```
+
+The analytics API reads recent ranges from minute aggregates and long ranges from the hourly
+rollup. Request details remain in the raw table for the top lists and the recent-request table.
 
 ---
 
 ## Key Features
 
 - **Traffic Overview:** displays recently ingested request counts and the live network throughput of the server. Aggregates flush approximately every 10 seconds.
-- **Requests Over Time:** Area chart showing traffic trends over the last 1h, 24h, 7d, or 30d.
+- **Requests Over Time:** Area chart showing traffic trends over the last 1h, 24h, 7d, or 30d. The 1h/24h views use minute aggregates; the 7d/30d views use the hourly rollup.
 - **Status Codes:** Bar chart breakdown of HTTP response codes (2xx, 3xx, 4xx, 5xx).
 - **Top Lists:**
   - **Countries:** GeoIP-based breakdown of traffic sources.
@@ -39,13 +44,27 @@ flowchart TD
     - **MySQL:** Uses `Handler_read_rnd_next` and `Handler_write` status variables.
     - **PostgreSQL:** Uses `blks_read`, `blks_hit`, and tuple statistics from `pg_stat_database`.
 
+## Storage model and hourly rollup
+
+ShieldPM keeps three analytics layers in the application database:
+
+- `analytics_logs` stores one row per request (IP address, path, user agent, status, bytes and duration). It feeds the top lists, the recent-request table and the response-time ranking.
+- `analytic_count` stores one-minute aggregates (requests, bytes and 2xx–5xx counters). The 1-hour and 24-hour views read this layer.
+- `analytics_hourly` stores one row per host and completed hour. A background rollup job derives it from `analytics_logs`; the 7-day and 30-day views and long-range KPI queries read it.
+
+The rollup runs at startup and every five minutes. For each completed hour it replaces the stored counters instead of adding to them, and it records the last committed hour in `analytics_rollup_state`. Re-running an hour, restarting the process or retrying after a database error therefore produces the same totals. A short late window re-aggregates recent committed hours when late detail rows arrive; without late rows the job only processes the new hour.
+
+Raw detail rows are pruned only after the rollup has committed coverage for them. If the rollup has not run yet, the detail rows stay even when their configured retention has elapsed. This prevents a failed or delayed rollup from deleting data that no aggregate has captured. Minute and hourly aggregates share `ANALYTICS_AGGREGATION_RETENTION_DAYS`; raw detail uses `ANALYTICS_DETAILED_RETENTION_HOURS`. If the detail retention is shorter than the rollup's late window, the late window shrinks so a partially pruned hour is never aggregated.
+
 ## Privacy
 
-The built-in analytics service does not need a third-party analytics provider. It stores IP addresses and other request details locally. By default, detailed database rows are deleted after 24 hours and minute aggregates after 35 days; the retention job runs on startup and hourly. Set `ANALYTICS_DETAILED_RETENTION_HOURS` and `ANALYTICS_AGGREGATION_RETENTION_DAYS` to change those periods. Nginx log-file rotation is a separate mechanism. GoAccess can be configured independently with its own `GOACLA` options, including IP anonymization.
+The built-in analytics service does not need a third-party analytics provider. It stores IP addresses and other request details locally. By default, detailed database rows are deleted after 24 hours and minute and hourly aggregates after 35 days; the retention job runs on startup and hourly. Set `ANALYTICS_DETAILED_RETENTION_HOURS` and `ANALYTICS_AGGREGATION_RETENTION_DAYS` to change those periods. Detailed rows are only removed once the hourly rollup has committed the corresponding coverage. Nginx log-file rotation is a separate mechanism. GoAccess can be configured independently with its own `GOACLA` options, including IP anonymization.
 
 ## Configuration
 
 Built-in analytics are enabled by default. GoAccess is **off** by default (`GOA=false`); enable it with `GOA=true` to use its separate dashboard on `GOA_PORT` (default `91`). Per-host analytics is limited to hosts the user can view according to server-side permission checks; global analytics requires the `analytics:list` permission.
+
+Every enabled proxy host writes its requests to `/data/nginx/json_access.log` in the `json_analytics` format, so the dashboard and the request history cover all proxy hosts. The separate per-host traffic log (`spm_traffic_<host-id>`) is written only for hosts with an upstream pool or cache policy. Log rotation caps `json_access.log` at 100 MB by default and deletes rotated files after a few cycles; the analytics retention settings above bound the database rows.
 
 ### Enabling GeoIP (Country Statistics)
 

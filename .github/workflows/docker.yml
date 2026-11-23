@@ -50,6 +50,7 @@ on:
 env:
   IMAGE_NAME: ghcr.io/shedowe19/shieldpm
   LXC_TEMPLATE_NAME: "" # Placeholder for linter
+  SHIELDPM_NGINX_IMAGE: ${{ vars.SHIELDPM_NGINX_IMAGE }}
 
 # Arch tags must not be overwritten by another run before its manifest merges.
 concurrency:
@@ -76,7 +77,7 @@ jobs:
       is_pr: ${{ steps.calc.outputs.is_pr }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: "Calculate Version & Tags"
         id: calc
@@ -117,10 +118,10 @@ jobs:
             flags: "FLAGS=-mbranch-protection=standard"
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4.2.0
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
         with:
           driver-opts: env.BUILDKIT_STEP_LOG_MAX_SIZE=-1
 
@@ -128,7 +129,7 @@ jobs:
         # Same-repository PRs need authentication to pull the Nginx base image.
         # Fork PRs must not receive registry credentials; PR builds never push.
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-        uses: docker/login-action@v4.6.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -142,10 +143,29 @@ jobs:
           # Save full commit hash for update-shieldpm
           echo "${{ github.sha }}" > backend/.git-commit
 
+      - name: "🔐 Resolve pinned Nginx base image"
+        id: base
+        env:
+          PINNED_NGINX_IMAGE: ${{ vars.SHIELDPM_NGINX_IMAGE }}
+        run: |
+          CANONICAL="ghcr.io/shedowe19/shieldpm-nginx"
+          IMAGE="${PINNED_NGINX_IMAGE:-$CANONICAL:master}"
+          case "$IMAGE" in
+            "$CANONICAL"|"$CANONICAL":*|"$CANONICAL"@sha256:*) ;;
+            *) echo "Nginx base must be $CANONICAL." >&2; exit 1 ;;
+          esac
+          if [[ "$IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]; then
+            DIGEST="${IMAGE##*@}"
+          else
+            DIGEST=$(docker buildx imagetools inspect "$IMAGE" --format '{{json .Manifest.Digest}}' | tr -d '"')
+            [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "Unable to resolve an immutable Nginx base digest." >&2; exit 1; }
+          fi
+          echo "image=$CANONICAL@$DIGEST" >> "$GITHUB_OUTPUT"
+
       # --- Build Steps ---
 
       - name: "📦 Build Stage: Frontend"
-        uses: docker/build-push-action@v7.3.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: ./Dockerfile
@@ -153,12 +173,13 @@ jobs:
           push: false
           outputs: type=cacheonly
           build-args: |
+            SHIELDPM_NGINX_IMAGE=${{ steps.base.outputs.image }}
             ${{ matrix.flags }}
           cache-from: type=gha,scope=${{ matrix.arch }}-frontend
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-frontend
 
       - name: "📦 Build Stage: Backend"
-        uses: docker/build-push-action@v7.3.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: ./Dockerfile
@@ -166,19 +187,23 @@ jobs:
           push: false
           outputs: type=cacheonly
           build-args: |
+            SHIELDPM_NGINX_IMAGE=${{ steps.base.outputs.image }}
             ${{ matrix.flags }}
           cache-from: type=gha,scope=${{ matrix.arch }}-backend
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-backend
 
       - name: "🚀 Build Final & Push"
-        uses: docker/build-push-action@v7.3.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: ./Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           load: ${{ github.event_name == 'pull_request' }}
+          provenance: ${{ github.event_name != 'pull_request' && 'mode=max' || '' }}
+          sbom: ${{ github.event_name != 'pull_request' }}
           tags: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
           build-args: |
+            SHIELDPM_NGINX_IMAGE=${{ steps.base.outputs.image }}
             ${{ matrix.flags }}
           cache-from: |
             type=gha,scope=${{ matrix.arch }}-frontend
@@ -263,28 +288,30 @@ jobs:
           rm -rf "$BUILD_DIR"
 
       - name: "📤 Upload Native Installer"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: shieldpm-install-linux-${{ matrix.arch }}
           path: ${{ env.INSTALLER_PKG }}
           if-no-files-found: error
+          retention-days: 14
 
       # ---------------------------------------------------------
       # OPTIONAL: Proxmox LXC Template Creation (Systemd-Patched)
       # Now for both x86_64 and aarch64
+      # Never execute a PR-built image; LXC extraction needs a trusted push.
       # ---------------------------------------------------------
       - name: "📦 Create Proxmox LXC Template"
         id: lxc
-        # if: matrix.arch == 'x86_64' # Enable for both architectures
+        if: github.event_name != 'pull_request'
+        timeout-minutes: 30
         run: |
           # 1. Pull the image we just pushed/built to ensure it's local
           TAG="${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}"
           docker image inspect "$TAG" >/dev/null 2>&1 || docker pull "$TAG"
 
-          # 2. Run a temporary builder container
-          # We start it with a sleep entrypoint so we can exec patches into it
+          # 2. Run a temporary builder container without host privileges
           CONTAINER_NAME="lxc-builder-${{ matrix.arch }}"
-          docker run -d --name "$CONTAINER_NAME" --entrypoint /bin/sleep --user 0:0 --privileged "$TAG" infinity
+          docker run -d --name "$CONTAINER_NAME" --entrypoint /bin/sleep --user 0:0 "$TAG" infinity
 
           # 3. PATCH: Install Systemd & Networking (Required for LXC)
           echo "Installing Systemd & Networking tools..."
@@ -363,12 +390,14 @@ jobs:
           docker rm -f "$CONTAINER_NAME"
 
       - name: "📤 Upload LXC Template"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: github.event_name != 'pull_request'
         with:
           # ÄNDERUNG: ${{ matrix.arch }} zum Namen hinzufügen
           name: shieldpm-lxc-template-${{ matrix.arch }}
           path: ${{ env.LXC_TEMPLATE_NAME }}
           if-no-files-found: error
+          retention-days: 14
 
   # ---------------------------------------------------------
   # PHASE 3: ZUSAMMENFÜGEN (Manifest erstellen)
@@ -378,9 +407,14 @@ jobs:
     needs: [prepare, build]
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'pull_request' && github.repository_owner == 'shedowe19' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
     steps:
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4.6.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -394,8 +428,57 @@ jobs:
             "${TAG_BASE}-x86_64" \
             "${TAG_BASE}-aarch64"
 
+      - name: Resolve published digest
+        id: manifest
+        run: |
+          TAG_BASE="${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}"
+          DIGEST=""
+          for attempt in 1 2 3 4 5; do
+            DIGEST=$(docker buildx imagetools inspect "${TAG_BASE}" \
+              --format '{{json .Manifest.Digest}}' 2>/dev/null | tr -d '"' || true)
+            [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] && break
+            sleep 2
+          done
+          [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+            echo "Unable to resolve the published multiarch digest." >&2
+            exit 1
+          }
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate SBOM for the published image
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: ${{ env.IMAGE_NAME }}@${{ steps.manifest.outputs.digest }}
+          format: spdx-json
+          output-file: shieldpm.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Attest build provenance for the published image
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.manifest.outputs.digest }}
+          push-to-registry: true
+
+      - name: Attest the SBOM for the published image
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-name: ${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.manifest.outputs.digest }}
+          sbom-path: shieldpm.spdx.json
+          push-to-registry: true
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
+      - name: Sign the published image
+        env:
+          IMAGE_DIGEST: ${{ steps.manifest.outputs.digest }}
+        run: cosign sign --yes "${IMAGE_NAME}@${IMAGE_DIGEST}"
+
       - name: "Add PR Comment"
-        uses: mshick/add-pr-comment@v3.12.0
+        uses: mshick/add-pr-comment@ec328af66588ab8f77cdeb2c264f14aba45bbf59 # v3.12.0
         if: ${{ needs.prepare.outputs.is_pr == 'true' }}
         with:
           message: "The Docker Image can now be found here: `${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}`"
@@ -409,12 +492,13 @@ jobs:
     name: "📦 Upload Release Artifacts"
     needs: [prepare, build, merge]
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/v')) && github.repository_owner == 'shedowe19' }}
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository_owner == 'shedowe19' }}
     concurrency:
       group: shieldpm-release-v${{ needs.prepare.outputs.version }}
       cancel-in-progress: false
     permissions:
       contents: write
+      id-token: write
     steps:
       - name: Check version release
         id: version_release
@@ -458,28 +542,28 @@ jobs:
 
       - name: Download LXC Template (x86_64)
         if: steps.version_release.outputs.publish == 'true'
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: shieldpm-lxc-template-x86_64
           path: release-assets
 
       - name: Download LXC Template (aarch64)
         if: steps.version_release.outputs.publish == 'true'
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: shieldpm-lxc-template-aarch64
           path: release-assets
 
       - name: Download Native Installer (x86_64)
         if: steps.version_release.outputs.publish == 'true'
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: shieldpm-install-linux-x86_64
           path: release-assets
 
       - name: Download Native Installer (aarch64)
         if: steps.version_release.outputs.publish == 'true'
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: shieldpm-install-linux-aarch64
           path: release-assets
@@ -488,9 +572,25 @@ jobs:
         if: steps.version_release.outputs.publish == 'true'
         run: ls -la release-assets/
 
+      - name: Create Release Checksums
+        if: steps.version_release.outputs.publish == 'true'
+        run: |
+          cd release-assets
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Install cosign
+        if: steps.version_release.outputs.publish == 'true'
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
+      - name: Sign release checksums
+        if: steps.version_release.outputs.publish == 'true'
+        working-directory: release-assets
+        run: cosign sign-blob --yes --bundle SHA256SUMS.sigstore.json SHA256SUMS
+
       - name: Create Release
         if: steps.version_release.outputs.publish == 'true'
-        uses: softprops/action-gh-release@v3.0.2
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: "v${{ needs.prepare.outputs.version }}"
           target_commitish: ${{ github.sha }}
@@ -506,6 +606,15 @@ jobs:
             ### 🐳 Docker
             ```bash
             docker pull ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}
+            ```
+
+            Verify the image signature and the release checksums:
+            ```bash
+            DIGEST=$(docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }} --format '{{json .Manifest.Digest}}' | tr -d '"')
+            cosign verify "${{ env.IMAGE_NAME }}@${DIGEST}" \
+              --certificate-identity-regexp '^https://github.com/shedowe19/ShieldPM/.github/workflows/docker.yml@refs/(heads/develop|tags/v.*)$' \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com
+            cosign verify-blob --bundle SHA256SUMS.sigstore.json SHA256SUMS
             ```
 
             ---

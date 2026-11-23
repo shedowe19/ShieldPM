@@ -4,12 +4,41 @@ import { message } from "telegraf/filters";
 import access from "../lib/access.js";
 import { getPrivateKey } from "../lib/config.js";
 import { decrypt } from "../lib/encryption.js";
+import { AUDIT_ACTION } from "../lib/security-events.js";
 import { global as logger } from "../logger.js";
 import ChatIntegrationModel from "../models/chat_integration.js";
 import ai from "./ai.js";
 
+const bots = {};
 const botLifecycles = new WeakMap();
-const bots = {}; // Cache for bot instances: { integration_id: TelegrafInstance }
+
+/**
+ * ChatOps runs on Telegram, outside Express. The audit row records the
+ * integration owner as the acting identity and the Telegram user as context;
+ * message text is never stored.
+ *
+ * @param {any} access
+ * @param {any} integration
+ * @param {string} outcome
+ * @param {Record<string, any>} [meta]
+ */
+const auditChatOps = async (access, integration, outcome, meta = {}) => {
+	try {
+		const { default: internalAuditLog } = await import("./audit-log.js");
+		await internalAuditLog.add(access, {
+			action: AUDIT_ACTION.CHATOPS_COMMAND,
+			object_type: "chat-integration",
+			object_id: integration.id,
+			outcome,
+			...(access ? {} : { user_id: integration.user_id, actor_type: "system" }),
+			meta: { integration_id: integration.id, read_only: true, ...meta },
+		});
+	} catch (error) {
+		logger.error?.(`[ChatOps] Could not audit command: ${error?.message}`);
+	}
+};
+
+// Cache for bot instances: { integration_id: TelegrafInstance }
 const pendingReloads = new Map();
 
 // Smart MarkdownV2 Escaper
@@ -130,6 +159,10 @@ const internalChat = {
 
 				if (!isAllowed) {
 					logger.warn(`[ChatOps] Unauthorized access attempt from Telegram ID: ${userId}`);
+					await auditChatOps(null, integration, "denied", {
+						telegram_user_id: userId ? String(userId) : null,
+						reason: "not_allowlisted",
+					});
 					return; // Silently ignore unauthorized users
 				}
 
@@ -189,11 +222,32 @@ const internalChat = {
 
 					let response;
 					try {
+						// ChatOps has no dialog state: it must never execute state-changing tools.
 						// @ts-expect-error: Custom shieldAccess property on context is not typed
-						response = await ai.chat(ctx.shieldAccess, message, []);
+						response = await ai.chat(ctx.shieldAccess, message, [], { readOnly: true });
 					} finally {
 						clearInterval(typingInterval);
 					}
+
+					if (response.requires_confirmation) {
+						// @ts-expect-error: Custom shieldAccess property on context is not typed
+						await auditChatOps(ctx.shieldAccess, integration, "denied", {
+							telegram_user_id: ctx.from?.id ? String(ctx.from.id) : null,
+							requires_confirmation: true,
+							reason: "web_confirmation_required",
+						});
+						await ctx.reply(
+							"This action needs confirmation and is only available in the ShieldPM web interface. ChatOps is read-only.",
+						);
+						return;
+					}
+
+					// @ts-expect-error: Custom shieldAccess property on context is not typed
+					await auditChatOps(ctx.shieldAccess, integration, "success", {
+						telegram_user_id: ctx.from?.id ? String(ctx.from.id) : null,
+						requires_confirmation: false,
+						message_length: message.length,
+					});
 
 					// Send response
 					if (response.content) {
@@ -221,6 +275,11 @@ const internalChat = {
 					}
 				} catch (err) {
 					logger.error(`[ChatOps] Error handling message: ${err.message}`);
+					// @ts-expect-error: Custom shieldAccess property on context is not typed
+					await auditChatOps(ctx.shieldAccess, integration, "failure", {
+						telegram_user_id: ctx.from?.id ? String(ctx.from.id) : null,
+						reason: "processing_error",
+					});
 					await ctx.reply(`❌ Error processing request: ${err.message}`);
 				}
 			});

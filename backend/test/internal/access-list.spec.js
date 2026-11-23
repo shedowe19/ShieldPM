@@ -95,7 +95,10 @@ vi.mock("../../internal/nginx.js", () => ({
 }));
 vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: vi.fn() } }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: { stop: vi.fn(), restart: vi.fn() } }));
-vi.mock("../../lib/utils.js", () => ({ default: {} }));
+vi.mock("../../lib/utils.js", async (importOriginal) => {
+	const actual = await importOriginal();
+	return { ...actual, default: { ...actual.default, validatePublicHttpsUrl: actual.validatePublicHttpsUrl } };
+});
 vi.mock("../../logger.js", () => ({ access: { info: vi.fn() } }));
 
 import service from "../../internal/access-list.js";
@@ -203,6 +206,37 @@ describe("access list credential updates", () => {
 	])("rejects malformed SSO metadata before persistence: %j", async (meta) => {
 		await expect(service.update(access, { id: 1, meta })).rejects.toMatchObject({ status: 400 });
 		expect(service.get).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		{ authentik_host: "http://auth.example.test" },
+		{ authentik_host: "https://127.0.0.1" },
+		{ authentik_host: "https://[::1]" },
+		{ authentik_host: "https://169.254.169.254" },
+		{ authentik_host: "https://10.0.0.5" },
+		{ authentik_host: "https://auth.local" },
+		{ authentik_host: "https://metadata.google.internal" },
+		{ authentik_host: "https://user:pass@auth.example.test" },
+		{ authentik_host: "https://auth.example.test/path" },
+		{ authentik_host: "https://auth.example.test/?next=1" },
+		{ authentik_host: "unix:/run/shieldpm/oauth2-proxy.sock" },
+		{ oidc_discovery_url: "https://127.0.0.1/.well-known/openid-configuration" },
+		{ oauth2_oidc_issuer_url: "http://sso.example.test/realms/test" },
+	])("rejects unsafe Authentik/OIDC targets before persistence: %j", async (meta) => {
+		await expect(service.update(access, { id: 1, meta })).rejects.toMatchObject({ status: 400 });
+		expect(service.get).not.toHaveBeenCalled();
+	});
+
+	it("accepts public OIDC discovery and issuer paths", async () => {
+		await expect(
+			service.update(access, {
+				id: 1,
+				meta: {
+					oidc_discovery_url: "https://login.example.test/.well-known/openid-configuration",
+					oauth2_oidc_issuer_url: "https://sso.example.test/realms/test",
+				},
+			}),
+		).resolves.toBeDefined();
 	});
 
 	it("loads current domains and certificates before regenerating assigned hosts", async () => {

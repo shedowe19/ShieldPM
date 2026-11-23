@@ -233,6 +233,8 @@ if (process.env.NC_AIO) checkBool('NC_AIO');
 if (getEnvBool('NPM_LISTEN_LOCALHOST', false)) {
     info("Setting NPM binding to localhost");
     // We print export commands for shell to eval
+} else {
+    info("WARNING: the ShieldPM admin UI and first-time setup listen on every interface (NPM_PORT). If you reach ShieldPM through a reverse proxy or tunnel, set NPM_LISTEN_LOCALHOST=true to keep port 81 off the network.");
 }
 
 // X-Frame-Options
@@ -257,6 +259,25 @@ checkInt('LOGROTATIONS');
 checkInt('CRT');
 checkInt('IPRT');
 checkInt('DEFAULT_CERT_ID');
+
+// Analytics retention. The backend clamps these as well; failing early keeps a
+// typo from silently disabling cleanup for a whole deployment.
+ensureDefault('ANALYTICS_DETAILED_RETENTION_HOURS', '24');
+ensureDefault('ANALYTICS_AGGREGATION_RETENTION_DAYS', '35');
+checkInt('ANALYTICS_DETAILED_RETENTION_HOURS');
+checkInt('ANALYTICS_AGGREGATION_RETENTION_DAYS');
+const detailedHours = Number(getEnv('ANALYTICS_DETAILED_RETENTION_HOURS', '24'));
+const aggregationDays = Number(getEnv('ANALYTICS_AGGREGATION_RETENTION_DAYS', '35'));
+if (!Number.isInteger(detailedHours) || detailedHours < 1 || detailedHours > 8760) {
+    fatal('ANALYTICS_DETAILED_RETENTION_HOURS needs to be an integer between 1 and 8760.');
+}
+if (!Number.isInteger(aggregationDays) || aggregationDays < 1 || aggregationDays > 3650) {
+    fatal('ANALYTICS_AGGREGATION_RETENTION_DAYS needs to be an integer between 1 and 3650.');
+}
+const ingestStartMode = process.env.ANALYTICS_INGEST_START_MODE;
+if (ingestStartMode && !['beginning', 'end'].includes(ingestStartMode)) {
+    fatal('ANALYTICS_INGEST_START_MODE needs to be beginning or end.');
+}
 
 ensureDefault('GOACLA', "--agent-list --real-os --double-decode --anonymize-ip --anonymize-level=1 --keep-last=30 --with-output-resolver --no-query-string");
 ensureDefault('INITIAL_DEFAULT_PAGE', 'congratulations');

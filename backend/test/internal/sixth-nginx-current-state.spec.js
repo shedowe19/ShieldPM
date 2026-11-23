@@ -119,7 +119,7 @@ describe.each(["sqlite", "postgres"])("queued Nginx jobs use current persisted h
 		await nginx.configure(ProxyHost, "proxy_host", await currentHost());
 		await nginx.bulkGenerateConfigs(ProxyHost, "proxy_host", [staleSnapshot]);
 		const config = await fs.promises.readFile(nginx.getConfigName("proxy_host", 7), "utf8");
-		expect(config).toContain("auth_basic_user_file  /data/access/4;");
+		expect(config).toContain(`auth_basic_user_file  ${path.join(process.env.DATA_PATH, "access", "4")};`);
 		expect(config).toContain("/data/tls/internal/npm-3/fullchain.pem");
 		expect(config).toContain("server_name new.example.test;");
 		expect(config).toContain("http://new-upstream.test:8080");
@@ -231,7 +231,7 @@ describe.each(["sqlite", "postgres"])("queued Nginx jobs use current persisted h
 		await operation;
 		const config = await fs.promises.readFile(nginx.getConfigName("proxy_host", 8), "utf8");
 		expect(config).toContain("server_name second-new.example.test;");
-		expect(config).toContain("auth_basic_user_file  /data/access/4;");
+		expect(config).toContain(`auth_basic_user_file  ${path.join(process.env.DATA_PATH, "access", "4")};`);
 		expect(config).toContain("/data/tls/custom/npm-3/fullchain.pem");
 		expect(config).toContain("http://second-new.test:8080");
 		expect(config).not.toContain("second-old");

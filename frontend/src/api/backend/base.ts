@@ -173,6 +173,8 @@ interface PostArgs {
 	data?: object | FormData;
 	noAuth?: boolean;
 	silentAuth?: boolean;
+	/** Extra request headers such as X-Setup-Token. */
+	headers?: Record<string, string>;
 	/** Skip key decamelization — required for WebAuthn payloads where key casing matters */
 	rawKeys?: boolean;
 	/** Preserve response keys that represent data, such as domain names. */
@@ -272,7 +274,7 @@ export async function downloadPost({ url, params, data, noAuth, silentAuth }: Po
 }
 
 export async function post<T = DynamicResponse>(
-	{ url, params, data, noAuth, silentAuth, rawKeys, rawResponse }: PostArgs,
+	{ url, params, data, noAuth, silentAuth, rawKeys, rawResponse, headers: extraHeaders }: PostArgs,
 	abortController?: AbortController,
 ): Promise<T> {
 	const sessionRevision = AuthStore.sessionRevision;
@@ -284,6 +286,9 @@ export async function post<T = DynamicResponse>(
 		headers = {
 			...buildAuthHeader(),
 		};
+	}
+	if (extraHeaders) {
+		headers = { ...headers, ...extraHeaders };
 	}
 
 	let body: string | FormData | undefined;

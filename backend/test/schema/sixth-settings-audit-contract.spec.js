@@ -7,7 +7,11 @@ vi.mock("../../db.js", async () => {
 	state.database = knex({ client: "better-sqlite3", connection: { filename: ":memory:" }, useNullAsDefault: true });
 	return { default: () => state.database };
 });
-vi.mock("../../lib/config.js", () => ({ isSqlite: () => true, isPostgres: () => false }));
+vi.mock("../../lib/config.js", () => ({
+	isSqlite: () => true,
+	isPostgres: () => false,
+	getEncryptionKey: () => "01".repeat(32),
+}));
 vi.mock("../../internal/nginx.js", () => ({ default: {} }));
 
 import auditLog from "../../internal/audit-log.js";
@@ -33,6 +37,14 @@ describe("settings events in the published audit response", () => {
 			table.string("object_type");
 			table.string("action");
 			table.json("meta");
+			table.string("ip");
+			table.string("user_agent");
+			table.string("session_id");
+			table.string("request_id");
+			table.string("outcome");
+			table.integer("actor_user_id");
+			table.string("actor_type");
+			table.string("jti");
 		});
 		await state.database("setting").insert({
 			id: "oidc-config",

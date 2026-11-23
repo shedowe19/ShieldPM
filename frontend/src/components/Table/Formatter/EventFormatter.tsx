@@ -61,6 +61,28 @@ const getEventValue = (event: AuditLog): ReactNode => {
 			);
 		case AUDIT_LOG_OBJECT_TYPE.WIREGUARD_SETTINGS:
 			return <T id="audit-log.filter.wireguard-settings" />;
+		case AUDIT_LOG_OBJECT_TYPE.AUTH:
+			return typeof meta.email === "string" && meta.email.trim()
+				? meta.email
+				: typeof meta.name === "string" && meta.name.trim()
+					? meta.name
+					: "N/A";
+		case AUDIT_LOG_OBJECT_TYPE.SECURITY_INCIDENT:
+			return typeof meta.ruleId === "string" && meta.ruleId.trim()
+				? meta.ruleId
+				: typeof meta.rule_id === "string" && meta.rule_id.trim()
+					? meta.rule_id
+					: typeof meta.title === "string" && meta.title.trim()
+						? meta.title
+						: "N/A";
+		case AUDIT_LOG_OBJECT_TYPE.CHAT_INTEGRATION:
+			return typeof meta.name === "string" && meta.name.trim() ? meta.name : "N/A";
+		case AUDIT_LOG_OBJECT_TYPE.AUTH_SESSION: {
+			const label = [meta.name, meta.sessionId, meta.session_id].find(
+				(value): value is string => typeof value === "string" && value.trim().length > 0,
+			);
+			return label ?? <T id="auth-session" />;
+		}
 		default:
 			return (
 				<T
@@ -129,6 +151,15 @@ const getIcon = (row: AuditLog) => {
 			ico = <IconBolt size={16} className={c} />;
 			break;
 		case AUDIT_LOG_OBJECT_TYPE.DASHBOARD_NOTE:
+			ico = <IconNote size={16} className={c} />;
+			break;
+		case AUDIT_LOG_OBJECT_TYPE.AUTH:
+			ico = <IconLock size={16} className={c} />;
+			break;
+		case AUDIT_LOG_OBJECT_TYPE.SECURITY_INCIDENT:
+			ico = <IconShield size={16} className={c} />;
+			break;
+		case AUDIT_LOG_OBJECT_TYPE.CHAT_INTEGRATION:
 			ico = <IconNote size={16} className={c} />;
 			break;
 		default:

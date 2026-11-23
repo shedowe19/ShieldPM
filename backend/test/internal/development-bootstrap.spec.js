@@ -6,6 +6,7 @@ vi.mock("../../app.js", () => {
 	return { default: { listen: state.listen } };
 });
 vi.mock("../../internal/analytics.js", () => ({ default: { init: vi.fn() } }));
+vi.mock("../../internal/analytics-rollup.js", () => ({ default: { init: vi.fn(), stop: vi.fn() } }));
 vi.mock("../../internal/certificate.js", () => ({ default: {} }));
 vi.mock("../../internal/ip_ranges.js", () => ({ default: {} }));
 vi.mock("../../internal/nginx.js", () => ({ default: {} }));

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+	analyticCountKnex: vi.fn(),
 	analyticCountQuery: vi.fn(),
 	analyticsLogsQuery: vi.fn(),
 	middlewares: [],
@@ -29,15 +30,24 @@ vi.mock("express", () => ({
 vi.mock("systeminformation", () => ({ default: { networkStats: vi.fn() } }));
 vi.mock("../../lib/config.js", () => ({ isMysql: vi.fn(), isPostgres: vi.fn(), isSqlite: vi.fn() }));
 vi.mock("../../lib/express/jwt-decode.js", () => ({ default: () => () => undefined }));
-vi.mock("../../models/analytic_count.js", () => ({ default: { query: mocks.analyticCountQuery } }));
+vi.mock("../../models/analytic_count.js", () => ({
+	default: { knex: mocks.analyticCountKnex, query: mocks.analyticCountQuery },
+}));
 vi.mock("../../models/analytics_logs.js", () => ({ default: { query: mocks.analyticsLogsQuery } }));
 vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.proxyHostQuery } }));
 
 import "../../routes/analytics.js";
 
-const createResponse = () => ({
+const createResponse = (permission = { roles: ["admin"] }) => ({
 	json: vi.fn(),
+	locals: { access: createAccess(permission), analyticsPermission: permission },
+	set: vi.fn(),
 	status: vi.fn().mockReturnThis(),
+});
+
+const createAccess = (permission = { roles: ["admin"] }) => ({
+	can: vi.fn().mockResolvedValue(permission),
+	token: { getUserId: () => 1 },
 });
 
 const createTopHostsQuery = (rows) => {
@@ -78,6 +88,7 @@ const createTopHostsQuery = (rows) => {
 const createProxyHostQuery = (rows) => {
 	const query = {
 		alias: vi.fn(),
+		andWhere: vi.fn(),
 		groupBy: vi.fn(),
 		join: vi.fn(),
 		select: vi.fn(),
@@ -86,12 +97,38 @@ const createProxyHostQuery = (rows) => {
 		withGraphFetched: vi.fn().mockResolvedValue(rows),
 	};
 	query.alias.mockReturnValue(query);
+	query.andWhere.mockReturnValue(query);
 	query.groupBy.mockReturnValue(query);
 	query.join.mockReturnValue(query);
 	query.select.mockReturnValue(query);
 	query.where.mockReturnValue(query);
 	query.whereIn.mockReturnValue(query);
 	return query;
+};
+
+const createSeriesQuery = (rows) => {
+	const query = {
+		andWhere: vi.fn(() => query),
+		orderBy: vi.fn().mockResolvedValue(rows),
+		where: vi.fn(() => query),
+		whereIn: vi.fn(() => query),
+		whereNotNull: vi.fn(() => query),
+	};
+	return query;
+};
+
+const createSummaryBuilder = (result) => {
+	const builder = {
+		andWhere: vi.fn(() => builder),
+		first: vi.fn().mockResolvedValue(result),
+		from: vi.fn(() => builder),
+		sum: vi.fn(() => builder),
+		where: vi.fn(() => builder),
+		whereIn: vi.fn(() => builder),
+		whereNotNull: vi.fn(() => builder),
+		whereNull: vi.fn(() => builder),
+	};
+	return builder;
 };
 
 describe("analytics top-hosts route", () => {
@@ -249,6 +286,7 @@ describe("analytics top-hosts route", () => {
 		expect(slowestQuery.orderBy).toHaveBeenCalledWith("average_duration", "desc");
 		expect(slowestQuery.limit).toHaveBeenCalledWith(5);
 		expect(metricsQuery.whereIn).toHaveBeenCalledWith("analytic_count.proxy_host_id", [3]);
+		expect(response.set).toHaveBeenCalledWith("X-Analytics-Detail-Since", expect.any(String));
 		expect(response.json).toHaveBeenCalledWith([
 			{
 				average_duration: 1825,
@@ -260,5 +298,73 @@ describe("analytics top-hosts route", () => {
 				server_errors: 1,
 			},
 		]);
+	});
+
+	it("filters top-hosts to hosts owned by a normal analytics viewer", async () => {
+		const ranking = createTopHostsQuery([
+			{ bytes: "100", client_errors: "0", id: "7", requests: "3", server_errors: "0" },
+		]);
+		const hostRows = [{ domain_names: ["own.example"], id: 7 }];
+		const hostsWithDomainsQuery = createProxyHostQuery(hostRows);
+		const ownershipQuery = createProxyHostQuery([]);
+		const proxyHostQuery = createProxyHostQuery(hostRows);
+		const response = createResponse({
+			permission_analytics: "view",
+			permission_visibility: "user",
+			roles: ["user"],
+		});
+		mocks.analyticCountQuery.mockReturnValue(ranking);
+		mocks.proxyHostQuery
+			.mockReturnValueOnce(hostsWithDomainsQuery)
+			.mockReturnValueOnce(ownershipQuery)
+			.mockReturnValueOnce(proxyHostQuery);
+
+		await mocks.routes.get("/top-hosts")({ query: {} }, response);
+
+		expect(hostsWithDomainsQuery.whereIn).toHaveBeenCalledWith("proxy_host.id", ownershipQuery);
+		expect(ownershipQuery.where).toHaveBeenCalledWith("is_deleted", 0);
+		expect(ownershipQuery.andWhere).toHaveBeenCalledWith("owner_user_id", 1);
+		expect(ownershipQuery.select).toHaveBeenCalledWith("id");
+		expect(proxyHostQuery.andWhere).toHaveBeenCalledWith("owner_user_id", 1);
+		expect(response.json).toHaveBeenCalledWith([
+			{ bytes: 100, client_errors: 0, domain_name: "own.example", id: 7, requests: 3, server_errors: 0 },
+		]);
+	});
+
+	it("filters the global time series to owned hosts for a normal analytics viewer", async () => {
+		const query = createSeriesQuery([]);
+		const ownershipQuery = createProxyHostQuery([]);
+		const response = createResponse({
+			permission_analytics: "view",
+			permission_visibility: "user",
+			roles: ["user"],
+		});
+		mocks.analyticCountQuery.mockReturnValue(query);
+		mocks.proxyHostQuery.mockReturnValueOnce(ownershipQuery);
+
+		await mocks.routes.get("/series")({ query: {} }, response);
+
+		expect(query.whereIn).toHaveBeenCalledWith("proxy_host_id", ownershipQuery);
+		expect(query.whereNotNull).not.toHaveBeenCalled();
+		expect(response.json).toHaveBeenCalledWith([]);
+	});
+
+	it("reports the host-0 bucket separately from attributed hosts", async () => {
+		const attributed = createSummaryBuilder({ bytes: "1024", count: "10", s2xx: "8" });
+		const unattributed = createSummaryBuilder({ bytes: "128", count: "3", s2xx: "1" });
+		const knexFunction = { from: vi.fn().mockReturnValueOnce(attributed).mockReturnValueOnce(unattributed) };
+		mocks.analyticCountKnex.mockReturnValue(knexFunction);
+		const response = createResponse();
+
+		await mocks.routes.get("/summary")({ query: {} }, response);
+
+		expect(attributed.whereNotNull).toHaveBeenCalledWith("proxy_host_id");
+		expect(unattributed.whereNull).toHaveBeenCalledWith("proxy_host_id");
+		expect(response.json).toHaveBeenCalledWith(
+			expect.objectContaining({
+				count: 10,
+				unattributed: expect.objectContaining({ count: 3 }),
+			}),
+		);
 	});
 });

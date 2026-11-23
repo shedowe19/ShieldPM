@@ -1,7 +1,7 @@
 # Laufzeit und Start
 
 Status: active
-Last verified: 2026-11-04
+Last verified: 2026-11-23
 Confidence: high
 
 ## Zweck
@@ -82,6 +82,14 @@ Quelle: `scripts/install.sh:20-26,38-55,456-482,794-830`.
   Wartungssperre. Ein zweiter Lauf muss abbrechen, nicht warten.
 - **Prerun:** `ENABLE_PRERUN=true` führt beliebige Skripte aus `/data/prerun` als
   Root aus. Nur in kontrollierten Umgebungen aktivieren.
+- **Native Unit ohne schreibgeschützte Systempfade:** `ProtectSystem`,
+  `ProtectHome` und `ReadWritePaths` sind bewusst nicht gesetzt. Der Start
+  schreibt `/etc/logrotate`, `/etc/tor/torrc` und `/usr/local/nginx/conf`,
+  WireGuard ruft `sysctl`, das Terminal führt Paketverwaltung aus und der
+  Updater kopiert ein Rootfs über `/`. Eine fehlende Allowlist-Datei beendet
+  die Unit mit `226/NAMESPACE`. Quelle:
+  `rootfs/usr/lib/systemd/system/shieldpm.service`,
+  `scripts/tests/test_native_maintenance.py`.
 
 ## GeoIP-Verhalten
 

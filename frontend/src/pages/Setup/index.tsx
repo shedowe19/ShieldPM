@@ -10,6 +10,7 @@ import {
 } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { createUser } from "src/api/backend";
 import { LocalePicker } from "src/components/LocalePicker";
 import { ThemeSwitcher } from "src/components/ThemeSwitcher";
@@ -26,10 +27,12 @@ interface Payload {
 	name: string;
 	email: string;
 	password: string;
+	setupToken: string;
 }
 
 export default function Setup() {
 	const queryClient = useQueryClient();
+	const navigate = useNavigate();
 	const { login } = useAuthState();
 	const [errorMsg, setErrorMsg] = useState<string | null>(null);
 	const mounted = useRef(false);
@@ -46,7 +49,7 @@ export default function Setup() {
 		// Set a nickname, which is the first word of the name
 		const nickname = values.name.split(" ")[0];
 
-		const { password, ...payload } = {
+		const { password, setupToken, ...payload } = {
 			...values,
 			...{
 				nickname,
@@ -58,7 +61,7 @@ export default function Setup() {
 		};
 
 		try {
-			const user = await createUser(payload, true);
+			const user = await createUser(payload, true, setupToken);
 			if (user?.id) {
 				try {
 					if (mounted.current) await login(user.email, password);
@@ -67,6 +70,7 @@ export default function Setup() {
 				} finally {
 					// Creation completed even when automatic login fails: leave the setup route.
 					await queryClient.refetchQueries({ queryKey: ["health"] });
+					navigate("/", { replace: true });
 				}
 			} else {
 				setErrorMsg("cannot_create_user");
@@ -116,6 +120,7 @@ export default function Setup() {
 								name: "",
 								email: "",
 								password: "",
+								setupToken: "",
 							}}
 							onSubmit={onSubmit}
 						>
@@ -167,6 +172,33 @@ export default function Setup() {
 										</Field>
 										{errors.email && touched.email && (
 											<p className="text-sm text-destructive">{errors.email}</p>
+										)}
+									</div>
+
+									<div className="space-y-2">
+										<Label htmlFor="setupToken">Setup token</Label>
+										<Field name="setupToken" validate={validateString(1, 512)}>
+											{({ field }: FieldProps) => (
+												<Input
+													{...field}
+													id="setupToken"
+													type="password"
+													autoComplete="off"
+													placeholder="Token from DATA_PATH/setup-token"
+													className={
+														errors.setupToken && touched.setupToken
+															? "border-destructive"
+															: ""
+													}
+												/>
+											)}
+										</Field>
+										<p className="text-xs text-muted-foreground">
+											Printed to the startup log, stored at /data/setup-token, or set with
+											SETUP_TOKEN.
+										</p>
+										{errors.setupToken && touched.setupToken && (
+											<p className="text-sm text-destructive">{errors.setupToken}</p>
 										)}
 									</div>
 

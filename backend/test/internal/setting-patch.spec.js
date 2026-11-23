@@ -16,7 +16,7 @@ describe("Fix #73: setting.js field whitelist", () => {
 	it("patches only value and meta fields (not full data object)", () => {
 		// The patch call should only include value and meta
 		expect(source).toContain("value: data.value");
-		expect(source).toContain("meta: data.meta");
+		expect(source).toContain("preserveMetaSecrets(data.meta");
 		// Should NOT patch the raw data object
 		expect(source).not.toContain(".patch(data)");
 	});

@@ -9,6 +9,9 @@ vi.mock("../../models/user.js", async () => {
 	return { default: { knex: () => state.db } };
 });
 vi.mock("../../models/user-2fa.js", () => ({ default: { hasActive2FA: async () => false } }));
+vi.mock("../../models/setting.js", () => ({
+	default: { query: () => ({ where: () => ({ first: async () => null }) }) },
+}));
 vi.mock("../../models/token.js", () => ({ default: () => ({}) }));
 vi.mock("../../internal/token.js", () => ({
 	default: { getTokenFromEmail: vi.fn(), issueTokenPair: vi.fn(), refreshTokenPair: vi.fn() },

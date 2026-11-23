@@ -42,7 +42,10 @@ Requires Docker Engine and Docker Compose.
 
 3. **Access the Admin Panel:**
    Open `https://<your-ip>:81` in your browser (self-signed certificate — accept the browser warning).
-   The **Setup Wizard** will guide you through creating your admin account.
+   The setup form creates your admin account.
+
+> [!WARNING]
+> **Complete setup before port 81 is reachable from an untrusted network.** The first administrator is created through the setup form. ShieldPM writes a random setup token to `${DATA_PATH}/setup-token` (for example `./data/setup-token` or `/opt/shieldpm/setup-token`) on first start and logs its path; `SETUP_TOKEN` overrides it. Read the token and enter it in the setup form. For the first start, bind the UI to localhost (`NPM_LISTEN_LOCALHOST=true`), use an SSH tunnel, or block port 81 in the firewall, then open the UI. An Access List on a Proxy Host for the UI does **not** close the direct listener on port 81.
 
 > [!TIP]
 > There are no default credentials — you create your own admin user during the initial setup.
@@ -57,7 +60,7 @@ docker compose up -d
 ```
 
 > [!TIP]
-> Your data, including certificates, is stored in the mounted `/data` volume. Pulling a new image and recreating the container does **not** delete it. If you selected MySQL or PostgreSQL, back up that database separately.
+> Your data, including certificates, is stored in the mounted `/data` volume. Pulling a new image and recreating the container does **not** delete it. If you selected MySQL or PostgreSQL, back up that database separately. Before updating, create a verified instance backup under **Settings → Backups**; downgrades are not supported.
 
 ---
 
@@ -89,7 +92,7 @@ This method installs ShieldPM directly onto a fresh Debian 13 system. It include
    ```
 
 3. **Access:**
-   Open `https://<your-ip>:81`. The Setup Wizard will guide you through creating your admin account.
+   Open `https://<your-ip>:81`. The setup form creates your admin account. Complete setup before making port 81 reachable, or start with `NPM_LISTEN_LOCALHOST=true` and use an SSH tunnel.
 
 ### Updating (Native)
 
@@ -107,7 +110,7 @@ This command will:
 4. Offer updates for installed Nginx, Anubis and OAuth2 Proxy binaries.
 5. Restart or start ShieldPM, apply pending database migrations and verify the backend health endpoint before reporting success.
 
-Run `update-shieldpm` with root privileges on native installations. Back up `/data` and any external database before upgrading.
+Run `update-shieldpm` with root privileges on native installations. Create a verified instance backup under **Settings → Backups** (or back up `/data` and any external database) before upgrading. Downgrades are not supported. See [Backup & Restore](Backup-Restore).
 
 ---
 
@@ -126,7 +129,7 @@ For Proxmox users, we provide a pre-built LXC template based on Debian 13.
 4. **Important Setting:**
    In the container **Options**, enable **Nesting**.
 5. **Start:**
-   Boot the container. Access `https://<IP>:81` — the Setup Wizard will create your admin account.
+   Boot the container. Access `https://<IP>:81` — the setup form creates your admin account. Finish setup before exposing port 81; the first reachable visitor can create the administrator.
 
 ### Updating (LXC)
 

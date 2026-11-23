@@ -103,16 +103,23 @@ vi.mock("../../lib/firewall-geoip.js", () => ({
 }));
 vi.mock("node:fs", () => ({
 	default: {
-		existsSync: (path) =>
-			mocks.files.has(path) || [...mocks.files.keys()].some((key) => key.startsWith(`${path}/`)),
+		existsSync: (path) => {
+			// The mocked tree uses POSIX paths; normalize Windows separators from path.join.
+			const normalized = String(path).replaceAll("\\", "/");
+			return (
+				mocks.files.has(normalized) || [...mocks.files.keys()].some((key) => key.startsWith(`${normalized}/`))
+			);
+		},
 		promises: {
 			mkdir: vi.fn(),
-			readdir: async (path) =>
-				[...mocks.files.keys()]
-					.filter((key) => key.startsWith(`${path}/`))
-					.map((key) => key.slice(path.length + 1))
-					.filter((key) => !key.includes("/")),
-			readFile: async (path) => mocks.files.get(path),
+			readdir: async (path) => {
+				const normalized = String(path).replaceAll("\\", "/");
+				return [...mocks.files.keys()]
+					.filter((key) => key.startsWith(`${normalized}/`))
+					.map((key) => key.slice(normalized.length + 1))
+					.filter((key) => !key.includes("/"));
+			},
+			readFile: async (path) => mocks.files.get(String(path).replaceAll("\\", "/")),
 		},
 	},
 }));
@@ -198,6 +205,7 @@ vi.mock("../../internal/proxy-host-monitor.js", () => ({
 	default: { update: vi.fn(), removeHost: vi.fn(), resetHost: vi.fn() },
 }));
 
+import cloudflared from "../../internal/cloudflared.js";
 import firewallLists from "../../internal/firewall-list.js";
 import gitops from "../../internal/gitops.js";
 import nginx from "../../internal/nginx.js";
@@ -206,6 +214,7 @@ import { assertNoSymlinkPath, writeConfigFile } from "../../lib/gitops-files.js"
 import { subscribeProxyHostDomains } from "../../lib/proxy-host-domain-events.js";
 
 const access = { can: vi.fn().mockResolvedValue(true), token: { getUserId: () => 1 } };
+const posixPath = (value) => String(value).replaceAll("\\", "/");
 const file = (directory, data) =>
 	mocks.files.set(`/data/gitops/shieldpm-config/${directory}/1.yaml`, JSON.stringify(data));
 
@@ -797,10 +806,10 @@ describe("GitOps import sanitization and safe restore", () => {
 		});
 		const result = await gitops.importConfig(access, { overwrite: true });
 		expect(result.success).toBe(true);
-		expect(assertNoSymlinkPath).toHaveBeenCalledWith(
+		expect(vi.mocked(assertNoSymlinkPath).mock.calls.map((args) => args.map(posixPath))).toContainEqual([
 			"/data/gitops",
 			"/data/gitops/shieldpm-config/proxy-host-monitors/1.yaml",
-		);
+		]);
 		expect(monitor.update).toHaveBeenCalledWith(
 			access,
 			1,
@@ -844,10 +853,12 @@ describe("GitOps import sanitization and safe restore", () => {
 		const initialize = vi.spyOn(gitops, "initRepo").mockResolvedValue();
 		const certificates = vi.spyOn(gitops, "exportCertificateFiles").mockResolvedValue();
 		try {
-			expect(await gitops.exportConfig()).toContain("/data/gitops/shieldpm-config/access-lists/7.yaml");
+			expect((await gitops.exportConfig()).map(posixPath)).toContain(
+				"/data/gitops/shieldpm-config/access-lists/7.yaml",
+			);
 			const output = vi
 				.mocked(writeConfigFile)
-				.mock.calls.find(([, filename]) => filename.endsWith("/access-lists/7.yaml"));
+				.mock.calls.find(([, filename]) => posixPath(filename).endsWith("/access-lists/7.yaml"));
 			expect(yaml.load(output[2])).toMatchObject({ meta: { note: "portable" } });
 			expect(output[2]).not.toContain("authorization_revision");
 			expect(mocks.rows.AccessList[0].meta.authorization_revision).toBe(local);
@@ -883,10 +894,12 @@ describe("GitOps import sanitization and safe restore", () => {
 		const initialize = vi.spyOn(gitops, "initRepo").mockResolvedValue();
 		const certificates = vi.spyOn(gitops, "exportCertificateFiles").mockResolvedValue();
 		try {
-			expect(await gitops.exportConfig()).toContain("/data/gitops/shieldpm-config/proxy-host-monitors/1.yaml");
+			expect((await gitops.exportConfig()).map(posixPath)).toContain(
+				"/data/gitops/shieldpm-config/proxy-host-monitors/1.yaml",
+			);
 			const output = vi
 				.mocked(writeConfigFile)
-				.mock.calls.find(([, filename]) => filename.endsWith("/proxy-host-monitors/1.yaml"));
+				.mock.calls.find(([, filename]) => posixPath(filename).endsWith("/proxy-host-monitors/1.yaml"));
 			expect(yaml.load(output[2])).toMatchObject({
 				upstream_ca: "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----",
 				upstream_server_name: "service.internal.example",
@@ -943,9 +956,132 @@ describe("GitOps import sanitization and safe restore", () => {
 		expect(exported.enabled).toBe(0);
 		expect(JSON.stringify(exported)).not.toMatch(/plaintext-do-not-export|ciphertext-do-not-export|sealed_value/);
 	});
-	it("retains certificate DNS credentials required for a GitOps restore", () => {
-		const certificate = { id: 1, provider: "letsencrypt", meta: { dns_provider_credentials: "private-dns-token" } };
-		expect(gitops.sanitizeForExport(certificate, ["is_deleted"])).toEqual(certificate);
+	it("redacts certificate DNS credentials from a GitOps export", () => {
+		const certificate = {
+			id: 1,
+			provider: "letsencrypt",
+			meta: { dns_provider: "cloudflare", dns_provider_credentials: "private-dns-token" },
+		};
+		const exported = gitops.sanitizeForExport(certificate, ["is_deleted"], false, "Certificate");
+		expect(exported.meta.dns_provider_credentials).toBe("********");
+		expect(JSON.stringify(exported)).not.toContain("private-dns-token");
+	});
+	it("never exports known credential values for any model", () => {
+		const exported = [
+			gitops.sanitizeForExport({ id: 1, token: "cf-tunnel-token", meta: {} }, [], false, "CloudflaredTunnel"),
+			gitops.sanitizeForExport(
+				{
+					id: 2,
+					provider: "custom",
+					config: { url: "https://user:ddns-password@example.test/update?token=ddns-token" },
+				},
+				[],
+				false,
+				"DdnsProvider",
+			),
+			gitops.sanitizeForExport(
+				{
+					id: 3,
+					terminal_password: "terminal-password",
+					terminal_private_key: "terminal-private-key",
+					git_credentials: "git-token",
+					meta: { note: "portable" },
+				},
+				[],
+				true,
+				"ProxyHost",
+			),
+			gitops.sanitizeForExport(
+				{
+					id: 4,
+					meta: {
+						oauth2_client_secret: "oauth2-secret",
+						oauth2_cookie_secret: "cookie-secret",
+						oidc_client_secret: "oidc-secret",
+						note: "portable",
+					},
+				},
+				[],
+				false,
+				"AccessList",
+			),
+			gitops.sanitizeForExport(
+				{ id: "ai-config", meta: { api_key: "ai-api-key", model: "gemini" } },
+				[],
+				false,
+				"Setting",
+			),
+			gitops.sanitizeForExport(
+				{ id: "oidc-config", meta: { clientSecret: "oidc-client-secret", clientID: "client" } },
+				[],
+				false,
+				"Setting",
+			),
+			gitops.sanitizeForExport(
+				{ id: 7, client_private_key: "wg-private-key", preshared_key: "wg-preshared-key" },
+				[],
+				false,
+				"WireguardPeer",
+			),
+		];
+		const dump = yaml.dump(exported);
+		for (const secret of [
+			"cf-tunnel-token",
+			"ddns-password",
+			"ddns-token",
+			"terminal-password",
+			"terminal-private-key",
+			"git-token",
+			"oauth2-secret",
+			"cookie-secret",
+			"oidc-secret",
+			"ai-api-key",
+			"oidc-client-secret",
+			"wg-private-key",
+			"wg-preshared-key",
+		]) {
+			expect(dump).not.toContain(secret);
+		}
+		expect(exported[2].meta.note).toBe("portable");
+		expect(exported[3].meta.note).toBe("portable");
+		expect(exported[4].meta.model).toBe("gemini");
+		expect(exported[5].meta.clientID).toBe("client");
+	});
+	it("preserves saved credentials when a redacted export omits or masks them", async () => {
+		mocks.rows.CloudflaredTunnel = [{ id: 1, token: "saved-tunnel-token", status: 0, meta: {} }];
+		mocks.rows.Setting = [{ id: "ai-config", meta: { api_key: "saved-ai-key", model: "gemini" } }];
+		file("cloudflared-tunnels", { id: 1, name: "Tunnel", token: "********" });
+		file("settings", { id: "ai-config", meta: { api_key: "********", model: "gemini" } });
+
+		const result = await gitops.importConfig(access, { overwrite: true });
+
+		expect(result.success).toBe(true);
+		expect(mocks.writes.find(({ name }) => name === "CloudflaredTunnel").data.token).toBe("saved-tunnel-token");
+		expect(mocks.writes.find(({ name }) => name === "Setting").data.meta).toEqual({
+			api_key: "saved-ai-key",
+			model: "gemini",
+		});
+	});
+	it("restores a redacted tunnel as an empty reference without activating it", async () => {
+		file("cloudflared-tunnels", { id: 2, name: "Restored tunnel", token: "********", meta: {} });
+
+		const result = await gitops.importConfig(access, { overwrite: true });
+
+		expect(result.success).toBe(true);
+		expect(mocks.writes.find(({ name }) => name === "CloudflaredTunnel").data.token).toBe("");
+		expect(cloudflared.activateImported).not.toHaveBeenCalled();
+	});
+	it("reports every object deleted by a full sync instead of deleting silently", async () => {
+		mocks.rows.ProxyHost = [
+			{ id: 5, is_deleted: 0, domain_names: [], meta: {}, forward_scheme: "http", forward_host: "old.test" },
+		];
+		mocks.files.set("/data/gitops/shieldpm-config/proxy-hosts/.gitkeep", "");
+
+		const result = await gitops.importConfig(access, { overwrite: true });
+
+		expect(result.success).toBe(true);
+		expect(result.deleted).toBe(1);
+		expect(result.deletions).toEqual([{ model: "ProxyHost", id: 5 }]);
 	});
 	it.each(["api_key", "custom", "application"])(
 		"keeps an imported host disabled when removing an active legacy %s binding",

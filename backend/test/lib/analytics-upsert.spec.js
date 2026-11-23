@@ -1,6 +1,6 @@
 import knex from "knex";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { upsertAnalyticsRows } from "../../lib/analytics-upsert.js";
+import { insertAnalyticsLogs, upsertAnalyticsRows } from "../../lib/analytics-upsert.js";
 import { createPostgres } from "../helpers/postgres.js";
 
 const counters = [
@@ -29,12 +29,14 @@ describe.each(["sqlite", "postgres"])("transactional analytics bulk upsert on %s
 	let db;
 	let embedded;
 	let model;
+	let logModel;
 	beforeAll(async () => {
 		if (engine === "postgres") {
 			embedded = await createPostgres();
 			db = embedded.database;
 		} else db = knex({ client: "better-sqlite3", connection: { filename: ":memory:" }, useNullAsDefault: true });
 		model = { tableName: "analytic_count", transaction: (callback) => db.transaction(callback) };
+		logModel = { tableName: "analytics_logs", transaction: (callback) => db.transaction(callback) };
 		await db.schema.createTable("analytic_count", (table) => {
 			table.increments("id");
 			table.string("aggregation_key").notNullable();
@@ -46,11 +48,47 @@ describe.each(["sqlite", "postgres"])("transactional analytics bulk upsert on %s
 			table.check("request_count >= 0");
 			table.unique(["aggregation_key", "aggregation_timestamp", "aggregation_generation"]);
 		});
+		await db.schema.createTable("analytics_logs", (table) => {
+			table.increments("id");
+			table.integer("host_id").notNullable();
+			table.string("time");
+			table.string("status");
+			table.integer("bytes");
+			table.string("event_key", 64).nullable();
+			table.unique(["event_key"]);
+		});
 	});
-	beforeEach(() => db("analytic_count").delete());
+	beforeEach(async () => {
+		await db("analytic_count").delete();
+		await db("analytics_logs").delete();
+	});
 	afterAll(async () => {
 		if (embedded) await embedded.close();
 		else await db.destroy();
+	});
+	it("inserts each access-log event once across retries and reports only fresh rows", async () => {
+		const logs = [
+			{ bytes: 10, event_key: "a".repeat(64), host_id: 7, status: "200", time: "2026-11-23T10:00:00.000Z" },
+			{ bytes: 20, event_key: "b".repeat(64), host_id: 7, status: "404", time: "2026-11-23T10:00:00.000Z" },
+		];
+		const first = await insertAnalyticsLogs(logModel, logs);
+		expect(first.map((row) => row.event_key).sort()).toEqual(["a".repeat(64), "b".repeat(64)]);
+
+		const second = await insertAnalyticsLogs(logModel, [...logs, logs[0]]);
+		expect(second).toHaveLength(0);
+		expect(Number((await db("analytics_logs").count("* as total").first()).total)).toBe(2);
+	});
+	it("deduplicates repeated event keys inside one batch before writing", async () => {
+		const row = {
+			bytes: 10,
+			event_key: "c".repeat(64),
+			host_id: 7,
+			status: "200",
+			time: "2026-11-23T10:00:00.000Z",
+		};
+		const fresh = await insertAnalyticsLogs(logModel, [row, row]);
+		expect(fresh).toHaveLength(1);
+		expect(Number((await db("analytics_logs").count("* as total").first()).total)).toBe(1);
 	});
 	it("writes 500 counters with two inserts and adds all counters on subsequent flushes", async () => {
 		const statements = [];

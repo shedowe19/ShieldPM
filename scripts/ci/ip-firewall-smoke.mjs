@@ -36,6 +36,10 @@ const escapeHtml = (value) =>
 		.replaceAll(">", "&gt;")
 		.replaceAll('"', "&quot;")
 		.replaceAll("'", "&#39;");
+// Every rendered proxy location writes to the shared analytics log, so the
+// fixture must define the same format the product image ships.
+const JSON_ANALYTICS_LOG_FORMAT =
+	`log_format json_analytics escape=json '{"time":"$time_iso8601","status":$status}';`;
 const oracle = async (database, addresses) =>
 	JSON.parse(
 		await utils.execFile("python3", [
@@ -896,10 +900,21 @@ async function checkAcmeAuthentication({
 		const engine = utils.getRenderEngine();
 		const variants = [
 			{ name: "baseline", expected: 200 },
-			...["oauth2_proxy", "authentik_proxy", "oidc"].flatMap((auth) => [
-				{ name: auth, auth, expected: 302 },
-				{ name: `${auth}-firewall`, auth, firewall: true, expected: 302 },
-			]),
+			{ name: "oauth2_proxy", auth: "oauth2_proxy", expected: 302 },
+			{ name: "oauth2_proxy-firewall", auth: "oauth2_proxy", firewall: true, expected: 302 },
+			// The fixture outpost is a loopback HTTP service, which the product
+			// rejects as an Authentik origin. The host must fail closed with 503
+			// instead of rendering undefined auth variables.
+			{ name: "authentik_proxy", auth: "authentik_proxy", expected: 503, failClosed: true },
+			{
+				name: "authentik_proxy-firewall",
+				auth: "authentik_proxy",
+				firewall: true,
+				expected: 503,
+				failClosed: true,
+			},
+			{ name: "oidc", auth: "oidc", expected: 302 },
+			{ name: "oidc-firewall", auth: "oidc", firewall: true, expected: 302 },
 			{ name: "mtls", mtls: true, expected: 403 },
 			{ name: "redirect", redirect: true, expected: 308 },
 		];
@@ -1001,6 +1016,7 @@ pid ${quote(path.join(fixture, "nginx.pid"))};
 error_log stderr notice;
 events { worker_connections 128; }
 http {
+    ${JSON_ANALYTICS_LOG_FORMAT}
     access_log off;
     ${temporaryPaths(fixture)}
     lua_package_path ${quote(`${fixture}/?.lua;${luaPackagePath || ""};;`)};
@@ -1054,8 +1070,10 @@ http {
 				assert.equal(challenge.body, "challenge-proof", host);
 			const ordinary = await request(port, { host, uri: "/private" });
 			assert.equal(ordinary.status, variant.expected, host);
-			if (variant.auth)
+			if (variant.auth && !variant.failClosed)
 				assert(ordinary.headers.location, `${host} must require sign-in`);
+			if (variant.failClosed)
+				assert.equal(ordinary.headers.location, undefined, `${host} must not redirect`);
 			if (variant.redirect)
 				assert.equal(
 					ordinary.headers.location,
@@ -1165,6 +1183,7 @@ pid ${quote(path.join(fixture, "nginx.pid"))};
 error_log stderr notice;
 events { worker_connections 128; }
 http {
+    ${JSON_ANALYTICS_LOG_FORMAT}
     access_log off;
     ${luaPackagePath ? `lua_package_path ${quote(luaPackagePath)};` : ""}
     ${luaPackageCpath ? `lua_package_cpath ${quote(luaPackageCpath)};` : ""}

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import _ from "lodash";
 import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
+import { validateStreamHostFields } from "../lib/host-input.js";
 import { sanitizeHostMeta } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import streamModel from "../models/stream.js";
@@ -74,6 +75,7 @@ const internalStream = {
 		}
 
 		await access.can("streams:create", data);
+		await validateStreamHostFields(access, data);
 		await internalHost.validateReferences(access, data);
 
 		// Check for port collision
@@ -159,6 +161,7 @@ const internalStream = {
 		}
 
 		await access.can("streams:update", thisData.id);
+		await validateStreamHostFields(access, thisData);
 		let row = await internalStream.get(access, { id: thisData.id });
 		await internalHost.validateReferences(access, thisData, row);
 		const incomingPort = thisData.incoming_port ?? row.incoming_port;

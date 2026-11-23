@@ -13,7 +13,15 @@ const state = vi.hoisted(() => ({
 	refresh: vi.fn(),
 	findUser: vi.fn(),
 }));
-vi.mock("openid-client", () => ({ discovery: async () => ({}), authorizationCodeGrant: state.grant }));
+vi.mock("openid-client", () => ({
+	discovery: async () => ({}),
+	randomNonce: () => "nonce",
+	randomState: () => "state",
+	randomPKCECodeVerifier: () => "verifier",
+	calculatePKCECodeChallenge: async (verifier) => `challenge-${verifier}`,
+	buildAuthorizationUrl: async () => "https://idp.example.test/authorize",
+	authorizationCodeGrant: state.grant,
+}));
 vi.mock("../../internal/token.js", () => ({
 	default: {
 		getFreshToken: state.fresh,
@@ -23,16 +31,32 @@ vi.mock("../../internal/token.js", () => ({
 	},
 }));
 vi.mock("../../internal/user.js", () => ({ default: { loginAs: state.loginAs } }));
+vi.mock("../../internal/audit-log.js", () => ({ default: { add: vi.fn() } }));
 vi.mock("../../internal/2fa-service.js", () => ({ default: {} }));
 vi.mock("../../models/user.js", () => ({
-	default: { query: () => ({ findById: () => ({ where: state.findUser }) }) },
+	default: {
+		query: () => ({
+			findById: () => ({ where: state.findUser }),
+			whereRaw: () => ({ andWhere: () => ({ limit: async () => [user] }) }),
+		}),
+	},
 }));
-vi.mock("../../models/user-2fa.js", () => ({ default: {} }));
+vi.mock("../../models/user-2fa.js", () => ({ default: { hasActive2FA: async () => false } }));
 vi.mock("../../models/token.js", () => ({ default: () => ({ load: state.load }) }));
 vi.mock("../../models/setting.js", () => ({
 	default: {
 		query: () => ({
-			where: () => ({ first: async () => ({ meta: { enabled: true, issuerURL: "https://idp.example.test" } }) }),
+			where: () => ({
+				first: async () => ({
+					meta: {
+						enabled: true,
+						clientID: "client",
+						clientSecret: "secret",
+						issuerURL: "https://idp.example.test",
+						redirectURL: "https://shield.example.test/api/oidc/callback",
+					},
+				}),
+			}),
 		}),
 	},
 }));
@@ -41,8 +65,9 @@ vi.mock("../../lib/config.js", () => ({ isDestructiveTestMode: () => false, getE
 vi.mock("../../lib/express/jwt-decode.js", () => ({ default: () => (_req, _res, next) => next() }));
 vi.mock("../../lib/validator/index.js", () => ({ default: async (_schema, data) => data }));
 vi.mock("../../lib/validator/api.js", () => ({ default: async (_schema, data) => data }));
-vi.mock("../../setup.js", () => ({ isSetup: async () => true }));
+vi.mock("../../setup.js", () => ({ isSetup: async () => true, isSetupTokenValid: async () => true }));
 
+import { encrypt } from "../../lib/encryption.js";
 import oidc from "../../routes/oidc.js";
 import tokens from "../../routes/tokens.js";
 import users from "../../routes/users.js";
@@ -66,7 +91,19 @@ const user = {
 const browserCookies = () => {
 	const cookies = new Map(
 		[
-			{ name: "shieldpm_oidc", value: "nonce___state", path: "/" },
+			{
+				name: "shieldpm_oidc",
+				value: encrypt(
+					JSON.stringify({
+						purpose: "shieldpm:oidc-login:v1",
+						nonce: "nonce",
+						state: "state",
+						codeVerifier: "verifier",
+						expiresAt: Date.now() + 300_000,
+					}),
+				),
+				path: "/",
+			},
 			{ name: "shieldpm_jwt", value: "old-access", path: "/" },
 			{ name: "shieldpm_refresh", value: "old-refresh", path: "/api/tokens" },
 			{ name: "shieldpm_jwt_original", value: "old-admin", path: "/" },
@@ -135,17 +172,17 @@ describe("HTTP authentication responses match the published schema", () => {
 		expect(validate({ ...body, token: "must-stay-in-cookie" })).toBe(false);
 	});
 
-	it("accepts the legacy renewal's minimal user identity without permitting arbitrary fields", async () => {
-		state.fresh.mockResolvedValueOnce({ token: "renewed-jwt", expires, user: { id: 7 } });
+	it("returns 410 Gone with deprecation headers for the removed legacy renewal", async () => {
 		const response = await fetch(`${origin}/api/tokens`);
-		expect(response.status).toBe(200);
+		expect(response.status).toBe(410);
+		expect(response.headers.get("deprecation")).toBe("true");
+		expect(response.headers.get("sunset")).toMatch(/GMT$/);
 		const body = await response.json();
-		expect(body).toEqual({ token: "renewed-jwt", expires, user: { id: 7 } });
-		const contract = schema.paths["/tokens"].get.responses[200].content["application/json"].schema;
+		expect(body).toMatchObject({ error: { code: 410 } });
+		expect(state.fresh).not.toHaveBeenCalled();
+		const contract = schema.paths["/tokens"].get.responses["410"].content["application/json"].schema;
 		const validate = ajv.compile(contract);
 		expect(validate(body), JSON.stringify(validate.errors)).toBe(true);
-		expect(validate({ ...body, user: { id: 7, secret: "private" } })).toBe(false);
-		expect(validate({ token: body.token, expires })).toBe(true);
 	});
 
 	it("replaces this browser's old session before the OIDC return can restore it", async () => {

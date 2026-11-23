@@ -18,6 +18,7 @@ vi.mock("../../lib/config.js", () => ({
 vi.mock("../../internal/nginx.js", () => ({ default: {} }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: vi.fn() } }));
 
+import { preserveMetaSecrets } from "../../internal/setting.js";
 import jwt from "../../lib/express/jwt.js";
 import Token from "../../models/token.js";
 import settings from "../../routes/settings.js";
@@ -44,6 +45,9 @@ describe("public OIDC settings with stale browser authentication", () => {
 		});
 		await state.db.schema.createTable("setting", (table) => {
 			table.string("id").primary();
+			table.string("name");
+			table.string("description");
+			table.string("value");
 			table.json("meta");
 		});
 		await state.db("user").insert(
@@ -58,6 +62,9 @@ describe("public OIDC settings with stale browser authentication", () => {
 		await state.db("setting").insert([
 			{
 				id: "oidc-config",
+				name: "OIDC",
+				description: "OIDC configuration",
+				value: "enabled",
 				meta: JSON.stringify({
 					name: "Company SSO",
 					enabled: true,
@@ -67,7 +74,13 @@ describe("public OIDC settings with stale browser authentication", () => {
 					redirectURL: "https://shield.example.test/api/oidc/callback",
 				}),
 			},
-			{ id: "ai-config", meta: JSON.stringify({ api_key: "must-stay-private" }) },
+			{
+				id: "ai-config",
+				name: "AI",
+				description: "AI configuration",
+				value: "enabled",
+				meta: JSON.stringify({ api_key: "must-stay-private" }),
+			},
 		]);
 		for (const [name, id, scope, expiresIn] of [
 			["user", 1, "user", "5m"],
@@ -101,7 +114,13 @@ describe("public OIDC settings with stale browser authentication", () => {
 				headers: tokens[name] ? { Cookie: `shieldpm_jwt=${tokens[name]}` } : {},
 			});
 			expect(response.status, await response.clone().text()).toBe(200);
-			expect(await response.json()).toEqual({ id: "oidc-config", meta: { name: "Company SSO", enabled: true } });
+			expect(await response.json()).toEqual({
+				id: "oidc-config",
+				name: "OIDC",
+				description: "OIDC configuration",
+				value: "enabled",
+				meta: { name: "Company SSO", enabled: true },
+			});
 		},
 	);
 
@@ -127,11 +146,59 @@ describe("public OIDC settings with stale browser authentication", () => {
 		},
 	);
 
-	it("keeps administrator access to private settings", async () => {
+	it.each(["anonymous", "user", "disabled", "deleted", "pending", "expired", "invalid"])(
+		"denies the settings list to %s",
+		async (name) => {
+			const response = await fetch(`${origin}/api/settings`, {
+				headers: tokens[name] ? { Cookie: `shieldpm_jwt=${tokens[name]}` } : {},
+			});
+			expect([400, 401, 403]).toContain(response.status);
+			expect(await response.text()).not.toContain("must-stay-private");
+		},
+	);
+
+	it("masks every secret in the settings list for administrators", async () => {
+		const response = await fetch(`${origin}/api/settings`, {
+			headers: { Cookie: `shieldpm_jwt=${tokens.admin}` },
+		});
+		expect(response.status).toBe(200);
+		expect(response.headers.get("cache-control")).toBe("no-store");
+		const body = await response.json();
+		expect(JSON.stringify(body)).not.toContain("must-stay-private");
+		expect(body.find((row) => row.id === "ai-config").meta).toEqual({
+			api_key: "********",
+			api_key_configured: true,
+		});
+		const oidc = body.find((row) => row.id === "oidc-config").meta;
+		expect(oidc).toMatchObject({
+			clientID: "test-client",
+			clientSecret: "********",
+			clientSecret_configured: true,
+		});
+		expect(oidc).not.toHaveProperty("clientSecret", "must-stay-private");
+	});
+
+	it("keeps the saved secret when a masked form value is submitted", () => {
+		expect(
+			preserveMetaSecrets(
+				{ name: "Company SSO", clientSecret: "********" },
+				{ clientSecret: "must-stay-private" },
+			),
+		).toEqual({ name: "Company SSO", clientSecret: "must-stay-private" });
+	});
+
+	it("masks the secret on the single-setting route for administrators", async () => {
 		const response = await fetch(`${origin}/api/settings/ai-config`, {
 			headers: { Cookie: `shieldpm_jwt=${tokens.admin}` },
 		});
 		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual({ id: "ai-config", meta: { api_key: "must-stay-private" } });
+		expect(response.headers.get("cache-control")).toBe("no-store");
+		expect(await response.json()).toEqual({
+			id: "ai-config",
+			name: "AI",
+			description: "AI configuration",
+			value: "enabled",
+			meta: { api_key: "********", api_key_configured: true },
+		});
 	});
 });

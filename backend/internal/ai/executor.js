@@ -27,6 +27,9 @@ import internalSetting from "../setting.js";
 import internalStream from "../stream.js";
 import internalTor from "../tor.js";
 import internalUser from "../user.js";
+import { needsConfirmation } from "./confirmation.js";
+import { getToolDefinitions } from "./tools.js";
+import { validateToolArguments } from "./validation.js";
 
 /**
  * Validate host data in Demo Mode - blocks private IPs and advanced config
@@ -145,17 +148,45 @@ const verifyProxyHostUpdateAccess = async (access, id) => {
 };
 
 /**
- * Execute a list of tool calls
+ * Execute a list of tool calls.
+ *
+ * Every call is checked against the tools the caller is actually authorized to
+ * use and against the JSON schema that was advertised to the model. Unknown
+ * fields, unknown tools and schema violations never reach a service.
+ *
  * @param {Object} access - The user access object (permission context)
  * @param {Array} toolCalls - List of tool calls from the LLM
+ * @param {{toolDefinitions?: Array, readOnly?: boolean}} [options]
  * @returns {Promise<Array>} - List of tool results
  */
-export const executeTools = async (access, toolCalls) => {
+export const executeTools = async (access, toolCalls, options = {}) => {
 	const toolResults = [];
+	const toolDefinitions =
+		options.toolDefinitions || (await getToolDefinitions(access, { readOnly: options.readOnly === true }));
+	const definitionsByName = new Map(toolDefinitions.map((tool) => [tool.function.name, tool.function]));
 
-	for (const call of /** @type {any[]} */ (toolCalls)) {
+	for (let call of /** @type {any[]} */ (toolCalls)) {
 		try {
 			let result = "";
+
+			const definition = definitionsByName.get(call?.name);
+			if (!definition) {
+				toolResults.push({
+					name: call?.name,
+					toolCallId: call?.id,
+					result: `Error: Tool not permitted: ${call?.name || "unknown"}`,
+				});
+				continue;
+			}
+
+			if (options.readOnly === true && needsConfirmation(call.name)) {
+				toolResults.push({
+					name: call.name,
+					toolCallId: call.id,
+					result: `Error: This action requires confirmation and is not available in this channel: ${call.name}`,
+				});
+				continue;
+			}
 
 			// Check for Demo Mode restrictions
 			if (isDemoMode()) {
@@ -189,6 +220,13 @@ export const executeTools = async (access, toolCalls) => {
 					continue;
 				}
 			}
+
+			if (call.argsParseError) {
+				throw new errs.ValidationError(`Invalid JSON arguments for ${call.name}`);
+			}
+
+			// Validate and coerce against the advertised schema before dispatch.
+			call = { ...call, args: validateToolArguments(definition, call.args) };
 
 			switch (call.name) {
 				case "get_proxy_hosts": {
@@ -663,6 +701,7 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "validate_certificate": {
+					await access.can("certificates:create");
 					const files = {
 						certificate: { data: Buffer.from(call.args.certificate) },
 						certificate_key: { data: Buffer.from(call.args.certificate_key) },
@@ -724,7 +763,7 @@ export const executeTools = async (access, toolCalls) => {
 				case "read_nginx_logs": {
 					if (isDemoMode()) throw new errs.PermissionError("Log reading is disabled in Demo Mode.");
 					const logType = call.args.log_type || "error";
-					const lines = call.args.lines || 50;
+					const lines = Math.min(100, Math.max(1, Number(call.args.lines) || 50));
 					const logs = await internalNginx.getLogs(access, logType);
 					// Get last N lines
 					const logLines = logs.split("\n").slice(-lines).join("\n");
@@ -738,14 +777,14 @@ export const executeTools = async (access, toolCalls) => {
 					// Use 'all' or first host if not specified, though summary implies specific.
 					// If no host, maybe dashboard summary?
 					// Let's assume dashboard summary if no args
-					if (!call.args.host_id && !call.args.proxy_host_id) {
+					if (!call.args.host_id) {
 						// Dashboard stats
 						const counts = await internalReport.getHostsReport(access);
 						result = JSON.stringify(counts);
 					} else {
 						const summary = await internalAnalytics.getHostSummary(
 							access,
-							call.args.host_id || call.args.proxy_host_id,
+							call.args.host_id,
 							call.args.range || "24h",
 						);
 						result = JSON.stringify(summary, null, 2);
@@ -813,8 +852,8 @@ export const executeTools = async (access, toolCalls) => {
 					const internalAnalytics = (await import("../../internal/analytics.js")).default;
 					const summary = await internalAnalytics.getHostSummary(
 						access,
-						call.args.proxy_host_id || call.args.host_id,
-						call.args.time_range || call.args.range || "24h",
+						call.args.host_id,
+						call.args.range || "24h",
 					);
 					result = JSON.stringify(summary, null, 2);
 					break;
@@ -875,6 +914,12 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				// Settings
 				case "update_global_setting": {
+					const settingId = typeof call.args.id === "string" ? call.args.id : String(call.args.id ?? "");
+					if (settingId === "ai-config" || settingId.startsWith("ai-")) {
+						throw new errs.PermissionError(
+							"The AI configuration can only be changed by an administrator in the AI settings.",
+						);
+					}
 					await internalSetting.update(access, { id: call.args.id, ...call.args });
 					result = `Updated Setting: ${call.args.id}`;
 					break;
@@ -1077,9 +1122,10 @@ export const executeTools = async (access, toolCalls) => {
 				case "get_audit_log": {
 					if (isDemoMode()) throw new errs.PermissionError("Audit Log is disabled in Demo Mode.");
 					await access.can("auditlog:list");
+					const limit = Math.min(100, Math.max(1, Number(call.args.limit) || 100));
 					const logs = await internalAuditLog.getAll(access, ["user"]);
 					result = JSON.stringify(
-						logs.map((/** @type {any} */ l) => ({
+						logs.slice(0, limit).map((/** @type {any} */ l) => ({
 							action: l.action,
 							user: l.user ? l.user.name : "System",
 							time: l.created_on,

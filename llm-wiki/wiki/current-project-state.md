@@ -1,10 +1,10 @@
 # Aktueller Projektzustand
 
 Status: active
-Last verified: 2026-11-05
+Last verified: 2026-11-23
 Confidence: high
 
-Last updated: 2026-11-05
+Last updated: 2026-11-23
 
 Dies ist eine rollierende Momentaufnahme, keine Historie. Ältere Details gehören
 in den [Log](./log.md) oder in die passende Bereichsseite.
@@ -16,7 +16,8 @@ zuletzt fertig wurde, was bewusst fehlt und welche Risiken gerade aktiv sind.
 
 ## Stand
 
-- Branch `develop`, Arbeitsbaum sauber und synchron mit `origin/develop`.
+- Branch `fix/security-hardening` (Basis `develop` @ `b1826f19`); Arbeitsbaum
+  enthält die Behebung der Security-Review 2026-11.
 - Letzte Version `4.4.1` in `.version`, `backend/package.json` und
   `frontend/package.json`.
 - Wiki versioniert seit `443d764f`; die Nacharbeiten dieser Sitzung betreffen
@@ -24,18 +25,21 @@ zuletzt fertig wurde, was bewusst fehlt und welche Risiken gerade aktiv sind.
 
 ## Was zuletzt fertig wurde
 
-| Datum      | Ergebnis                                                                                                           | Quelle                                                        |
-| ---------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
-| 2026-11-04 | Dependabot-Alarme für `qs`, `seroval` und `minimatch` geschlossen                                                  | [Log](./log.md)                                               |
-| 2026-11-05 | Warnungs-Triage: 350 Warnungen sortiert, 16 Sofortfixes, Folgeaufgaben T-020–T-027                                 | [Triage](./analyses/2026-11-05-warnungs-triage.md)            |
-| 2026-11-05 | Datei-Audit mit 173 Agents: 2.066 Dateien, 22 Fehler, 350 Warnungen; 21 Fehler behoben                             | [Analyse](./analyses/2026-11-05-datei-audit.md)               |
-| 2026-11-04 | Backlog abgearbeitet: Authentik-Beispiel, Fastly-Ranges, Advanced-Modell, Token-Kompatibilität, Tabellen-Kommentar | [Log](./log.md)                                               |
-| 2026-11-04 | Wiki-Prüfung in der CI verankert; OpenAppSec-Regressionstest CRLF-robust                                           | [Log](./log.md)                                               |
-| 2026-11-04 | Internes Wiki auf `llm-wiki/` konsolidiert; `docs/wiki-intern/` nach `llm-wiki/wiki/reference/` übernommen         | [ADR](./decisions/2026-11-04-wiki-struktur.md)                |
-| 2026-10-27 | Sicherheitsupdates für Redirect-, URI- und IP-Parser-Abhängigkeiten (PR #158)                                      | Commit `2324db48`                                             |
-| 2026-10-27 | Referenzkorrektur und Entfernung der Wasm/WASI-Ausführung                                                          | [ADR](./decisions/2026-10-27-entfernung-der-wasm-laufzeit.md) |
-| 2026-10-27 | Abhängigkeiten in Frontend und Backend aktualisiert (PR #157)                                                      | Commit `afec2978`                                             |
-| 2026-10    | Host-Versionen mit Rollback, Instanzbackups, Störungszentrale, IP-Firewall, Proxy-Host-Überwachung und Diagnose    | [Interne Feature-Doku](reference/features/README.md)          |
+| Datum      | Ergebnis                                                                                                           | Quelle                                                                |
+| ---------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| 2026-11-23 | P2-Analytics: Stunden-Rollup, Retention-Gate und Langzeit-Query-Switch                                             | [Analytics](./reference/module/analytics.md), [Aufgaben](./tasks.md)  |
+| 2026-11-23 | T-030: Cosign/SBOM/Provenienz, AES-Rotation, OIDC-Step-up, verschlüsselte 2FA-/OIDC-Secrets, DB-gestütztes KI-Budget | [Sicherheit](./security/overview.md), [Aufgaben](./tasks.md)          |
+| 2026-11-23 | Security-Review-Behebung: K-01/K-02/K-03, Identität, Betrieb, KI, Analytics, Secrets, Audit, UX und Doku           | [Sicherheit](./security/overview.md), Branch `fix/security-hardening` |
+| 2026-11-04 | Dependabot-Alarme für `qs`, `seroval` und `minimatch` geschlossen                                                  | [Log](./log.md)                                                       |
+| 2026-11-05 | Warnungs-Triage: 350 Warnungen sortiert, 16 Sofortfixes, Folgeaufgaben T-020–T-027                                 | [Triage](./analyses/2026-11-05-warnungs-triage.md)                    |
+| 2026-11-05 | Datei-Audit mit 173 Agents: 2.066 Dateien, 22 Fehler, 350 Warnungen; 21 Fehler behoben                             | [Analyse](./analyses/2026-11-05-datei-audit.md)                       |
+| 2026-11-04 | Backlog abgearbeitet: Authentik-Beispiel, Fastly-Ranges, Advanced-Modell, Token-Kompatibilität, Tabellen-Kommentar | [Log](./log.md)                                                       |
+| 2026-11-04 | Wiki-Prüfung in der CI verankert; OpenAppSec-Regressionstest CRLF-robust                                           | [Log](./log.md)                                                       |
+| 2026-11-04 | Internes Wiki auf `llm-wiki/` konsolidiert; `docs/wiki-intern/` nach `llm-wiki/wiki/reference/` übernommen         | [ADR](./decisions/2026-11-04-wiki-struktur.md)                        |
+| 2026-10-27 | Sicherheitsupdates für Redirect-, URI- und IP-Parser-Abhängigkeiten (PR #158)                                      | Commit `2324db48`                                                     |
+| 2026-10-27 | Referenzkorrektur und Entfernung der Wasm/WASI-Ausführung                                                          | [ADR](./decisions/2026-10-27-entfernung-der-wasm-laufzeit.md)         |
+| 2026-10-27 | Abhängigkeiten in Frontend und Backend aktualisiert (PR #157)                                                      | Commit `afec2978`                                                     |
+| 2026-10    | Host-Versionen mit Rollback, Instanzbackups, Störungszentrale, IP-Firewall, Proxy-Host-Überwachung und Diagnose    | [Interne Feature-Doku](reference/features/README.md)                  |
 
 ## Was funktioniert
 

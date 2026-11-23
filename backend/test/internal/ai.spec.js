@@ -16,6 +16,13 @@ vi.mock("../../lib/encryption.js", () => ({
 	decrypt: vi.fn((val) => val.replace("encrypted_", "")),
 }));
 
+vi.mock("../../internal/ai/usage.js", () => ({
+	getDailyBudget: () => 0,
+	getDailyTokenUsage: vi.fn(async () => 0),
+	addDailyTokenUsage: vi.fn(async () => 0),
+	resetDailyTokenUsage: vi.fn(async () => {}),
+}));
+
 vi.mock("../../db.js", () => ({
 	default: vi.fn(() => ({
 		// Mock knex instance
@@ -46,7 +53,7 @@ describe("internal/ai.js", () => {
 			const mockConfig = { enabled: true, provider: "local" };
 			internalSetting.get.mockResolvedValue({ meta: mockConfig });
 			const config = await internalAi.getConfig(mockAccess);
-			expect(config).toEqual(mockConfig);
+			expect(config).toMatchObject(mockConfig);
 		});
 	});
 

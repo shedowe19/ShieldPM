@@ -3,6 +3,48 @@
 Ergebnisse für Menschen, neueste zuerst. Die Arbeit selbst steht im [Log](./log.md).
 Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
+## 2026-11-23
+
+- Certbot-Erneuerungen erhalten ein 60-Minuten-Zeitbudget: Certbot pollt
+  ACME-Autorisierungen bis zu 30 Minuten, ZeroSSL kann eine pending
+  DNS-Challenge mit einem langen `Retry-After` beantworten. Das frühere
+  15-Minuten-Limit beendete gültige Wildcard-Erneuerungen per `SIGKILL`.
+  ([Certbot](./reference/module/certbot.md), [Log](./log.md))
+- Native systemd-Unit korrigiert: Die schreibgeschützte System-Allowlist ließ
+  den Dienst auf einer echten LXC-Installation mit `226/NAMESPACE` scheitern und
+  blockierte Startschreibzugriffe unter `/etc` und `/usr/local/nginx/conf`. Die
+  Unit behält die verträglichen Sandbox-Direktiven; ein Regressionstest weist die
+  unverträglichen zurück.
+  ([Laufzeit](./infrastructure/runtime.md), [Log](./log.md))
+- P2-Analytics-Scaling: Ein idempotenter Stunden-Rollup verdichtet abgeschlossene
+  Stunden aus den Rohdaten in `analytics_hourly`; 7d/30d- und globale
+  Langzeit-KPIs lesen diese Aggregate, 1h/24h bleiben auf Minutenpunkten. Die
+  Rohdetail-Retention löscht erst nach committetem Rollup-Stand und in
+  begrenzten Batches. Neue Migration für SQLite, MariaDB/MySQL und PostgreSQL,
+  neue Rollup-/Query-/Retention-Tests, öffentliche Analytics-Doku aktualisiert.
+  ([Analytics](./reference/module/analytics.md), [Log](./log.md))
+- T-033 umgesetzt: ShieldPM schreibt Login, OIDC, Token-Rotation/-Replay, 2FA,
+  Rollen/Rechte, Secret-Exporte, Terminal, GitOps, Git-Deploy, Docker,
+  ChatOps und ACME mit Request-Kontext ins Audit-Log und wandelt sie ueber
+  stabile Regel-IDs (`SPM-AUTH-001` bis `SPM-ACME-001`) in deduplizierte
+  Security-Incidents um. Die Zustellung nutzt die vorhandenen
+  Notification-Targets; die API liegt unter `/api/incidents/security`.
+  ([Sicherheit](./security/overview.md), [Log](./log.md))
+- T-030 umgesetzt: Release-Images und `SHA256SUMS` sind keyless per Cosign
+  signiert, der manuelle `docker-latest`-Push attestiert SBOM und Provenienz,
+  der AES-Envelope ist versioniert und per Re-Encrypt-CLI rotierbar, TOTP-/Duo-
+  und OIDC-Secrets liegen verschlüsselt, OIDC nutzt eine Step-up-Seite für
+  lokale 2FA und das KI-Budget liegt in der Datenbank.
+  ([Sicherheit](./security/overview.md), [Log](./log.md))
+
+- Security-Review mit drei Runden und 39 Rollen behoben: Die drei kritischen
+  Befunde (Dateisystemzugriff über `path`, Nginx-/Lua-Injection über Host-Felder,
+  beliebige Client-Zertifikate der internen CA) sind an der Trust-Grenze
+  geschlossen. Dazu kommen Identität/SSO, Audit-Kontext, Secret-Redaktion,
+  Analytics-Idempotenz, KI-Bestätigungen, Terminal-/Backup-/Container-Härtung,
+  Supply-Chain-Pinning und korrigierte Dokumentation.
+  ([Sicherheit](./security/overview.md), [Log](./log.md))
+
 ## 2026-11-05
 
 - T-019: 350 Warnungen triagiert, 16 sicherheits- und fehlerrelevante Punkte

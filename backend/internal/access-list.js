@@ -65,15 +65,23 @@ const validateListInput = (data) => {
 		throw new errs.ValidationError("Invalid access-list authentication type");
 	}
 	if (meta.authentik_host) {
-		let url;
-		try {
-			url = new URL(meta.authentik_host);
-		} catch {
-			/* Report a validation error below. */
-		}
-		if (!url || !["http:", "https:"].includes(url.protocol) || /[\s;{}"'\\$#]/.test(meta.authentik_host)) {
-			throw new errs.ValidationError("Authentik host must be an HTTP(S) URL without Nginx directives");
-		}
+		// Authentik's outpost is proxied by Nginx. Accept only a bare public HTTPS
+		// origin so metadata, loopback, unix sockets and URL userinfo cannot be
+		// turned into an internal SSRF target. Paths and queries are appended by
+		// the template, never supplied by the user.
+		meta.authentik_host = utils.validatePublicHttpsUrl(meta.authentik_host, { label: "Authentik host" });
+	}
+	if (meta.oidc_discovery_url) {
+		meta.oidc_discovery_url = utils.validatePublicHttpsUrl(meta.oidc_discovery_url, {
+			label: "OIDC discovery URL",
+			allowPath: true,
+		});
+	}
+	if (meta.oauth2_oidc_issuer_url) {
+		meta.oauth2_oidc_issuer_url = utils.validatePublicHttpsUrl(meta.oauth2_oidc_issuer_url, {
+			label: "OAuth2 OIDC issuer URL",
+			allowPath: true,
+		});
 	}
 	if (meta.oauth2_proxy_prefix && !/^\/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\/?$/.test(meta.oauth2_proxy_prefix)) {
 		throw new errs.ValidationError("OAuth2 proxy prefix must be an absolute URL path");

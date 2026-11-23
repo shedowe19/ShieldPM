@@ -34,4 +34,30 @@ describe("Proxy host preview API contracts", () => {
 			getValidationSchema("/nginx/proxy-hosts/{hostID}", "put"),
 		);
 	});
+
+	it("rejects Nginx and Lua syntax in interpolated host fields", async () => {
+		const schema = getValidationSchema("/nginx/proxy-hosts", "post");
+		const base = {
+			domain_names: ["app.test"],
+			forward_scheme: "http",
+			forward_host: "backend.test",
+			forward_port: 80,
+		};
+		await expect(apiValidator(schema, { ...base, bandwidth_limit: '1m"; os.execute("id")' })).rejects.toThrow();
+		await expect(apiValidator(schema, { ...base, forward_query: "$http_authorization" })).rejects.toThrow();
+		await expect(apiValidator(schema, { ...base, index_file: "../../etc/passwd" })).rejects.toThrow();
+		await expect(
+			apiValidator(schema, {
+				...base,
+				locations: [
+					{
+						path: "/app; return 200",
+						forward_scheme: "http",
+						forward_host: "backend.test",
+						forward_port: 80,
+					},
+				],
+			}),
+		).rejects.toThrow();
+	});
 });

@@ -64,7 +64,9 @@ trap cleanup_update EXIT
 
 REPO_URL="https://github.com/shedowe19/ShieldPM.git"
 
-BRANCH="develop" # Default branch for content
+# The default target is the latest published release tag, never a moving
+# branch. Development builds require an explicit --branch develop.
+BRANCH=""
 
 # Preserve original arguments for self-update restart
 ORIGINAL_ARGS=("$@")
@@ -87,6 +89,30 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Resolve the exact release tag without trusting a branch head.
+resolve_release_ref() {
+  local tag
+  if ! tag=$(curl -fsSL --connect-timeout 10 --max-time 60 \
+      "https://api.github.com/repos/shedowe19/ShieldPM/releases/latest" | \
+      node --input-type=module -e 'let data = ""; for await (const chunk of process.stdin) data += chunk; try { console.log(JSON.parse(data).tag_name || ""); } catch { process.exitCode = 1; }'); then
+    return 1
+  fi
+  if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    return 1
+  fi
+  printf '%s\n' "$tag"
+}
+
+if [ -z "$BRANCH" ]; then
+  if ! BRANCH=$(resolve_release_ref); then
+    echo "Could not resolve the latest ShieldPM release." >&2
+    echo "Pass --branch <ref> to update from a specific branch or tag deliberately." >&2
+    echo "No application files were changed." >&2
+    exit 1
+  fi
+  echo "Using latest published release: $BRANCH"
+fi
+
 TEMP_DIR="$UPDATE_RUN_DIR/source"
 BACKEND_DIR="/app"
 FRONTEND_DIR="/html/frontend"
@@ -94,7 +120,7 @@ FRONTEND_DIR="/html/frontend"
 echo "=========================================="
 echo "🛡️ ShieldPM In-Place Update Utility"
 echo "=========================================="
-echo "Target Branch: $BRANCH"
+echo "Target Ref:    $BRANCH"
 echo "Temp Dir:      $TEMP_DIR"
 echo "Binary Tag:    nginx-binaries (Rolling)"
 echo "=========================================="
@@ -147,7 +173,7 @@ else
 fi
 
 echo "    Current Version: $CURRENT_VER ($CURRENT_SHORT)"
-echo "    Latest Commit:   $LATEST_SHORT (Branch: $BRANCH)"
+echo "    Latest Commit:   $LATEST_SHORT (Ref: $BRANCH)"
 echo ""
 
 if [[ "$CURRENT_SHA" == "$LATEST_SHA_FULL" ]]; then
@@ -456,6 +482,20 @@ apply_staged_native_binaries() {
     fi
 }
 
+# The terminal page loads its xterm assets from /html/terminal/vendor. Docker
+# builds copy them from node_modules; a native update must install them too.
+install_terminal_assets() {
+    local source="$TEMP_DIR/frontend/node_modules/@xterm"
+    local target
+    target="$(dirname "$FRONTEND_DIR")/terminal/vendor"
+    install -d -m 755 "$target"
+    install -m 644 "$source/xterm/lib/xterm.js" "$target/xterm.js"
+    install -m 644 "$source/xterm/css/xterm.css" "$target/xterm.css"
+    install -m 644 "$source/addon-fit/lib/addon-fit.js" "$target/addon-fit.js"
+    install -m 644 "$source/addon-web-links/lib/addon-web-links.js" "$target/addon-web-links.js"
+    echo "    - Terminal assets installed."
+}
+
 echo "--> [1/9] Updating System & Dependencies..."
 
 apt-get update
@@ -531,6 +571,7 @@ echo "    - Updating System Configs (rootfs)..."
 # SAFETY: Remove /data from the update payload to PREVENT overwriting user config (.env) and database
 rm -rf "$TEMP_DIR/rootfs/data"
 cp -rf "$TEMP_DIR/rootfs/"* /
+install_terminal_assets
 
 # Only prepared local files are installed while ShieldPM is stopped.
 apply_staged_native_binaries

@@ -117,7 +117,7 @@ ShieldPM runs schema migrations for the **selected** database on startup. When y
 | :-------------------- | :------------------------------------------------------------------------------ | :----------------- |
 | `GOA`                 | Enable GoAccess Analytics dashboard (port `GOA_PORT`); also enables `LOGROTATE` | `false`            |
 | `GOACLA`              | Custom GoAccess command-line arguments                                          | See `.env` example |
-| `LOGROTATE`           | Enable log rotation (rotates daily)                                             | `false`            |
+| `LOGROTATE`           | Enable log rotation (daily and at a 100 MB size ceiling)                        | `true`             |
 | `LOGROTATIONS`        | Number of rotated log files to keep                                             | `3`                |
 | `NGINX_LOG_NOT_FOUND` | Log 404 errors to the container log                                             | `false`            |
 

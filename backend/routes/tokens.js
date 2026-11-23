@@ -5,13 +5,30 @@ import twoFaService from "../internal/2fa-service.js";
 import internalToken from "../internal/token.js";
 import { clearAuthCookies, clearDuoCookie, readDuoCookie, setAuthCookies, setDuoCookie } from "../lib/auth-cookies.js";
 import errs from "../lib/error.js";
-import jwtdecode from "../lib/express/jwt-decode.js";
+import { AUDIT_ACTION } from "../lib/security-events.js";
 import apiValidator from "../lib/validator/api.js";
 import { debug, express as logger } from "../logger.js";
 import TokenModel from "../models/token.js";
 import User from "../models/user.js";
 import UserTwoFa from "../models/user-2fa.js";
 import { getValidationSchema } from "../schema/index.js";
+
+/**
+ * OIDC enforcement can be disabled for break-glass access with
+ * `OIDC_ENFORCE_SSO=false`. Without that override the database setting wins.
+ * The setting model is imported lazily so token-only test fixtures and routes
+ * do not need a database connection merely to import this module.
+ */
+export const isLocalPasswordLoginForbidden = async () => {
+	const override = process.env.OIDC_ENFORCE_SSO;
+	if (typeof override === "string" && ["false", "0", "no", "off"].includes(override.trim().toLowerCase())) {
+		return false;
+	}
+
+	const { default: settingModel } = await import("../models/setting.js");
+	const settings = await settingModel.query().where({ id: "oidc-config" }).first();
+	return settings?.meta?.enabled === true && settings?.meta?.enforce_sso === true;
+};
 
 /**
  * Rate limiter for sensitive auth endpoints (refresh, logout, restore).
@@ -39,6 +56,40 @@ const loadPendingTwoFaToken = async (rawToken) => {
 	return payload;
 };
 
+const loginFailureReason = (error) => {
+	if (error instanceof errs.ValidationError) return "invalid_request";
+	if (error instanceof errs.AuthError || error instanceof errs.UnauthorizedError) return "invalid_credentials";
+	return "error";
+};
+
+/**
+ * Login events are the primary signal for account takeover attempts. They are
+ * written without credentials, tokens or password material; only the login
+ * identifier, the outcome and the request context are retained.
+ *
+ * @param {string} action
+ * @param {string} outcome
+ * @param {{ user_id?: number, actor_user_id?: number, actor_type?: string, ip?: string, meta?: Record<string, any> }} [data]
+ */
+const auditAuthEvent = async (action, outcome, data = {}) => {
+	try {
+		const { default: internalAuditLog } = await import("../internal/audit-log.js");
+		await internalAuditLog.add(null, {
+			action,
+			object_type: "auth",
+			outcome,
+			user_id: data.user_id,
+			actor_user_id: data.actor_user_id,
+			actor_type: data.actor_type ?? "anonymous",
+			ip: data.ip,
+			user_agent: undefined,
+			meta: data.meta || {},
+		});
+	} catch {
+		// Auditing must never block a login decision.
+	}
+};
+
 const router = express.Router({
 	caseSensitive: true,
 	strict: true,
@@ -49,6 +100,7 @@ const LOGIN_ATTEMPT_TABLE = "login_attempts";
 const LOGIN_ATTEMPT_LIMIT = 5;
 const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_ATTEMPT_BLOCK_MS = 15 * 60 * 1000;
+const LEGACY_GET_TOKENS_SUNSET = new Date("2027-01-01T00:00:00Z").toUTCString();
 let loginAttemptTableInitPromise = null;
 
 const getLoginAttemptKnex = () => User.knex();
@@ -201,28 +253,20 @@ router
 	/**
 	 * GET /tokens
 	 *
-	 * Get a new Token, given they already have a token they want to refresh
-	 * We also piggy back on to this method, allowing admins to get tokens
-	 * for services like Job board and Worker.
+	 * Removed. The old flow issued long-lived access tokens with an
+	 * unvalidated `expiry` query parameter and without a revocable session.
+	 * Clients must rotate with POST /tokens/refresh.
 	 */
-	.get(authRateLimiter, jwtdecode(), async (req, res) => {
-		logger.warn(`Legacy GET /tokens accessed from IP ${req.ip || "unknown"} – migrate to POST /tokens/refresh`);
-
-		const expiry = typeof req.query.expiry === "string" ? req.query.expiry : null;
-		const scope = typeof req.query.scope === "string" ? req.query.scope : null;
-		const query = { expiry, scope };
-		const data = await internalToken.getFreshToken(res.locals.access, query);
-
-		res.cookie("shieldpm_jwt", data.token, {
-			httpOnly: true,
-			secure: req.secure,
-			sameSite: "strict",
-			maxAge: data.expires ? Math.max(0, new Date(data.expires).getTime() - Date.now()) : undefined,
+	.get(authRateLimiter, (_req, res) => {
+		res.set("Deprecation", "true");
+		res.set("Sunset", LEGACY_GET_TOKENS_SUNSET);
+		res.set("Cache-Control", "no-store");
+		res.status(410).send({
+			error: {
+				code: 410,
+				message: "GET /tokens has been removed. Use POST /tokens/refresh to rotate a session.",
+			},
 		});
-
-		res.clearCookie("shieldpm_oidc");
-		res.locals.refreshCsrfToken?.(data.token);
-		res.status(200).send({ ...data, csrfToken: res.locals.csrfToken });
 	})
 
 	/**
@@ -231,6 +275,23 @@ router
 	 * Create a new Token
 	 */
 	.post(authRateLimiter, async (req, res, next) => {
+		// Enforce SSO before touching credentials or login-attempt counters: an
+		// enforced tenant must not be able to authenticate with a local password.
+		if (await isLocalPasswordLoginForbidden()) {
+			logger.warn(`Blocked local password login from ${req.ip || "unknown"} because OIDC/SSO is enforced`);
+			await auditAuthEvent(AUDIT_ACTION.LOGIN_BLOCKED, "denied", {
+				ip: req.ip,
+				meta: { reason: "sso_enforced" },
+			});
+			return res.status(403).send({
+				error: {
+					code: 403,
+					message:
+						"Local password login is disabled because OIDC/SSO is enforced. Sign in through your identity provider.",
+				},
+			});
+		}
+
 		const ip = req.ip || "unknown";
 		const now = Date.now();
 		const loginIdentifier = normalizeLoginIdentifier(req.body);
@@ -245,6 +306,10 @@ router
 			for (const tracked of trackedIdentifiers) {
 				const state = await getLoginAttemptState(tracked.scope, tracked.identifier, now);
 				if (state.blockedUntil > now) {
+					await auditAuthEvent(AUDIT_ACTION.LOGIN_BLOCKED, "denied", {
+						ip,
+						meta: { reason: "rate_limited", identifier: loginIdentifier },
+					});
 					return res.status(429).send({
 						error: {
 							code: 429,
@@ -271,6 +336,14 @@ router
 					expiresIn: "5m",
 				});
 
+				await auditAuthEvent(AUDIT_ACTION.LOGIN_PENDING_2FA, "pending", {
+					user_id: result.user.id,
+					actor_user_id: result.user.id,
+					actor_type: "user",
+					ip,
+					meta: { method: "password" },
+				});
+
 				// Return which methods are available so the UI can present the right input
 				const activeMethods = await UserTwoFa.getActiveForUser(result.user.id);
 				const methodTypes = [...new Set(activeMethods.map((m) => m.type))];
@@ -286,6 +359,14 @@ router
 			// No 2FA — issue refresh-token pair alongside the access token
 			const meta = { ip, userAgent: req.headers["user-agent"] || null };
 			const pair = await internalToken.issueTokenPair(result.user, data.scope || "user", meta);
+
+			await auditAuthEvent(AUDIT_ACTION.LOGIN_SUCCEEDED, "success", {
+				user_id: result.user.id,
+				actor_user_id: result.user.id,
+				actor_type: "user",
+				ip,
+				meta: { method: "password", scope: data.scope || "user" },
+			});
 
 			// Set both cookies
 			setAuthCookies(res, req, {
@@ -316,6 +397,13 @@ router
 			}
 
 			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+			await auditAuthEvent(AUDIT_ACTION.LOGIN_FAILED, "failure", {
+				ip,
+				meta: {
+					identifier: loginIdentifier,
+					reason: loginFailureReason(err),
+				},
+			});
 			// Small delay to deter timing attacks
 			await new Promise((resolve) => setTimeout(resolve, 500));
 			next(err);
@@ -502,18 +590,40 @@ router.post("/2fa/verify", authRateLimiter, async (req, res) => {
 		// Verify the provided 2FA code
 		const valid = await twoFaService.verifyLoginChallenge(userId, method, code);
 		if (!valid) {
+			await auditAuthEvent(AUDIT_ACTION.LOGIN_FAILED, "failure", {
+				user_id: userId,
+				actor_user_id: userId,
+				actor_type: "user",
+				ip: req.ip,
+				meta: { method: `password+${method}`, reason: "invalid_2fa" },
+			});
 			return res.status(401).send({ error: { code: 401, message: "Invalid 2FA code" } });
 		}
 
 		// 2FA passed — load the user and issue full tokens
 		const user = await User.query().findById(userId).andWhere("is_deleted", 0).andWhere("is_disabled", 0);
 		if (!user) {
+			await auditAuthEvent(AUDIT_ACTION.LOGIN_FAILED, "failure", {
+				user_id: userId,
+				actor_user_id: userId,
+				actor_type: "user",
+				ip: req.ip,
+				meta: { method: `password+${method}`, reason: "user_unavailable" },
+			});
 			return res.status(401).send({ error: { code: 401, message: "User not found" } });
 		}
 
 		const ip = req.ip || "unknown";
 		const meta = { ip, userAgent: req.headers["user-agent"] || null };
 		const pair = await internalToken.issueTokenPair(user, "user", meta);
+
+		await auditAuthEvent(AUDIT_ACTION.LOGIN_SUCCEEDED, "success", {
+			user_id: user.id,
+			actor_user_id: user.id,
+			actor_type: "user",
+			ip,
+			meta: { method: `password+${method}` },
+		});
 
 		setAuthCookies(res, req, {
 			accessToken: pair.access_token,
@@ -530,6 +640,10 @@ router.post("/2fa/verify", authRateLimiter, async (req, res) => {
 		});
 	} catch (err) {
 		debug(logger, `POST /tokens/2fa/verify: ${err}`);
+		await auditAuthEvent(AUDIT_ACTION.LOGIN_FAILED, "failure", {
+			ip: req.ip,
+			meta: { method: `password+${method || "unknown"}`, reason: "verification_error" },
+		});
 		const code = err.status || 500;
 		res.status(code).send({ error: { code, message: err.public ? err.message : "2FA verification failed" } });
 	}

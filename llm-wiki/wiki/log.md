@@ -2,6 +2,183 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-23] fix | Certbot-Erneuerung überlebt die ACME-Poll-Deadline
+
+- Command: "check das mal bitte" zum Certbot-Fehler auf der nativen Installation.
+- Type: fix
+- Areas affected: Certbot-Ausführung, automatische und manuelle
+  Zertifikatserneuerung, Wildcard-/DNS-01-Zertifikate, Zertifikatsrouten.
+- Files changed: `backend/lib/utils.js`, `backend/routes/nginx/certificates.js`,
+  `backend/test/lib/utils-hardening.spec.js`.
+- Wiki pages updated: [Certbot](./reference/module/certbot.md),
+  [Changelog](./changelog.md), diese Seite.
+- New TODOs: keine.
+- New bugs: Auf dem nativen LXC-Host beendete das 15-Minuten-Budget
+  `certbot renew` für das Wildcard-Zertifikat #28 per `SIGKILL`, während
+  Certbot bei ZeroSSL noch auf die DNS-Autorisierung wartete. ZeroSSL
+  antwortet auf eine pending DNS-Challenge mit `Retry-After: 86400`; Certbot
+  wartet bis zu seiner 30-Minuten-Poll-Deadline. Die Erneuerung schlug dadurch
+  bei jedem Lauf fehl. Behoben in `9fa0db34`.
+- New decisions: Certbot bekommt 60 Minuten (`CERTBOT_EXEC_TIMEOUT_MS`);
+  beide Zertifikatsrouten verwenden dasselbe Budget plus eine Minute. Die
+  gemeinsame Prozesssperre bleibt bestehen.
+- Verification: `utils-hardening.spec.js` 22/22 grün, `tsc --noEmit` ohne
+  Ausgabe, Biome ohne Befund. Auf dem Host wurde #28 direkt mit derselben
+  Certbot-Konfiguration bis 2027-02-21 erneuert, die Datenbankzeile
+  aktualisiert und nginx neu geladen. #29 wurde ebenfalls bis 2027-02-21
+  erneuert; nginx liefert das neue Wildcard-Zertifikat für die `.eu`-Hosts aus,
+  beide Datenbankzeilen stehen auf dem neuen Ablaufdatum.
+
+## [2026-11-23] fix | Native systemd-Einheit mit dem Appliance-Layout verträglich
+
+- Command: "ShieldPM-Dienst startet auf der nativen LXC-Installation nicht (226/NAMESPACE), bitte prüfen und beheben".
+- Type: fix
+- Areas affected: native Installation, systemd-Unit, Startkette, Updater,
+  WireGuard, eingebautes Terminal, Regressionstest.
+- Files changed: `rootfs/usr/lib/systemd/system/shieldpm.service`,
+  `scripts/tests/test_native_maintenance.py`.
+- Wiki pages updated: [Laufzeit](./infrastructure/runtime.md),
+  [Changelog](./changelog.md), diese Seite.
+- New TODOs: keine.
+- New bugs: `ReadWritePaths=/var/lib/letsencrypt` fehlte auf der nativen
+  Installation und beendete die Unit mit `226/NAMESPACE`; nach dem Anlegen
+  blockierte `ProtectSystem=full` die Startschreibzugriffe auf
+  `/etc/logrotate`, `/etc/tor/torrc` und `/usr/local/nginx/conf`.
+  `ProtectKernelTunables` hätte die WireGuard-`sysctl`-Aufrufe blockiert,
+  `RestrictSUIDSGID` die Paketverwaltung im Terminal. Behoben in `e850141e`.
+- New decisions: Die native Unit setzt keine schreibgeschützten Systempfade;
+  die Container-/VM-Grenze ist die Dateisystemgrenze. Es bleiben
+  `NoNewPrivileges`, `PrivateTmp`, `ProtectControlGroups`, `RestrictRealtime`,
+  `LockPersonality` und `UMask=0022`.
+- Verification: `systemd-analyze verify` auf dem LXC-Host ohne Befund; Unit
+  `active`, `NRestarts=0`, Ports 80/443/81 lauschen, `/` und `/api/` liefern
+  HTTP 200; `NativeServiceSandboxTests` 2/2 grün.
+
+## [2026-11-23] security | Branch-Protection, Rechtstemplates, Restore und interner Pentest
+
+- Command: "Die verbleibenden Nachweise (Live-Restore, Pentest, AVV, Branch-Protection) mach das jetzt".
+- Type: security
+- Areas affected: GitHub-Rulesets, Repository-Sicherheit, Recht/Datenschutz, lokale Betriebsverifikation.
+- Files changed: `docs/legal/*` (AVV, SCC/TIA, Retention, DSAR, Subprocessors, Restore-Drill, Pentest-Report), `llm-wiki`-Seiten, `backend/app.js`, `backend/lib/request-context.js`, neuer IP-Test.
+- Wiki pages updated: [Sicherheit](./security/overview.md), [Aufgaben](./tasks.md), diese Seite.
+- New TODOs: T-029 auf den unabhängigen Pentest reduziert; T-031 (produktive Schlüsselrotation) bleibt blockiert.
+- New bugs: Rate-Limiter lieferte hinter Unix-Socket HTTP 500, weil `req.ip` fehlte; behoben und getestet.
+- Verification: Rulesets `Protect develop`/`Protect release tags` aktiv, Secret Scanning/Push Protection und Dependabot Security Updates an; lokaler Restore-Drill bestanden (Host gelöscht und wiederhergestellt); interner Pentest 20/20 bestanden.
+
+## [2026-11-23] performance | P2-Analytics-Rollup, Retention-Gate und Query-Switch
+
+- Command: "P2 analytics-scaling work: hourly rollup, retention gate and long-range query switch".
+- Type: performance
+- Areas affected: Analytics-Ingestion, Datenbank (SQLite/MariaDB/PostgreSQL),
+  Analytics-API, Retention, Startkette, öffentliche Analytics-Doku.
+- Files changed: `backend/internal/analytics.js`,
+  `backend/internal/analytics-rollup.js` (neu), `backend/lib/analytics-rollup.js`
+  (neu), `backend/lib/analytics-query.js` (neu),
+  `backend/lib/analytics-retention.js` (neu), Modelle `analytics_hourly` und
+  `analytics_rollup_state` (neu), Migration
+  `20261123000002_add_analytics_hourly_rollup.js`, `routes/analytics.js`,
+  `routes/nginx/analytics.js`, `index.js`, `index-dev.js`,
+  `docs/wiki/Analytics.md`, bestehende Starttests (Rollup-Mock).
+- Wiki pages updated: [Analytics](./reference/module/analytics.md),
+  [Nginx-Analytics-Routen](./reference/api/nginx-analytics.md),
+  [Projektzustand](./current-project-state.md), [Aufgaben](./tasks.md),
+  [Changelog](./changelog.md), diese Seite.
+- New TODOs: keine; T-032 ist erledigt.
+- New bugs: keine neuen offenen Fehler. Bekannte Grenze: Der erste Lauf nach
+  einem langen Ausfall verarbeitet höchstens 72 Stunden pro Lauf; ältere
+  Stunden ohne Detailzeilen werden übersprungen und geloggt.
+- New decisions: `analytics_hourly` trägt `bucket_key` statt einer Teilmenge
+  über die nullable `proxy_host_id`; der Rollup schreibt mit Set-Semantik und
+  Wasserzeichen; Rohdetail-Löschung endet am committeten Rollup-Stand; das
+  späte Fenster schrumpft mit `ANALYTICS_DETAILED_RETENTION_HOURS`, damit keine
+  teilweise gelöschte Stunde neu aggregiert wird.
+- Verification: `vitest` 137 Tests im gezielten Analytics-, Migrations- und
+  Startlauf grün, davon 50 neue Rollup-/Query-/Retention-/Migrations-Tests;
+  `tsc --noEmit` ohne Ausgabe; Biome auf allen geänderten Backend-Dateien ohne
+  Befund (nur Schema-Versionshinweis der bestehenden `biome.json`).
+
+## [2026-11-23] security | T-033 Sicherheitsdetektion umgesetzt
+
+- Command: "P2 detection-engineering work for ShieldPM".
+- Type: security
+- Areas affected: Audit-Kontext, Auth/OIDC/Token, 2FA, Benutzerverwaltung,
+  Zertifikate/ACME, WireGuard, Terminal, GitOps, Git-Deploy, Docker-Discovery,
+  ChatOps, Incident-/Notification-Pfad, OpenAPI, oeffentliche und interne Doku.
+- Files changed: `lib/security-events.js`, `internal/security-detection.js`,
+  `models/security_incident.js`, Migration `security_detection`, Audit-Aufrufe
+  in `routes/{tokens,oidc,2fa,incidents}.js`, `internal/{auth-session-service,
+  certificate,chat,docker,git-deploy,gitops,terminal,user,incidents}.js`,
+  `routes/nginx/{certificates,cloudflared,wireguard}.js`.
+- Wiki pages updated: [Sicherheit](./security/overview.md),
+  [Audit-Log](./reference/verwaltung/audit-log.md), [Aufgaben](./tasks.md),
+  [Changelog](./changelog.md), diese Seite.
+- New TODOs: keine; verbleibende Grenzen (SIEM-Push, Hash-Kette, Host-/FIM)
+  stehen in T-033 und in der Sicherheitsseite.
+- New bugs: keine neuen offenen Fehler.
+- New decisions: Detection liest den Audit-Stream statt jeden Aufrufer zu
+  aendern; Incidents sind eine eigene Tabelle, weil `monitor_incident` an einen
+  Proxy-Host gebunden ist; Zustellung bleibt beim vorhandenen
+  Notification-Target-Pfad; Regel-IDs sind stabil (`SPM-*`).
+- Verification: Neue Tests `security-detection.spec.js` (27),
+  `security-event-audit.spec.js` (4), `two-factor-audit.spec.js` (2),
+  `wireguard-export-audit.spec.js` (2), `audit-log-request-context.spec.js`
+  (7) und `certificate-lifecycle.spec.js` (Download-Audit) gruen;
+  `tsc --noEmit` gruen; Biome auf 32 geaenderten Dateien ohne Befund;
+  `node validate-schema.js` "Schema is valid". Bestehende plattformbedingte
+  Windows-Fehler in `csrf-session-transitions` (Duo-Cookie) und vier
+  GitOps-Pfadtests sind unveraendert und nicht durch diesen Branch verursacht.
+## [2026-11-23] security | T-030 umgesetzt: Signatur, SBOM, Rotation, Step-up
+
+- Command: "Hast du alle Fehler behoben? habe ja alle gesagt".
+- Type: security
+- Areas affected: CI/Release, Verschlüsselung, OIDC/2FA, KI-Budget, Settings-UI.
+- Files changed: `docker.yml`, `docker-latest.yml`, `lib/encryption.js`,
+  `scripts/rotate-encryption-key.js`, `2fa-service.js`, `internal/setting.js`,
+  `routes/oidc.js`, `internal/ai/usage.js`, Migration `ai_token_usage`,
+  OIDC-Step-up im Login, OIDC-Settings-Tab.
+- Wiki pages updated: [Sicherheit](./security/overview.md),
+  [Aufgaben](./tasks.md), [Changelog](./changelog.md), diese Seite.
+- New TODOs: T-031 (produktive AES-Rotation auf der laufenden Instanz).
+- New bugs: keine neuen offenen Fehler.
+- New decisions: Ciphertext ist `v2:<key-id>:...`; alte Envelopes bleiben
+  lesbar; Previous-Key nur während der Rotation; TOTP-/Duo-/OIDC-Secrets werden
+  verschlüsselt gespeichert; das KI-Tagesbudget liegt in der Datenbank.
+- Verification: Encryption-, 2FA-, OIDC-, AI- und Workflow-Tests grün;
+  Frontend-/Backend-`tsc` grün; Re-Encrypt-CLI gegen eine SQLite-Fixture
+  geprüft (Legacy- und Previous-Key-Werte, TOTP/Duo/OIDC-Klartext).
+
+## [2026-11-23] security | Drei Prüfrunden behoben, Branch `fix/security-hardening`
+
+- Command: "Behebe alle fehler wirklich alles und mach dann ein PR für alle auf".
+- Type: security
+- Areas affected: Backend, Frontend, Nginx-Templates, Rootfs/Container, CI und
+  Release, öffentliche Doku, internes Wiki.
+- Files changed: 229 Dateien; Schwerpunkte: zentrale Host-Validierung
+  (`lib/host-input.js`), Identität/Sessions, Audit-Kontext, KI-Bestätigungen,
+  Analytics-Ingestion, Secret-Redaktion, Terminal, Backup, Compose/CI,
+  Setup-Token, Frontend-Dialoge und Barrierefreiheit.
+- Wiki pages updated: [Sicherheit](./security/overview.md),
+  [Projektzustand](./current-project-state.md), [Aufgaben](./tasks.md),
+  [Changelog](./changelog.md), diese Seite.
+- New wiki pages: keine.
+- New TODOs: T-029 (Live-Restore-Drill und Penetrationstest) und T-030
+  (Cosign/SBOM im manuellen `docker-latest`-Push, AES-Schlüsselrotation,
+  OIDC-Step-up-UI) als blockierte externe Punkte.
+- New bugs: keine neuen offenen Fehler; vier frühere Review-Aussagen waren
+  bereits im Reality Check widerlegt und sind nicht als Fixes eingeflossen.
+- New decisions: `path`/`advanced_config`/private Upstreams/unix-Sockets sind
+  admin-only; `json_access.log` wird für alle Proxy-Hosts geschrieben;
+  `update-shieldpm` folgt dem letzten Release-Tag statt `develop`; Actions sind
+  per Commit-SHA gepinnt; Analytics-Fenster werden explizit ausgewiesen.
+- Open questions: keine neuen; die externen Nachweise bleiben T-028/T-029.
+- Next steps: PR gegen `develop` prüfen und mergen; danach T-028/T-029
+  organisatorisch verfolgen.
+- Verification: Backend- und Frontend-`tsc --noEmit` grün; Frontend-Vollsuite
+  1.013 Tests grün (zwei POSIX-only Locale-Tests unter Windows übersprungen);
+  Backend-Zielsuites je geändertem Bereich grün, die Vollsuite läuft in der
+  Linux-CI; Biome auf den geänderten Dateien; `node llm-wiki/tools/wiki-check.mjs`
+  PASS; Prettier auf den kuratierten Wiki-Seiten.
+
 ## [2026-11-05] chore | T-019 Triage und 16 Sofortfixes
 
 - Command: „T-019 mach das“.

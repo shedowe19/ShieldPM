@@ -3,6 +3,7 @@ import { captureConfigurationFiles, restoreConfigurationFiles } from "../lib/con
 import { encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import { withHostDomainClaims } from "../lib/host-domain-claims.js";
+import { validateProxyHostFields } from "../lib/host-input.js";
 import { sanitizeHostMeta, sanitizeProxyHost } from "../lib/host-response.js";
 import { rethrowAfterHostRollback } from "../lib/host-rollback.js";
 import { notifyProxyHostDomainsChanged } from "../lib/proxy-host-domain-events.js";
@@ -140,12 +141,14 @@ const internalProxyHost = {
 		let thisData = data;
 		const requestedMeta = data.meta === undefined ? undefined : structuredClone(data.meta);
 		const createCertificate = thisData.certificate_id === "new";
+		const requestedCertificate = thisData.certificate_id;
 
 		if (createCertificate) {
 			delete thisData.certificate_id;
 		}
 
 		await access.can("proxy_hosts:create", thisData);
+		await validateProxyHostFields(access, thisData, { certificate_id: requestedCertificate });
 		await internalHost.validateReferences(access, thisData);
 		await validateHostFirewall(access, thisData);
 		await prepareProxyHostPolicies(thisData, {}, requestedMeta);
@@ -324,6 +327,10 @@ const internalProxyHost = {
 		if (thisData.forward_host === "(managed)" && row.forward_host?.startsWith("/data/websites/")) {
 			thisData.forward_host = row.forward_host;
 		}
+		await validateProxyHostFields(access, thisData, {
+			...row,
+			certificate_id: create_certificate ? "new" : row.certificate_id,
+		});
 
 		if (row.id !== thisData.id) {
 			// Sanity check that something crazy hasn't happened

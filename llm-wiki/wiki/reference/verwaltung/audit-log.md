@@ -22,7 +22,7 @@ Um Änderungen im System nachvollziehbar zu machen (z. B. die Erstellung eines P
 
 ## Verhalten
 
-- Erfasst die Felder `id`, `action`, `user_id`, `object_id`, `object_type`, `meta`, `created_on` und `modified_on`. Ein eigenes Feld für die IP-Adresse der API-Anfrage ist nicht vorgesehen.
+- Erfasst `id`, `action`, `user_id`, `object_id`, `object_type`, `meta`, `created_on`, `modified_on`, `ip`, `user_agent`, `session_id`, `request_id`, `outcome`, `actor_user_id`, `actor_type` und `jti`. IP, User-Agent, Session/Familie und Request-ID kommen aus `lib/request-context.js`; Secrets und Tokenwerte werden nie geschrieben.
 - Der Objekttyp `firewall-list` erscheint mit Schildsymbol, übersetztem Namen „Firewall-Liste“ beziehungsweise „Firewall List“ und dem Listennamen aus `meta.name`; er ist auch im Objekttypfilter auswählbar. Erstellen, Bearbeiten und Löschen verwenden `created`, `updated` und `deleted`; ein erfolgreicher manueller Refresh verwendet ebenfalls `updated`. Fehlt der Listenname, zeigt die Oberfläche `N/A`.
 - Die Oberfläche erkennt alle aktuell vom Backend emittierten Objekttypen sowie den bereits unterstützten Typ `terminal-host`. Ereignisüberschrift und Objekttypfilter verwenden dieselbe Übersetzungszuordnung, insbesondere für Cloudflare-Tunnels, Terminal-Hosts und WireGuard. Zertifikatserneuerungen verwenden die bestehende Aktion `renewed`.
 - WireGuard-Peers und Servereinstellungen verwenden `wireguard-peer` beziehungsweise `wireguard-settings` mit Schildsymbol. Das Peer-Badge zeigt ausschließlich `meta.name` oder den lokalisierten Ersatz „Peer #ID“; Einstellungen erhalten einen festen lokalisierten Titel. Die Zeilenkennzeichnung liest keine Schlüssel oder Konfigurationen aus Metadaten. Aktivieren und Deaktivieren eines Peers bleiben `updated`; `meta.status` unterscheidet `enabled` und `disabled`.
@@ -42,6 +42,23 @@ Um Änderungen im System nachvollziehbar zu machen (z. B. die Erstellung eines P
 - Der Detaildialog kann die angezeigten Metadaten lokal in die Zwischenablage kopieren. Im Demo-Modus übernimmt er dabei dieselbe IP-Maskierung wie der JSON-Editor und übergibt keine unverdeckten Demo-Werte. Bei nicht verfügbarer oder abgelehnter Zwischenablage erscheint ein lokalisierter Fehlerhinweis. Die Aktion nutzt keine zusätzliche API und bleibt damit auf Daten beschränkt, die bereits mit `auditlog:list` autorisiert geladen wurden.
 
 SQLite speichert die historischen Audit-Zeitstempel als lokale Zeit mit einem Leerzeichen zwischen Datum und Uhrzeit. Die UTC-Zeitfilter vergleichen deshalb numerische Julianische Zeitwerte einschließlich der lokalen UTC-Umrechnung; ein lexikalischer Vergleich mit dem ISO-8601-Parameter würde gültige Ereignisse desselben Tages ausblenden. Ein Regressionstest prüft beide inklusiven Grenzen gegen eine echte SQLite-Datenbank.
+
+## Sicherheitsdetektion
+
+`internal/security-detection.js` liest jede persistierte Audit-Zeile und
+wandelt passende Aktionen in `security_incident`-Zeilen um. Jede Regel hat
+eine stabile ID (`SPM-AUTH-001` bis `SPM-ACME-001`), eine Severity und
+einen Dedup-Key; Wiederholungen im Regel-Fenster erhoehen `count` und
+`last_seen_at` statt neue Zeilen zu erzeugen. Die Zustellung nutzt die
+vorhandenen `notification_target`-Kanaele, nicht ein zweites
+Benachrichtigungssystem. Die API ist auf `auditlog:list` beschraenkt:
+`GET /api/incidents/security` und
+`POST /api/incidents/security/{id}/resolve`.
+
+Der Beobachter wird beim Start nach den Migrationen registriert
+(`securityDetection.install()`), damit Audit-, Migrations- und Unit-Tests
+das Detection-Modul nicht mitladen. Ein fehlgeschlagener Audit-Insert oder
+eine fehlgeschlagene Detection blockiert die dokumentierte Operation nicht.
 
 ## Abhängigkeiten
 

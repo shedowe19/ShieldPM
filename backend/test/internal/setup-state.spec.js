@@ -80,6 +80,10 @@ describe("startup preserves persisted setup state", () => {
 				"streams",
 				"access_lists",
 				"certificates",
+				"dashboard_notes",
+				"ddns_providers",
+				"tor_onions",
+				"chat",
 				"created_on",
 				"modified_on",
 			])

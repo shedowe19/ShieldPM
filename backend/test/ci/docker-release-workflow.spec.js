@@ -6,9 +6,9 @@ const workflow = fs.readFileSync(backendSourcePath("..", ".github", "workflows",
 const releaseVersionExpression = "$" + "{{ needs.prepare.outputs.version }}";
 
 describe("Docker publication workflow", () => {
-	it("publishes a version once from develop or the matching version tag", () => {
-		expect(workflow).toMatch(
-			/release:[\s\S]*?if: \$\{\{ github\.event_name == 'push' && \(github\.ref == 'refs\/heads\/develop' \|\| startsWith\(github\.ref, 'refs\/tags\/v'\)\) && github\.repository_owner == 'shedowe19' \}\}/,
+	it("publishes a release only from a version tag", () => {
+		expect(workflow).toContain(
+			"if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository_owner == 'shedowe19' }}",
 		);
 		expect(workflow).toContain(`RELEASE_TAG: v${releaseVersionExpression}`);
 		expect(workflow).toContain('echo "publish=false" >> "$GITHUB_OUTPUT"');
@@ -21,5 +21,21 @@ describe("Docker publication workflow", () => {
 	it("smoke-tests the exact image before packaging deployment artifacts", () => {
 		expect(workflow).toContain('docker image inspect "$SMOKE_IMAGE" >/dev/null 2>&1 || docker pull "$SMOKE_IMAGE"');
 		expect(workflow).toMatch(/Smoke loaded image as root and UID 1000[\s\S]*?bash scripts\/ci\/docker-smoke\.sh/);
+	});
+
+	it("attests and signs the published multiarch image", () => {
+		expect(workflow).toMatch(/merge:[\s\S]*?id-token: write[\s\S]*?attestations: write/);
+		expect(workflow).toContain("anchore/sbom-action@");
+		expect(workflow).toContain("actions/attest-build-provenance@");
+		expect(workflow).toContain("sbom-path: shieldpm.spdx.json");
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal workflow expression
+		expect(workflow).toContain('cosign sign --yes "${IMAGE_NAME}@${IMAGE_DIGEST}"');
+		expect(workflow).toContain("Unable to resolve the published multiarch digest");
+	});
+
+	it("signs the release checksums with a keyless Sigstore bundle", () => {
+		expect(workflow).toContain("sigstore/cosign-installer@");
+		expect(workflow).toContain("cosign sign-blob --yes --bundle SHA256SUMS.sigstore.json SHA256SUMS");
+		expect(workflow).toMatch(/release:[\s\S]*?id-token: write/);
 	});
 });

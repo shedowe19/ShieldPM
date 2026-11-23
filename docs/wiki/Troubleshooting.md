@@ -10,7 +10,7 @@ Docker commands below use the Compose service name `shieldpm`; adjust the name i
 
 ### I Forgot My Admin Password
 
-**SQLite (Default):** Supply the user's email and a new password; the tool cannot discover/reset an account without those arguments.
+**SQLite (Default):** Supply the user's email and a new password; the tool cannot discover/reset an account without those arguments. The password is read from the command line, so it appears in shell history and the process list — run the command from a private shell and remove the history entry afterwards. The password must not exceed 72 UTF-8 bytes.
 
 ```bash
 # Docker
@@ -20,16 +20,26 @@ docker compose exec shieldpm npm-reset-password 'admin@example.com' 'your-new-pa
 sudo npm-reset-password 'admin@example.com' 'your-new-password'
 ```
 
-**MySQL / PostgreSQL:** `npm-reset-password` connects directly to SQLite and cannot reset accounts stored in an external database. Use an existing admin account or the supported authentication/account management flow; avoid direct SQL changes to credential hashes.
+**MySQL / PostgreSQL:** There is **no supported password-reset command** for external databases. `npm-reset-password` connects directly to SQLite and cannot change accounts stored in MySQL/MariaDB or PostgreSQL. Keep a second administrator account and a verified [instance backup](Backup-Restore), or restore the instance. Direct edits to credential hashes are unsupported and can lock the account further.
+
+### I Lost My Second Factor / Backup Codes
+
+There is no self-service recovery and no CLI switch to disable 2FA. Another administrator can remove the method under **Users → Edit user → Security**. If the affected account is the only administrator, recovery requires restoring a verified instance backup (or direct database intervention, which is unsupported). Keep a second administrator and current backups for this case.
 
 ### "Invalid Login Credentials"
 
-| Cause             | Fix                                      |
-| :---------------- | :--------------------------------------- |
-| Wrong email       | Check for typos; email is case-sensitive |
-| Account disabled  | Ask an admin to re-enable your account   |
-| Old browser cache | Clear cookies and try again              |
-| CAPS LOCK         | Passwords are case-sensitive             |
+| Cause             | Fix                                                    |
+| :---------------- | :----------------------------------------------------- |
+| Wrong email       | Check for typos and surrounding spaces                 |
+| Account disabled  | Ask an admin to re-enable your account                 |
+| Old browser cache | Clear cookies and try again                            |
+| CAPS LOCK         | Passwords are case-sensitive                           |
+
+Emails are matched case-insensitively after trimming, so a different capitalisation is not the cause.
+
+### The Setup Form Asks for a Setup Token
+
+On first start ShieldPM generates a random setup token in `${DATA_PATH}/setup-token` and logs its path. Read it with `docker compose exec shieldpm cat /data/setup-token` (Docker) or `sudo cat /data/setup-token` (native/LXC). `SETUP_TOKEN` overrides the generated value. The token is required until the first administrator exists; afterwards the route is no longer usable for account creation.
 
 ---
 
@@ -73,12 +83,12 @@ client_max_body_size 10G; # 10 GB limit
 
 ### 403 Forbidden
 
-| Cause                | Fix                                     |
-| :------------------- | :-------------------------------------- |
-| Access List blocking | Check the assigned Access List          |
-| ModSecurity rule     | Check error log for rule ID, exclude it |
-| CrowdSec ban         | Run `cscli decisions list` to check     |
-| IP not in allow list | Add your IP to the Access List          |
+| Cause                | Fix                                                                     |
+| :------------------- | :---------------------------------------------------------------------- |
+| Access List blocking | Check the assigned Access List                                          |
+| ModSecurity rule     | Check `/data/nginx/error.log` for the rule ID, then exclude the rule    |
+| CrowdSec ban         | Run `cscli decisions list` to check                                     |
+| IP not in allow list | Add your IP to the Access List                                          |
 
 ### 429 Too Many Requests
 
@@ -109,15 +119,17 @@ If you're seeing "Your connection is not private" on internal services:
 
 ## 📜 Where to Find Logs
 
-| Log Type         | Docker                                                           | Native / LXC                  |
-| :--------------- | :--------------------------------------------------------------- | :---------------------------- |
-| **Application**  | `docker logs -f shieldpm`                                        | `journalctl -u shieldpm -f`   |
-| **Nginx Access** | `/data/nginx/json_access.log` (when `LOGROTATE=true`/`GOA=true`) | `/data/nginx/json_access.log` |
-| **Nginx Error**  | `/data/nginx/error.log` (when file logging is enabled)           | `/data/nginx/error.log`       |
-| **CrowdSec**     | `docker logs crowdsec`                                           | `journalctl -u crowdsec -f`   |
+| Log Type         | Docker                                                              | Native / LXC                                                    |
+| :--------------- | :------------------------------------------------------------------ | :-------------------------------------------------------------- |
+| **Application**  | `docker logs -f shieldpm`                                           | `journalctl -u shieldpm -f`                                     |
+| **Nginx Error**  | `/data/nginx/error.log` (always written)                            | `/data/nginx/error.log`                                         |
+| **JSON Access**  | `/data/nginx/json_access.log` (hosts with cache or upstream pool)   | `/data/nginx/json_access.log`                                   |
+| **Base Access**  | `/data/nginx/access.log` (file logging via `LOGROTATE`)             | `/data/nginx/access.log`                                        |
+| **Stream**       | `/data/nginx/stream.log` (file logging via `LOGROTATE`)             | `/data/nginx/stream.log`                                        |
+| **CrowdSec**     | `docker logs crowdsec`                                              | `journalctl -u crowdsec -f`                                     |
 
 > [!TIP]
-> Enable `LOGROTATE=true` to auto-rotate and compress logs daily.
+> `LOGROTATE` (default `true`) enables the base HTTP and stream access-log files and rotates all `/data/nginx/*.log` daily; `LOGROTATIONS` controls how many rotated files are kept. It does **not** switch `json_access.log` on or off: proxy hosts with caching or an upstream pool write JSON entries independently. The Nginx error log is always written.
 
 ---
 
@@ -152,11 +164,11 @@ systemctl disable apache2
 
 ### Slow Dashboard / High CPU
 
-| Cause                        | Fix                              |
-| :--------------------------- | :------------------------------- |
-| Too many log entries         | Enable `LOGROTATE=true`          |
-| SQLite on large deployment   | Migrate to MySQL/PostgreSQL      |
-| Many concurrent SSL renewals | Stagger certificate expiry dates |
+| Cause                        | Fix                                                        |
+| :--------------------------- | :--------------------------------------------------------- |
+| Too many retained log files  | Lower `LOGROTATIONS`; `LOGROTATE` already rotates by default |
+| SQLite on large deployment   | Migrate to MySQL/PostgreSQL                                |
+| Many concurrent SSL renewals | Stagger certificate expiry dates                           |
 
 ### Nginx Not Reloading
 

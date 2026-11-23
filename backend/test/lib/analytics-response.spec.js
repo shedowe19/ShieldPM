@@ -114,4 +114,28 @@ describe("analytics API response serialization", () => {
 			},
 		]);
 	});
+
+	it("exposes the aggregate KPI window and the shorter detail window", () => {
+		const summary = serializeAnalyticsSummary({
+			detail_window: {
+				complete: false,
+				range: "30d",
+				retention_hours: 24,
+				since: "2026-10-24T12:00:00.000Z",
+				source: "details",
+				until: "2026-11-23T12:00:00.000Z",
+			},
+			kpi_window: {
+				range: "30d",
+				resolution: "day",
+				since: "2026-10-24T12:00:00.000Z",
+				source: "aggregates",
+				until: "2026-11-23T12:00:00.000Z",
+			},
+			stats: { count: "5" },
+		});
+
+		expect(summary.kpi_window).toMatchObject({ range: "30d", resolution: "day", source: "aggregates" });
+		expect(summary.detail_window).toMatchObject({ complete: false, retention_hours: 24, source: "details" });
+	});
 });

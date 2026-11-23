@@ -101,7 +101,7 @@ function TotpSetup({
 		return (
 			<div className="space-y-4">
 				<Alert>
-					<CheckCircle2 className="h-4 w-4 text-green-500" />
+					<CheckCircle2 className="h-4 w-4 text-green-700 dark:text-green-400" />
 					<AlertTitle>
 						<T id="2fa.totp.enabled" />
 					</AlertTitle>
@@ -109,11 +109,11 @@ function TotpSetup({
 						<T id="2fa.backup-codes.save-info" />
 					</AlertDescription>
 				</Alert>
-				<div className="grid grid-cols-2 gap-2 font-mono text-sm bg-muted p-4 rounded-md">
+				<ul className="grid grid-cols-2 gap-2 font-mono text-sm bg-muted p-4 rounded-md">
 					{backupCodes.map((c) => (
-						<span key={c}>{c}</span>
+						<li key={c}>{c}</li>
 					))}
-				</div>
+				</ul>
 				<Button type="button" onClick={onComplete} className="w-full">
 					<T id="2fa.done" />
 				</Button>
@@ -124,14 +124,14 @@ function TotpSetup({
 	return (
 		<div className="space-y-4">
 			{error && (
-				<Alert variant="destructive">
+				<Alert id="totp-verification-error" variant="destructive">
 					<AlertCircle className="h-4 w-4" />
 					<AlertDescription>{error}</AlertDescription>
 				</Alert>
 			)}
 			{loading && !qr && (
 				<div className="flex justify-center py-8">
-					<Loader2 className="h-8 w-8 animate-spin" />
+					<Loader2 className="h-8 w-8 animate-spin" aria-hidden="true" />
 				</div>
 			)}
 			{qr && (
@@ -146,10 +146,11 @@ function TotpSetup({
 					/>
 					<div className="w-full space-y-3">
 						<div className="space-y-1">
-							<Label>
+							<Label htmlFor="totp-verification-code">
 								<T id="2fa.totp.verification-code" />
 							</Label>
 							<Input
+								id="totp-verification-code"
 								value={code}
 								onChange={(e) => setCode(e.target.value)}
 								onKeyDown={async (e) => {
@@ -163,6 +164,9 @@ function TotpSetup({
 								inputMode="numeric"
 								maxLength={6}
 								autoFocus
+								autoComplete="one-time-code"
+								aria-invalid={error ? true : undefined}
+								aria-describedby={error ? "totp-verification-error" : undefined}
 								className="font-mono tracking-widest"
 							/>
 						</div>
@@ -229,50 +233,58 @@ function YubikeySetup({
 	};
 
 	return (
-		<div
+		<fieldset
 			className="space-y-4"
-			role="form"
 			onKeyDown={async (e) => {
 				if (e.key === "Enter") await handleAdd(e);
 			}}
 		>
+			<legend className="sr-only">
+				<T id="2fa.method.yubikey" />
+			</legend>
 			{error && (
-				<Alert variant="destructive">
+				<Alert id="yubikey-error" variant="destructive">
 					<AlertCircle className="h-4 w-4" />
 					<AlertDescription>{error}</AlertDescription>
 				</Alert>
 			)}
-			<p className="text-sm text-muted-foreground">
+			<p id="yubikey-instruction" className="text-sm text-muted-foreground">
 				<T id="2fa.yubikey.instruction" />
 			</p>
 			<div className="space-y-1">
-				<Label>
+				<Label htmlFor="yubikey-label">
 					<T id="2fa.label-optional" />
 				</Label>
 				<Input
+					id="yubikey-label"
 					value={label}
 					onChange={(e) => setLabel(e.target.value)}
 					placeholder={intl.formatMessage({ id: "2fa.yubikey.label-placeholder" })}
+					aria-describedby="yubikey-instruction"
 				/>
 			</div>
 			<div className="space-y-1">
-				<Label>
+				<Label htmlFor="yubikey-otp">
 					<T id="2fa.yubikey.otp" />
 				</Label>
 				<Input
 					ref={otpRef}
+					id="yubikey-otp"
 					value={otp}
 					onChange={(e) => setOtp(e.target.value)}
 					placeholder={intl.formatMessage({ id: "2fa.yubikey.otp-placeholder" })}
 					className="font-mono"
 					type="text"
+					autoComplete="off"
+					aria-invalid={error ? true : undefined}
+					aria-describedby={error ? "yubikey-instruction yubikey-error" : "yubikey-instruction"}
 				/>
 			</div>
 			<Button type="button" onClick={handleAdd} className="w-full" disabled={loading || otp.length < 32}>
-				{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+				{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
 				<T id="2fa.yubikey.add" />
 			</Button>
-		</div>
+		</fieldset>
 	);
 }
 
@@ -326,9 +338,8 @@ function PasskeySetup({
 	};
 
 	return (
-		<div
+		<fieldset
 			className="space-y-4"
-			role="form"
 			onKeyDown={async (event) => {
 				if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
 					event.preventDefault();
@@ -337,30 +348,40 @@ function PasskeySetup({
 				}
 			}}
 		>
+			<legend className="sr-only">
+				<T id="2fa.method.passkey" />
+			</legend>
 			{error && (
-				<Alert variant="destructive">
+				<Alert id="passkey-error" variant="destructive">
 					<AlertCircle className="h-4 w-4" />
 					<AlertDescription>{error}</AlertDescription>
 				</Alert>
 			)}
-			<p className="text-sm text-muted-foreground">
+			<p id="passkey-instruction" className="text-sm text-muted-foreground">
 				<T id="2fa.passkey.instruction" />
 			</p>
 			<div className="space-y-1">
-				<Label>
+				<Label htmlFor="passkey-label">
 					<T id="2fa.label-optional" />
 				</Label>
 				<Input
+					id="passkey-label"
 					value={label}
 					onChange={(e) => setLabel(e.target.value)}
 					placeholder={intl.formatMessage({ id: "2fa.passkey.label-placeholder" })}
+					aria-invalid={error ? true : undefined}
+					aria-describedby={error ? "passkey-instruction passkey-error" : "passkey-instruction"}
 				/>
 			</div>
 			<Button type="button" onClick={handleRegister} className="w-full" disabled={loading}>
-				{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+				{loading ? (
+					<Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+				) : (
+					<ShieldCheck className="mr-2 h-4 w-4" aria-hidden="true" />
+				)}
 				<T id="2fa.passkey.register" />
 			</Button>
-		</div>
+		</fieldset>
 	);
 }
 
@@ -411,9 +432,8 @@ function DuoSetup({
 	];
 
 	return (
-		<div
+		<fieldset
 			className="space-y-4"
-			role="form"
 			onKeyDown={async (e) => {
 				if (e.key === "Enter") {
 					e.preventDefault();
@@ -422,26 +442,33 @@ function DuoSetup({
 				}
 			}}
 		>
+			<legend className="sr-only">
+				<T id="2fa.method.duo" />
+			</legend>
 			{error && (
-				<Alert variant="destructive">
+				<Alert id="duo-error" variant="destructive">
 					<AlertCircle className="h-4 w-4" />
 					<AlertDescription>{error}</AlertDescription>
 				</Alert>
 			)}
-			<p className="text-sm text-muted-foreground">
+			<p id="duo-instruction" className="text-sm text-muted-foreground">
 				<T id="2fa.duo.instruction" />
 			</p>
 			{duoFields.map(({ key, labelId, placeholder }) => (
 				<div key={key} className="space-y-1">
-					<Label>
+					<Label htmlFor={`duo-${key}`}>
 						<T id={labelId} />
 					</Label>
 					<Input
+						id={`duo-${key}`}
 						value={(form as Record<string, string>)[key]}
 						onChange={update(key)}
 						placeholder={placeholder}
 						type={key === "clientSecret" ? "password" : "text"}
+						autoComplete={key === "clientSecret" ? "new-password" : "off"}
 						required
+						aria-invalid={error ? true : undefined}
+						aria-describedby={error ? "duo-instruction duo-error" : "duo-instruction"}
 					/>
 				</div>
 			))}
@@ -455,10 +482,10 @@ function DuoSetup({
 				className="w-full"
 				disabled={loading || Object.values(form).some((value) => !value.trim())}
 			>
-				{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+				{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
 				<T id="2fa.duo.save-verify" />
 			</Button>
-		</div>
+		</fieldset>
 	);
 }
 
@@ -560,7 +587,7 @@ export default function SecuritySettings() {
 			{/* Backup codes display (after setup) */}
 			{backupCodes && (
 				<Alert>
-					<CheckCircle2 className="h-4 w-4 text-green-500" />
+					<CheckCircle2 className="h-4 w-4 text-green-700 dark:text-green-400" />
 					<AlertTitle>
 						<T id="2fa.backup-codes.save-title" />
 					</AlertTitle>
@@ -568,11 +595,11 @@ export default function SecuritySettings() {
 						<p className="mb-2">
 							<T id="2fa.backup-codes.save-info" />
 						</p>
-						<div className="grid grid-cols-2 gap-1 font-mono text-sm bg-muted p-3 rounded">
+						<ul className="grid grid-cols-2 gap-1 font-mono text-sm bg-muted p-3 rounded">
 							{backupCodes.map((c) => (
-								<span key={c}>{c}</span>
+								<li key={c}>{c}</li>
 							))}
-						</div>
+						</ul>
 						<Button
 							type="button"
 							variant="outline"
@@ -614,12 +641,12 @@ export default function SecuritySettings() {
 									type="button"
 									variant="ghost"
 									size="sm"
-									aria-label={intl.formatMessage({ id: "action.delete" })}
+									aria-label={`${intl.formatMessage({ id: "action.delete" })}: ${method.label}`}
 									className="text-destructive hover:text-destructive"
 									disabled={mutationPending || !!setupView}
 									onClick={() => removeMutation.mutate(method.id)}
 								>
-									<Trash2 className="h-4 w-4" />
+									<Trash2 className="h-4 w-4" aria-hidden="true" />
 								</Button>
 							</div>
 						))}

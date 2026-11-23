@@ -8,8 +8,8 @@ import errs from "../lib/error.js";
 import {
 	backupArchivePath,
 	backupMetadataPath,
+	getMaxBackupBytes,
 	InstanceBackup,
-	MAX_BACKUP_BYTES,
 	privateJson,
 } from "../lib/instance-backup.js";
 import internalAuditLog from "./audit-log.js";
@@ -83,7 +83,7 @@ const internalBackups = {
 			backups: await instance.list(),
 			jobs: [...jobs.values()].reverse(),
 			pending: pending ? { id: pending.id, phase: pending.phase, created_on: pending.created_on } : null,
-			limits: { max_bytes: MAX_BACKUP_BYTES },
+			limits: { max_bytes: getMaxBackupBytes() },
 			activation: "next_restart",
 		};
 	},
@@ -199,11 +199,12 @@ const internalBackups = {
 		const id = crypto.randomUUID();
 		const filename = instance.archive(id);
 		const temporary = `${filename}.tmp`;
+		const maxBytes = getMaxBackupBytes();
 		let size = 0;
 		const limit = new Transform({
 			transform(chunk, _encoding, callback) {
 				size += chunk.length;
-				callback(size > MAX_BACKUP_BYTES ? new Error("Archive too large") : null, chunk);
+				callback(size > maxBytes ? new Error("Archive too large") : null, chunk);
 			},
 		});
 		try {

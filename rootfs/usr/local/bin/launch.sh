@@ -120,9 +120,14 @@ if [ "$GOA" = "true" ]; then while true; do if [ -f /data/nginx/json_access.log 
 nginx -e stderr &
 nginx_pid=$!
 
-cd /app || exit 1
-node index.js &
-backend_pid=$!
+start_backend() {
+    cd /app || exit 1
+    node index.js &
+    backend_pid=$!
+    backend_started_at=$(date +%s)
+}
+
+start_backend
 
 stop_critical_children() {
     kill "$nginx_pid" "$backend_pid" 2>/dev/null || true
@@ -131,23 +136,33 @@ stop_critical_children() {
 
 trap 'stop_critical_children; exit 0' INT TERM
 
-wait_for_critical_children() {
-    while kill -0 "$nginx_pid" 2>/dev/null && kill -0 "$backend_pid" 2>/dev/null; do
-        sleep 1
-    done
-
+# The data plane must survive a control-plane crash. Nginx keeps serving the
+# last valid configuration while the backend is restarted with backoff; only an
+# Nginx exit stops the container. This avoids taking every customer host down
+# because the Node process crashed or was OOM-killed.
+restart_delay=1
+while true; do
     if ! kill -0 "$nginx_pid" 2>/dev/null; then
         wait "$nginx_pid"
         status=$?
         echo "Nginx exited with status $status; stopping container."
-    else
-        wait "$backend_pid"
-        status=$?
-        echo "ShieldPM backend exited with status $status; stopping container."
+        stop_critical_children
+        exit "$status"
     fi
 
-    stop_critical_children
-    return "$status"
-}
-
-wait_for_critical_children
+    if ! kill -0 "$backend_pid" 2>/dev/null; then
+        wait "$backend_pid"
+        status=$?
+        now=$(date +%s)
+        if [ $((now - backend_started_at)) -ge 60 ]; then
+            restart_delay=1
+        fi
+        echo "ShieldPM backend exited with status $status; restarting in ${restart_delay}s while Nginx keeps serving."
+        sleep "$restart_delay"
+        if [ "$restart_delay" -lt 30 ]; then
+            restart_delay=$((restart_delay * 2))
+        fi
+        start_backend
+    fi
+    sleep 1
+done

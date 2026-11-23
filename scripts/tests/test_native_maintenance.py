@@ -231,6 +231,11 @@ cp() {
         shutil.copy(STAGER, source / "rootfs/usr/local/bin/stage-native-binaries.py")
         (source / "backend/package.json").write_text("new backend")
         (source / "frontend/dist/index.html").write_text("new frontend")
+        for asset in ("xterm/lib/xterm.js", "xterm/css/xterm.css", "addon-fit/lib/addon-fit.js",
+                      "addon-web-links/lib/addon-web-links.js"):
+            asset_path = source / "frontend/node_modules/@xterm" / asset
+            asset_path.parent.mkdir(parents=True, exist_ok=True)
+            asset_path.write_text(asset)
         (live / "app/old.js").write_text("old backend")
         (live / "html/frontend/old.html").write_text("old frontend")
         for binary in ("anubis", "oauth2-proxy"):
@@ -309,6 +314,40 @@ curl() {
         self.assertIn("preflight failed", result.stderr)
         self.assertFalse((self.root / "service-calls").exists())
         self.assertEqual((live / "app/old.js").read_text(), "old backend")
+
+
+class NativeServiceSandboxTests(unittest.TestCase):
+    def test_native_unit_hardens_the_root_service(self):
+        unit = (REPO / "rootfs/usr/lib/systemd/system/shieldpm.service").read_text()
+        for directive in [
+            "ExecStart=/usr/local/bin/entrypoint.sh",
+            "NoNewPrivileges=yes",
+            "PrivateTmp=yes",
+            "ProtectControlGroups=yes",
+            "RestrictRealtime=yes",
+            "LockPersonality=yes",
+            "UMask=0022",
+        ]:
+            self.assertIn(directive, unit)
+
+    def test_native_unit_keeps_paths_the_service_must_write(self):
+        # Startup rewrites /etc/logrotate, /etc/tor/torrc and
+        # /usr/local/nginx/conf, WireGuard sets rp_filter through sysctl, the
+        # terminal runs package management and the updater copies a rootfs over
+        # /. Read-only system paths or a SUID ban brick the service
+        # (226/NAMESPACE) or break updates, so these directives must stay out.
+        unit = (REPO / "rootfs/usr/lib/systemd/system/shieldpm.service").read_text()
+        for directive in [
+            "ProtectSystem=",
+            "ProtectHome=",
+            "ReadWritePaths=",
+            "ProtectKernelTunables=yes",
+            "ProtectKernelModules=yes",
+            "ProtectClock=yes",
+            "ProtectHostname=yes",
+            "RestrictSUIDSGID=yes",
+        ]:
+            self.assertNotIn(directive, unit)
 
 
 if __name__ == "__main__":

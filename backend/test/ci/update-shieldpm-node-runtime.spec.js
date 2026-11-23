@@ -147,6 +147,27 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 		expect(updater).toContain('cp -a "$TEMP_DIR/frontend/dist/." "$FRONTEND_DIR/"');
 	});
 
+	it("installs the bundled terminal vendor assets during native updates", () => {
+		expect(updater).toContain("install_terminal_assets()");
+		expect(updater).toContain('$(dirname "$FRONTEND_DIR")/terminal/vendor');
+		for (const asset of [
+			"xterm/lib/xterm.js",
+			"xterm/css/xterm.css",
+			"addon-fit/lib/addon-fit.js",
+			"addon-web-links/lib/addon-web-links.js",
+		]) {
+			expect(updater).toContain(asset);
+		}
+	});
+
+	it("defaults to the latest published release instead of a moving branch", () => {
+		expect(updater).toContain("resolve_release_ref()");
+		expect(updater).toContain("releases/latest");
+		expect(updater).toContain("^v[0-9]+\\.[0-9]+\\.[0-9]+$");
+		expect(updater).toContain("Pass --branch <ref> to update from a specific branch or tag deliberately.");
+		expect(updater).not.toContain('BRANCH="develop" # Default branch for content');
+	});
+
 	it("checks the native backend health endpoint at the socket root", () => {
 		const commandDirectory = fs.mkdtempSync(join(tmpdir(), "shieldpm-update-health-check-"));
 		temporaryDirectories.push(commandDirectory);
@@ -211,7 +232,7 @@ ${backendHealthCheck}
 SECONDS=0
 curl() { ((SECONDS >= 242)) && printf '{"status":"OK"}'; }
 jq() { body=$(cat); [[ "$body" == '{"status":"OK"}' ]]; }
-sleep() { if ((SECONDS == 0)); then SECONDS=241; else SECONDS=$((SECONDS + 1)); fi; }
+sleep() { if ((SECONDS < 241)); then SECONDS=241; else SECONDS=$((SECONDS + 1)); fi; }
 wait_for_backend_health
 printf 'elapsed=%s' "$SECONDS"
 `,
@@ -219,7 +240,11 @@ printf 'elapsed=%s' "$SECONDS"
 			{ encoding: "utf8", timeout: 5000 },
 		);
 		expect(result.status, result.stderr).toBe(0);
-		expect(result.stdout).toContain("elapsed=242");
+		const elapsed = Number.parseInt(result.stdout.match(/elapsed=(\d+)/)?.[1] ?? "", 10);
+		// The faked clock jumps to 241, but real wall-clock seconds keep counting
+		// while the pipeline forks, so the exact final value is not deterministic.
+		expect(elapsed).toBeGreaterThanOrEqual(242);
+		expect(elapsed).toBeLessThan(360);
 	});
 
 	it("updates optional runtime binaries and waits for migrations to become healthy", () => {

@@ -11,6 +11,17 @@
 			]
 		}
 	],
+	"parameters": [
+		{
+			"in": "header",
+			"name": "X-Setup-Token",
+			"required": false,
+			"description": "Required only while no active user exists. Value of SETUP_TOKEN or the token stored in DATA_PATH/setup-token.",
+			"schema": {
+				"type": "string"
+			}
+		}
+	],
 	"requestBody": {
 		"description": "User Payload",
 		"required": true,

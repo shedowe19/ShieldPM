@@ -29,14 +29,15 @@ ModSecurity is a Web Application Firewall that inspects incoming HTTP requests f
 
 ## 🚀 Activation
 
-ModSecurity is wired to the Proxy Host's **Block Exploits** option:
+ModSecurity is wired to the Proxy Host's **Block Exploits** option, and new Proxy Hosts enable it by default:
 
 1. Edit a Proxy Host
 2. In **Details**, find **Options**
-3. Enable **Block Exploits**
-4. Save
+3. Verify that **Block Exploits** is enabled (disable it only deliberately)
+4. In **Security**, choose the **WAF ruleset**: `Base exploit protection` loads `modsecurity.conf`, `OWASP CRS` loads `modsecurity-crs.conf`
+5. Save
 
-The generated Nginx configuration enables `modsecurity on` when **Block Exploits** is set (and also in demo mode). It chooses `modsecurity-crs.conf` for a host with caching enabled and `modsecurity.conf` otherwise. The included rule files come from the Nginx base image; check the active file before assuming that every CRS rule is loaded.
+The Security tab's ruleset selection has no effect while Block Exploits is off. The generated Nginx configuration enables `modsecurity on` when Block Exploits is set (and also in demo mode). The included rule files come from the Nginx base image; check the active file before assuming that every CRS rule is loaded.
 
 > [!TIP]
 > Start by enabling ModSecurity on your most sensitive services first (login pages, admin panels, APIs). Monitor logs before enabling it globally to avoid false positives.
@@ -68,11 +69,11 @@ If a legitimate request is blocked (HTTP 403 Forbidden):
 Check the Nginx error log for the `ModSecurity: Access denied` message:
 
 ```bash
-# Docker
-docker logs shieldpm 2>&1 | grep "ModSecurity"
+# Docker: the Nginx error log is a file inside the container
+docker compose exec shieldpm tail -n 200 /data/nginx/error.log | grep "ModSecurity"
 
 # Native / LXC
-grep "ModSecurity" /data/logs/error.log
+grep "ModSecurity" /data/nginx/error.log
 ```
 
 Look for the rule ID in the log entry: `id "920350"`.

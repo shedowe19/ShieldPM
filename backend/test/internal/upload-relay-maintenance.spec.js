@@ -123,7 +123,8 @@ await hourlyFailure.promise;
 assert.equal(logged.length, 2);
 for (const [message, error] of logged) {
  assert.equal(message, 'Upload relay maintenance failed:');
- assert.equal(error, denied);
+ assert.equal(error.message, 'synthetic storage denied');
+ assert.equal(error.code, 'EACCES');
 }
 await relay.stop();
 console.log('maintenance regression passed');

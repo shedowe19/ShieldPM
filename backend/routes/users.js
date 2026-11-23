@@ -12,6 +12,7 @@ const avatarLimiter = rateLimit({
 	},
 });
 
+import internalAuditLog from "../internal/audit-log.js";
 import internalUser from "../internal/user.js";
 import Access from "../lib/access.js";
 import { isDestructiveTestMode } from "../lib/config.js";
@@ -22,7 +23,7 @@ import apiValidator from "../lib/validator/api.js";
 import validator from "../lib/validator/index.js";
 import { debug, express as logger } from "../logger.js";
 import { getValidationSchema } from "../schema/index.js";
-import { isSetup } from "../setup.js";
+import { isSetup, isSetupTokenValid } from "../setup.js";
 
 // Rate limiter for loginAs endpoint
 const loginAsRateLimiter = rateLimit({
@@ -95,6 +96,13 @@ router
 		const currentUserId = res.locals.access?.token?.getUserId?.(0) || 0;
 
 		if (!setupComplete) {
+			// ShieldPM is often reachable before its first administrator exists.
+			// Require the startup token from DATA_PATH/setup-token (or SETUP_TOKEN)
+			// so a network attacker cannot claim the instance during that window.
+			if (!isSetupTokenValid(req.get("x-setup-token"))) {
+				logger.warn(`Rejected unauthenticated initial setup attempt from ${req.ip || "unknown"}`);
+				throw new errs.PermissionError("A valid setup token is required to create the first administrator");
+			}
 			logger.info("Creating initial admin user during first-time setup");
 			const access = new Access(null);
 			await access.load(true);
@@ -376,6 +384,14 @@ router
 
 		const result = await internalUser.loginAs(res.locals.access, {
 			id: Number(params.user_id),
+		});
+
+		await internalAuditLog.add(res.locals.access, {
+			action: "user.impersonated",
+			object_type: "user",
+			object_id: Number(params.user_id),
+			user_id: Number(params.user_id),
+			meta: { target_user_id: Number(params.user_id) },
 		});
 
 		if (req.cookies?.shieldpm_jwt) {

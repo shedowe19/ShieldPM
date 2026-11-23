@@ -4,6 +4,7 @@ import path from "node:path";
 import _ from "lodash";
 import { validatePasswordAuth } from "../lib/auth-password.js";
 import errs from "../lib/error.js";
+import { AUDIT_ACTION } from "../lib/security-events.js";
 import utils from "../lib/utils.js";
 import authModel from "../models/auth.js";
 import AuthSession from "../models/auth-session.js";
@@ -23,6 +24,41 @@ const getGravatarUrl = (email) => {
 };
 
 const DEFAULT_AVATAR = getGravatarUrl("admin@example.com");
+
+// Default permission matrix for new accounts.
+// - Admins bypass permission checks entirely; the row stays fully manageable so
+//   the users UI has a meaningful starting point if the role is ever removed.
+// - New non-admin accounts get read-only access to shared/security-sensitive
+//   resources (PKI, access lists, integrations) but may create and manage their
+//   own host types. This avoids handing every invite "manage" on eight areas.
+const ADMIN_DEFAULT_PERMISSIONS = {
+	access_lists: "manage",
+	certificates: "manage",
+	proxy_hosts: "manage",
+	redirection_hosts: "manage",
+	streams: "manage",
+	dead_hosts: "manage",
+	cloudflared_tunnels: "manage",
+	analytics: "view",
+	dashboard_notes: "manage",
+	ddns_providers: "manage",
+	tor_onions: "manage",
+	chat: "manage",
+};
+const NON_ADMIN_DEFAULT_PERMISSIONS = {
+	access_lists: "view",
+	certificates: "view",
+	proxy_hosts: "manage",
+	redirection_hosts: "manage",
+	streams: "manage",
+	dead_hosts: "manage",
+	cloudflared_tunnels: "view",
+	analytics: "view",
+	dashboard_notes: "manage",
+	ddns_providers: "view",
+	tor_onions: "view",
+	chat: "view",
+};
 
 const AVATAR_SIGNATURES = [
 	{
@@ -89,6 +125,13 @@ const emailClaimTransaction = (callback) => {
 	return userModel.transaction(callback);
 };
 
+const revokeSessionsForDisabledUser = async (trx, userId) => {
+	await AuthSession.query(trx).where("user_id", userId).whereNull("revoked_at").patch({
+		revoked_at: trx.fn.now(),
+		revoked_reason: "account_disabled",
+	});
+};
+
 const internalUser = {
 	/**
 	 * Create a user can happen unauthenticated only once and only when no active users exist.
@@ -148,19 +191,13 @@ const internalUser = {
 
 			// Create permissions row as well
 			const _isAdmin = data.roles.indexOf("admin") !== -1;
+			const defaultPermissions = _isAdmin ? ADMIN_DEFAULT_PERMISSIONS : NON_ADMIN_DEFAULT_PERMISSIONS;
 
 			await userPermissionModel.query(trx).insert(
 				/** @type {any} */ ({
 					user_id: user.id,
 					visibility: "user",
-					access_lists: "manage",
-					certificates: "manage",
-					proxy_hosts: "manage",
-					redirection_hosts: "manage",
-					streams: "manage",
-					dead_hosts: "manage",
-					cloudflared_tunnels: "manage",
-					analytics: "view",
+					...defaultPermissions,
 				}),
 			);
 		});
@@ -194,11 +231,15 @@ const internalUser = {
 		// Make sure that the user being updated doesn't change their email to another user that is already using it
 		// 1. get user we want to update
 		let user = await internalUser.get(access, { id: data.id });
+		const previousRoles = Array.isArray(user.roles) ? [...user.roles] : [];
+		const nextRoles = Array.isArray(data.roles) ? [...data.roles] : previousRoles;
+		const rolesChanged =
+			typeof data.roles !== "undefined" && !_.isEqual([...nextRoles].sort(), [...previousRoles].sort());
 
 		// Profile editing is available to ordinary users, but account roles and
 		// disabled state require the same administrator permission as permissions.
 		if (
-			(typeof data.roles !== "undefined" && !_.isEqual([...data.roles].sort(), [...user.roles].sort())) ||
+			(typeof data.roles !== "undefined" && rolesChanged) ||
 			(typeof data.is_disabled !== "undefined" && Boolean(data.is_disabled) !== Boolean(user.is_disabled))
 		) {
 			await access.can("users:permissions", data.id);
@@ -214,6 +255,12 @@ const internalUser = {
 		if (typeof data.email !== "undefined") {
 			data.email = data.email.toLowerCase().trim();
 		}
+
+		// A block must revoke every refresh family in the same transaction as the
+		// flag. Revoking on every privileged `is_disabled=true` write also cleans
+		// up sessions left behind by accounts disabled before this fix. Re-enabling
+		// never touches `revoked_at`, so old families cannot come back.
+		const revokeSessions = typeof data.is_disabled !== "undefined" && Boolean(data.is_disabled);
 
 		if (user.id !== data.id) {
 			// Sanity check that something crazy hasn't happened
@@ -256,15 +303,24 @@ const internalUser = {
 			}
 		}
 
-		if (typeof data.email !== "undefined") {
-			await emailClaimTransaction(async (trx) => {
+		const persistUser = async (trx) => {
+			if (typeof data.email !== "undefined") {
 				const lock = await settingModel.query(trx).findById("default-site").forUpdate();
 				if (!lock) throw new errs.PermissionError("Initial setup is not ready");
 				if (!(await internalUser.isEmailAvailable(data.email, user.id, trx))) {
 					throw new errs.ValidationError(`Email address already in use - ${data.email}`);
 				}
-				await userModel.query(trx).patchAndFetchById(user.id, data);
-			});
+			}
+			await userModel.query(trx).patchAndFetchById(user.id, data);
+			if (revokeSessions) {
+				await revokeSessionsForDisabledUser(trx, user.id);
+			}
+		};
+
+		if (typeof data.email !== "undefined") {
+			await emailClaimTransaction(persistUser);
+		} else if (revokeSessions) {
+			await userModel.transaction(persistUser);
 		} else {
 			await userModel.query().patchAndFetchById(user.id, data);
 		}
@@ -277,6 +333,22 @@ const internalUser = {
 			object_id: user.id,
 			meta: { ...data, id: user.id, name: user.name },
 		});
+
+		if (rolesChanged) {
+			const currentRoles = Array.isArray(user.roles) ? user.roles : [];
+			await internalAuditLog.add(access, {
+				action: AUDIT_ACTION.USER_ROLES_CHANGED,
+				object_type: "user",
+				object_id: user.id,
+				user_id: user.id,
+				meta: {
+					name: user.name,
+					previous_roles: previousRoles,
+					roles: currentRoles,
+					granted_admin: currentRoles.includes("admin") && !previousRoles.includes("admin"),
+				},
+			});
+		}
 
 		return user;
 	},
@@ -581,6 +653,18 @@ const internalUser = {
 				permissions: permissions,
 			},
 		});
+		await internalAuditLog.add(access, {
+			action: AUDIT_ACTION.USER_PERMISSIONS_CHANGED,
+			object_type: "user",
+			object_id: user.id,
+			user_id: user.id,
+			meta: {
+				name: user.name,
+				permissions: {
+					visibility: permissions.visibility,
+				},
+			},
+		});
 
 		return true;
 	},
@@ -593,7 +677,10 @@ const internalUser = {
 	loginAs: async (access, data) => {
 		await access.can("users:loginas", data.id);
 		const user = await internalUser.get(access, data);
-		return internalToken.getTokenFromUser(user);
+		return internalToken.getTokenFromUser(user, {
+			actorUserId: access.token.getUserId(0),
+			sessionId: access.token.get("sid"),
+		});
 	},
 
 	/**

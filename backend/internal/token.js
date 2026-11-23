@@ -212,18 +212,28 @@ export default {
 
 	/**
 	 * @param   {Object} user
+	 * @param   {Object} [options]
+	 * @param   {number} [options.actorUserId] Administrator starting an impersonation
+	 * @param   {string} [options.sessionId]   Auth-session family of the actor
 	 * @returns {Promise}
 	 */
-	getTokenFromUser: async (user) => {
+	getTokenFromUser: async (user, options = {}) => {
 		const expire = "1d";
 		const Token = TokenModel();
 		const expiry = parseDatePeriod(expire);
+		const actorUserId =
+			Number.isSafeInteger(options.actorUserId) && options.actorUserId > 0 ? options.actorUserId : null;
 
 		const signed = await Token.create({
 			iss: "api",
 			attrs: {
 				id: user.id,
 			},
+			// Standard subject stays the impersonated user. `act.sub` names the
+			// administrator whose authority produced this token.
+			sub: user.id,
+			...(actorUserId ? { act: { sub: actorUserId } } : {}),
+			...(typeof options.sessionId === "string" && options.sessionId ? { sid: options.sessionId } : {}),
 			scope: ["user"],
 			expiresIn: expire,
 		});
