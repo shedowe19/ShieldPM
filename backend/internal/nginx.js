@@ -530,7 +530,10 @@ const internalNginx = {
 		try {
 			if (internalNginx.getFileFriendlyHostType(host_type) === "proxy_host") await prepareTrafficFiles(host_row);
 			const config_text = await internalNginx.renderConfig(host_type, host_row);
-			await fs.promises.mkdir(dirname(filename), { recursive: true });
+			// A fresh native install only creates /data/nginx. Tests also replace
+			// the writer without provisioning /data, so a failed directory probe
+			// must not mask the writeFile result.
+			await fs.promises.mkdir(dirname(filename), { recursive: true }).catch(() => {});
 			await fs.promises.writeFile(filename, config_text, { encoding: "utf8" });
 			debug(logger, "Wrote config:", filename);
 		} catch (err) {
