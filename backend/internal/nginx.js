@@ -530,6 +530,7 @@ const internalNginx = {
 		try {
 			if (internalNginx.getFileFriendlyHostType(host_type) === "proxy_host") await prepareTrafficFiles(host_row);
 			const config_text = await internalNginx.renderConfig(host_type, host_row);
+			await fs.promises.mkdir(dirname(filename), { recursive: true });
 			await fs.promises.writeFile(filename, config_text, { encoding: "utf8" });
 			debug(logger, "Wrote config:", filename);
 		} catch (err) {

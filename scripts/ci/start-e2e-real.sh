@@ -24,6 +24,7 @@ sudo rm -f /run/shieldpm/shieldpm.sock
 find "$DATA" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 rm -rf "$BIN"
 mkdir -p "$DATA/nginx" "$BIN"
+mkdir -p "$DATA/nginx/proxy_host" "$DATA/nginx/redirection_host" "$DATA/nginx/dead_host" "$DATA/nginx/stream" "$DATA/logs"
 sudo mkdir -p /usr/local/nginx/conf
 printf 'events {}\nhttp {}\n' | sudo tee /usr/local/nginx/conf/nginx.conf >/dev/null
 
