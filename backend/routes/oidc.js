@@ -4,7 +4,7 @@ import * as client from "openid-client";
 import internalAuditLog from "../internal/audit-log.js";
 import internalToken from "../internal/token.js";
 import { clearAuthCookies, clearDuoCookie, setAuthCookies } from "../lib/auth-cookies.js";
-import { decrypt, encrypt } from "../lib/encryption.js";
+import { decrypt, encrypt, isEncrypted } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import { oidc as logger } from "../logger.js";
 import settingModel from "../models/setting.js";
@@ -13,8 +13,11 @@ import userModel from "../models/user.js";
 import UserTwoFa from "../models/user-2fa.js";
 
 const OIDC_COOKIE = "shieldpm_oidc";
+const OIDC_STEPUP_COOKIE = "shieldpm_oidc_stepup";
 const LOGIN_STATE_PURPOSE = "shieldpm:oidc-login:v1";
+const STEPUP_STATE_PURPOSE = "shieldpm:oidc-stepup:v1";
 const LOGIN_STATE_TTL_MS = 5 * 60 * 1000;
+const STEPUP_STATE_TTL_MS = 5 * 60 * 1000;
 
 // Set up rate limiter: for example, 100 requests per 15 minutes per IP
 const oidcRateLimiter = rateLimit({
@@ -65,8 +68,12 @@ router
 	.get(async (req, res) => {
 		try {
 			const settings = await settingModel.query().where({ id: "oidc-config" }).first();
-			const token = await validateCallback(req, settings);
-			redirectWithJwtToken(req, res, token);
+			const result = await validateCallback(req, settings);
+			if (result?.stepUp) {
+				redirectToStepUp(req, res, result.stepUp);
+				return;
+			}
+			redirectWithJwtToken(req, res, result);
 		} catch (err) {
 			redirectWithError(res, err);
 		}
@@ -113,6 +120,45 @@ router
 		} catch (err) {
 			res.status(err.status || 400).send({
 				error: { message: err.public ? err.message : "OIDC authentication failed" },
+			});
+		}
+	});
+
+router
+	.route("/step-up")
+	.options((_, res) => {
+		res.sendStatus(204);
+	})
+	.all(oidcRateLimiter)
+	.get(async (req, res) => {
+		try {
+			const state = readStepUpState(req);
+			const pending = await TokenModel().load(state.token);
+			if (
+				!Array.isArray(pending.scope) ||
+				!pending.scope.includes("2fa_pending") ||
+				!Number.isSafeInteger(pending.attrs?.id)
+			) {
+				throw new errs.AuthError("Invalid pending 2FA token");
+			}
+			const user = await userModel.query().findById(pending.attrs.id).where({ is_deleted: 0, is_disabled: 0 });
+			if (!user) {
+				throw new errs.AuthError("User cannot be loaded for OIDC step-up");
+			}
+			const activeMethods = await UserTwoFa.getActiveForUser(user.id);
+			res.clearCookie(OIDC_STEPUP_COOKIE);
+			res.clearCookie(OIDC_COOKIE);
+			res.status(200).send({
+				requires_2fa: true,
+				pending_token: state.token,
+				methods: [...new Set(activeMethods.map((method) => method.type))],
+				csrfToken: res.locals.csrfToken,
+			});
+		} catch (err) {
+			logger.error(`OIDC step-up failed: ${err.message}`);
+			res.clearCookie(OIDC_STEPUP_COOKIE);
+			res.status(err.status || 400).send({
+				error: { message: err.public ? err.message : "OIDC step-up failed" },
 			});
 		}
 	});
@@ -164,7 +210,12 @@ const getRedirectUri = (settings) => {
 
 const getConfig = async (settings) => {
 	assertConfigured(settings);
-	return await client.discovery(new URL(settings.meta.issuerURL), settings.meta.clientID, settings.meta.clientSecret);
+	// Rows written before encryption at rest may still hold a plaintext secret;
+	// both forms stay readable until the rotation command re-encrypts them.
+	const clientSecret = isEncrypted(settings.meta.clientSecret)
+		? decrypt(settings.meta.clientSecret)
+		: settings.meta.clientSecret;
+	return await client.discovery(new URL(settings.meta.issuerURL), settings.meta.clientID, clientSecret);
 };
 
 /**
@@ -229,6 +280,29 @@ const readLoginState = (req) => {
 		payload.expiresAt <= Date.now()
 	) {
 		throw new errs.AuthError("Invalid OIDC login state. Please restart login.");
+	}
+	return payload;
+};
+
+const readStepUpState = (req) => {
+	const raw = req.cookies?.[OIDC_STEPUP_COOKIE];
+	if (typeof raw !== "string" || !raw) {
+		throw new errs.AuthError("No OIDC step-up state. Please restart sign-in.");
+	}
+	let payload;
+	try {
+		payload = JSON.parse(decrypt(raw));
+	} catch {
+		throw new errs.AuthError("Invalid OIDC step-up state. Please restart sign-in.");
+	}
+	if (
+		payload?.purpose !== STEPUP_STATE_PURPOSE ||
+		typeof payload.token !== "string" ||
+		!payload.token ||
+		!Number.isFinite(payload.expiresAt) ||
+		payload.expiresAt <= Date.now()
+	) {
+		throw new errs.AuthError("Invalid OIDC step-up state. Please restart sign-in.");
 	}
 	return payload;
 };
@@ -342,18 +416,35 @@ const validateCallback = async (req, settings) => {
 	const email = claims.email.toLowerCase();
 	logger.info(`Successful authentication for email ${email}`);
 
-	// Local TOTP/WebAuthn/Duo must never be bypassed by an IdP login. A real
-	// step-up needs a browser screen and a pending-token cookie; the login page is
-	// outside this change's scope, so fail closed instead of issuing a session.
-	// Accounts enforced onto SSO can use OIDC_ENFORCE_SSO=false as break-glass.
+	// Local TOTP/WebAuthn/Duo must never be bypassed by an IdP login. Issue a
+	// short-lived pending token instead of a session and let the login page ask
+	// for the second factor. Accounts enforced onto SSO can use
+	// OIDC_ENFORCE_SSO=false as break-glass.
 	const localUser = await findLocalUserByEmail(email);
 	if (localUser) {
 		await assertOidcAccountLinkAllowed(localUser, email);
 	}
 	if (localUser && (await UserTwoFa.hasActive2FA(localUser.id))) {
-		throw new errs.PermissionError(
-			"This account has local two-factor authentication. Sign in with your password and 2FA factor.",
-		);
+		const pending = await TokenModel().create({
+			iss: "api",
+			attrs: { id: localUser.id },
+			scope: ["2fa_pending"],
+			expiresIn: "5m",
+		});
+		try {
+			await internalAuditLog.add(null, {
+				action: "user.oidc_step_up_required",
+				object_type: "user",
+				object_id: localUser.id,
+				user_id: localUser.id,
+				actor_type: "system",
+				outcome: "allowed",
+				meta: { email },
+			});
+		} catch (error) {
+			logger.error(`Could not audit OIDC step-up requirement: ${error.message}`);
+		}
+		return { stepUp: pending.token };
 	}
 
 	return internalToken.getTokenFromOAuthClaim({ identity: email });
@@ -395,6 +486,27 @@ const redirectToAuthorizationURL = (req, res, params) => {
 		maxAge: LOGIN_STATE_TTL_MS,
 	});
 	res.redirect(params.url);
+};
+
+const redirectToStepUp = (req, res, token) => {
+	const payload = JSON.stringify({
+		purpose: STEPUP_STATE_PURPOSE,
+		token,
+		expiresAt: Date.now() + STEPUP_STATE_TTL_MS,
+	});
+	// The verified OIDC first factor replaces this browser's previous session;
+	// an old session must not survive while the second factor is pending.
+	clearAuthCookies(res);
+	clearDuoCookie(res, req);
+	res.clearCookie("shieldpm_jwt_original");
+	res.clearCookie(OIDC_COOKIE);
+	res.cookie(OIDC_STEPUP_COOKIE, encrypt(payload), {
+		httpOnly: true,
+		secure: req.secure,
+		sameSite: "lax",
+		maxAge: STEPUP_STATE_TTL_MS,
+	});
+	res.redirect("/login?stepup=1");
 };
 
 const redirectWithJwtToken = (req, res, token) => {

@@ -96,6 +96,7 @@ export const SETTINGS_TAB = {
 	DEFAULT_SITE: "default-site",
 	AI: "ai",
 	GITOPS: "gitops",
+	OIDC: "oidc",
 } as const;
 export type SettingsTab = (typeof SETTINGS_TAB)[keyof typeof SETTINGS_TAB];
 

@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
 	grant: vi.fn(),
 	load: vi.fn(),
+	create: vi.fn(),
 	issue: vi.fn(),
 	getOauthToken: vi.fn(),
 	build: vi.fn(async () => "https://idp.example.com/authorize"),
 	user: null,
 	usersByEmail: [],
 	has2fa: false,
+	activeMethods: [],
 	hasLocalPassword: false,
 	audit: vi.fn(),
 	enabled: true,
@@ -27,7 +29,7 @@ vi.mock("../../lib/config.js", () => ({ getEncryptionKey: () => "01".repeat(32) 
 vi.mock("../../internal/token.js", () => ({
 	default: { issueTokenPair: mocks.issue, getTokenFromOAuthClaim: mocks.getOauthToken },
 }));
-vi.mock("../../models/token.js", () => ({ default: () => ({ load: mocks.load }) }));
+vi.mock("../../models/token.js", () => ({ default: () => ({ load: mocks.load, create: mocks.create }) }));
 vi.mock("../../models/user.js", () => ({
 	default: {
 		query: () => ({
@@ -36,7 +38,12 @@ vi.mock("../../models/user.js", () => ({
 		}),
 	},
 }));
-vi.mock("../../models/user-2fa.js", () => ({ default: { hasActive2FA: async () => mocks.has2fa } }));
+vi.mock("../../models/user-2fa.js", () => ({
+	default: {
+		hasActive2FA: async () => mocks.has2fa,
+		getActiveForUser: async () => mocks.activeMethods,
+	},
+}));
 vi.mock("../../models/auth.js", () => ({
 	default: {
 		query: () => {
@@ -105,8 +112,10 @@ describe("OIDC callback binding and session claims", () => {
 		mocks.user = { id: 7, email: "test@example.com", roles: [], is_disabled: 0, is_deleted: 0 };
 		mocks.usersByEmail = [mocks.user];
 		mocks.has2fa = false;
+		mocks.activeMethods = [{ type: "totp" }];
 		mocks.hasLocalPassword = false;
 		mocks.audit.mockReset();
+		mocks.create.mockResolvedValue({ token: "pending-token" });
 		mocks.issue.mockResolvedValue({
 			access_token: "access",
 			refresh_token: "refresh",
@@ -279,18 +288,55 @@ describe("OIDC callback binding and session claims", () => {
 		);
 	});
 
-	it("does not issue an OIDC handoff for an account with local 2FA", async () => {
+	it("starts a local 2FA step-up instead of issuing an OIDC handoff", async () => {
 		mocks.has2fa = true;
 		const res = response();
 		await handler("/callback")(req({ cookies: { shieldpm_oidc: loginState() } }), res);
 		expect(mocks.grant).toHaveBeenCalledOnce();
 		expect(mocks.getOauthToken).not.toHaveBeenCalled();
-		expect(res.redirect).toHaveBeenCalledWith("/login");
-		expect(res.cookie).toHaveBeenCalledWith(
-			"shieldpm_oidc_error",
-			expect.stringContaining("two-factor"),
-			expect.any(Object),
+		expect(mocks.create).toHaveBeenCalledWith(
+			expect.objectContaining({ attrs: { id: 7 }, scope: ["2fa_pending"], expiresIn: "5m" }),
 		);
+		expect(res.clearCookie).toHaveBeenCalledWith("shieldpm_oidc");
+		expect(res.cookie).toHaveBeenCalledWith("shieldpm_oidc_stepup", expect.any(String), expect.any(Object));
+		expect(res.redirect).toHaveBeenCalledWith("/login?stepup=1");
+	});
+
+	it("exchanges a pending OIDC step-up cookie for the 2FA challenge", async () => {
+		const state = encrypt(
+			JSON.stringify({
+				purpose: "shieldpm:oidc-stepup:v1",
+				token: "pending-token",
+				expiresAt: Date.now() + 60_000,
+			}),
+		);
+		mocks.load.mockResolvedValue({ attrs: { id: 7 }, scope: ["2fa_pending"] });
+		const res = response();
+		res.locals = { csrfToken: "csrf-token" };
+		await handler("/step-up")(req({ cookies: { shieldpm_oidc_stepup: state } }), res);
+		expect(res.status).toHaveBeenCalledWith(200);
+		expect(res.send).toHaveBeenCalledWith({
+			requires_2fa: true,
+			pending_token: "pending-token",
+			methods: ["totp"],
+			csrfToken: "csrf-token",
+		});
+		expect(res.clearCookie).toHaveBeenCalledWith("shieldpm_oidc_stepup");
+	});
+
+	it("rejects an expired OIDC step-up cookie", async () => {
+		const state = encrypt(
+			JSON.stringify({
+				purpose: "shieldpm:oidc-stepup:v1",
+				token: "pending-token",
+				expiresAt: Date.now() - 1,
+			}),
+		);
+		const res = response();
+		res.locals = { csrfToken: "csrf-token" };
+		await handler("/step-up")(req({ cookies: { shieldpm_oidc_stepup: state } }), res);
+		expect(res.status).toHaveBeenCalledWith(400);
+		expect(res.clearCookie).toHaveBeenCalledWith("shieldpm_oidc_stepup");
 	});
 
 	it("claims a valid handoff and creates both access and refresh cookies", async () => {
