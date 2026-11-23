@@ -5,6 +5,12 @@ Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
 ## 2026-11-23
 
+- Native systemd-Unit korrigiert: Die schreibgeschützte System-Allowlist ließ
+  den Dienst auf einer echten LXC-Installation mit `226/NAMESPACE` scheitern und
+  blockierte Startschreibzugriffe unter `/etc` und `/usr/local/nginx/conf`. Die
+  Unit behält die verträglichen Sandbox-Direktiven; ein Regressionstest weist die
+  unverträglichen zurück.
+  ([Laufzeit](./infrastructure/runtime.md), [Log](./log.md))
 - P2-Analytics-Scaling: Ein idempotenter Stunden-Rollup verdichtet abgeschlossene
   Stunden aus den Rohdaten in `analytics_hourly`; 7d/30d- und globale
   Langzeit-KPIs lesen diese Aggregate, 1h/24h bleiben auf Minutenpunkten. Die

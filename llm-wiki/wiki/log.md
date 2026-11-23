@@ -2,6 +2,31 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-23] fix | Native systemd-Einheit mit dem Appliance-Layout verträglich
+
+- Command: "ShieldPM-Dienst startet auf der nativen LXC-Installation nicht (226/NAMESPACE), bitte prüfen und beheben".
+- Type: fix
+- Areas affected: native Installation, systemd-Unit, Startkette, Updater,
+  WireGuard, eingebautes Terminal, Regressionstest.
+- Files changed: `rootfs/usr/lib/systemd/system/shieldpm.service`,
+  `scripts/tests/test_native_maintenance.py`.
+- Wiki pages updated: [Laufzeit](./infrastructure/runtime.md),
+  [Changelog](./changelog.md), diese Seite.
+- New TODOs: keine.
+- New bugs: `ReadWritePaths=/var/lib/letsencrypt` fehlte auf der nativen
+  Installation und beendete die Unit mit `226/NAMESPACE`; nach dem Anlegen
+  blockierte `ProtectSystem=full` die Startschreibzugriffe auf
+  `/etc/logrotate`, `/etc/tor/torrc` und `/usr/local/nginx/conf`.
+  `ProtectKernelTunables` hätte die WireGuard-`sysctl`-Aufrufe blockiert,
+  `RestrictSUIDSGID` die Paketverwaltung im Terminal. Behoben in `e850141e`.
+- New decisions: Die native Unit setzt keine schreibgeschützten Systempfade;
+  die Container-/VM-Grenze ist die Dateisystemgrenze. Es bleiben
+  `NoNewPrivileges`, `PrivateTmp`, `ProtectControlGroups`, `RestrictRealtime`,
+  `LockPersonality` und `UMask=0022`.
+- Verification: `systemd-analyze verify` auf dem LXC-Host ohne Befund; Unit
+  `active`, `NRestarts=0`, Ports 80/443/81 lauschen, `/` und `/api/` liefern
+  HTTP 200; `NativeServiceSandboxTests` 2/2 grün.
+
 ## [2026-11-23] security | Branch-Protection, Rechtstemplates, Restore und interner Pentest
 
 - Command: "Die verbleibenden Nachweise (Live-Restore, Pentest, AVV, Branch-Protection) mach das jetzt".
