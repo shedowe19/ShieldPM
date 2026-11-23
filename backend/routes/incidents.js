@@ -41,5 +41,9 @@ router.get("/deliveries", async (_req, res) => res.json(await incidents.deliveri
 router.post("/deliveries/:id/retry", async (req, res) =>
 	res.json({ success: await incidents.retry(res.locals.access, req.params.id) }),
 );
+router.get("/security", async (req, res) => res.json(await incidents.securityIncidents(res.locals.access, req.query)));
+router.post("/security/:id/resolve", async (req, res) =>
+	res.json(await incidents.resolveSecurityIncident(res.locals.access, req.params.id)),
+);
 router.get("/", async (req, res) => res.json(await incidents.list(res.locals.access, req.query)));
 export default router;

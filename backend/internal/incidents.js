@@ -12,6 +12,8 @@ import {
 	NotificationTarget,
 } from "../models/monitor_incident.js";
 import ProxyHost from "../models/proxy_host.js";
+import SecurityIncident from "../models/security_incident.js";
+import User from "../models/user.js";
 import internalAuditLog from "./audit-log.js";
 
 const DAY_MS = 86_400_000;
@@ -408,25 +410,60 @@ const incidents = {
 	},
 
 	/**
+	 * Resolve every enabled notification target that should receive a security
+	 * alert: the affected account (when given) and every administrator. The
+	 * user table is optional in lightweight tests and older fixtures, so an
+	 * admin lookup failure degrades to the explicit owner instead of dropping
+	 * the alert.
+	 *
+	 * @param {number | null | undefined} ownerUserId
+	 * @param {boolean} notifyAdmins
+	 * @returns {Promise<number[]>}
+	 */
+	async _securityRecipients(ownerUserId, notifyAdmins = true) {
+		const recipients = new Set();
+		const hasOwner = ownerUserId !== null && typeof ownerUserId !== "undefined";
+		if (hasOwner) {
+			const owner = Number(ownerUserId);
+			if (!Number.isSafeInteger(owner) || owner <= 0) return [];
+			recipients.add(owner);
+		}
+		if (notifyAdmins || !hasOwner) {
+			try {
+				const users = await User.query().where("is_deleted", 0).select("id", "roles");
+				for (const user of users) {
+					if (Array.isArray(user.roles) && user.roles.includes("admin")) recipients.add(user.id);
+				}
+			} catch {
+				// No user table (unit fixture) or the lookup failed: the explicit
+				// owner still receives the alert.
+			}
+		}
+		return [...recipients];
+	},
+
+	/**
 	 * Deliver a security event to every enabled notification target of the
-	 * affected account. Unlike availability incidents there is no host/incident
-	 * row, so the delivery is sent directly and never blocks the caller: a
-	 * stolen refresh token must be revocable even when the notification
-	 * endpoint is slow or broken.
+	 * affected account and of the administrators. Unlike availability
+	 * incidents there is no host/incident row, so the delivery is sent directly
+	 * and never blocks the caller: a stolen refresh token must be revocable
+	 * even when the notification endpoint is slow or broken.
 	 *
 	 * @param {Object} alert
-	 * @param {number} alert.owner_user_id
+	 * @param {number} [alert.owner_user_id]
+	 * @param {boolean} [alert.notify_admins]
 	 * @param {string} [alert.event]
 	 * @param {string} [alert.severity]
 	 * @param {string} [alert.message]
 	 * @param {Object} [alert.meta]
 	 */
 	async securityAlert(alert = /** @type {any} */ ({})) {
-		const { owner_user_id, event, severity = "high", message = "", meta = {} } = alert;
+		const { owner_user_id, notify_admins = true, event, severity = "high", message = "", meta = {} } = alert;
 		try {
-			const owner = idNumber(owner_user_id);
+			const owners = await this._securityRecipients(owner_user_id, notify_admins);
+			if (!owners.length) return 0;
 			const targets = await NotificationTarget.query()
-				.where("owner_user_id", owner)
+				.whereIn("owner_user_id", owners)
 				.where("enabled", 1)
 				.limit(100);
 			if (!targets.length) return 0;
@@ -464,6 +501,51 @@ const incidents = {
 			logger.error(`[Incidents] Security alert failed: ${error?.message}`);
 			return 0;
 		}
+	},
+
+	/**
+	 * Security incidents are a separate stream from availability incidents:
+	 * they are not bound to a proxy host and expose the rule id that raised
+	 * them. Administrators can page through them with `before` and resolve a
+	 * row after triage.
+	 *
+	 * @param {import("../lib/types.js").Access} access
+	 * @param {{ limit?: string | number, before?: string | number, status?: string, severity?: string }} [options]
+	 */
+	async securityIncidents(access, options = {}) {
+		await access.can("auditlog:list");
+		const parsedLimit = Number.parseInt(String(options.limit ?? ""), 10);
+		const limit = Number.isInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 200) : 100;
+		const query = SecurityIncident.query().orderBy("id", "desc").limit(limit);
+		if (options.status) query.where("status", options.status);
+		if (options.severity) query.where("severity", options.severity);
+		if (options.before) {
+			const before = Number.parseInt(String(options.before), 10);
+			if (Number.isSafeInteger(before) && before > 0) query.where("id", "<", before);
+		}
+		return query;
+	},
+
+	/**
+	 * @param {import("../lib/types.js").Access} access
+	 * @param {string | number} incidentId
+	 */
+	async resolveSecurityIncident(access, incidentId) {
+		await access.can("auditlog:list");
+		const id = idNumber(incidentId);
+		const incident = await SecurityIncident.query().findById(id);
+		if (!incident) throw new errs.ItemNotFoundError(id);
+		const row =
+			incident.status === "resolved"
+				? incident
+				: await incident.$query().patchAndFetch({ status: "resolved", resolved_at: iso() });
+		await internalAuditLog.add(access, {
+			action: "security.incident_resolved",
+			object_type: "security-incident",
+			object_id: id,
+			meta: { rule_id: row.rule_id, severity: row.severity },
+		});
+		return row;
 	},
 
 	async deliveries(access) {
@@ -594,6 +676,9 @@ const incidents = {
 					.delete();
 				await MonitorIncident.query()
 					.where("resolved_at", "<", iso(Date.now() - 366 * DAY_MS))
+					.delete();
+				await SecurityIncident.query()
+					.where("last_seen_at", "<", iso(Date.now() - 366 * DAY_MS))
 					.delete();
 			}
 		})()

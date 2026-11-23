@@ -518,6 +518,34 @@ describe("certificate lifecycle regressions", () => {
 		await expect(internalCertificate.delete(access(), { id: 2 })).resolves.toBe(true);
 		expect(internalCertificate.revokeCertbot).toHaveBeenCalledWith(row, true, expect.any(Function));
 	});
+	it("audits a successful certificate bundle download without key material", async () => {
+		vi.spyOn(internalCertificate, "get").mockResolvedValue({
+			id: 2,
+			provider: "other",
+			nice_name: "example.test",
+			meta: {},
+		});
+		vi.spyOn(fs, "existsSync").mockReturnValue(true);
+		vi.spyOn(fs.promises, "readdir").mockResolvedValue(["fullchain.pem", "private.key"]);
+		vi.spyOn(fs.promises, "realpath").mockImplementation(async (value) => value);
+		vi.spyOn(internalCertificate, "zipFiles").mockResolvedValue();
+		mocks.audit.mockResolvedValue({ id: 1 });
+
+		const result = await internalCertificate.download(access(), { id: 2 });
+
+		expect(result.fileName).toMatch(/npm-2-.*\.zip$/);
+		expect(mocks.audit).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				action: "downloaded",
+				object_type: "certificate",
+				object_id: 2,
+				outcome: "success",
+				meta: expect.objectContaining({ name: "example.test", provider: "other", file_count: 2 }),
+			}),
+		);
+	});
+
 	it("queues periodic renewal reloads behind active configuration writes", async () => {
 		const entered = Promise.withResolvers();
 		const hold = Promise.withResolvers();

@@ -80,6 +80,18 @@
       Rollup. Tests: `analytics-rollup.spec.js`,
       `analytics-query.spec.js`, `analytics-hourly-rollup.spec.js`,
       `analytics-retention-rollup.spec.js`; bestehende Analytics-Tests grün.
+
+- [x] **T-033 Sicherheitsdetektion und Alarmierung.** Done 2026-11-23. Beleg:
+      Audit-Ereignisse fuer Login/OIDC/Token, 2FA, Rollen/Rechte, Secret-Exporte,
+      Terminal, GitOps, Git-Deploy, Docker, ChatOps und ACME; Regelwerk
+      `SPM-AUTH-001` bis `SPM-ACME-001` mit Severity und Dedup in
+      `security_incident`; Zustellung ueber vorhandene Notification-Targets;
+      API `GET /api/incidents/security`. Tests:
+      `security-detection.spec.js`, `security-event-audit.spec.js`,
+      `two-factor-audit.spec.js`, `wireguard-export-audit.spec.js`,
+      `certificate-lifecycle.spec.js`. Offen bleiben SIEM-Push, Hash-Kette und
+      Host-/FIM-Telemetrie.
+
 - [x] **T-030 Signatur, Attestierung, Rotation und OIDC-Step-up.** Done
       2026-11-23. Beleg: Keyless-Cosign für Image und `SHA256SUMS`,
       SBOM-/Provenienz-Attestierung im manuellen `docker-latest`-Push,

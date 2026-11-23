@@ -4,6 +4,7 @@ import { transaction } from "objection";
 import db from "../db.js";
 import errs from "../lib/error.js";
 import { parseDatePeriod } from "../lib/helpers.js";
+import { AUDIT_ACTION } from "../lib/security-events.js";
 import { global as logger } from "../logger.js";
 import AuthSession from "../models/auth-session.js";
 import TokenModel from "../models/token.js";
@@ -126,6 +127,27 @@ const revokeFamily = async (familyId, reason = "family_revoked", trx = null) => 
 		.whereNull("revoked_at");
 };
 
+const auditTokenEvent = async (action, data) => {
+	try {
+		const { default: internalAuditLog } = await import("./audit-log.js");
+		await internalAuditLog.add(/** @type {any} */ ({ token: { getUserId: () => data.userId } }), {
+			action,
+			object_type: "auth-session",
+			object_id: data.sessionId,
+			user_id: data.userId,
+			actor_user_id: data.userId,
+			actor_type: "user",
+			session_id: data.familyId,
+			ip: data.ip,
+			user_agent: data.userAgent,
+			outcome: "success",
+			meta: data.meta || {},
+		});
+	} catch (error) {
+		logger.error(`[Auth] Could not audit ${action}: ${error?.message}`);
+	}
+};
+
 const reportRefreshReplay = async (session, meta = {}) => {
 	const details = {
 		event: "security.refresh_replay",
@@ -201,6 +223,19 @@ const issueTokenPair = async (user, scope = "user", meta = {}) => {
 		});
 	});
 
+	await auditTokenEvent(AUDIT_ACTION.TOKEN_ISSUED, {
+		userId: user.id,
+		familyId: result.refresh_session?.family_id || familyId,
+		sessionId: result.refresh_session?.id,
+		ip: meta.ip || null,
+		userAgent: meta.userAgent || null,
+		meta: {
+			family_id: result.refresh_session?.family_id || familyId,
+			scope: normalizedScope,
+			method: typeof meta.method === "string" ? meta.method.slice(0, 32) : "password",
+		},
+	});
+
 	return result;
 };
 
@@ -266,12 +301,17 @@ const refreshTokenPair = async (rawRefreshToken, meta = {}) => {
 
 		const accessToken = await buildAccessToken(session.user, session.scope, nextSession);
 
-		return buildTokenResponse({
-			accessToken,
-			refreshToken: nextRefreshToken,
-			refreshSession: nextSession,
-			user: session.user,
-		});
+		return {
+			...buildTokenResponse({
+				accessToken,
+				refreshToken: nextRefreshToken,
+				refreshSession: nextSession,
+				user: session.user,
+			}),
+			// Internal only: lets the post-commit audit say whether the refresh
+			// family moved to a new source IP. It is stripped below.
+			previous_created_ip: session.created_ip || null,
+		};
 	});
 
 	// Throw only after the transaction commits so security revocations survive
@@ -282,7 +322,21 @@ const refreshTokenPair = async (rawRefreshToken, meta = {}) => {
 		}
 		throw result.error;
 	}
-	return result;
+
+	const { previous_created_ip: previousCreatedIp, ...pair } = /** @type {any} */ (result);
+	await auditTokenEvent(AUDIT_ACTION.TOKEN_REFRESHED, {
+		userId: pair.refresh_session?.user_id || pair.user?.id,
+		familyId: pair.refresh_session?.family_id,
+		sessionId: pair.refresh_session?.id,
+		ip: meta.ip || null,
+		userAgent: meta.userAgent || null,
+		meta: {
+			family_id: pair.refresh_session?.family_id,
+			ip_changed: Boolean(previousCreatedIp && meta.ip && previousCreatedIp !== meta.ip),
+			source_ip: previousCreatedIp || null,
+		},
+	});
+	return pair;
 };
 
 export default {

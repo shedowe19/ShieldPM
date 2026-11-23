@@ -10,7 +10,7 @@ vi.mock("../../logger.js", () => ({
 	global: { error: mocks.error, info: vi.fn(), warn: vi.fn() },
 }));
 
-import auditLog from "../../internal/audit-log.js";
+import auditLog, { setAuditObserver } from "../../internal/audit-log.js";
 import { requestContext, runWithRequestContext } from "../../lib/request-context.js";
 
 const claims = { sid: "family-42", jti: "jti-abc", attrs: { id: 7 } };
@@ -144,5 +144,20 @@ describe("audit request context", () => {
 		expect(mocks.insert).toHaveBeenCalledWith(
 			expect.objectContaining({ ip: "203.0.113.5", request_id: "job-12345678" }),
 		);
+	});
+
+	it("hands every persisted row to the installed security detector once", async () => {
+		const observer = vi.fn().mockResolvedValue();
+		setAuditObserver(observer);
+
+		await auditLog.add(access, { action: "created", object_type: "auth", object_id: 1 });
+		await vi.waitFor(() => expect(observer).toHaveBeenCalledTimes(1));
+		expect(observer).toHaveBeenCalledWith(
+			expect.objectContaining({ action: "created", object_type: "auth", object_id: 1 }),
+		);
+
+		setAuditObserver(null);
+		await auditLog.add(access, { action: "created", object_type: "auth", object_id: 1 });
+		expect(observer).toHaveBeenCalledTimes(1);
 	});
 });

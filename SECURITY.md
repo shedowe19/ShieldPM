@@ -48,6 +48,16 @@ Out of scope:
 - denial-of-service tests against systems you do not own,
 - reports that require a compromised administrator account unless the report shows a privilege boundary being crossed.
 
+## In-product detection
+
+ShieldPM records authentication, authorization, secret-export, terminal,
+configuration-integration and ACME events with the request context (IP, user
+agent, session, request id, outcome). A detection layer turns them into
+security incidents with a stable rule id (`SPM-*`), a severity and a
+deduplication window, and delivers them through the notification channels
+configured in the Incidents UI. Detection is not a SIEM and does not cover
+host-runtime, file-integrity or audit-database tampering.
+
 ## Safe harbour
 
 Good-faith research that follows this policy, avoids privacy violations and does not degrade service for others will not be pursued legally by the project. Test only against your own installation or a dedicated test system.

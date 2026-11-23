@@ -8,6 +8,7 @@ import tempWrite from "temp-write";
 import error from "../lib/error.js";
 import { restrictHostExpansions } from "../lib/host-expansions.js";
 import { sanitizeProxyHost } from "../lib/host-response.js";
+import { AUDIT_ACTION } from "../lib/security-events.js";
 import utils from "../lib/utils.js";
 import { debug, ssl as logger } from "../logger.js";
 import certificateModel from "../models/certificate.js";
@@ -207,18 +208,49 @@ const internalCertificate = {
 							const certInfo = await internalCertificate.getCertificateInfoFromFile(
 								`${internalCertificate.getLiveCertPath(certificate.id)}/fullchain.pem`,
 							);
+							const expiresOn = dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss");
+							const previousExpiresOn = certificate.expires_on
+								? dayjs(certificate.expires_on).format("YYYY-MM-DD HH:mm:ss")
+								: null;
+							if (expiresOn === previousExpiresOn) return;
 							await certificateModel
 								.query()
 								.where("id", certificate.id)
 								.andWhere("provider", "letsencrypt")
 								.patch({
-									expires_on: /** @type {any} */ (
-										dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss")
-									),
+									expires_on: /** @type {any} */ (expiresOn),
 								});
+							await internalAuditLog.add(null, {
+								action: AUDIT_ACTION.CERTIFICATE_RENEWED,
+								object_type: "certificate",
+								object_id: certificate.id,
+								user_id: 0,
+								actor_type: "system",
+								outcome: "success",
+								meta: {
+									auto: true,
+									provider: "letsencrypt",
+									domain_names: certificate.domain_names || [],
+									previous_expires_on: previousExpiresOn,
+									expires_on: expiresOn,
+								},
+							});
 						} catch (err) {
 							// Don't want to stop the train here, just log the error
 							logger.error(err.message);
+							await internalAuditLog.add(null, {
+								action: AUDIT_ACTION.CERTIFICATE_RENEW_FAILED,
+								object_type: "certificate",
+								object_id: certificate.id,
+								user_id: 0,
+								actor_type: "system",
+								outcome: "failure",
+								meta: {
+									auto: true,
+									domain_names: certificate.domain_names || [],
+									reason: String(err.message || "renewal check failed").slice(0, 200),
+								},
+							});
 						}
 					});
 					await Promise.all(promises);
@@ -476,6 +508,17 @@ const internalCertificate = {
 			throw err;
 		}
 		debug(logger, "zip completed : ", opName);
+		await internalAuditLog.add(access, {
+			action: AUDIT_ACTION.CERTIFICATE_DOWNLOADED,
+			object_type: "certificate",
+			object_id: certificate.id,
+			outcome: "success",
+			meta: {
+				name: certificate.nice_name,
+				provider: certificate.provider,
+				file_count: certFilesWithRealPaths.length,
+			},
+		});
 		return {
 			fileName: opName,
 		};

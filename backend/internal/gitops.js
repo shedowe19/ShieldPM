@@ -19,6 +19,7 @@ import { withHostDomainClaims } from "../lib/host-domain-claims.js";
 import { isSecretFieldName, sanitizeHostMeta } from "../lib/host-response.js";
 import { notifyProxyHostDomainsChanged } from "../lib/proxy-host-domain-events.js";
 import { retireHostRuntime } from "../lib/retired-host-metadata.js";
+import { AUDIT_ACTION } from "../lib/security-events.js";
 import { global as logger } from "../logger.js";
 import AccessList from "../models/access_list.js";
 import Certificate from "../models/certificate.js";
@@ -41,6 +42,28 @@ import { relayConfigForHost, validateRelayConfigForHost } from "./upload-relay.j
 
 const GITOPS_DIR = "/data/gitops";
 const CONFIG_SUBDIR = "shieldpm-config";
+
+/**
+ * @param {import("../lib/types.js").Access | null} access
+ * @param {string} action
+ * @param {string} outcome
+ * @param {Record<string, any>} [meta]
+ */
+const auditGitOps = async (access, action, outcome, meta = {}) => {
+	try {
+		const { default: internalAuditLog } = await import("./audit-log.js");
+		await internalAuditLog.add(access, {
+			action,
+			object_type: "setting",
+			object_id: 0,
+			outcome,
+			...(access ? {} : { user_id: 0, actor_type: "system" }),
+			meta: { setting_id: "gitops-config", ...meta },
+		});
+	} catch (error) {
+		logger.error?.(`[GitOps] Could not audit ${action}: ${error?.message}`);
+	}
+};
 
 /**
  * Credentials are never written to a GitOps export. A GitOps repository is a
@@ -1121,9 +1144,10 @@ const internalGitOps = {
 
 	/**
 	 * Pull from remote
+	 * @param {import("../lib/types.js").Access | null} [access]
 	 * @returns {Promise<{success: boolean, message?: string}>}
 	 */
-	pull: async () => {
+	pull: async (access = null) => {
 		if (isDemoMode()) {
 			throw new errs.AuthError("GitOps is disabled in Demo Mode");
 		}
@@ -1169,10 +1193,15 @@ const internalGitOps = {
 			await settingModel.query().where("id", "gitops-config").patch({ meta: updatedMeta1 });
 
 			logger.info("GitOps: Pulled from remote");
+			await auditGitOps(access, AUDIT_ACTION.GITOPS_PULLED, "success", { branch: config.branch || "main" });
 			return { success: true, message: "Pull successful" };
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : "Unknown error";
 			logger.error("GitOps pull failed:", err);
+			await auditGitOps(access, AUDIT_ACTION.GITOPS_PULLED, "failure", {
+				branch: config.branch || "main",
+				reason: String(errorMessage).slice(0, 200),
+			});
 			return { success: false, message: errorMessage };
 		}
 	},
@@ -1236,6 +1265,7 @@ const internalGitOps = {
 			const importResult = await internalGitOps.importConfig(access, { overwrite: true });
 
 			if (importResult.success) {
+				await auditGitOps(access, AUDIT_ACTION.GITOPS_REVERTED, "success", { sha });
 				// Restart only this service; PID 1 can be the native host's init system.
 				logger.info("GitOps Revert: Scheduling backend restart in 1 second...");
 				setTimeout(() => {
@@ -1257,6 +1287,10 @@ const internalGitOps = {
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : "Unknown error";
 			logger.error("GitOps revert failed:", err);
+			await auditGitOps(access, AUDIT_ACTION.GITOPS_REVERTED, "failure", {
+				sha,
+				reason: String(errorMessage).slice(0, 200),
+			});
 			return { success: false, message: errorMessage };
 		}
 	},
@@ -2139,6 +2173,13 @@ const internalGitOps = {
 							.map((entry) => `${entry.model}#${entry.id}`)
 							.join(", ")}`,
 					);
+				await auditGitOps(access, AUDIT_ACTION.GITOPS_IMPORTED, errors.length ? "failure" : "success", {
+					imported,
+					skipped,
+					deleted,
+					errors: errors.length,
+					overwrite: options.overwrite === true,
+				});
 				return {
 					success: errors.length === 0,
 					imported,
@@ -2164,6 +2205,13 @@ const internalGitOps = {
 					errors.push(`Proxy rollback failed: ${rollbackError.message}`);
 				}
 				if (fs.existsSync(path.join(configDir, "proxy-hosts"))) await notifyProxyHostDomainsChanged();
+				await auditGitOps(access, AUDIT_ACTION.GITOPS_IMPORTED, "failure", {
+					imported,
+					deleted,
+					errors: errors.length + 1,
+					overwrite: options.overwrite === true,
+					reason: String(errorMessage).slice(0, 200),
+				});
 				return {
 					success: false,
 					imported: proxyActivated

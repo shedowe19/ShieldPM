@@ -4,6 +4,7 @@ import path from "node:path";
 import _ from "lodash";
 import { validatePasswordAuth } from "../lib/auth-password.js";
 import errs from "../lib/error.js";
+import { AUDIT_ACTION } from "../lib/security-events.js";
 import utils from "../lib/utils.js";
 import authModel from "../models/auth.js";
 import AuthSession from "../models/auth-session.js";
@@ -230,11 +231,15 @@ const internalUser = {
 		// Make sure that the user being updated doesn't change their email to another user that is already using it
 		// 1. get user we want to update
 		let user = await internalUser.get(access, { id: data.id });
+		const previousRoles = Array.isArray(user.roles) ? [...user.roles] : [];
+		const nextRoles = Array.isArray(data.roles) ? [...data.roles] : previousRoles;
+		const rolesChanged =
+			typeof data.roles !== "undefined" && !_.isEqual([...nextRoles].sort(), [...previousRoles].sort());
 
 		// Profile editing is available to ordinary users, but account roles and
 		// disabled state require the same administrator permission as permissions.
 		if (
-			(typeof data.roles !== "undefined" && !_.isEqual([...data.roles].sort(), [...user.roles].sort())) ||
+			(typeof data.roles !== "undefined" && rolesChanged) ||
 			(typeof data.is_disabled !== "undefined" && Boolean(data.is_disabled) !== Boolean(user.is_disabled))
 		) {
 			await access.can("users:permissions", data.id);
@@ -328,6 +333,22 @@ const internalUser = {
 			object_id: user.id,
 			meta: { ...data, id: user.id, name: user.name },
 		});
+
+		if (rolesChanged) {
+			const currentRoles = Array.isArray(user.roles) ? user.roles : [];
+			await internalAuditLog.add(access, {
+				action: AUDIT_ACTION.USER_ROLES_CHANGED,
+				object_type: "user",
+				object_id: user.id,
+				user_id: user.id,
+				meta: {
+					name: user.name,
+					previous_roles: previousRoles,
+					roles: currentRoles,
+					granted_admin: currentRoles.includes("admin") && !previousRoles.includes("admin"),
+				},
+			});
+		}
 
 		return user;
 	},
@@ -630,6 +651,18 @@ const internalUser = {
 			meta: {
 				name: user.name,
 				permissions: permissions,
+			},
+		});
+		await internalAuditLog.add(access, {
+			action: AUDIT_ACTION.USER_PERMISSIONS_CHANGED,
+			object_type: "user",
+			object_id: user.id,
+			user_id: user.id,
+			meta: {
+				name: user.name,
+				permissions: {
+					visibility: permissions.visibility,
+				},
 			},
 		});
 

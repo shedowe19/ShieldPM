@@ -11,11 +11,38 @@ import http from "isomorphic-git/http/node";
 import { isDemoMode } from "../lib/config.js";
 import { decrypt, encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
+import { AUDIT_ACTION } from "../lib/security-events.js";
 import { global as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
 import internalNginx from "./nginx.js";
 
 const WEBSITES_DIR = "/data/websites";
+
+/**
+ * @param {import("../lib/types.js").Access | null} access
+ * @param {any} host
+ * @param {{ success: boolean, commit?: string | null, message?: string }} result
+ */
+const auditSync = async (access, host, result) => {
+	try {
+		const { default: internalAuditLog } = await import("./audit-log.js");
+		await internalAuditLog.add(access, {
+			action: AUDIT_ACTION.GIT_DEPLOY_SYNCED,
+			object_type: "proxy-host",
+			object_id: host.id,
+			outcome: result.success ? "success" : "failure",
+			...(access ? {} : { user_id: 0, actor_type: "system" }),
+			meta: {
+				commit: result.commit || null,
+				branch: host.git_branch || "main",
+				repository: host.git_repo_url || null,
+				...(result.success ? {} : { reason: String(result.message || "sync failed").slice(0, 200) }),
+			},
+		});
+	} catch (error) {
+		logger.error?.(`[git-deploy] Could not audit host ${host.id}: ${error?.message}`);
+	}
+};
 
 /** @type {Map<number, any>} */
 const pollingTimers = new Map();
@@ -264,7 +291,12 @@ const internalGitDeploy = {
 					}
 				}
 			}
-		})().finally(() => activeSyncs.delete(hostId));
+		})()
+			.then(async (result) => {
+				await auditSync(access, host, result);
+				return result;
+			})
+			.finally(() => activeSyncs.delete(hostId));
 		activeSyncs.set(hostId, syncTask);
 		return syncTask;
 	},

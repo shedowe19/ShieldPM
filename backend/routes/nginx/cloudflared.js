@@ -120,6 +120,7 @@ router.put("/:id", async (req, res, next) => {
 		}
 
 		const payload = await apiValidator(getValidationSchema("/nginx/cloudflared-tunnels/{id}", "put"), req.body);
+		const tokenChanged = Boolean(payload.token);
 		if (!payload.token) delete payload.token;
 
 		trx = await transaction.start(CloudflaredTunnel.knex());
@@ -136,6 +137,7 @@ router.put("/:id", async (req, res, next) => {
 			object_id: result.id,
 			meta: {
 				name: result.name,
+				token_changed: tokenChanged,
 			},
 		});
 

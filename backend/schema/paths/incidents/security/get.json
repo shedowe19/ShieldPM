@@ -1,0 +1,62 @@
+{
+	"operationId": "getSecurityIncidents",
+	"summary": "List detection results with rule id, severity and deduplication count",
+	"tags": ["incidents"],
+	"security": [
+		{
+			"bearerAuth": ["admin"]
+		}
+	],
+	"parameters": [
+		{
+			"in": "query",
+			"name": "status",
+			"schema": {
+				"enum": ["open", "resolved"]
+			}
+		},
+		{
+			"in": "query",
+			"name": "severity",
+			"schema": {
+				"enum": ["low", "medium", "high", "critical"]
+			}
+		},
+		{
+			"in": "query",
+			"name": "before",
+			"schema": {
+				"type": "integer",
+				"minimum": 1
+			}
+		},
+		{
+			"in": "query",
+			"name": "limit",
+			"schema": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 200
+			}
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "array",
+						"items": {
+							"$ref": "../../../components/security-incident.json"
+						},
+						"maxItems": 200
+					}
+				}
+			}
+		},
+		"403": {
+			"description": "Permission denied"
+		}
+	}
+}

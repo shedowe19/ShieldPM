@@ -5,6 +5,7 @@ import twoFaService from "../internal/2fa-service.js";
 import internalToken from "../internal/token.js";
 import { clearAuthCookies, clearDuoCookie, readDuoCookie, setAuthCookies, setDuoCookie } from "../lib/auth-cookies.js";
 import errs from "../lib/error.js";
+import { AUDIT_ACTION } from "../lib/security-events.js";
 import apiValidator from "../lib/validator/api.js";
 import { debug, express as logger } from "../logger.js";
 import TokenModel from "../models/token.js";
@@ -53,6 +54,40 @@ const loadPendingTwoFaToken = async (rawToken) => {
 		throw new errs.AuthError("Invalid pending 2FA token");
 	}
 	return payload;
+};
+
+const loginFailureReason = (error) => {
+	if (error instanceof errs.ValidationError) return "invalid_request";
+	if (error instanceof errs.AuthError || error instanceof errs.UnauthorizedError) return "invalid_credentials";
+	return "error";
+};
+
+/**
+ * Login events are the primary signal for account takeover attempts. They are
+ * written without credentials, tokens or password material; only the login
+ * identifier, the outcome and the request context are retained.
+ *
+ * @param {string} action
+ * @param {string} outcome
+ * @param {{ user_id?: number, actor_user_id?: number, actor_type?: string, ip?: string, meta?: Record<string, any> }} [data]
+ */
+const auditAuthEvent = async (action, outcome, data = {}) => {
+	try {
+		const { default: internalAuditLog } = await import("../internal/audit-log.js");
+		await internalAuditLog.add(null, {
+			action,
+			object_type: "auth",
+			outcome,
+			user_id: data.user_id,
+			actor_user_id: data.actor_user_id,
+			actor_type: data.actor_type ?? "anonymous",
+			ip: data.ip,
+			user_agent: undefined,
+			meta: data.meta || {},
+		});
+	} catch {
+		// Auditing must never block a login decision.
+	}
 };
 
 const router = express.Router({
@@ -244,6 +279,10 @@ router
 		// enforced tenant must not be able to authenticate with a local password.
 		if (await isLocalPasswordLoginForbidden()) {
 			logger.warn(`Blocked local password login from ${req.ip || "unknown"} because OIDC/SSO is enforced`);
+			await auditAuthEvent(AUDIT_ACTION.LOGIN_BLOCKED, "denied", {
+				ip: req.ip,
+				meta: { reason: "sso_enforced" },
+			});
 			return res.status(403).send({
 				error: {
 					code: 403,
@@ -267,6 +306,10 @@ router
 			for (const tracked of trackedIdentifiers) {
 				const state = await getLoginAttemptState(tracked.scope, tracked.identifier, now);
 				if (state.blockedUntil > now) {
+					await auditAuthEvent(AUDIT_ACTION.LOGIN_BLOCKED, "denied", {
+						ip,
+						meta: { reason: "rate_limited", identifier: loginIdentifier },
+					});
 					return res.status(429).send({
 						error: {
 							code: 429,
@@ -293,6 +336,14 @@ router
 					expiresIn: "5m",
 				});
 
+				await auditAuthEvent(AUDIT_ACTION.LOGIN_PENDING_2FA, "pending", {
+					user_id: result.user.id,
+					actor_user_id: result.user.id,
+					actor_type: "user",
+					ip,
+					meta: { method: "password" },
+				});
+
 				// Return which methods are available so the UI can present the right input
 				const activeMethods = await UserTwoFa.getActiveForUser(result.user.id);
 				const methodTypes = [...new Set(activeMethods.map((m) => m.type))];
@@ -308,6 +359,14 @@ router
 			// No 2FA — issue refresh-token pair alongside the access token
 			const meta = { ip, userAgent: req.headers["user-agent"] || null };
 			const pair = await internalToken.issueTokenPair(result.user, data.scope || "user", meta);
+
+			await auditAuthEvent(AUDIT_ACTION.LOGIN_SUCCEEDED, "success", {
+				user_id: result.user.id,
+				actor_user_id: result.user.id,
+				actor_type: "user",
+				ip,
+				meta: { method: "password", scope: data.scope || "user" },
+			});
 
 			// Set both cookies
 			setAuthCookies(res, req, {
@@ -338,6 +397,13 @@ router
 			}
 
 			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+			await auditAuthEvent(AUDIT_ACTION.LOGIN_FAILED, "failure", {
+				ip,
+				meta: {
+					identifier: loginIdentifier,
+					reason: loginFailureReason(err),
+				},
+			});
 			// Small delay to deter timing attacks
 			await new Promise((resolve) => setTimeout(resolve, 500));
 			next(err);
@@ -524,18 +590,40 @@ router.post("/2fa/verify", authRateLimiter, async (req, res) => {
 		// Verify the provided 2FA code
 		const valid = await twoFaService.verifyLoginChallenge(userId, method, code);
 		if (!valid) {
+			await auditAuthEvent(AUDIT_ACTION.LOGIN_FAILED, "failure", {
+				user_id: userId,
+				actor_user_id: userId,
+				actor_type: "user",
+				ip: req.ip,
+				meta: { method: `password+${method}`, reason: "invalid_2fa" },
+			});
 			return res.status(401).send({ error: { code: 401, message: "Invalid 2FA code" } });
 		}
 
 		// 2FA passed — load the user and issue full tokens
 		const user = await User.query().findById(userId).andWhere("is_deleted", 0).andWhere("is_disabled", 0);
 		if (!user) {
+			await auditAuthEvent(AUDIT_ACTION.LOGIN_FAILED, "failure", {
+				user_id: userId,
+				actor_user_id: userId,
+				actor_type: "user",
+				ip: req.ip,
+				meta: { method: `password+${method}`, reason: "user_unavailable" },
+			});
 			return res.status(401).send({ error: { code: 401, message: "User not found" } });
 		}
 
 		const ip = req.ip || "unknown";
 		const meta = { ip, userAgent: req.headers["user-agent"] || null };
 		const pair = await internalToken.issueTokenPair(user, "user", meta);
+
+		await auditAuthEvent(AUDIT_ACTION.LOGIN_SUCCEEDED, "success", {
+			user_id: user.id,
+			actor_user_id: user.id,
+			actor_type: "user",
+			ip,
+			meta: { method: `password+${method}` },
+		});
 
 		setAuthCookies(res, req, {
 			accessToken: pair.access_token,
@@ -552,6 +640,10 @@ router.post("/2fa/verify", authRateLimiter, async (req, res) => {
 		});
 	} catch (err) {
 		debug(logger, `POST /tokens/2fa/verify: ${err}`);
+		await auditAuthEvent(AUDIT_ACTION.LOGIN_FAILED, "failure", {
+			ip: req.ip,
+			meta: { method: `password+${method || "unknown"}`, reason: "verification_error" },
+		});
 		const code = err.status || 500;
 		res.status(code).send({ error: { code, message: err.public ? err.message : "2FA verification failed" } });
 	}

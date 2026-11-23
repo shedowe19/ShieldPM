@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
 	query: vi.fn(),
 	host: {},
 	patch: vi.fn(),
+	audit: vi.fn(),
 }));
 vi.mock("node:fs", () => ({
 	default: {
@@ -36,7 +37,8 @@ vi.mock("../../lib/config.js", () => ({ isDemoMode: () => false }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: vi.fn(), decrypt: vi.fn() }));
 vi.mock("../../logger.js", () => ({ global: { info: vi.fn(), debug: vi.fn(), error: vi.fn() } }));
 vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.query } }));
-vi.mock("../../internal/nginx.js", () => ({ default: {} }));
+vi.mock("../../internal/nginx.js", () => ({ default: { configure: vi.fn() } }));
+vi.mock("../../internal/audit-log.js", () => ({ default: { add: mocks.audit } }));
 
 import gitDeploy from "../../internal/git-deploy.js";
 
@@ -54,6 +56,7 @@ describe("Git Deploy synchronization", () => {
 			const query = {
 				findById: () => query,
 				where: () => query,
+				withGraphFetched: async () => mocks.host,
 				patch: mocks.patch,
 				// biome-ignore lint/suspicious/noThenProperty: Objection query builders are intentionally thenable.
 				then: (resolve) => Promise.resolve(mocks.host).then(resolve),
@@ -61,6 +64,7 @@ describe("Git Deploy synchronization", () => {
 			return query;
 		});
 		mocks.patch.mockResolvedValue();
+		mocks.audit.mockResolvedValue({ id: 1 });
 		mocks.clone.mockResolvedValue();
 		mocks.currentBranch.mockResolvedValue("main");
 		mocks.getConfig.mockResolvedValue("https://git.example/old.git");
@@ -69,7 +73,19 @@ describe("Git Deploy synchronization", () => {
 	});
 	afterEach(() => gitDeploy.stopAllPolling());
 	it("re-clones when the repository URL changes even if the branch is unchanged", async () => {
-		expect(await gitDeploy.sync(null, 7)).toMatchObject({ success: true });
+		const result = await gitDeploy.sync(null, 7);
+		expect(result).toMatchObject({ success: true });
+		expect(mocks.audit).toHaveBeenCalledWith(
+			null,
+			expect.objectContaining({
+				action: "git_sync",
+				object_type: "proxy-host",
+				object_id: 7,
+				outcome: "success",
+				user_id: 0,
+				actor_type: "system",
+			}),
+		);
 		expect(mocks.clone).toHaveBeenCalledWith(expect.objectContaining({ url: "https://git.example/new.git" }));
 		expect(mocks.pull).not.toHaveBeenCalled();
 	});

@@ -185,7 +185,15 @@ describe("OIDC callback binding and session claims", () => {
 		mocks.hasLocalPassword = true;
 		await handler("/callback")(req({ cookies: { shieldpm_oidc: loginState() } }), response());
 		expect(mocks.getOauthToken).toHaveBeenCalledOnce();
-		expect(mocks.audit).not.toHaveBeenCalled();
+		expect(mocks.audit).toHaveBeenCalledWith(
+			null,
+			expect.objectContaining({
+				action: "oidc.login_succeeded",
+				object_type: "auth",
+				outcome: "success",
+				meta: expect.objectContaining({ stage: "callback" }),
+			}),
+		);
 	});
 
 	it("links an administrator account without a local password", async () => {

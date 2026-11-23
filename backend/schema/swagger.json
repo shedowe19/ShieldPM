@@ -783,6 +783,16 @@
 				"$ref": "./paths/incidents/deliveries/deliveryID/retry/post.json"
 			}
 		},
+		"/incidents/security": {
+			"get": {
+				"$ref": "./paths/incidents/security/get.json"
+			}
+		},
+		"/incidents/security/{incidentID}/resolve": {
+			"post": {
+				"$ref": "./paths/incidents/security/incidentID/resolve/post.json"
+			}
+		},
 		"/nginx/proxy-hosts/options": {
 			"get": {
 				"$ref": "./paths/nginx/proxy-hosts/options/get.json"

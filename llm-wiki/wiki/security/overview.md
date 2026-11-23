@@ -66,6 +66,27 @@ Anwendungslogik.
 - **Backup-Dateien:** Instanzbackups sind verschlüsselt; der Schlüssel gehört
   nicht ins gleiche Backup-Ziel.
 
+## Sicherheitsdetektion
+
+Seit 2026-11-23 schreibt ShieldPM sicherheitsrelevante Aktionen mit
+Request-Kontext (IP, User-Agent, Session/Familie, Request-ID, Outcome) ins
+Audit-Log und wandelt sie in Security-Incidents um. Jeder Incident traegt eine
+stabile Regel-ID, eine Severity und einen Dedup-Zaehler; Wiederholungen innerhalb
+des Fensters erhoehen den Zaehler statt neue Zeilen zu erzeugen.
+
+- Regeln: SPM-AUTH-001..010 (Login, OIDC, Replay, 2FA, Rollen/Rechte, Passwort,
+  SSO-Blockade), SPM-TOKEN-001 (Familie von neuer IP), SPM-EXFIL-001..004
+  (Backup, Zertifikat/Key, WireGuard, Root-CA), SPM-EXEC-001 (Terminal),
+  SPM-CONFIG-001..005 (GitOps, Git-Deploy, Docker, WAF/CrowdSec aus),
+  SPM-TUNNEL-001 (Cloudflare-Token), SPM-CHATOPS-001, SPM-ACME-001.
+- Zustellung: bestehende Notification-Targets (Webhook/ntfy/Discord); Admins
+  erhalten Alarme auch fuer Aktionen anderer Konten.
+- Sichtbarkeit: `GET /api/incidents/security`,
+  `POST /api/incidents/security/{id}/resolve` (nur `auditlog:list`).
+- Grenzen: kein SIEM-Push, keine Hash-Kette, keine Container-/FIM-Telemetrie;
+  Container-Escape, Dateiaenderungen und Manipulation der Audit-DB bleiben
+  ausserhalb der Regelabdeckung.
+
 ## Prüfung 2026-11 und Behebung
 
 Drei Prüfrunden mit 39 Rollen (rund 498 Rohbefunde, 463 nach Zusammenführung)

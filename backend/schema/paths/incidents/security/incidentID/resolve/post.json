@@ -1,0 +1,39 @@
+{
+	"operationId": "resolveSecurityIncident",
+	"summary": "Resolve a security incident after triage",
+	"tags": ["incidents"],
+	"security": [
+		{
+			"bearerAuth": ["admin"]
+		}
+	],
+	"parameters": [
+		{
+			"in": "path",
+			"name": "incidentID",
+			"required": true,
+			"schema": {
+				"type": "integer",
+				"minimum": 1
+			}
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Success",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../../components/security-incident.json"
+					}
+				}
+			}
+		},
+		"403": {
+			"description": "Permission denied"
+		},
+		"404": {
+			"description": "Security incident not found"
+		}
+	}
+}

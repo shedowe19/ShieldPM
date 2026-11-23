@@ -8,6 +8,7 @@ import internalCertificate from "../../internal/certificate.js";
 import internalPki from "../../internal/pki.js";
 import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
+import { AUDIT_ACTION } from "../../lib/security-events.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
 import { express as logger } from "../../logger.js";
@@ -70,6 +71,13 @@ const createCertLimiter = rateLimit({
  */
 router.get("/root-ca", jwtdecode(), async (_req, res) => {
 	const certContent = await internalPki.getRootCa();
+	await internalAuditLog.add(res.locals.access, {
+		action: AUDIT_ACTION.CERTIFICATE_ROOT_CA_DOWNLOADED,
+		object_type: "certificate",
+		object_id: 0,
+		outcome: "success",
+		meta: { format: "pem" },
+	});
 	res.status(200)
 		.header("Content-Type", "application/x-pem-file")
 		.header("Content-Disposition", 'attachment; filename="root_ca.crt"')

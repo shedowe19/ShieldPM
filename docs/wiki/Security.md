@@ -136,6 +136,43 @@ The Admin UI listens on port 81 with a self-signed certificate. Binding and fire
 
 ---
 
+## Security Event Detection
+
+ShieldPM writes security-relevant actions to the audit log with the request
+context (source IP, user agent, session/family, request id and outcome) and
+turns them into in-product security incidents. An incident carries a stable
+rule id, a severity and a deduplication counter, so a brute-force burst becomes
+one actionable row instead of hundreds.
+
+| Rule id | Signal | Default severity |
+| :--- | :--- | :--- |
+| `SPM-AUTH-001` | Repeated failed password logins per IP | high after 5 in 15 min |
+| `SPM-AUTH-002` | Successful login from a previously unseen IP | medium |
+| `SPM-AUTH-003` | Repeated OIDC login failures per IP | high after 5 in 15 min |
+| `SPM-AUTH-004` | Refresh-token replay; the family is revoked | high |
+| `SPM-AUTH-005` / `006` | Two-factor method removed / added | high / medium |
+| `SPM-AUTH-007` / `008` / `009` | Role, permission or password change | high / medium / medium |
+| `SPM-AUTH-010` | Local login blocked because SSO is enforced | medium |
+| `SPM-TOKEN-001` | Refresh family used from a different IP | medium |
+| `SPM-EXFIL-001`..`004` | Backup, certificate/private key, WireGuard config or root CA download | high / high / high / medium |
+| `SPM-EXEC-001` | Terminal session opened or denied | high |
+| `SPM-CONFIG-001`..`005` | GitOps import/pull, Git-Deploy sync, Docker discovery, WAF+CrowdSec disabled | high / medium / high / medium / high |
+| `SPM-TUNNEL-001` | Cloudflare tunnel connector token replaced | high |
+| `SPM-CHATOPS-001` | ChatOps denied or requested a state-changing action | high |
+| `SPM-ACME-001` | ACME certificate issued, renewed or renewal failed | medium / high on failure |
+
+Incidents are delivered through the notification channels configured under
+**Incidents** (webhook, ntfy, Discord); administrators receive them even when
+the action belongs to another account. Administrators can read and resolve the
+stream at `GET /api/incidents/security` and
+`POST /api/incidents/security/{id}/resolve`.
+
+The detection layer is not a SIEM: it has no hash chain, no external push and
+no host-runtime telemetry. Container escape, file-integrity changes and
+manipulation of the audit database itself remain outside its reach.
+
+---
+
 ## 📋 Security Hardening Checklist
 
 - [ ] Setup completed and verified **before** port 81 is reachable from an untrusted network
@@ -151,6 +188,7 @@ The Admin UI listens on port 81 with a self-signed certificate. Binding and fire
 - [ ] Terminal hosts use Force SSL/HTTPS and an Access List
 - [ ] HTTP/3 enabled (UDP 443 open)
 - [ ] Regular backups: encrypted instance backups or `/data` + database dumps, restored and verified
+- [ ] At least one incident notification channel configured and tested for security alerts
 
 > [!WARNING]
 > Use a **private, access-controlled repository** for GitOps. Current exports redact credentials, but they still contain hostnames, users, roles, Access List structure and integration configuration. Review repository access and rotate credentials that were exposed by older exports. GitOps versions configuration; it is **not a backup** and does not replace `/data`, database dumps or certificate private keys.

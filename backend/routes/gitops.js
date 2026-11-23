@@ -88,7 +88,7 @@ router.post("/push", jwtdecode(), demoCheck, accessCheck, async (req, res) => {
  * Pull from remote repository
  */
 router.post("/pull", jwtdecode(), demoCheck, accessCheck, async (_req, res) => {
-	const result = await internalGitOps.pull();
+	const result = await internalGitOps.pull(res.locals.access);
 	res.status(200).json(result);
 });
 

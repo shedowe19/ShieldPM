@@ -72,6 +72,31 @@ const clip = (value, max) => {
 	return result ? result.slice(0, max) : null;
 };
 
+/**
+ * Detection is installed at startup instead of imported here: the detection
+ * module depends on incidents, notifications and the database, while the audit
+ * writer is also used by lightweight unit tests and migrations.
+ *
+ * @type {((row: any) => void | Promise<void>) | null}
+ */
+let auditObserver = null;
+
+/**
+ * @param {((row: any) => void | Promise<void>) | null} observer
+ */
+export const setAuditObserver = (observer) => {
+	auditObserver = typeof observer === "function" ? observer : null;
+};
+
+const observeAuditEvent = (row) => {
+	if (!row || !auditObserver) return;
+	Promise.resolve()
+		.then(() => auditObserver?.(row))
+		.catch((error) => {
+			logger.error(`[Audit] Security detection failed for "${row.action}": ${error?.message}`);
+		});
+};
+
 const claim = (access, key) => {
 	if (!access?.token || typeof access.token.get !== "function") {
 		return null;
@@ -263,7 +288,9 @@ const internalAuditLog = {
 		};
 
 		try {
-			return await auditLogModel.query().insert(/** @type {any} */ (row));
+			const inserted = await auditLogModel.query().insert(/** @type {any} */ (row));
+			observeAuditEvent(inserted);
+			return inserted;
 		} catch (error) {
 			// Auditing must never break the operation it documents: a failed
 			// insert is reported to the operator but the mutation stays committed.

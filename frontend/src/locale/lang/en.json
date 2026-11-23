@@ -477,6 +477,7 @@
 	"object.event.user.impersonated": "Impersonated {object}",
 	"object.event.user.oidc_link_denied": "OIDC account link denied for {object}",
 	"object.event.user.oidc_step_up_required": "OIDC sign-in requires the local second factor for {object}",
+	"object.event.security.incident_resolved": "Security incident resolved for {object}",
 	"objectType": "Object Type",
 	"offline": "Offline",
 	"oidcClientId": "OIDC Client ID",

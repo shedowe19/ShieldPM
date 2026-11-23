@@ -1,0 +1,73 @@
+/**
+ * Stable audit action names and detection rule ids for the security event
+ * stream.
+ *
+ * The action is written to `audit_log.action`; the rule id is stored on the
+ * resulting `security_incident` row and in the notification payload. Keeping
+ * both in one module prevents call sites and rules from drifting apart.
+ */
+export const AUDIT_ACTION = Object.freeze({
+	LOGIN_SUCCEEDED: "auth.login_succeeded",
+	LOGIN_FAILED: "auth.login_failed",
+	LOGIN_PENDING_2FA: "auth.login_pending_2fa",
+	LOGIN_BLOCKED: "auth.login_blocked",
+	LOGOUT: "auth.logout",
+	TOKEN_ISSUED: "auth.token_issued",
+	TOKEN_REFRESHED: "auth.token_refreshed",
+	REFRESH_REPLAY_DETECTED: "refresh_replay_detected",
+	TWO_FACTOR_ENABLED: "auth.2fa_enabled",
+	TWO_FACTOR_DISABLED: "auth.2fa_disabled",
+	TWO_FACTOR_BACKUP_CODES_REGENERATED: "auth.2fa_backup_codes_regenerated",
+	USER_ROLES_CHANGED: "user.roles_changed",
+	USER_PERMISSIONS_CHANGED: "user.permissions_changed",
+	OIDC_LOGIN_STARTED: "oidc.login_started",
+	OIDC_LOGIN_SUCCEEDED: "oidc.login_succeeded",
+	OIDC_LOGIN_FAILED: "oidc.login_failed",
+	BACKUP_DOWNLOADED: "downloaded",
+	CERTIFICATE_DOWNLOADED: "downloaded",
+	CERTIFICATE_ROOT_CA_DOWNLOADED: "root_ca_downloaded",
+	WIREGUARD_CONFIG_EXPORTED: "config_exported",
+	TERMINAL_OPENED: "terminal.session_opened",
+	TERMINAL_CLOSED: "terminal.session_closed",
+	TERMINAL_DENIED: "terminal.session_denied",
+	GITOPS_IMPORTED: "imported",
+	GITOPS_PULLED: "pulled",
+	GITOPS_REVERTED: "reverted",
+	GIT_DEPLOY_SYNCED: "git_sync",
+	DOCKER_DISCOVERED: "discovered",
+	DOCKER_DISABLED: "disabled",
+	CHATOPS_COMMAND: "command",
+	CERTIFICATE_CREATED: "created",
+	CERTIFICATE_RENEWED: "renewed",
+	CERTIFICATE_RENEW_FAILED: "renew_failed",
+	PROXY_HOST_UPDATED: "updated",
+	USER_UPDATED: "updated",
+	CLOUDFLARED_UPDATED: "updated",
+});
+
+export const SECURITY_RULE = Object.freeze({
+	FAILED_LOGIN: "SPM-AUTH-001",
+	NEW_LOGIN_IP: "SPM-AUTH-002",
+	OIDC_FAILURE: "SPM-AUTH-003",
+	REFRESH_REPLAY: "SPM-AUTH-004",
+	MFA_DISABLED: "SPM-AUTH-005",
+	MFA_ENABLED: "SPM-AUTH-006",
+	ROLE_CHANGE: "SPM-AUTH-007",
+	PERMISSION_CHANGE: "SPM-AUTH-008",
+	PASSWORD_CHANGE: "SPM-AUTH-009",
+	LOGIN_BLOCKED: "SPM-AUTH-010",
+	TOKEN_IP_CHANGE: "SPM-TOKEN-001",
+	BACKUP_DOWNLOAD: "SPM-EXFIL-001",
+	CERTIFICATE_DOWNLOAD: "SPM-EXFIL-002",
+	WIREGUARD_EXPORT: "SPM-EXFIL-003",
+	ROOT_CA_DOWNLOAD: "SPM-EXFIL-004",
+	TERMINAL_OPEN: "SPM-EXEC-001",
+	GITOPS_IMPORT: "SPM-CONFIG-001",
+	GITOPS_PULL: "SPM-CONFIG-002",
+	GIT_DEPLOY_SYNC: "SPM-CONFIG-003",
+	DOCKER_DISCOVERY: "SPM-CONFIG-004",
+	WAF_DISABLED: "SPM-CONFIG-005",
+	CHATOPS_ACTION: "SPM-CHATOPS-001",
+	ACME_ISSUE: "SPM-ACME-001",
+	CLOUDFLARED_TOKEN: "SPM-TUNNEL-001",
+});

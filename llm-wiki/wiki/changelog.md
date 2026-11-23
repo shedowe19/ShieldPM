@@ -12,7 +12,13 @@ Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
   begrenzten Batches. Neue Migration für SQLite, MariaDB/MySQL und PostgreSQL,
   neue Rollup-/Query-/Retention-Tests, öffentliche Analytics-Doku aktualisiert.
   ([Analytics](./reference/module/analytics.md), [Log](./log.md))
-
+- T-033 umgesetzt: ShieldPM schreibt Login, OIDC, Token-Rotation/-Replay, 2FA,
+  Rollen/Rechte, Secret-Exporte, Terminal, GitOps, Git-Deploy, Docker,
+  ChatOps und ACME mit Request-Kontext ins Audit-Log und wandelt sie ueber
+  stabile Regel-IDs (`SPM-AUTH-001` bis `SPM-ACME-001`) in deduplizierte
+  Security-Incidents um. Die Zustellung nutzt die vorhandenen
+  Notification-Targets; die API liegt unter `/api/incidents/security`.
+  ([Sicherheit](./security/overview.md), [Log](./log.md))
 - T-030 umgesetzt: Release-Images und `SHA256SUMS` sind keyless per Cosign
   signiert, der manuelle `docker-latest`-Push attestiert SBOM und Provenienz,
   der AES-Envelope ist versioniert und per Re-Encrypt-CLI rotierbar, TOTP-/Duo-

@@ -29,6 +29,7 @@ import internalMaintenance from "./internal/maintenance.js";
 import internalNginx from "./internal/nginx.js";
 import internalOAuth2Proxy from "./internal/oauth2-proxy.js";
 import internalProxyHostMonitor from "./internal/proxy-host-monitor.js";
+import securityDetection from "./internal/security-detection.js";
 import internalTerminal from "./internal/terminal.js";
 import internalTor from "./internal/tor.js";
 import internalUploadRelay from "./internal/upload-relay.js";
@@ -45,6 +46,7 @@ async function appStart() {
 	try {
 		await migrateFromSqliteToNewDb();
 		await migrateUp();
+		securityDetection.install();
 		await analyticsService.init();
 		await analyticsRollup.init();
 		internalUploadRelay.init();

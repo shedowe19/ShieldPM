@@ -6,6 +6,7 @@ import internalToken from "../internal/token.js";
 import { clearAuthCookies, clearDuoCookie, setAuthCookies } from "../lib/auth-cookies.js";
 import { decrypt, encrypt, isEncrypted } from "../lib/encryption.js";
 import errs from "../lib/error.js";
+import { AUDIT_ACTION } from "../lib/security-events.js";
 import { oidc as logger } from "../logger.js";
 import settingModel from "../models/setting.js";
 import TokenModel from "../models/token.js";
@@ -32,6 +33,32 @@ const router = express.Router({
 	mergeParams: true,
 });
 
+/**
+ * @param {import("express").Request} req
+ * @param {string} action
+ * @param {string} outcome
+ * @param {Record<string, any>} [meta]
+ */
+const auditOidc = (req, action, outcome, meta = {}) =>
+	Promise.resolve(
+		internalAuditLog.add(null, {
+			action,
+			object_type: "auth",
+			outcome,
+			ip: req.ip,
+			meta,
+		}),
+	).catch((error) => logger.error(`Could not audit OIDC event: ${error?.message}`));
+
+const oidcFailureReason = (error) =>
+	error instanceof errs.ConfigurationError
+		? "configuration"
+		: error instanceof errs.AuthError || error instanceof errs.PermissionError
+			? error.public
+				? error.message
+				: "authentication_failed"
+			: "provider_error";
+
 router
 	.route("/")
 	.options((_, res) => {
@@ -48,8 +75,13 @@ router
 		try {
 			const settings = await settingModel.query().where({ id: "oidc-config" }).first();
 			const params = await getInitParams(settings);
+			await auditOidc(req, AUDIT_ACTION.OIDC_LOGIN_STARTED, "started");
 			redirectToAuthorizationURL(req, res, params);
 		} catch (err) {
+			await auditOidc(req, AUDIT_ACTION.OIDC_LOGIN_FAILED, "failure", {
+				stage: "start",
+				reason: oidcFailureReason(err),
+			});
 			redirectWithError(res, err);
 		}
 	});
@@ -69,12 +101,21 @@ router
 		try {
 			const settings = await settingModel.query().where({ id: "oidc-config" }).first();
 			const result = await validateCallback(req, settings);
+			await auditOidc(req, AUDIT_ACTION.OIDC_LOGIN_SUCCEEDED, "success", {
+				stage: "callback",
+				email: typeof result?.email === "string" ? result.email : null,
+				step_up: Boolean(result?.stepUp),
+			});
 			if (result?.stepUp) {
 				redirectToStepUp(req, res, result.stepUp);
 				return;
 			}
 			redirectWithJwtToken(req, res, result);
 		} catch (err) {
+			await auditOidc(req, AUDIT_ACTION.OIDC_LOGIN_FAILED, "failure", {
+				stage: "callback",
+				reason: oidcFailureReason(err),
+			});
 			redirectWithError(res, err);
 		}
 	});
@@ -115,9 +156,18 @@ router
 				refreshToken: pair.refresh_token,
 				refreshExpires: pair.refresh_expires,
 			});
+			await auditOidc(req, AUDIT_ACTION.OIDC_LOGIN_SUCCEEDED, "success", {
+				stage: "claim",
+				user_id: user.id,
+				email: user.email,
+			});
 			res.clearCookie(OIDC_COOKIE);
 			res.status(200).send({ expires: pair.access_expires, user: pair.user, csrfToken: res.locals.csrfToken });
 		} catch (err) {
+			await auditOidc(req, AUDIT_ACTION.OIDC_LOGIN_FAILED, "failure", {
+				stage: "claim",
+				reason: oidcFailureReason(err),
+			});
 			res.status(err.status || 400).send({
 				error: { message: err.public ? err.message : "OIDC authentication failed" },
 			});
@@ -446,10 +496,11 @@ const validateCallback = async (req, settings) => {
 		} catch (error) {
 			logger.error(`Could not audit OIDC step-up requirement: ${error.message}`);
 		}
-		return { stepUp: pending.token };
+		return { stepUp: pending.token, email };
 	}
 
-	return internalToken.getTokenFromOAuthClaim({ identity: email });
+	const token = await internalToken.getTokenFromOAuthClaim({ identity: email });
+	return { ...token, email };
 };
 
 const readTokenHandoff = (req) => {

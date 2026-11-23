@@ -2,6 +2,7 @@ import { StringDecoder } from "node:string_decoder";
 import { Client } from "ssh2";
 import { WebSocketServer } from "ws";
 import { decrypt } from "../lib/encryption.js";
+import { AUDIT_ACTION } from "../lib/security-events.js";
 import {
 	consumeTerminalSessionToken,
 	createTerminalSessionToken,
@@ -57,6 +58,40 @@ const originAllowed = (request, host) => {
 		hostHeader: request.headers?.host,
 		allowHttp: process.env.TERMINAL_ALLOW_HTTP_ORIGIN === "true",
 	});
+};
+
+/**
+ * Terminal connections bypass Express, so the audit entry carries its own
+ * request context. The SSH host credentials and every byte of terminal output
+ * stay out of the audit trail.
+ *
+ * @param {string} action
+ * @param {import("node:http").IncomingMessage} request
+ * @param {number | string | null} hostId
+ * @param {string} outcome
+ * @param {Record<string, any>} [meta]
+ */
+const auditTerminal = async (action, request, hostId, outcome, meta = {}) => {
+	try {
+		const { default: internalAuditLog } = await import("./audit-log.js");
+		const forwarded = request?.headers?.["x-forwarded-for"];
+		await internalAuditLog.add(null, {
+			action,
+			object_type: "terminal",
+			object_id: Number(hostId) || 0,
+			user_id: 0,
+			actor_type: "system",
+			outcome,
+			ip: request?.socket?.remoteAddress || null,
+			user_agent: typeof request?.headers?.["user-agent"] === "string" ? request.headers["user-agent"] : null,
+			meta: {
+				...meta,
+				forwarded_for: Array.isArray(forwarded) ? forwarded[0] : forwarded || null,
+			},
+		});
+	} catch (error) {
+		logger.error?.(`[Terminal] Could not audit ${action}: ${error?.message}`);
+	}
 };
 
 const rejectUpgrade = (socket, status = 403) => {
@@ -208,7 +243,15 @@ const internalTerminal = {
 		let initialRows = 24;
 		let sshStream = null;
 		let disconnected = false;
+		let openedAt = null;
+		let closedAudited = false;
 		const disconnect = () => {
+			if (openedAt && !closedAudited) {
+				closedAudited = true;
+				auditTerminal(AUDIT_ACTION.TERMINAL_CLOSED, request, hostId, "success", {
+					duration_ms: Date.now() - openedAt,
+				});
+			}
 			disconnected = true;
 			sshClient?.end();
 		};
@@ -246,15 +289,18 @@ const internalTerminal = {
 		try {
 			host = await findTerminalHost(hostId);
 		} catch (_err) {
+			auditTerminal(AUDIT_ACTION.TERMINAL_DENIED, request, hostId, "denied", { reason: "host_unavailable" });
 			ws.close(1008, "Terminal host not found");
 			return;
 		}
 
 		if (!originAllowed(request, host)) {
+			auditTerminal(AUDIT_ACTION.TERMINAL_DENIED, request, hostId, "denied", { reason: "origin" });
 			ws.close(1008, "Unauthorized terminal origin");
 			return;
 		}
 		if (!consumeTerminalSessionToken(hostId, sessionToken(request))) {
+			auditTerminal(AUDIT_ACTION.TERMINAL_DENIED, request, hostId, "denied", { reason: "session_token" });
 			ws.close(1008, "Unauthorized terminal connection");
 			return;
 		}
@@ -264,6 +310,11 @@ const internalTerminal = {
 
 		sshClient.on("ready", () => {
 			if (disconnected) return;
+			openedAt = Date.now();
+			auditTerminal(AUDIT_ACTION.TERMINAL_OPENED, request, hostId, "success", {
+				host_name: hostNames(host)[0] || null,
+				auth_type: host.terminal_auth_type || null,
+			});
 			ws.send(JSON.stringify({ type: "status", status: "connected" }));
 
 			sshClient.shell({ term: "xterm-256color", cols: initialCols, rows: initialRows }, (err, stream) => {
@@ -297,6 +348,7 @@ const internalTerminal = {
 		});
 
 		sshClient.on("error", (err) => {
+			auditTerminal(AUDIT_ACTION.TERMINAL_DENIED, request, hostId, "denied", { reason: "ssh_error" });
 			ws.send(JSON.stringify({ type: "error", message: `SSH Error: ${err.message}` }));
 			ws.close();
 		});

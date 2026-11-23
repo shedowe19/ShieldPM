@@ -34,6 +34,36 @@ Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Felder
   `tsc --noEmit` ohne Ausgabe; Biome auf allen geänderten Backend-Dateien ohne
   Befund (nur Schema-Versionshinweis der bestehenden `biome.json`).
 
+## [2026-11-23] security | T-033 Sicherheitsdetektion umgesetzt
+
+- Command: "P2 detection-engineering work for ShieldPM".
+- Type: security
+- Areas affected: Audit-Kontext, Auth/OIDC/Token, 2FA, Benutzerverwaltung,
+  Zertifikate/ACME, WireGuard, Terminal, GitOps, Git-Deploy, Docker-Discovery,
+  ChatOps, Incident-/Notification-Pfad, OpenAPI, oeffentliche und interne Doku.
+- Files changed: `lib/security-events.js`, `internal/security-detection.js`,
+  `models/security_incident.js`, Migration `security_detection`, Audit-Aufrufe
+  in `routes/{tokens,oidc,2fa,incidents}.js`, `internal/{auth-session-service,
+  certificate,chat,docker,git-deploy,gitops,terminal,user,incidents}.js`,
+  `routes/nginx/{certificates,cloudflared,wireguard}.js`.
+- Wiki pages updated: [Sicherheit](./security/overview.md),
+  [Audit-Log](./reference/verwaltung/audit-log.md), [Aufgaben](./tasks.md),
+  [Changelog](./changelog.md), diese Seite.
+- New TODOs: keine; verbleibende Grenzen (SIEM-Push, Hash-Kette, Host-/FIM)
+  stehen in T-033 und in der Sicherheitsseite.
+- New bugs: keine neuen offenen Fehler.
+- New decisions: Detection liest den Audit-Stream statt jeden Aufrufer zu
+  aendern; Incidents sind eine eigene Tabelle, weil `monitor_incident` an einen
+  Proxy-Host gebunden ist; Zustellung bleibt beim vorhandenen
+  Notification-Target-Pfad; Regel-IDs sind stabil (`SPM-*`).
+- Verification: Neue Tests `security-detection.spec.js` (27),
+  `security-event-audit.spec.js` (4), `two-factor-audit.spec.js` (2),
+  `wireguard-export-audit.spec.js` (2), `audit-log-request-context.spec.js`
+  (7) und `certificate-lifecycle.spec.js` (Download-Audit) gruen;
+  `tsc --noEmit` gruen; Biome auf 32 geaenderten Dateien ohne Befund;
+  `node validate-schema.js` "Schema is valid". Bestehende plattformbedingte
+  Windows-Fehler in `csrf-session-transitions` (Duo-Cookie) und vier
+  GitOps-Pfadtests sind unveraendert und nicht durch diesen Branch verursacht.
 ## [2026-11-23] security | T-030 umgesetzt: Signatur, SBOM, Rotation, Step-up
 
 - Command: "Hast du alle Fehler behoben? habe ja alle gesagt".

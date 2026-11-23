@@ -238,6 +238,7 @@ export const AUDIT_LOG_OBJECT_TYPE = {
 	AUTH: "auth",
 	TERMINAL: "terminal",
 	SECURITY_INCIDENT: "security-incident",
+	CHAT_INTEGRATION: "chat-integration",
 } as const;
 export type AuditLogObjectType = (typeof AUDIT_LOG_OBJECT_TYPE)[keyof typeof AUDIT_LOG_OBJECT_TYPE];
 
@@ -255,6 +256,7 @@ export const AUDIT_LOG_ACTION = {
 	USER_IMPERSONATED: "user.impersonated",
 	USER_OIDC_LINK_DENIED: "user.oidc_link_denied",
 	USER_OIDC_STEP_UP_REQUIRED: "user.oidc_step_up_required",
+	SECURITY_INCIDENT_RESOLVED: "security.incident_resolved",
 } as const;
 export type AuditLogAction = (typeof AUDIT_LOG_ACTION)[keyof typeof AUDIT_LOG_ACTION];
 
