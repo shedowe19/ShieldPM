@@ -1,6 +1,8 @@
 import dayjs from "dayjs";
 import express from "express";
 import internalAnalytics from "../../internal/analytics.js";
+import analyticsRollup from "../../internal/analytics-rollup.js";
+import { loadAnalyticsSeries, planAnalyticsRange } from "../../lib/analytics-query.js";
 import { resolveAnalyticsRange } from "../../lib/analytics-range.js";
 import { serializeAnalyticsSeries, serializeAnalyticsSummary } from "../../lib/analytics-response.js";
 import errs from "../../lib/error.js";
@@ -23,10 +25,19 @@ router.get("/:hostId", jwtdecode(), async (req, res, next) => {
 
 		await internalAnalytics.assertHostAccess(res.locals.access, hostId);
 
-		const data = await AnalyticCount.query()
-			.where("proxy_host_id", hostId)
-			.andWhere("timestamp", ">=", since.toISOString())
-			.orderBy("timestamp", "asc");
+		const until = dayjs().toISOString();
+		const plan = planAnalyticsRange({
+			coveredFrom: analyticsRollup.getQueryCoveredFrom(),
+			coveredThrough: analyticsRollup.getQueryCoveredThrough(),
+			end: until,
+			start: since.toISOString(),
+		});
+		const data = plan.hourly
+			? await loadAnalyticsSeries(AnalyticCount.knex(), plan, { hostId })
+			: await AnalyticCount.query()
+					.where("proxy_host_id", hostId)
+					.andWhere("timestamp", ">=", since.toISOString())
+					.orderBy("timestamp", "asc");
 
 		res.json(serializeAnalyticsSeries(data, resolution));
 	} catch (err) {

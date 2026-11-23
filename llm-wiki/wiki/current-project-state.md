@@ -1,10 +1,10 @@
 # Aktueller Projektzustand
 
 Status: active
-Last verified: 2026-11-05
+Last verified: 2026-11-23
 Confidence: high
 
-Last updated: 2026-11-05
+Last updated: 2026-11-23
 
 Dies ist eine rollierende Momentaufnahme, keine Historie. Ältere Details gehören
 in den [Log](./log.md) oder in die passende Bereichsseite.
@@ -27,6 +27,7 @@ zuletzt fertig wurde, was bewusst fehlt und welche Risiken gerade aktiv sind.
 
 | Datum      | Ergebnis                                                                                                           | Quelle                                                                |
 | ---------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| 2026-11-23 | P2-Analytics: Stunden-Rollup, Retention-Gate und Langzeit-Query-Switch                                             | [Analytics](./reference/module/analytics.md), [Aufgaben](./tasks.md)  |
 | 2026-11-23 | T-030: Cosign/SBOM/Provenienz, AES-Rotation, OIDC-Step-up, verschlüsselte 2FA-/OIDC-Secrets, DB-gestütztes KI-Budget | [Sicherheit](./security/overview.md), [Aufgaben](./tasks.md)          |
 | 2026-11-23 | Security-Review-Behebung: K-01/K-02/K-03, Identität, Betrieb, KI, Analytics, Secrets, Audit, UX und Doku           | [Sicherheit](./security/overview.md), Branch `fix/security-hardening` |
 | 2026-11-04 | Dependabot-Alarme für `qs`, `seroval` und `minimatch` geschlossen                                                  | [Log](./log.md)                                                       |

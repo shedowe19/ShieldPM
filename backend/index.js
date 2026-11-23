@@ -11,6 +11,7 @@ process.on("uncaughtException", (err) => {
 
 import app from "./app.js";
 import analyticsService from "./internal/analytics.js";
+import analyticsRollup from "./internal/analytics-rollup.js";
 import internalSessionCleanup from "./internal/auth-session-cleanup.js";
 import internalCertificate from "./internal/certificate.js";
 import internalChat from "./internal/chat.js";
@@ -45,6 +46,7 @@ async function appStart() {
 		await migrateFromSqliteToNewDb();
 		await migrateUp();
 		await analyticsService.init();
+		await analyticsRollup.init();
 		internalUploadRelay.init();
 		await setup();
 		await getCompiledSchema();
@@ -111,6 +113,7 @@ async function appStart() {
 					await internalSessionCleanup.stop();
 					await internalFirewallList.stopTimer();
 					await analyticsService.stop();
+					await analyticsRollup.stop();
 					await internalUploadRelay.stop();
 					logger.info("Stopping.");
 					process.exit(0);

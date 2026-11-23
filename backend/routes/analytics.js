@@ -1,6 +1,15 @@
 import dayjs from "dayjs";
 import express from "express";
 import analyticsService from "../internal/analytics.js";
+import analyticsRollup from "../internal/analytics-rollup.js";
+import {
+	loadAnalyticsSeries,
+	planAnalyticsRange,
+	resolveSeriesResolution,
+	sumAnalyticsRange,
+	sumAnalyticsRangeByHost,
+} from "../lib/analytics-query.js";
+import { serializeAnalyticsSeries } from "../lib/analytics-response.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import AnalyticCount from "../models/analytic_count.js";
 import AnalyticsLogs from "../models/analytics_logs.js";
@@ -77,30 +86,52 @@ router.get("/summary", async (req, res) => {
 		const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
 		const end = req.query.end || dayjs().toISOString();
 		const scope = await resolveRequestScope(res);
-		const query = AnalyticCount.knex()
-			.from("analytic_count")
-			.where("timestamp", ">=", start)
-			.andWhere("timestamp", "<=", end);
-		applyHostScope(query, scope, "proxy_host_id");
-		// Host 0 is the global/unattributed bucket. It is reported separately and never mixed into
-		// the sum of real hosts, for administrators and normal users alike.
-		if (scope.allHosts) query.whereNotNull("proxy_host_id");
-		const stats = (await sumExpression(query)) || {};
-
+		const plan = planAnalyticsRange({
+			coveredFrom: analyticsRollup.getQueryCoveredFrom(),
+			coveredThrough: analyticsRollup.getQueryCoveredThrough(),
+			end,
+			start,
+		});
+		let stats = {};
 		let unattributed = null;
-		if (scope.allHosts) {
-			const unattributedQuery = AnalyticCount.knex()
+
+		if (plan.hourly) {
+			const filters = {
+				applyScope: (query) => applyHostScope(query, scope, "proxy_host_id"),
+				excludeUnattributed: scope.allHosts,
+			};
+			stats = await sumAnalyticsRange(AnalyticCount.knex(), plan, filters);
+			if (scope.allHosts) {
+				unattributed = parseStats(
+					await sumAnalyticsRange(AnalyticCount.knex(), plan, { onlyUnattributed: true }),
+				);
+			}
+		} else {
+			const query = AnalyticCount.knex()
 				.from("analytic_count")
-				.whereNull("proxy_host_id")
 				.where("timestamp", ">=", start)
 				.andWhere("timestamp", "<=", end);
-			unattributed = parseStats((await sumExpression(unattributedQuery)) || {});
+			applyHostScope(query, scope, "proxy_host_id");
+			// Host 0 is the global/unattributed bucket. It is reported separately and never mixed into
+			// the sum of real hosts, for administrators and normal users alike.
+			if (scope.allHosts) query.whereNotNull("proxy_host_id");
+			stats = (await sumExpression(query)) || {};
+
+			if (scope.allHosts) {
+				const unattributedQuery = AnalyticCount.knex()
+					.from("analytic_count")
+					.whereNull("proxy_host_id")
+					.where("timestamp", ">=", start)
+					.andWhere("timestamp", "<=", end);
+				unattributed = parseStats((await sumExpression(unattributedQuery)) || {});
+			}
 		}
 
 		res.json({
 			...parseStats(stats),
 			kpi_window: {
 				range: null,
+				rollup: Boolean(plan.hourly),
 				since: start,
 				source: "aggregates",
 				until: end,
@@ -123,6 +154,20 @@ router.get("/series", async (req, res) => {
 		const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
 		const end = req.query.end || dayjs().toISOString();
 		const scope = await resolveRequestScope(res);
+		const plan = planAnalyticsRange({
+			coveredFrom: analyticsRollup.getQueryCoveredFrom(),
+			coveredThrough: analyticsRollup.getQueryCoveredThrough(),
+			end,
+			start,
+		});
+
+		if (plan.hourly) {
+			const rows = await loadAnalyticsSeries(AnalyticCount.knex(), plan, {
+				applyScope: (query) => applyHostScope(query, scope, "proxy_host_id"),
+				excludeUnattributed: scope.allHosts,
+			});
+			return res.json(serializeAnalyticsSeries(rows, resolveSeriesResolution(start, end)));
+		}
 
 		// Fetch raw bucketed data
 		// For performance on large sets, we might want to aggregate by hour if range > 24h
@@ -184,48 +229,74 @@ router.get("/top-hosts", async (req, res) => {
 		const sort = ["bytes", "client_errors", "response_time", "server_errors"].includes(req.query.sort)
 			? req.query.sort
 			: "requests";
-		const hostsWithDomains = ProxyHost.query()
-			.alias("proxy_host")
-			.join("host_domain", "host_domain.proxy_host_id", "proxy_host.id")
-			.select("proxy_host.id")
-			.where("proxy_host.is_deleted", 0)
-			.groupBy("proxy_host.id");
-		applyHostScope(hostsWithDomains, scope, "proxy_host.id");
-		const rankings =
-			sort === "response_time"
-				? await AnalyticsLogs.query()
-						.alias("analytics_logs")
-						.whereIn("analytics_logs.host_id", hostsWithDomains)
-						.where("analytics_logs.time", ">=", responseTimeStart)
-						.andWhere("analytics_logs.time", "<=", end)
-						.where("analytics_logs.duration", ">", 0)
-						.select("analytics_logs.host_id as id")
-						.avg("analytics_logs.duration as average_duration")
-						.groupBy("analytics_logs.host_id")
-						.orderBy("average_duration", "desc")
-						.limit(5)
-				: await AnalyticCount.query()
-						.alias("analytic_count")
-						.whereNotNull("analytic_count.proxy_host_id")
-						.whereIn("analytic_count.proxy_host_id", hostsWithDomains)
-						.where("analytic_count.timestamp", ">=", start)
-						.andWhere("analytic_count.timestamp", "<=", end)
-						.select("analytic_count.proxy_host_id as id")
-						.sum("analytic_count.request_count as requests")
-						.sum("analytic_count.bytes_sent as bytes")
-						.sum("analytic_count.status_code_4xx as client_errors")
-						.sum("analytic_count.status_code_5xx as server_errors")
-						.groupBy("analytic_count.proxy_host_id")
-						.orderBy(sort, "desc")
-						.limit(5);
+		const plan = planAnalyticsRange({
+			coveredFrom: analyticsRollup.getQueryCoveredFrom(),
+			coveredThrough: analyticsRollup.getQueryCoveredThrough(),
+			end,
+			start,
+		});
+		const activeHosts = () => {
+			const query = ProxyHost.query()
+				.alias("proxy_host")
+				.join("host_domain", "host_domain.proxy_host_id", "proxy_host.id")
+				.select("proxy_host.id")
+				.where("proxy_host.is_deleted", 0)
+				.groupBy("proxy_host.id");
+			applyHostScope(query, scope, "proxy_host.id");
+			return query;
+		};
+		const hostsWithDomains = activeHosts();
+		let rankings;
+		if (sort === "response_time") {
+			rankings = await AnalyticsLogs.query()
+				.alias("analytics_logs")
+				.whereIn("analytics_logs.host_id", hostsWithDomains)
+				.where("analytics_logs.time", ">=", responseTimeStart)
+				.andWhere("analytics_logs.time", "<=", end)
+				.where("analytics_logs.duration", ">", 0)
+				.select("analytics_logs.host_id as id")
+				.avg("analytics_logs.duration as average_duration")
+				.groupBy("analytics_logs.host_id")
+				.orderBy("average_duration", "desc")
+				.limit(5);
+		} else if (plan.hourly) {
+			const grouped = await sumAnalyticsRangeByHost(AnalyticCount.knex(), plan, {
+				applyScope: (query) => query.whereIn("proxy_host_id", activeHosts()),
+				excludeUnattributed: true,
+			});
+			rankings = grouped
+				.sort((left, right) => (right[sort] || 0) - (left[sort] || 0) || left.id - right.id)
+				.slice(0, 5);
+		} else {
+			rankings = await AnalyticCount.query()
+				.alias("analytic_count")
+				.whereNotNull("analytic_count.proxy_host_id")
+				.whereIn("analytic_count.proxy_host_id", hostsWithDomains)
+				.where("analytic_count.timestamp", ">=", start)
+				.andWhere("analytic_count.timestamp", "<=", end)
+				.select("analytic_count.proxy_host_id as id")
+				.sum("analytic_count.request_count as requests")
+				.sum("analytic_count.bytes_sent as bytes")
+				.sum("analytic_count.status_code_4xx as client_errors")
+				.sum("analytic_count.status_code_5xx as server_errors")
+				.groupBy("analytic_count.proxy_host_id")
+				.orderBy(sort, "desc")
+				.limit(5);
+		}
 
 		const hostIds = rankings.map((ranking) => Number(ranking.id));
 		if (hostIds.length === 0) {
 			return res.json([]);
 		}
-		const metrics =
-			sort === "response_time"
-				? await AnalyticCount.query()
+		let metrics;
+		if (sort === "response_time") {
+			metrics = plan.hourly
+				? await sumAnalyticsRangeByHost(AnalyticCount.knex(), plan, {
+						applyScope: (query) => query.whereIn("proxy_host_id", activeHosts()),
+						excludeUnattributed: true,
+						hostIds,
+					})
+				: await AnalyticCount.query()
 						.alias("analytic_count")
 						.whereIn("analytic_count.proxy_host_id", hostIds)
 						.where("analytic_count.timestamp", ">=", start)
@@ -235,8 +306,10 @@ router.get("/top-hosts", async (req, res) => {
 						.sum("analytic_count.bytes_sent as bytes")
 						.sum("analytic_count.status_code_4xx as client_errors")
 						.sum("analytic_count.status_code_5xx as server_errors")
-						.groupBy("analytic_count.proxy_host_id")
-				: rankings;
+						.groupBy("analytic_count.proxy_host_id");
+		} else {
+			metrics = rankings;
+		}
 		const metricsByHostId = new Map(metrics.map((metric) => [Number(metric.id), metric]));
 
 		const hostsQuery = ProxyHost.query().whereIn("id", hostIds).where("is_deleted", 0);

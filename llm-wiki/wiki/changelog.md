@@ -5,6 +5,14 @@ Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
 ## 2026-11-23
 
+- P2-Analytics-Scaling: Ein idempotenter Stunden-Rollup verdichtet abgeschlossene
+  Stunden aus den Rohdaten in `analytics_hourly`; 7d/30d- und globale
+  Langzeit-KPIs lesen diese Aggregate, 1h/24h bleiben auf Minutenpunkten. Die
+  Rohdetail-Retention löscht erst nach committetem Rollup-Stand und in
+  begrenzten Batches. Neue Migration für SQLite, MariaDB/MySQL und PostgreSQL,
+  neue Rollup-/Query-/Retention-Tests, öffentliche Analytics-Doku aktualisiert.
+  ([Analytics](./reference/module/analytics.md), [Log](./log.md))
+
 - T-030 umgesetzt: Release-Images und `SHA256SUMS` sind keyless per Cosign
   signiert, der manuelle `docker-latest`-Push attestiert SBOM und Provenienz,
   der AES-Envelope ist versioniert und per Re-Encrypt-CLI rotierbar, TOTP-/Duo-

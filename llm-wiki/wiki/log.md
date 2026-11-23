@@ -2,6 +2,38 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-23] performance | P2-Analytics-Rollup, Retention-Gate und Query-Switch
+
+- Command: "P2 analytics-scaling work: hourly rollup, retention gate and long-range query switch".
+- Type: performance
+- Areas affected: Analytics-Ingestion, Datenbank (SQLite/MariaDB/PostgreSQL),
+  Analytics-API, Retention, Startkette, öffentliche Analytics-Doku.
+- Files changed: `backend/internal/analytics.js`,
+  `backend/internal/analytics-rollup.js` (neu), `backend/lib/analytics-rollup.js`
+  (neu), `backend/lib/analytics-query.js` (neu),
+  `backend/lib/analytics-retention.js` (neu), Modelle `analytics_hourly` und
+  `analytics_rollup_state` (neu), Migration
+  `20261123000002_add_analytics_hourly_rollup.js`, `routes/analytics.js`,
+  `routes/nginx/analytics.js`, `index.js`, `index-dev.js`,
+  `docs/wiki/Analytics.md`, bestehende Starttests (Rollup-Mock).
+- Wiki pages updated: [Analytics](./reference/module/analytics.md),
+  [Nginx-Analytics-Routen](./reference/api/nginx-analytics.md),
+  [Projektzustand](./current-project-state.md), [Aufgaben](./tasks.md),
+  [Changelog](./changelog.md), diese Seite.
+- New TODOs: keine; T-032 ist erledigt.
+- New bugs: keine neuen offenen Fehler. Bekannte Grenze: Der erste Lauf nach
+  einem langen Ausfall verarbeitet höchstens 72 Stunden pro Lauf; ältere
+  Stunden ohne Detailzeilen werden übersprungen und geloggt.
+- New decisions: `analytics_hourly` trägt `bucket_key` statt einer Teilmenge
+  über die nullable `proxy_host_id`; der Rollup schreibt mit Set-Semantik und
+  Wasserzeichen; Rohdetail-Löschung endet am committeten Rollup-Stand; das
+  späte Fenster schrumpft mit `ANALYTICS_DETAILED_RETENTION_HOURS`, damit keine
+  teilweise gelöschte Stunde neu aggregiert wird.
+- Verification: `vitest` 137 Tests im gezielten Analytics-, Migrations- und
+  Startlauf grün, davon 50 neue Rollup-/Query-/Retention-/Migrations-Tests;
+  `tsc --noEmit` ohne Ausgabe; Biome auf allen geänderten Backend-Dateien ohne
+  Befund (nur Schema-Versionshinweis der bestehenden `biome.json`).
+
 ## [2026-11-23] security | T-030 umgesetzt: Signatur, SBOM, Rotation, Step-up
 
 - Command: "Hast du alle Fehler behoben? habe ja alle gesagt".

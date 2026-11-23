@@ -72,6 +72,14 @@
 
 ## Done
 
+- [x] **T-032 P2-Analytics-Rollup umgesetzt.** Done 2026-11-23. Beleg:
+      `analytics_hourly` und `analytics_rollup_state` mit Migration für SQLite,
+      MariaDB/MySQL und PostgreSQL; idempotenter Stunden-Job mit
+      Wasserzeichen, Set-Semantik und spätem Fenster; Detail-Retention erst
+      nach committetem Rollup; 7d/30d- und globale Langzeit-KPIs aus dem
+      Rollup. Tests: `analytics-rollup.spec.js`,
+      `analytics-query.spec.js`, `analytics-hourly-rollup.spec.js`,
+      `analytics-retention-rollup.spec.js`; bestehende Analytics-Tests grün.
 - [x] **T-030 Signatur, Attestierung, Rotation und OIDC-Step-up.** Done
       2026-11-23. Beleg: Keyless-Cosign für Image und `SHA256SUMS`,
       SBOM-/Provenienz-Attestierung im manuellen `docker-latest`-Push,

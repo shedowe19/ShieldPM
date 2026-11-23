@@ -4,14 +4,19 @@ import path from "node:path";
 import { StringDecoder } from "node:string_decoder";
 import dayjs from "dayjs";
 import { Tail } from "tail";
+import { planAnalyticsRange, sumAnalyticsRange } from "../lib/analytics-query.js";
 import { resolveAnalyticsRange } from "../lib/analytics-range.js";
+import { resolveRetentionConfig } from "../lib/analytics-retention.js";
+import { floorToHourMs, isoFromMs, resolveDetailPruneCutoff } from "../lib/analytics-rollup.js";
 import { buildAnalyticsEventKey, insertAnalyticsLogs, upsertAnalyticsRows } from "../lib/analytics-upsert.js";
 import errs from "../lib/error.js";
 import { subscribeProxyHostDomains } from "../lib/proxy-host-domain-events.js";
 import { analytics as logger } from "../logger.js";
 import AnalyticCount from "../models/analytic_count.js";
+import AnalyticsHourly from "../models/analytics_hourly.js";
 import AnalyticsLogs from "../models/analytics_logs.js";
 import ProxyHost from "../models/proxy_host.js";
+import analyticsRollup from "./analytics-rollup.js";
 
 const LOG_FILE = path.join(process.env.DATA_PATH || "/data", "nginx", "json_access.log");
 const FLUSH_INTERVAL_MS = 10 * 1000; // 10 seconds flush
@@ -29,36 +34,9 @@ const BACKFILL_FLUSH_THRESHOLD = 500;
 const ANUBIS_DEDUPE_WINDOW_MS = 2000;
 const REQUEST_SIGNATURE_LIMIT = 5000;
 const REQUEST_SIGNATURE_TTL_MS = 15 * 1000;
+const RETENTION_BATCH_SIZE = 1000;
 
-const retentionLimits = {
-	detailedHours: { fallback: 24, max: 8760, min: 1, name: "ANALYTICS_DETAILED_RETENTION_HOURS" },
-	aggregationDays: { fallback: 35, max: 3650, min: 1, name: "ANALYTICS_AGGREGATION_RETENTION_DAYS" },
-};
-
-const readRetentionValue = (env, limits) => {
-	const raw = env?.[limits.name];
-	if (raw === undefined || raw === null || String(raw).trim() === "") return limits.fallback;
-
-	const value = Number(raw);
-	if (!Number.isInteger(value) || value < limits.min || value > limits.max) {
-		logger.error(
-			`Invalid ${limits.name}="${raw}"; expected an integer between ${limits.min} and ${limits.max}. Using ${limits.fallback}.`,
-		);
-		return limits.fallback;
-	}
-	return value;
-};
-
-/**
- * Resolve and validate retention settings. Invalid, negative or non-integer values fall back to
- * the documented defaults and can never turn a retention run into "delete everything" or "never delete".
- * @param {Record<string, string | undefined>} [env]
- * @returns {{ detailedHours: number, aggregationDays: number }}
- */
-export const resolveRetentionConfig = (env = process.env) => ({
-	aggregationDays: readRetentionValue(env, retentionLimits.aggregationDays),
-	detailedHours: readRetentionValue(env, retentionLimits.detailedHours),
-});
+export { resolveRetentionConfig } from "../lib/analytics-retention.js";
 
 /**
  * Resolve the defined first-run start of the log stream.
@@ -295,6 +273,7 @@ export class AnalyticsService {
 			lastLineAt: this.lastLineAt,
 			lastOffset: this.persistedOffset,
 			lineQueueSize: this.lineQueue.length,
+			rollup: analyticsRollup.getStatus(),
 		};
 	}
 
@@ -893,6 +872,61 @@ export class AnalyticsService {
 		}
 	}
 
+	async deleteOlderRows(model, column, cutoff, { minValue = null, requireKnex = false } = {}) {
+		let knex = null;
+		try {
+			knex = typeof model?.knex === "function" ? model.knex() : null;
+		} catch {
+			knex = null;
+		}
+
+		if (knex) {
+			let deleted = 0;
+			while (true) {
+				const query = knex(model.tableName).select("id").where(column, "<", cutoff).limit(RETENTION_BATCH_SIZE);
+				if (minValue) query.andWhere(column, ">=", minValue);
+				const rows = await query;
+				if (rows.length === 0) break;
+				const removed = await knex(model.tableName)
+					.whereIn(
+						"id",
+						rows.map((row) => row.id),
+					)
+					.delete();
+				deleted += removed;
+				if (removed === 0 || rows.length < RETENTION_BATCH_SIZE) break;
+			}
+			return deleted;
+		}
+
+		if (requireKnex) return 0;
+		const query = model.query().where(column, "<", cutoff);
+		if (minValue && typeof query.andWhere === "function") query.andWhere(column, ">=", minValue);
+		return query.delete();
+	}
+
+	async loadRollupCoverage() {
+		let knex = null;
+		try {
+			knex = typeof AnalyticsHourly.knex === "function" ? AnalyticsHourly.knex() : null;
+		} catch {
+			knex = null;
+		}
+		if (!knex) return null;
+
+		try {
+			const row = await knex("analytics_rollup_state").where("name", "hourly").first();
+			if (!row?.watermark || !row?.coverage_start) return null;
+			return {
+				coverageStart: isoFromMs(floorToHourMs(row.coverage_start)),
+				coveredThrough: isoFromMs(floorToHourMs(row.watermark) + 60 * 60 * 1000),
+			};
+		} catch (err) {
+			logger.error(`Analytics retention: rollup state unavailable (${err.message}); keeping detailed rows.`);
+			return null;
+		}
+	}
+
 	async runRetention() {
 		if (
 			!Number.isInteger(DETAILED_RETENTION_HOURS) ||
@@ -904,15 +938,34 @@ export class AnalyticsService {
 			return;
 		}
 		try {
-			const detailedCutoff = dayjs().subtract(DETAILED_RETENTION_HOURS, "hour").toISOString();
-			const aggregateCutoff = dayjs().subtract(AGGREGATION_RETENTION_DAYS, "day").toISOString();
-			const [deletedDetailed, deletedAggregates] = await Promise.all([
-				AnalyticsLogs.query().where("time", "<", detailedCutoff).delete(),
-				AnalyticCount.query().where("timestamp", "<", aggregateCutoff).delete(),
-			]);
-			if (deletedDetailed > 0 || deletedAggregates > 0) {
+			const now = dayjs();
+			const detailedCutoff = now.subtract(DETAILED_RETENTION_HOURS, "hour").toISOString();
+			const aggregateCutoff = now.subtract(AGGREGATION_RETENTION_DAYS, "day").toISOString();
+			const coverage = await this.loadRollupCoverage();
+			const detailCutoff = resolveDetailPruneCutoff({
+				coveredThrough: coverage?.coveredThrough ?? null,
+				detailedCutoff,
+			});
+
+			let deletedDetailed = 0;
+			if (detailCutoff && coverage?.coverageStart) {
+				deletedDetailed = await this.deleteOlderRows(AnalyticsLogs, "time", detailCutoff, {
+					minValue: coverage.coverageStart,
+				});
+			} else {
+				logger.warn(
+					"Analytics retention: raw detail pruning deferred until the hourly rollup has committed coverage.",
+				);
+			}
+
+			const deletedAggregates = await this.deleteOlderRows(AnalyticCount, "timestamp", aggregateCutoff);
+			const deletedHourly = await this.deleteOlderRows(AnalyticsHourly, "bucket_start", aggregateCutoff, {
+				requireKnex: true,
+			});
+
+			if (deletedDetailed > 0 || deletedAggregates > 0 || deletedHourly > 0) {
 				logger.info(
-					`Analytics retention: removed ${deletedDetailed} detailed rows and ${deletedAggregates} aggregate rows.`,
+					`Analytics retention: removed ${deletedDetailed} detailed rows, ${deletedAggregates} minute aggregates and ${deletedHourly} hourly aggregates.`,
 				);
 			}
 		} catch (err) {
@@ -971,6 +1024,29 @@ export class AnalyticsService {
 		const detailSinceIso = detailSince.toISOString();
 		const detailComplete = !since.isBefore(detailRetentionStart);
 		const knex = AnalyticsLogs.knex();
+		const plan = planAnalyticsRange({
+			coveredFrom: analyticsRollup.getQueryCoveredFrom(),
+			coveredThrough: analyticsRollup.getQueryCoveredThrough(),
+			end: untilIso,
+			start: sinceIso,
+		});
+		const totalsPromise = plan.hourly
+			? sumAnalyticsRange(knex, plan, { hostId }).then((totals) => ({
+					count: totals.count,
+					s2xx: totals.s2xx,
+					s3xx: totals.s3xx,
+					s4xx: totals.s4xx,
+					s5xx: totals.s5xx,
+				}))
+			: AnalyticCount.query()
+					.where("proxy_host_id", hostId)
+					.andWhere("timestamp", ">=", sinceIso)
+					.sum("request_count as count")
+					.sum("status_code_2xx as s2xx")
+					.sum("status_code_3xx as s3xx")
+					.sum("status_code_4xx as s4xx")
+					.sum("status_code_5xx as s5xx")
+					.first();
 
 		// Parallel execution for speed
 		const [topCountries, topIps, topReferers, topUserAgents, topPaths, recent, resultTotals] = await Promise.all([
@@ -1035,15 +1111,7 @@ export class AnalyticsService {
 				.limit(20),
 
 			// Aggregated Totals
-			AnalyticCount.query()
-				.where("proxy_host_id", hostId)
-				.andWhere("timestamp", ">=", sinceIso)
-				.sum("request_count as count")
-				.sum("status_code_2xx as s2xx")
-				.sum("status_code_3xx as s3xx")
-				.sum("status_code_4xx as s4xx")
-				.sum("status_code_5xx as s5xx")
-				.first(),
+			totalsPromise,
 		]);
 
 		const totals = resultTotals || {};
@@ -1067,6 +1135,7 @@ export class AnalyticsService {
 			kpi_window: {
 				range,
 				resolution,
+				rollup: Boolean(plan.hourly),
 				since: sinceIso,
 				source: "aggregates",
 				until: untilIso,
