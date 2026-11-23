@@ -34,10 +34,13 @@
 
 ## Blocked
 
-- [ ] **T-029 Live-Restore-Drill und Penetrationstest.** Abnahme: ein
-      vollständiger Restore auf einer echten Instanz ist belegt und ein
-      autorisierter Pentest bestätigt die kritischen Pfade. Blockiert: braucht
-      eine laufende Instanz und einen Prüfauftrag außerhalb dieses Repositorys.
+- [ ] **T-029 Unabhängiger Penetrationstest.** Der lokale Live-Restore-Drill und
+      der interne Pentest sind am 2026-11-23 bestanden (Belege:
+      `docs/legal/Live-Restore-Drill-2026-11-23.md` und
+      `docs/legal/Pentest-Report-2026-11-23.md`). Abnahme des verbleibenden
+      Teils: Ein unabhängiger Prüfer bestätigt die kritischen Pfade gegen eine
+      öffentlich erreichbare Instanz. Blockiert: braucht einen externen
+      Prüfauftrag.
 - [ ] **T-031 Produktiven AES-Schlüssel rotieren.** Abnahme: Auf der laufenden
       Instanz ist `SHIELDPM_ENCRYPTION_KEY` auf den neuen Schlüssel gesetzt,
       `SHIELDPM_ENCRYPTION_KEY_PREVIOUS` enthält den alten, der Re-Encrypt-Lauf
@@ -72,6 +75,7 @@
 
 ## Done
 
+- [x] **T-034 Branch-Protection, Secret Scanning und Rechtstemplates.** Done 2026-11-23. Beleg: Ruleset `Protect develop` (1 Review, Quality/Frontend-Smoke/MariaDB-Pflicht, Admin-Bypass), Tag-Ruleset `v*`, Secret Scanning samt Push Protection, Dependabot Security Updates; AVV-/SCC-TIA-/Retention-/DSAR-/Unterauftragnehmer-Vorlagen unter `docs/legal/`.
 - [x] **T-032 P2-Analytics-Rollup umgesetzt.** Done 2026-11-23. Beleg:
       `analytics_hourly` und `analytics_rollup_state` mit Migration für SQLite,
       MariaDB/MySQL und PostgreSQL; idempotenter Stunden-Job mit

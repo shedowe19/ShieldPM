@@ -101,10 +101,10 @@ Was bewusst außerhalb des Repositories bleibt:
 
 - Zertifizierungen (ISO 27001, SOC 2, PCI DSS, CRA), Auditor-Rolle und Access
   Reviews.
-- AVV/SCC/TIA für externe Anbieter, DSAR-Verfahren und ein unterschriebener
-  Retention-Plan.
-- GitHub-Branch-Protection und Organisationsrichtlinien.
-- Live-Restore-Drill und Penetrationstest gegen eine laufende Instanz.
+- Unterschriebene AVV/SCC/TIA-Verträge und ein rechtlich freigegebener
+  Retention-Plan; die Vorlagen liegen unter `docs/legal/`.
+- Ein unabhängiger Pentest gegen eine öffentlich erreichbare Instanz; der
+  lokale Restore-Drill und der interne Pentest sind belegt.
 - Die tatsächliche Rotation des produktiven AES-Schlüssels: Das Werkzeug ist
   umgesetzt (`v2`-Envelope, Previous-Key, Re-Encrypt-CLI), die Ausführung
   braucht den produktiven Schlüssel und ein Datenbank-Backup.
@@ -119,6 +119,10 @@ Umgesetzt und nicht mehr offen:
   Pending-Token aus, die Login-Seite fragt den zweiten Faktor ab.
 - TOTP-Seeds, Duo-Client-Secrets und OIDC-Client-Secrets liegen verschlüsselt
   in der Datenbank.
+- GitHub-Rulesets für `develop` und `v*`-Tags, Secret Scanning samt Push
+  Protection und Dependabot Security Updates.
+- Lokaler Live-Restore-Drill und interner Pentest am 2026-11-23; Belege unter
+  `docs/legal/`.
 
 ## Abhängigkeiten
 

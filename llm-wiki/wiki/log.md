@@ -2,6 +2,17 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-23] security | Branch-Protection, Rechtstemplates, Restore und interner Pentest
+
+- Command: "Die verbleibenden Nachweise (Live-Restore, Pentest, AVV, Branch-Protection) mach das jetzt".
+- Type: security
+- Areas affected: GitHub-Rulesets, Repository-Sicherheit, Recht/Datenschutz, lokale Betriebsverifikation.
+- Files changed: `docs/legal/*` (AVV, SCC/TIA, Retention, DSAR, Subprocessors, Restore-Drill, Pentest-Report), `llm-wiki`-Seiten, `backend/app.js`, `backend/lib/request-context.js`, neuer IP-Test.
+- Wiki pages updated: [Sicherheit](./security/overview.md), [Aufgaben](./tasks.md), diese Seite.
+- New TODOs: T-029 auf den unabhängigen Pentest reduziert; T-031 (produktive Schlüsselrotation) bleibt blockiert.
+- New bugs: Rate-Limiter lieferte hinter Unix-Socket HTTP 500, weil `req.ip` fehlte; behoben und getestet.
+- Verification: Rulesets `Protect develop`/`Protect release tags` aktiv, Secret Scanning/Push Protection und Dependabot Security Updates an; lokaler Restore-Drill bestanden (Host gelöscht und wiederhergestellt); interner Pentest 20/20 bestanden.
+
 ## [2026-11-23] performance | P2-Analytics-Rollup, Retention-Gate und Query-Switch
 
 - Command: "P2 analytics-scaling work: hourly rollup, retention gate and long-range query switch".
