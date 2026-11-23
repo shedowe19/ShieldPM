@@ -3,8 +3,9 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Setup from ".";
 
-const mocks = vi.hoisted(() => ({ createUser: vi.fn(), login: vi.fn() }));
+const mocks = vi.hoisted(() => ({ createUser: vi.fn(), login: vi.fn(), navigate: vi.fn() }));
 vi.mock("src/api/backend", () => ({ createUser: mocks.createUser }));
+vi.mock("react-router-dom", () => ({ useNavigate: () => mocks.navigate }));
 vi.mock("src/context", () => ({ useAuthState: () => ({ login: mocks.login }) }));
 vi.mock("src/components/LocalePicker", () => ({ LocalePicker: () => null }));
 vi.mock("src/components/ThemeSwitcher", () => ({ ThemeSwitcher: () => null }));

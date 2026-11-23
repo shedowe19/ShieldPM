@@ -10,6 +10,7 @@ import {
 } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { createUser } from "src/api/backend";
 import { LocalePicker } from "src/components/LocalePicker";
 import { ThemeSwitcher } from "src/components/ThemeSwitcher";
@@ -31,6 +32,7 @@ interface Payload {
 
 export default function Setup() {
 	const queryClient = useQueryClient();
+	const navigate = useNavigate();
 	const { login } = useAuthState();
 	const [errorMsg, setErrorMsg] = useState<string | null>(null);
 	const mounted = useRef(false);
@@ -68,6 +70,7 @@ export default function Setup() {
 				} finally {
 					// Creation completed even when automatic login fails: leave the setup route.
 					await queryClient.refetchQueries({ queryKey: ["health"] });
+					navigate("/", { replace: true });
 				}
 			} else {
 				setErrorMsg("cannot_create_user");
