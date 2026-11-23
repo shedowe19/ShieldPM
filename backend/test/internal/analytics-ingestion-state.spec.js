@@ -103,7 +103,8 @@ describe("analytics log offset and backfill", () => {
 		expect(store.state.byte_offset).toBe(committedSize);
 	});
 
-	it("detects truncation and replays the current file from its start", async () => {		fs.writeFileSync(logFile, line("/one") + line("/two"));
+	it("detects truncation and replays the current file from its start", async () => {
+		fs.writeFileSync(logFile, line("/one") + line("/two"));
 		const store = createStore();
 		const first = createService(logFile, store);
 		await first.resumeFromPersistedOffset();

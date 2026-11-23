@@ -104,7 +104,10 @@ describe("AI provider resilience", () => {
 			geminiContents: [
 				{ role: "user", parts: [{ text: "hi" }] },
 				{ role: "model", parts: [{ functionCall: { name: "get_hosts", args: {} } }] },
-				{ role: "function", parts: [{ functionResponse: { name: "get_hosts", response: { content: "hosts" } } }] },
+				{
+					role: "function",
+					parts: [{ functionResponse: { name: "get_hosts", response: { content: "hosts" } } }],
+				},
 			],
 		};
 

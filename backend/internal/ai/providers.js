@@ -172,7 +172,7 @@ const mapGeminiUsage = (metadata) => {
 	};
 };
 
-const mapLocalUsage = (json, isOllamaNative) => {
+const mapLocalUsage = (json) => {
 	const usage = json?.usage || {};
 	const input = Number(usage.prompt_tokens ?? json?.prompt_eval_count) || 0;
 	const output = Number(usage.completion_tokens ?? json?.eval_count) || 0;
@@ -405,7 +405,7 @@ const parseLocalResponse = (json, dialect, messages) => {
 		content: normalizeContent(message?.content),
 		toolCalls: normalizeToolCalls(message, messages),
 		messages,
-		usage: mapLocalUsage(json, dialect === "ollama"),
+		usage: mapLocalUsage(json),
 		provider: "local",
 		model: json?.model,
 	};
