@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import crypto from "node:crypto";
+import { isIP } from "node:net";
 import express from "express";
 
 /**
@@ -29,6 +30,29 @@ const clean = (value, max) => {
 		.trim()
 		.slice(0, max);
 	return result || null;
+};
+
+/**
+ * Resolve the client address for a request that arrived on a Unix socket.
+ * Node reports no remote address for Unix sockets, so Express leaves `req.ip`
+ * undefined even when Nginx supplies X-Real-IP or X-Forwarded-For. Rate
+ * limiters and the audit context need a stable, validated address there.
+ *
+ * @param {import("express").Request} req
+ * @returns {string | null}
+ */
+export const resolveClientIp = (req) => {
+	if (typeof req?.ip === "string" && req.ip) return req.ip;
+	if (typeof req?.socket?.remoteAddress === "string" && req.socket.remoteAddress) return req.socket.remoteAddress;
+	const realIp = req?.headers?.["x-real-ip"];
+	const forwardedFor = req?.headers?.["x-forwarded-for"];
+	const candidate =
+		typeof realIp === "string" && realIp.trim()
+			? realIp.trim()
+			: typeof forwardedFor === "string"
+				? (forwardedFor.split(",")[0] || "").trim()
+				: "";
+	return isIP(candidate) ? candidate : null;
 };
 
 const decodeClaims = (token) => {
@@ -97,7 +121,7 @@ export const getRequestContext = () => storage.getStore() ?? null;
  */
 export const buildRequestContext = (req) => ({
 	requestId: requestIdFromRequest(req),
-	ip: clean(req.ip, MAX_IP_LENGTH),
+	ip: clean(resolveClientIp(req), MAX_IP_LENGTH),
 	userAgent: clean(req.headers?.["user-agent"], MAX_USER_AGENT_LENGTH),
 	sessionId: sessionIdFromRequest(req),
 });

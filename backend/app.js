@@ -7,7 +7,7 @@ import ipaddr from "ipaddr.js";
 import swaggerUi from "swagger-ui-express";
 import jsonBody from "./lib/express/json-body.js";
 import jwt from "./lib/express/jwt.js";
-import { requestContext } from "./lib/request-context.js";
+import { requestContext, resolveClientIp } from "./lib/request-context.js";
 import { debug, express as logger } from "./logger.js";
 import mainRoutes from "./routes/main.js";
 import { getCompiledSchema } from "./schema/index.js";
@@ -180,6 +180,15 @@ const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", TRUST_PROXY);
 app.enable("strict routing");
+// A Unix-socket listener has no socket remote address. Adopt the validated
+// proxy header before rate limiters and the audit context read req.ip.
+app.use((req, _res, next) => {
+	if (!req.ip) {
+		const ip = resolveClientIp(req);
+		if (ip) Object.defineProperty(req, "ip", { value: ip, configurable: true, enumerable: true });
+	}
+	next();
+});
 // Audit context (request id, IP, user agent, session id) must exist before
 // auth, CSRF and route handlers run.
 app.use(requestContext());
