@@ -2,6 +2,31 @@
 
 Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Feldern.
 
+## [2026-11-23] fix | Certbot-Erneuerung überlebt die ACME-Poll-Deadline
+
+- Command: "check das mal bitte" zum Certbot-Fehler auf der nativen Installation.
+- Type: fix
+- Areas affected: Certbot-Ausführung, automatische und manuelle
+  Zertifikatserneuerung, Wildcard-/DNS-01-Zertifikate, Zertifikatsrouten.
+- Files changed: `backend/lib/utils.js`, `backend/routes/nginx/certificates.js`,
+  `backend/test/lib/utils-hardening.spec.js`.
+- Wiki pages updated: [Certbot](./reference/module/certbot.md),
+  [Changelog](./changelog.md), diese Seite.
+- New TODOs: keine.
+- New bugs: Auf dem nativen LXC-Host beendete das 15-Minuten-Budget
+  `certbot renew` für das Wildcard-Zertifikat #28 per `SIGKILL`, während
+  Certbot bei ZeroSSL noch auf die DNS-Autorisierung wartete. ZeroSSL
+  antwortet auf eine pending DNS-Challenge mit `Retry-After: 86400`; Certbot
+  wartet bis zu seiner 30-Minuten-Poll-Deadline. Die Erneuerung schlug dadurch
+  bei jedem Lauf fehl. Behoben in `9fa0db34`.
+- New decisions: Certbot bekommt 60 Minuten (`CERTBOT_EXEC_TIMEOUT_MS`);
+  beide Zertifikatsrouten verwenden dasselbe Budget plus eine Minute. Die
+  gemeinsame Prozesssperre bleibt bestehen.
+- Verification: `utils-hardening.spec.js` 22/22 grün, `tsc --noEmit` ohne
+  Ausgabe, Biome ohne Befund. Auf dem Host wurde #28 direkt mit derselben
+  Certbot-Konfiguration bis 2027-02-21 erneuert, die Datenbankzeile
+  aktualisiert und nginx neu geladen; #29 folgt.
+
 ## [2026-11-23] fix | Native systemd-Einheit mit dem Appliance-Layout verträglich
 
 - Command: "ShieldPM-Dienst startet auf der nativen LXC-Installation nicht (226/NAMESPACE), bitte prüfen und beheben".

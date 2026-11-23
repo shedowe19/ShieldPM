@@ -5,6 +5,11 @@ Dieses Changelog betrifft das Wiki, nicht Produkt-Releases.
 
 ## 2026-11-23
 
+- Certbot-Erneuerungen erhalten ein 60-Minuten-Zeitbudget: Certbot pollt
+  ACME-Autorisierungen bis zu 30 Minuten, ZeroSSL kann eine pending
+  DNS-Challenge mit einem langen `Retry-After` beantworten. Das frühere
+  15-Minuten-Limit beendete gültige Wildcard-Erneuerungen per `SIGKILL`.
+  ([Certbot](./reference/module/certbot.md), [Log](./log.md))
 - Native systemd-Unit korrigiert: Die schreibgeschützte System-Allowlist ließ
   den Dienst auf einer echten LXC-Installation mit `226/NAMESPACE` scheitern und
   blockierte Startschreibzugriffe unter `/etc` und `/usr/local/nginx/conf`. Die
