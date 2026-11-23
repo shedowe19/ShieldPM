@@ -152,6 +152,7 @@ jobs:
   frontend-e2e:
     name: Frontend browser smoke
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -179,6 +180,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y socat
 
       - name: Run real-backend browser E2E
+        timeout-minutes: 10
         run: cd /tmp && CI=1 npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/frontend" test:e2e:real
 
       - name: Upload browser screenshots and failure traces

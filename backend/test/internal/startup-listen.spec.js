@@ -55,6 +55,7 @@ vi.mock("../../internal/analytics.js", () => ({ default: { init: state.analytics
 vi.mock("../../internal/analytics-rollup.js", () => ({
 	default: { init: async () => {}, stop: async () => {} },
 }));
+vi.mock("../../internal/security-detection.js", () => ({ default: { install: vi.fn() } }));
 vi.mock("../../internal/certificate.js", () => ({ default: { initTimer: async () => {} } }));
 vi.mock("../../internal/chat.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/cloudflared.js", () => ({ default: { init: async () => {} } }));
