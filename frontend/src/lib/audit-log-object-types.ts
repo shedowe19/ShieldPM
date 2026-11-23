@@ -7,7 +7,6 @@ const auditLogObjectTypeMessageIds = new Map<string, string>([
 	[AUDIT_LOG_OBJECT_TYPE.WIREGUARD_PEER, "audit-log.filter.wireguard-peer"],
 	[AUDIT_LOG_OBJECT_TYPE.WIREGUARD_SETTINGS, "audit-log.filter.wireguard-settings"],
 	[AUDIT_LOG_OBJECT_TYPE.AUTH, "auth-session"],
-	[AUDIT_LOG_OBJECT_TYPE.TERMINAL, "terminal.host"],
 	[AUDIT_LOG_OBJECT_TYPE.SECURITY_INCIDENT, "incidents.title"],
 	[AUDIT_LOG_OBJECT_TYPE.CHAT_INTEGRATION, "chatops"],
 ]);

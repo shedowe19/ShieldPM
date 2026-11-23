@@ -77,7 +77,7 @@ const auditTerminal = async (action, request, hostId, outcome, meta = {}) => {
 		const forwarded = request?.headers?.["x-forwarded-for"];
 		await internalAuditLog.add(null, {
 			action,
-			object_type: "terminal",
+			object_type: "terminal-host",
 			object_id: Number(hostId) || 0,
 			user_id: 0,
 			actor_type: "system",

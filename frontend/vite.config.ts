@@ -78,7 +78,7 @@ export default defineConfig({
 
 	test: {
 		environment: "happy-dom",
-		exclude: [...configDefaults.exclude, "e2e/**"],
+		exclude: [...configDefaults.exclude, "e2e/**", "e2e-real/**"],
 		setupFiles: ["./vitest-setup.js"],
 		coverage: {
 			provider: "v8",

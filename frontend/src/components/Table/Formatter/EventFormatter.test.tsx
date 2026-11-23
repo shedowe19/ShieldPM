@@ -137,6 +137,27 @@ const resourceEvents = [
 		en: "Auth session",
 	},
 	{
+		type: "auth",
+		meta: { email: "admin@example.test" },
+		value: "admin@example.test",
+		de: "Anmeldesitzung",
+		en: "Auth session",
+	},
+	{
+		type: "security-incident",
+		meta: { ruleId: "SPM-AUTH-001", title: "Failed logins" },
+		value: "SPM-AUTH-001",
+		de: "Störungszentrale",
+		en: "Incident center",
+	},
+	{
+		type: "chat-integration",
+		meta: { name: "Telegram" },
+		value: "Telegram",
+		de: "ChatOps",
+		en: "ChatOps",
+	},
+	{
 		type: "access-list",
 		meta: { name: "Office Access" },
 		value: "Office Access",

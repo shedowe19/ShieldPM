@@ -218,7 +218,7 @@ describe("security detection rules", () => {
 			"medium",
 		],
 		[
-			{ action: AUDIT_ACTION.TERMINAL_OPENED, object_type: "terminal", object_id: 3 },
+			{ action: AUDIT_ACTION.TERMINAL_OPENED, object_type: "terminal-host", object_id: 3 },
 			SECURITY_RULE.TERMINAL_OPEN,
 			"high",
 		],
