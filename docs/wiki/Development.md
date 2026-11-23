@@ -106,6 +106,17 @@ This multi-stage build will compile the frontend, install backend dependencies, 
 
 The public English Wiki pages live in `docs/wiki/` and are synchronized to the GitHub Wiki by `.github/workflows/wiki-sync.yml` on eligible pushes. The internal German notes live in `llm-wiki/`: the entry point and current state under `llm-wiki/wiki/`, the deep-dive reference under `llm-wiki/wiki/reference/`.
 
+## ?? Releasing
+
+A release is an immutable version tag, not a branch head:
+
+- `develop` builds produce `develop` images for testing and never create a GitHub release.
+- A release is published only from a `vX.Y.Z` tag whose value matches `.version` and whose commit is the one that passed CI. The workflow verifies that the tag points at the checked-out commit before it uploads anything.
+- `update-shieldpm` follows the latest published release tag by default; `--branch <ref>` is the explicit development path.
+- Images and `SHA256SUMS` are signed keylessly with Cosign, and the image digest carries SBOM and provenance attestations. Verification commands are in [SECURITY.md](https://github.com/shedowe19/ShieldPM/blob/develop/SECURITY.md#verifying-releases).
+
+If a release must be withdrawn, delete the GitHub release and the tag, then publish a new patch version. Do not move an existing tag: caches, updater clients and signatures are bound to it.
+
 ---
 
 [🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

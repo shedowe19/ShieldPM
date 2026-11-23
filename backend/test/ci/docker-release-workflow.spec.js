@@ -6,9 +6,9 @@ const workflow = fs.readFileSync(backendSourcePath("..", ".github", "workflows",
 const releaseVersionExpression = "$" + "{{ needs.prepare.outputs.version }}";
 
 describe("Docker publication workflow", () => {
-	it("publishes a version once from develop or the matching version tag", () => {
-		expect(workflow).toMatch(
-			/release:[\s\S]*?if: \$\{\{ github\.event_name == 'push' && \(github\.ref == 'refs\/heads\/develop' \|\| startsWith\(github\.ref, 'refs\/tags\/v'\)\) && github\.repository_owner == 'shedowe19' \}\}/,
+	it("publishes a release only from a version tag", () => {
+		expect(workflow).toContain(
+			"if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository_owner == 'shedowe19' }}",
 		);
 		expect(workflow).toContain(`RELEASE_TAG: v${releaseVersionExpression}`);
 		expect(workflow).toContain('echo "publish=false" >> "$GITHUB_OUTPUT"');
