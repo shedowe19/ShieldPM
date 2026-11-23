@@ -25,7 +25,9 @@ Append-only, neueste zuerst. Ein Eintrag pro relevanter Aktion, mit allen Felder
 - Verification: `utils-hardening.spec.js` 22/22 grün, `tsc --noEmit` ohne
   Ausgabe, Biome ohne Befund. Auf dem Host wurde #28 direkt mit derselben
   Certbot-Konfiguration bis 2027-02-21 erneuert, die Datenbankzeile
-  aktualisiert und nginx neu geladen; #29 folgt.
+  aktualisiert und nginx neu geladen. #29 wurde ebenfalls bis 2027-02-21
+  erneuert; nginx liefert das neue Wildcard-Zertifikat für die `.eu`-Hosts aus,
+  beide Datenbankzeilen stehen auf dem neuen Ablaufdatum.
 
 ## [2026-11-23] fix | Native systemd-Einheit mit dem Appliance-Layout verträglich
 
