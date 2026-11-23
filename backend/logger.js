@@ -42,14 +42,15 @@ export const isSecretFieldName = (name) => {
 	return SECRET_NAME_PATTERN.test(name) || SECRET_NAME_PATTERN.test(toSnakeCase(name));
 };
 
-const PRIVATE_KEY_HEADERS = [
-	"-----BEGIN PRIVATE KEY-----",
-	"-----BEGIN RSA PRIVATE KEY-----",
-	"-----BEGIN EC PRIVATE KEY-----",
-	"-----BEGIN OPENSSH PRIVATE KEY-----",
-	"-----BEGIN DSA PRIVATE KEY-----",
-	"-----BEGIN ENCRYPTED PRIVATE KEY-----",
+const PRIVATE_KEY_LABELS = [
+	"PRIVATE KEY",
+	"RSA PRIVATE KEY",
+	"EC PRIVATE KEY",
+	"OPENSSH PRIVATE KEY",
+	"DSA PRIVATE KEY",
+	"ENCRYPTED PRIVATE KEY",
 ];
+const PRIVATE_KEY_HEADERS = PRIVATE_KEY_LABELS.map((label) => `-----BEGIN ${label}-----`);
 
 /**
  * Replace PEM private-key blocks with a fixed marker.
