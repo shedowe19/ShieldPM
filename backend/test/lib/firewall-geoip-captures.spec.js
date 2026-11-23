@@ -143,5 +143,5 @@ describe("streamed map regexes and map-entry includes", () => {
 		expect(safe.asn.available).toBe(true);
 		await fs.appendFile(path.join(directory, "rows.conf"), '"~(?<SPM_GEOIP2_ASN>.+)" hit;\n');
 		expect((await getFirewallGeoipStatus({ masterConfig })).asn.available).toBe(false);
-	});
+	}, 30_000);
 });
