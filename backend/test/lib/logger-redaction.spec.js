@@ -71,6 +71,15 @@ describe("central log redaction", () => {
 		expect(redacted).not.toContain(`ghp_${"d".repeat(24)}`);
 	});
 
+	it("redacts a private key block with long dashes without pathological backtracking", () => {
+		const hostile = "-----BEGIN PRIVATE KEY-----".repeat(10000);
+		const startedAt = Date.now();
+		const redacted = redactText(hostile);
+		expect(redacted).toContain("[REDACTED PRIVATE KEY]");
+		expect(redacted).not.toContain("BEGIN PRIVATE KEY");
+		expect(Date.now() - startedAt).toBeLessThan(1000);
+	});
+
 	it("redacts credentials in error messages without changing the error name", () => {
 		const result = redact(new Error("request failed: Authorization: Bearer abcdefghijkl"));
 		expect(result.name).toBe("Error");

@@ -42,8 +42,47 @@ export const isSecretFieldName = (name) => {
 	return SECRET_NAME_PATTERN.test(name) || SECRET_NAME_PATTERN.test(toSnakeCase(name));
 };
 
-const PRIVATE_KEY_BLOCK =
-	/-----BEGIN (?:RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE KEY-----/g;
+const PRIVATE_KEY_HEADERS = [
+	"-----BEGIN PRIVATE KEY-----",
+	"-----BEGIN RSA PRIVATE KEY-----",
+	"-----BEGIN EC PRIVATE KEY-----",
+	"-----BEGIN OPENSSH PRIVATE KEY-----",
+	"-----BEGIN DSA PRIVATE KEY-----",
+	"-----BEGIN ENCRYPTED PRIVATE KEY-----",
+];
+
+/**
+ * Replace PEM private-key blocks with a fixed marker.
+ *
+ * A regular expression with a lazy body is quadratic when an attacker sends
+ * many `-----BEGIN` markers without an end marker. This scanner advances a
+ * cursor, so every byte is visited once. An unterminated block redacts the
+ * remaining text instead of leaving it in the log.
+ */
+const redactPrivateKeys = (text) => {
+	let cursor = 0;
+	let output = "";
+	while (cursor < text.length) {
+		const begin = text.indexOf("-----BEGIN ", cursor);
+		if (begin === -1) {
+			output += text.slice(cursor);
+			break;
+		}
+		output += text.slice(cursor, begin);
+		const header = PRIVATE_KEY_HEADERS.find((candidate) => text.startsWith(candidate, begin));
+		if (!header) {
+			output += "-----BEGIN ";
+			cursor = begin + 11;
+			continue;
+		}
+		output += REDACTED_PRIVATE_KEY;
+		const endMarker = `-----END ${header.slice(11)}`;
+		const end = text.indexOf(endMarker, begin + header.length);
+		if (end === -1) return output;
+		cursor = end + endMarker.length;
+	}
+	return output;
+};
 const BEARER_OR_BASIC = /\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{6,}/gi;
 const JWT = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{6,}/g;
 const PROVIDER_KEY =
@@ -54,8 +93,7 @@ const LONG_HEX_SECRET = /\b[a-f0-9]{64}\b/gi;
 /** Redacts credentials that appear inside an arbitrary string. */
 export const redactText = (value) => {
 	if (typeof value !== "string") return value;
-	return value
-		.replace(PRIVATE_KEY_BLOCK, REDACTED_PRIVATE_KEY)
+	return redactPrivateKeys(value)
 		.replace(KEYS_JSON_VALUE, `$1${REDACTED}$3`)
 		.replace(BEARER_OR_BASIC, `$1 ${REDACTED}`)
 		.replace(JWT, REDACTED)
