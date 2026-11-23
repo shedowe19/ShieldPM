@@ -36,6 +36,10 @@ const escapeHtml = (value) =>
 		.replaceAll(">", "&gt;")
 		.replaceAll('"', "&quot;")
 		.replaceAll("'", "&#39;");
+// Every rendered proxy location writes to the shared analytics log, so the
+// fixture must define the same format the product image ships.
+const JSON_ANALYTICS_LOG_FORMAT =
+	`log_format json_analytics escape=json '{"time":"$time_iso8601","status":$status}';`;
 const oracle = async (database, addresses) =>
 	JSON.parse(
 		await utils.execFile("python3", [
@@ -1001,6 +1005,7 @@ pid ${quote(path.join(fixture, "nginx.pid"))};
 error_log stderr notice;
 events { worker_connections 128; }
 http {
+    ${JSON_ANALYTICS_LOG_FORMAT}
     access_log off;
     ${temporaryPaths(fixture)}
     lua_package_path ${quote(`${fixture}/?.lua;${luaPackagePath || ""};;`)};
@@ -1165,6 +1170,7 @@ pid ${quote(path.join(fixture, "nginx.pid"))};
 error_log stderr notice;
 events { worker_connections 128; }
 http {
+    ${JSON_ANALYTICS_LOG_FORMAT}
     access_log off;
     ${luaPackagePath ? `lua_package_path ${quote(luaPackagePath)};` : ""}
     ${luaPackageCpath ? `lua_package_cpath ${quote(luaPackageCpath)};` : ""}
