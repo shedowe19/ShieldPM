@@ -88,7 +88,8 @@ confirm_database_recovery_checkpoint() {
     local data_path="${DATA_PATH:-/data}"
     local sqlite_source="$data_path/shieldpm/database.sqlite"
     local checkpoint_dir=/var/backups/shieldpm
-    local checkpoint="$checkpoint_dir/database-backup-$(date +%Y%m%dT%H%M%S).sqlite"
+    local checkpoint
+    checkpoint="$checkpoint_dir/database-backup-$(date +%Y%m%dT%H%M%S).sqlite"
     local external_database=false
     local reply
 

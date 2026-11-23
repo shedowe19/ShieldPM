@@ -571,7 +571,7 @@ export class AnalyticsService {
 		}
 
 		const knex = typeof AnalyticsLogs.knex === "function" ? AnalyticsLogs.knex() : null;
-		if (!knex) throw new Error("Analytics database is not available");
+		if (!knex) throw new errs.InternalError("Analytics database is not available");
 
 		// Detail insert and aggregate update share one transaction: a committed batch can never leave
 		// aggregates behind, and a retried batch sees its event keys and adds no counters twice.
@@ -834,7 +834,7 @@ export class AnalyticsService {
 						this.aggregationBuffer.size >= AGGREGATION_BUFFER_LIMIT / 2
 					) {
 						const flushed = await this.flush();
-						if (!flushed) throw new Error("Analytics backfill flush failed");
+						if (!flushed) throw new errs.InternalError("Analytics backfill flush failed");
 					}
 					separator = pending.indexOf("\n");
 				}
@@ -842,7 +842,7 @@ export class AnalyticsService {
 
 			pending += decoder.end();
 			const flushed = await this.flush();
-			if (!flushed) throw new Error("Analytics backfill flush failed");
+			if (!flushed) throw new errs.InternalError("Analytics backfill flush failed");
 			return { lines, offset: committedOffset };
 		} finally {
 			fs.closeSync(descriptor);
