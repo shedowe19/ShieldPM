@@ -144,6 +144,23 @@ describe("Latest Docker publication workflow", () => {
 		]);
 	});
 
+	it("publishes provenance, SBOM and a keyless signature for the promoted digest", () => {
+		const merge = workflow.jobs.merge;
+		expect(merge.permissions["id-token"]).toBe("write");
+		expect(merge.permissions.attestations).toBe("write");
+		const manifest = merge.steps.find((step) => step.id === "manifest");
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal workflow expression
+		expect(manifest.run).toContain('echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"');
+		const names = merge.steps.map((step) => step.name);
+		expect(names).toContain("Generate SBOM for the published image");
+		expect(names).toContain("Attest build provenance for the published image");
+		expect(names).toContain("Attest the SBOM for the published image");
+		expect(names).toContain("Sign the published image");
+		const sign = merge.steps.find((step) => step.name === "Sign the published image");
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal workflow expression
+		expect(sign.run).toContain('cosign sign --yes "${IMAGE_NAME}@${IMAGE_DIGEST}"');
+	});
+
 	it.each([
 		["missing architecture", { "image-digests/x86_64.txt": refs[0] }],
 		["invalid digest", { "image-digests/x86_64.txt": refs[0], "image-digests/aarch64.txt": "invalid" }],
