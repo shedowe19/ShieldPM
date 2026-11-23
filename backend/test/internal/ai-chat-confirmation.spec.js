@@ -42,17 +42,17 @@ const access = () => {
 };
 
 describe("AI chat confirmation and hardening", () => {
-	beforeEach(() => {
+	beforeEach(async () => {
 		vi.clearAllMocks();
-		resetDailyTokenUsage();
+		await resetDailyTokenUsage();
 		vi.spyOn(ai, "_getConfigForChat").mockResolvedValue({ ...baseConfig });
 		mocks.execute.mockResolvedValue([]);
 		mocks.localFollowup.mockResolvedValue({ content: "Done" });
 	});
 
-	afterEach(() => {
+	afterEach(async () => {
 		vi.restoreAllMocks();
-		resetDailyTokenUsage();
+		await resetDailyTokenUsage();
 	});
 
 	it("returns the planned state-changing tool calls instead of executing them", async () => {
@@ -222,7 +222,7 @@ describe("AI chat confirmation and hardening", () => {
 		});
 
 		await ai.chat(access(), "Hello");
-		expect(getDailyTokenUsage(7)).toBe(15);
+		expect(await getDailyTokenUsage(7)).toBe(15);
 
 		await expect(ai.chat(access(), "Hello again")).rejects.toMatchObject({
 			name: "ConfigurationError",

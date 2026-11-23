@@ -119,9 +119,9 @@ const addUsage = (total, response) => {
 	return total;
 };
 
-const budgetExceeded = (config, userId) => {
+const budgetExceeded = async (config, userId) => {
 	const budget = getDailyBudget(config);
-	return budget > 0 && getDailyTokenUsage(userId) >= budget;
+	return budget > 0 && (await getDailyTokenUsage(userId)) >= budget;
 };
 
 const budgetError = (config) => {
@@ -364,7 +364,7 @@ const ai = {
 		let approvalPending = options.confirm === true && approvedPlan.length > 0;
 
 		// Budget is checked before any provider call; never run silently past it.
-		if (budgetExceeded(config, userId)) throw budgetError(config);
+		if (await budgetExceeded(config, userId)) throw budgetError(config);
 
 		// Mark access as AI-initiated for Audit Log
 		access.is_ai = true;
@@ -446,9 +446,9 @@ const ai = {
 		const maxRounds = Math.min(12, Math.max(1, Number(config.max_tool_rounds) || MAX_TOOL_ROUNDS));
 		let degraded = false;
 
-		const logUsage = (currentResponse, round) => {
+		const logUsage = async (currentResponse, round) => {
 			addUsage(usage, currentResponse);
-			addDailyTokenUsage(userId, currentResponse?.usage?.total_tokens || 0);
+			await addDailyTokenUsage(userId, currentResponse?.usage?.total_tokens || 0);
 			logger.info("[AI Usage]", {
 				request_id: requestId,
 				user_id: userId,
@@ -465,7 +465,7 @@ const ai = {
 
 		// 4. Tool loop
 		for (;;) {
-			logUsage(response, iterations);
+			await logUsage(response, iterations);
 			const toolCalls = Array.isArray(response?.toolCalls) ? response.toolCalls : [];
 			if (toolCalls.length === 0) break;
 			if (iterations >= maxRounds) {
@@ -521,7 +521,7 @@ const ai = {
 				})),
 			});
 
-			if (budgetExceeded(config, userId)) {
+			if (await budgetExceeded(config, userId)) {
 				return {
 					role: "assistant",
 					content:
