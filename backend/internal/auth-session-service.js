@@ -324,18 +324,24 @@ const refreshTokenPair = async (rawRefreshToken, meta = {}) => {
 	}
 
 	const { previous_created_ip: previousCreatedIp, ...pair } = /** @type {any} */ (result);
-	await auditTokenEvent(AUDIT_ACTION.TOKEN_REFRESHED, {
-		userId: pair.refresh_session?.user_id || pair.user?.id,
-		familyId: pair.refresh_session?.family_id,
-		sessionId: pair.refresh_session?.id,
-		ip: meta.ip || null,
-		userAgent: meta.userAgent || null,
-		meta: {
-			family_id: pair.refresh_session?.family_id,
-			ip_changed: Boolean(previousCreatedIp && meta.ip && previousCreatedIp !== meta.ip),
-			source_ip: previousCreatedIp || null,
-		},
-	});
+	// Routine refreshes happen every few minutes and would drown the audit log.
+	// The session table already tracks last activity; only a source-IP change is
+	// security-relevant and feeds the SPM-TOKEN-001 detection rule.
+	const ipChanged = Boolean(previousCreatedIp && meta.ip && previousCreatedIp !== meta.ip);
+	if (ipChanged) {
+		await auditTokenEvent(AUDIT_ACTION.TOKEN_REFRESHED, {
+			userId: pair.refresh_session?.user_id || pair.user?.id,
+			familyId: pair.refresh_session?.family_id,
+			sessionId: pair.refresh_session?.id,
+			ip: meta.ip || null,
+			userAgent: meta.userAgent || null,
+			meta: {
+				family_id: pair.refresh_session?.family_id,
+				ip_changed: true,
+				source_ip: previousCreatedIp || null,
+			},
+		});
+	}
 	return pair;
 };
 

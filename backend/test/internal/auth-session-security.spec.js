@@ -158,4 +158,24 @@ describe("refresh token security transactions", () => {
 		expect(state.rows[1].revoked_at).toBeUndefined();
 		expect(state.signed).toHaveBeenCalledWith(expect.objectContaining({ sid: "family" }));
 	});
+
+	it("does not audit a routine refresh from the same source IP", async () => {
+		state.rows[0].created_ip = "203.0.113.9";
+		await service.refreshTokenPair("refresh-token", { ip: "203.0.113.9", userAgent: "test-agent" });
+		expect(state.audit).not.toHaveBeenCalled();
+	});
+
+	it("audits a refresh that moves the session to a new source IP", async () => {
+		state.rows[0].created_ip = "203.0.113.9";
+		await service.refreshTokenPair("refresh-token", { ip: "198.51.100.7", userAgent: "test-agent" });
+		expect(state.audit).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				action: "auth.token_refreshed",
+				object_type: "auth-session",
+				ip: "198.51.100.7",
+				meta: expect.objectContaining({ ip_changed: true, source_ip: "203.0.113.9" }),
+			}),
+		);
+	});
 });
