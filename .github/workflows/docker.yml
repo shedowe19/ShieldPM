@@ -148,19 +148,19 @@ jobs:
         env:
           PINNED_NGINX_IMAGE: ${{ vars.SHIELDPM_NGINX_IMAGE }}
         run: |
-          IMAGE="${PINNED_NGINX_IMAGE:-ghcr.io/shedowe19/shieldpm-nginx:master}"
-          if [[ "$IMAGE" =~ ^[^@]+@sha256:[0-9a-f]{64}$ ]]; then
-            RESOLVED="$IMAGE"
+          CANONICAL="ghcr.io/shedowe19/shieldpm-nginx"
+          IMAGE="${PINNED_NGINX_IMAGE:-$CANONICAL:master}"
+          case "$IMAGE" in
+            "$CANONICAL"|"$CANONICAL":*|"$CANONICAL"@sha256:*) ;;
+            *) echo "Nginx base must be $CANONICAL." >&2; exit 1 ;;
+          esac
+          if [[ "$IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]; then
+            DIGEST="${IMAGE##*@}"
           else
             DIGEST=$(docker buildx imagetools inspect "$IMAGE" --format '{{json .Manifest.Digest}}' | tr -d '"')
             [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "Unable to resolve an immutable Nginx base digest." >&2; exit 1; }
-            RESOLVED="${IMAGE%@*}@${DIGEST}"
           fi
-          [[ "$RESOLVED" == "ghcr.io/shedowe19/shieldpm-nginx@sha256:"* ]] || {
-            echo "Nginx base must be ghcr.io/shedowe19/shieldpm-nginx pinned by sha256 digest." >&2
-            exit 1
-          }
-          echo "image=$RESOLVED" >> "$GITHUB_OUTPUT"
+          echo "image=$CANONICAL@$DIGEST" >> "$GITHUB_OUTPUT"
 
       # --- Build Steps ---
 

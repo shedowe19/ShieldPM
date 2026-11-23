@@ -51,7 +51,7 @@ describe("central log redaction", () => {
 
 	it("redacts key material, bearer credentials and provider tokens inside strings", () => {
 		const hexKey = "a".repeat(64);
-		const privateKey = "-----BEGIN RSA PRIVATE KEY-----\nMIIEprivate\n-----END RSA PRIVATE KEY-----";
+		const privateKey = "-----BEGIN PRIVATE KEY-----\nMIIEprivate\n-----END PRIVATE KEY-----";
 		const text = [
 			`{"encryptionKey":"${hexKey}"}`,
 			privateKey,

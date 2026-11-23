@@ -1,12 +1,8 @@
 #!/usr/bin/env sh
 
-# Log rotation is on by default: access logs are bounded, and error_log must
-# never be silently disabled. An explicit `LOGROTATE=false` in /data/.env keeps
-# the opt-out for operators who manage log shipping themselves.
+# Log rotation is on by default. Set LOGROTATE=false in the environment or in
+# /data/.env only when log shipping is handled externally.
 export LOGROTATE="${LOGROTATE:-true}"
-if [ "$LOGROTATE" = "false" ] && ! grep -qsE '^[[:space:]]*(export[[:space:]]+)?LOGROTATE=[[:space:]]*false' "${DATA_PATH:-/data}/.env"; then
-    LOGROTATE=true
-fi
 export LOGROTATIONS="${LOGROTATIONS:-3}"
 
 # Native overlays retain files removed from later application versions.

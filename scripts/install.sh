@@ -333,6 +333,14 @@ apt-get install -y --no-install-recommends --fix-missing \
 
 install_node_26
 
+# Create a recoverable database checkpoint before any integration download,
+# file replacement or migration. Failures leave the instance untouched.
+echo "--> Creating a recoverable database checkpoint before replacing files or running migrations..."
+if ! confirm_database_recovery_checkpoint; then
+    echo "ERROR: Database checkpoint could not be confirmed; installation stopped before replacing files." >&2
+    exit 1
+fi
+
 # 2.1 Configure Locale (Interactive)
 echo ">>> Configuring locales..."
 echo "    Please select your desired system locale (e.g., en_US.UTF-8 or de_DE.UTF-8)."
@@ -470,12 +478,6 @@ LEGACY_PY
     fi
 }
 prepare_install_inputs
-
-echo "--> Creating a recoverable database checkpoint before replacing files or running migrations..."
-if ! confirm_database_recovery_checkpoint; then
-    echo "ERROR: Database checkpoint could not be confirmed; installation stopped before replacing files." >&2
-    exit 1
-fi
 
 # 3. Copy Pre-built Binaries (Nginx, Certbot, Cloudflared, Libs)
 # Back up the exact application trees before stopping an existing installation.
