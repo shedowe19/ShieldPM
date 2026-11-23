@@ -1,4 +1,4 @@
-import { decrypt, encrypt } from "./encryption.js";
+import { decrypt, encrypt, isEncrypted } from "./encryption.js";
 import errs from "./error.js";
 
 /**
@@ -76,8 +76,9 @@ export const readDuoCookie = (req) => {
 	const cookie = req.cookies?.[DUO_COOKIE];
 	if (!cookie) return null;
 	try {
-		// Bound the encrypted cookie's size in addition to the shared format checks.
-		if (typeof cookie !== "string" || !/^[a-f0-9]{24}:(?:[a-f0-9]{2}){1,256}:[a-f0-9]{32}$/.test(cookie)) {
+		// Bound the encrypted cookie's size in addition to the shared envelope
+		// validation. The envelope may be the current v2 format or a legacy row.
+		if (typeof cookie !== "string" || cookie.length > 4096 || !isEncrypted(cookie)) {
 			throw new errs.ValidationError("Invalid Duo cookie format");
 		}
 		const payload = JSON.parse(decrypt(cookie));
